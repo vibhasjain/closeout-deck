@@ -968,13 +968,28 @@
 
         .expand-icon {
             display: inline-block;
-            width: 20px;
-            color: var(--gray-500);
+            width: 16px;
+            height: 16px;
+            position: relative;
+            vertical-align: middle;
+            margin-right: 4px;
+        }
+
+        .expand-icon::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            border-right: 1.5px solid var(--gray-500);
+            border-bottom: 1.5px solid var(--gray-500);
+            transform: translate(-60%, -50%) rotate(-45deg);
             transition: transform 0.2s;
         }
 
-        .data-row.expanded .expand-icon {
-            transform: rotate(90deg);
+        .data-row.expanded .expand-icon::before {
+            transform: translate(-50%, -70%) rotate(45deg);
         }
 
         .expansion-row {
@@ -1431,120 +1446,24 @@
                 font-size: 0.75rem !important;
             }
 
-            /* Worker cards - clean list design */
+            /* Mobile table - horizontal scroll like desktop */
             .reconciliation-table {
-                display: block;
+                font-size: 0.75rem;
+                min-width: 600px;
             }
 
-            .reconciliation-table thead {
-                display: none;
-            }
-
-            .reconciliation-table tbody {
-                display: flex;
-                flex-direction: column;
-                gap: 1px;
-                background: var(--gray-700);
-                border-radius: 8px;
-                overflow: hidden;
-            }
-
-            .reconciliation-table tr.data-row {
-                display: grid;
-                grid-template-columns: 1fr auto auto;
-                grid-template-rows: auto auto;
-                gap: 4px 12px;
-                background: var(--gray-850);
-                padding: 14px 16px;
-                align-items: center;
-            }
-
-            .reconciliation-table tr.data-row:active {
-                background: var(--gray-800);
-            }
-
-            .reconciliation-table tr.data-row td {
-                border: none;
-                padding: 0;
+            .reconciliation-table th,
+            .reconciliation-table td {
+                padding: 8px 6px;
                 white-space: nowrap;
             }
 
-            /* Worker name - top left */
-            .reconciliation-table tr.data-row td:first-child {
-                grid-column: 1;
-                grid-row: 1;
-            }
-
             .reconciliation-table .worker-name {
-                font-size: 0.95rem;
-                font-weight: 600;
+                font-size: 0.8rem;
             }
 
             .reconciliation-table .worker-id {
-                display: none;
-            }
-
-            /* Date - bottom left */
-            .reconciliation-table tr.data-row td:nth-child(2) {
-                grid-column: 1;
-                grid-row: 2;
-                font-size: 0.75rem;
-                color: var(--gray-500);
-            }
-
-            /* Times - top right area */
-            .reconciliation-table tr.data-row td:nth-child(3) {
-                grid-column: 2;
-                grid-row: 1;
-                font-size: 0.8rem;
-                color: var(--gray-400);
-            }
-
-            .reconciliation-table tr.data-row td:nth-child(4) {
-                grid-column: 3;
-                grid-row: 1;
-                font-size: 0.8rem;
-                color: var(--gray-400);
-            }
-
-            .reconciliation-table tr.data-row td:nth-child(3)::before,
-            .reconciliation-table tr.data-row td:nth-child(4)::before {
-                content: none;
-            }
-
-            /* Total hours - bottom right */
-            .reconciliation-table tr.data-row td:nth-child(5) {
-                grid-column: 2 / 4;
-                grid-row: 2;
-                text-align: right;
-                font-size: 0.75rem;
-                color: var(--gray-400);
-            }
-
-            /* Hide sources count and confidence on mobile */
-            .reconciliation-table tr.data-row td:nth-child(6),
-            .reconciliation-table tr.data-row td:nth-child(7) {
-                display: none;
-            }
-
-            /* Hide data source columns on mobile */
-            .reconciliation-table tr.data-row td.data-source-col {
-                display: none;
-            }
-
-            /* Expansion row mobile */
-            .reconciliation-table tr.expansion-row {
-                display: none;
-                background: var(--gray-800);
-            }
-
-            .reconciliation-table tr.expansion-row.visible {
-                display: block;
-            }
-
-            .reconciliation-table tr.expansion-row td {
-                display: block;
-                padding: 0;
+                font-size: 0.65rem;
             }
 
             .expansion-content {
@@ -2911,7 +2830,6 @@ If you cannot extract meaningful time data, explain why and what format would be
             const headerHtml = `
                 <div class="reconciled-header" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <span>✅</span>
                         <h3>RECONCILED TIMESHEETS</h3>
                     </div>
                     <div style="color: var(--gray-400); font-size: 0.85rem;">
@@ -2980,7 +2898,7 @@ If you cannot extract meaningful time data, explain why and what format would be
                                 return `
                                     <tr class="data-row" onclick="toggleRow(${idx})">
                                         <td>
-                                            <span class="expand-icon">▶</span>
+                                            <span class="expand-icon"></span>
                                             <span class="worker-name">${w.worker_name || 'Unknown'}</span>
                                             ${w.worker_id ? `<span class="worker-id">${w.worker_id}</span>` : ''}
                                         </td>
