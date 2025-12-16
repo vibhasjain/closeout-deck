@@ -903,16 +903,26 @@ p[data-cursor-element-id],
 }
 
 .source-card {
-    background: var(--gray-850);
-    border: 1px solid var(--gray-700);
+    background: linear-gradient(145deg, rgba(34, 197, 94, 0.08) 0%, rgba(0, 0, 0, 0.4) 100%);
+    border: 1px solid rgba(34, 197, 94, 0.25);
     border-radius: 12px;
     padding: 1.5rem;
     position: relative;
-    transition: border-color 0.3s ease;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.source-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(34, 197, 94, 0.15) 0%, transparent 60%);
+    pointer-events: none;
+    border-radius: 12px;
 }
 
 .source-card:hover {
-    border-color: var(--gray-600);
+    border-color: rgba(34, 197, 94, 0.5);
+    box-shadow: 0 0 40px rgba(34, 197, 94, 0.15);
 }
 
 .source-card__header {
@@ -967,6 +977,7 @@ p[data-cursor-element-id],
     aspect-ratio: 1 / 1;
     overflow: hidden;
     border-radius: 11px 11px 0 0;
+    filter: drop-shadow(0 0 20px rgba(34, 197, 94, 0.4));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -974,8 +985,8 @@ p[data-cursor-element-id],
 
 .source-card__sprite {
     position: absolute;
-    width: 130%;
-    height: 130%;
+    width: 75%;
+    height: 75%;
     object-fit: contain;
 }
 
