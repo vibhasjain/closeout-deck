@@ -1020,8 +1020,11 @@ p[data-cursor-element-id],
 .pain-split {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-    margin-bottom: 2rem;
+    gap: 2rem;
+    margin-bottom: 2.5rem;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 @media (max-width: 600px) {
@@ -1031,30 +1034,71 @@ p[data-cursor-element-id],
 }
 
 .pain-box {
-    background: var(--gray-850);
-    border: 1px solid var(--gray-700);
-    border-radius: 12px;
-    padding: 1.5rem;
+    background: linear-gradient(145deg, rgba(34, 197, 94, 0.08) 0%, rgba(0, 0, 0, 0.4) 100%);
+    border: 1px solid rgba(34, 197, 94, 0.25);
+    border-radius: 16px;
+    padding: 2rem 1.5rem;
     text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.pain-box::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(34, 197, 94, 0.15) 0%, transparent 60%);
+    pointer-events: none;
+}
+
+.pain-box:hover {
+    border-color: rgba(34, 197, 94, 0.5);
+    box-shadow: 0 0 40px rgba(34, 197, 94, 0.15);
+}
+
+.pain-box__image {
+    width: 220px;
+    height: 200px;
+    margin: 0 auto 1.25rem;
+    position: relative;
+    filter: drop-shadow(0 0 20px rgba(34, 197, 94, 0.4));
+}
+
+.pain-box__img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.pain-box__title-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
 }
 
 .pain-box__icon {
-    width: 32px;
-    height: 32px;
+    width: 22px;
+    height: 22px;
     color: var(--green-400);
-    margin-bottom: 0.5rem;
+    flex-shrink: 0;
+    opacity: 0.8;
 }
 
 .pain-box h3 {
     font-family: var(--font-display);
-    font-size: 1.5rem;
+    font-size: 1.75rem;
     font-weight: 600;
     color: var(--green-400);
-    margin-bottom: 0.5rem;
+    margin: 0;
+    text-shadow: 0 0 30px rgba(34, 197, 94, 0.5);
 }
 
 .pain-box p {
-    color: var(--gray-400);
+    color: var(--gray-300);
+    font-size: 1.05rem;
 }
 
 .pain-reality {
