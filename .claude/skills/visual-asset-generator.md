@@ -36,11 +36,17 @@ Invoke when user:
 
 6. **Always trim whitespace** - Generated images often have padding. Trim it.
 
-## Visual Style (from CLAUDE.md)
+7. **DESCRIBE style in prompt, don't rely on reference images** - Passing multiple reference images can cause grid/mosaic artifacts. Instead, thoroughly describe the visual style in the prompt itself.
+
+8. **Avoid grid floors** - Explicitly say "floating in void" or "no ground plane, no grid floor" to prevent unwanted grid patterns.
+
+9. **Specify aspect ratio for wide images** - For panoramic cards, include "21:9 aspect ratio" or "wide panoramic format" in the prompt.
+
+## Visual Style (HyperTrack Brand)
 
 **Color Palette:**
 - Background: Pure black (#000000)
-- Line art: Bright green (#22c55e) and lighter variants
+- Line art: Bright green (#22c55e) - this is the exact HyperTrack brand green
 - Monochrome green on black only
 
 **Art Style:**
@@ -49,7 +55,7 @@ Invoke when user:
 - Green wireframe/hologram rendering
 - Stroke-only linework, NO solid fills, NO gray shading
 - 3/4 isometric perspective
-- Elements floating in space
+- Elements floating in space (no ground plane)
 
 **Mood:**
 - Sci-fi, Matrix-inspired, cyberpunk
@@ -74,17 +80,20 @@ STYLE:
 - Stroke-only linework
 - Technical blueprint look
 - Isometric 3/4 perspective
+- Floating in void - NO ground plane, NO grid floor
 
 CRITICAL REQUIREMENTS:
 - Background MUST be pure solid black - no gray, no gradients, no texture
 - Only green wireframe lines on black
 - No gray anywhere on the object
+- Compact composition filling the frame
 
 COMPOSITION:
 - Simple, uncluttered - only 1-2 main objects
 - Centered in frame
+- [For wide cards: "21:9 wide panoramic aspect ratio"]
 
-AVOID: Gray shading, solid fills, gradients, complex scenes, multiple objects, any color other than green on black
+AVOID: Gray shading, solid fills, gradients, complex scenes, multiple objects, any color other than green on black, grid floor, ground plane
 ```
 
 ### Step 2: Generate Image
@@ -96,7 +105,7 @@ from google.genai import types
 client = genai.Client(api_key="AIzaSyCeHHLv6NSnVYMx7fQueIaZt6swTLEe2tY")
 
 response = client.models.generate_content(
-    model="gemini-2.5-flash-image",
+    model="gemini-2.5-flash-preview-05-20",
     contents="YOUR DETAILED PROMPT HERE",
     config=types.GenerateContentConfig(
         response_modalities=["IMAGE", "TEXT"]
@@ -138,6 +147,35 @@ If there are issues, adjust the `-fuzz` percentage:
 - Lower (10-15%): More precise, keeps dark details
 - Higher (25-30%): More aggressive, removes more dark pixels
 
+## Using Reference Images (When Needed)
+
+If you need to match an existing asset's exact style or color:
+
+```python
+from google import genai
+from google.genai import types
+from pathlib import Path
+
+client = genai.Client(api_key="AIzaSyCeHHLv6NSnVYMx7fQueIaZt6swTLEe2tY")
+
+# Load ONE reference image (avoid multiple - causes grid artifacts)
+ref_path = Path("/Users/vibes/Documents/GitHub/closeout-deck/existing-asset.png")
+ref_data = ref_path.read_bytes()
+
+response = client.models.generate_content(
+    model="gemini-2.5-flash-preview-05-20",
+    contents=[
+        types.Part.from_bytes(data=ref_data, mime_type="image/png"),
+        "Create a new illustration matching EXACTLY this visual style and green color (#22c55e). [REST OF PROMPT]"
+    ],
+    config=types.GenerateContentConfig(
+        response_modalities=["IMAGE", "TEXT"]
+    )
+)
+```
+
+**WARNING:** Passing multiple reference images often causes Gemini to create a grid/mosaic of images instead of a single cohesive image. If you need style consistency, describe the style thoroughly in text instead.
+
 ## Example: Complete Card Asset Generation
 
 ```python
@@ -152,11 +190,12 @@ Isometric 3D wallet with money bills and coins on PURE BLACK background.
 Green glowing wireframe style, neon green (#22c55e) outlines only.
 No shading, no gray fills. Just green lines on solid black.
 Simple composition - wallet and 2-3 floating bills only.
+Floating in void - no ground plane, no grid floor.
 Matrix/cyberpunk hologram aesthetic.
 """
 
 response = client.models.generate_content(
-    model="gemini-2.5-flash-image",
+    model="gemini-2.5-flash-preview-05-20",
     contents=prompt,
     config=types.GenerateContentConfig(
         response_modalities=["IMAGE", "TEXT"]
@@ -185,6 +224,34 @@ subprocess.run(["rm", raw_path])
 print(f"Final asset: {final_path}")
 ```
 
+## Example: Wide Panoramic Card (21:9)
+
+For cards that need to fill horizontal space (like slide 8 confidence cards):
+
+```python
+prompt = """
+Create a wide panoramic isometric illustration on PURE BLACK background (#000000).
+21:9 aspect ratio - wide cinematic format.
+
+SUBJECT: A holographic rising arrow chart with data visualization elements
+
+STYLE:
+- Green glowing wireframe (#22c55e) ONLY
+- NO gray, NO fills, NO gradients
+- Stroke-only linework
+- Floating in void - NO ground plane, NO grid floor
+- Matrix/cyberpunk hologram aesthetic
+- Technical blueprint look
+
+COMPOSITION:
+- Wide horizontal layout filling the panoramic frame
+- Elements spread across the width
+- Compact, filling the space well
+
+AVOID: Gray shading, solid fills, grid floor, ground plane, square aspect ratio
+"""
+```
+
 ## Common Mistakes to Avoid
 
 | Mistake | Solution |
@@ -196,6 +263,9 @@ print(f"Final asset: {final_path}")
 | Forgetting to trim whitespace | Always use `-trim +repage` |
 | Creating animation sprites | Generate ONE image only |
 | Not verifying the result | Always Read the image to check |
+| Passing multiple reference images | Describe style in text instead - multiple refs cause grid artifacts |
+| Grid floor appearing | Say "floating in void, no ground plane, no grid floor" |
+| Wrong green color | Always specify exact hex: #22c55e |
 
 ## Asset Types
 
@@ -204,6 +274,13 @@ print(f"Final asset: {final_path}")
 - Style: Single focused element (1-2 objects)
 - Post-process: ImageMagick `-transparent black -trim`
 - Display size: ~180-220px in the UI
+- Composition: Compact, centered
+
+### Wide/Panoramic Cards
+- Format: PNG with transparency
+- Aspect ratio: 21:9 or similar wide format
+- Style: Elements spread horizontally
+- Post-process: Same ImageMagick command
 
 ### Hero Sprites
 - Format: JPEG (no transparency needed)
@@ -214,8 +291,11 @@ print(f"Final asset: {final_path}")
 
 - [ ] Single image generated (not multiple variants)
 - [ ] Pure black background in raw output
+- [ ] Correct aspect ratio (square for cards, wide for panoramic)
 - [ ] Processed with ImageMagick (not rembg)
 - [ ] Whitespace trimmed
 - [ ] Background fully transparent
 - [ ] No gray halos or artifacts
+- [ ] No grid floor in composition
+- [ ] Correct green color (#22c55e)
 - [ ] File placed in project directory with correct name
