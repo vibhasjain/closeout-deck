@@ -218,6 +218,19 @@
         }, 500);
     }
 
+    // Flash arrow animation
+    function flashArrow(btn) {
+        if (!btn || btn.disabled) return;
+        btn.classList.remove('nav-arrow--flash');
+        // Trigger reflow to restart animation
+        void btn.offsetWidth;
+        btn.classList.add('nav-arrow--flash');
+        // Remove class after animation completes
+        setTimeout(() => {
+            btn.classList.remove('nav-arrow--flash');
+        }, 600);
+    }
+
     // Next slide
     function nextSlide() {
         if (currentSlide < totalSlides - 1) {
@@ -242,12 +255,14 @@
             case ' ':
             case 'PageDown':
                 e.preventDefault();
+                flashArrow(nextBtn);
                 nextSlide();
                 break;
             case 'ArrowLeft':
             case 'ArrowUp':
             case 'PageUp':
                 e.preventDefault();
+                flashArrow(prevBtn);
                 prevSlide();
                 break;
             case 'Home':
@@ -371,8 +386,14 @@
         window.addEventListener('resize', checkMobile);
 
         // Navigation buttons
-        prevBtn.addEventListener('click', prevSlide);
-        nextBtn.addEventListener('click', nextSlide);
+        prevBtn.addEventListener('click', () => {
+            prevSlide();
+            prevBtn.blur();
+        });
+        nextBtn.addEventListener('click', () => {
+            nextSlide();
+            nextBtn.blur();
+        });
 
         // Fan-out delay on mouseleave
         if (slideNavGroup) {
