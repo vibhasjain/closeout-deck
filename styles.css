@@ -1876,7 +1876,7 @@ p[data-cursor-element-id],
    SLIDE 5: HOW IT WORKS
    ============================================ */
 .slide--how .slide__title {
-    margin-bottom: 1.5rem;
+    margin-bottom: 2.5rem;
     margin-top: -1rem;
 }
 
@@ -1884,7 +1884,7 @@ p[data-cursor-element-id],
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 1.5rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 2.5rem;
 }
 
 .feature-card {
@@ -1894,6 +1894,8 @@ p[data-cursor-element-id],
     padding: 1.5rem;
     position: relative;
     transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
 }
 
 .feature-card::before {
@@ -1915,7 +1917,7 @@ p[data-cursor-element-id],
     position: relative;
     width: calc(100% + 3rem);
     margin: -1.5rem -1.5rem 1rem -1.5rem;
-    height: 220px;
+    height: 280px;
     overflow: hidden;
     border-radius: 11px 11px 0 0;
     filter: drop-shadow(0 0 20px rgba(34, 197, 94, 0.4));
@@ -1926,9 +1928,26 @@ p[data-cursor-element-id],
 }
 
 .feature-card__img {
+    height: 90%;
+    width: auto;
+    object-fit: contain;
+}
+
+.feature-card__sprite {
+    position: absolute;
     height: 80%;
     width: auto;
     object-fit: contain;
+}
+
+.feature-card__sprite--1 {
+    animation: spriteSwitch 1s step-end infinite;
+}
+
+.feature-card__sprite--2 {
+    animation: spriteSwitch 1s step-end infinite;
+    animation-delay: 0.5s;
+    opacity: 0;
 }
 
 .feature-card__title-row {
@@ -1974,6 +1993,8 @@ p[data-cursor-element-id],
     border-radius: 100px;
     color: var(--green-400);
     font-weight: 500;
+    margin-top: auto;
+    align-self: flex-start;
 }
 
 .slide__tagline {
