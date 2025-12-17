@@ -2448,6 +2448,198 @@ p[data-cursor-element-id],
     }
 }
 
+/* Confidence Panel - Unified Data Sources Display */
+.confidence-panel {
+    background: linear-gradient(145deg, rgba(34, 197, 94, 0.06) 0%, rgba(0, 0, 0, 0.5) 100%);
+    border: 1px solid rgba(34, 197, 94, 0.25);
+    border-radius: 16px;
+    padding: 1.5rem 2rem;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+/* Subtle grid background */
+.confidence-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(34, 197, 94, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(34, 197, 94, 0.03) 1px, transparent 1px);
+    background-size: 20px 20px;
+    pointer-events: none;
+}
+
+.confidence-panel__sources {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    position: relative;
+    z-index: 1;
+}
+
+.confidence-source {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    border: 1px solid rgba(34, 197, 94, 0.1);
+}
+
+.confidence-source__label {
+    font-family: var(--font-display);
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: var(--gray-400);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.confidence-source__image {
+    height: 110px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 0 15px rgba(34, 197, 94, 0.35));
+}
+
+.confidence-source__image img {
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+.confidence-source__meter-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.confidence-source__meter {
+    flex: 1;
+    height: 3px;
+    background: rgba(34, 197, 94, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.confidence-source__meter-fill {
+    height: 100%;
+    background: rgba(34, 197, 94, 0.5);
+    border-radius: 2px;
+    transition: width 0.5s ease;
+}
+
+.confidence-source__score {
+    font-family: var(--font-display);
+    font-size: 0.6rem;
+    font-weight: 500;
+    color: var(--gray-500);
+}
+
+/* Arrows between sources */
+.confidence-source__arrow {
+    flex-shrink: 0;
+    color: rgba(34, 197, 94, 0.3);
+    display: flex;
+    align-items: center;
+}
+
+.confidence-source__arrow svg {
+    width: 16px;
+    height: 16px;
+}
+
+.confidence-panel__score {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+    z-index: 1;
+    padding-left: 1.5rem;
+    border-left: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.confidence-gauge {
+    position: relative;
+    width: 100px;
+    height: 100px;
+}
+
+.confidence-gauge__svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 0 10px rgba(34, 197, 94, 0.4));
+}
+
+.confidence-gauge__value {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--green-400);
+}
+
+.confidence-gauge__label {
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--gray-400);
+    text-align: center;
+    line-height: 1.3;
+}
+
+/* Mobile: Stack vertically */
+@media (max-width: 768px) {
+    .confidence-panel {
+        flex-direction: column;
+        gap: 1.5rem;
+        padding: 1.25rem;
+    }
+
+    .confidence-panel__sources {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        justify-content: center;
+    }
+
+    .confidence-source {
+        flex: 0 0 calc(50% - 1rem);
+        max-width: calc(50% - 1rem);
+    }
+
+    .confidence-source__image {
+        height: 70px;
+    }
+
+    .confidence-source__arrow {
+        display: none;
+    }
+
+    .confidence-panel__score {
+        padding-left: 0;
+        padding-top: 1rem;
+        border-left: none;
+        border-top: 1px solid rgba(34, 197, 94, 0.2);
+        width: 100%;
+    }
+}
+
 .slide__insight {
     font-family: var(--font-display);
     font-size: 1.25rem;

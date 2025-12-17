@@ -36,14 +36,18 @@ Invoke when user:
 
 6. **Keep scenes SIMPLE** - For card/UI assets, focus on 1-2 objects maximum. Complex scenes don't work at small display sizes.
 
-7. **TWO-STEP POST-PROCESSING** - Do NOT use PNG8 for transparency - it breaks alpha channels:
+7. **THREE-STEP POST-PROCESSING** - The order matters:
    ```bash
-   # Step 1: Remove background and trim (preserve full transparency)
+   # Step 1: Remove black background and trim (preserve full transparency)
    magick input.png -fuzz 20% -transparent black -trim +repage output.png
 
    # Step 2: If white background appears, remove it too
    magick output.png -fuzz 10% -transparent white output.png
+
+   # Step 3: OPTIMIZE with PNG8 (do this LAST, after transparency is done)
+   magick output.png -colors 64 PNG8:output.png
    ```
+   **CRITICAL:** PNG8 must come AFTER transparency removal, not during. Using PNG8 during transparency breaks alpha channels.
 
 8. **VERIFY TRANSPARENCY WORKS** - After processing:
    - View the image with Read tool
@@ -142,9 +146,7 @@ for part in response.candidates[0].content.parts:
         break
 ```
 
-### Step 2: Post-Process (Two-Step for Reliable Transparency)
-
-**IMPORTANT:** Do NOT use PNG8 - it breaks transparency and creates white backgrounds.
+### Step 2: Post-Process (Three-Step: Transparency → Optimize)
 
 ```bash
 # Step 1: Remove black background + trim (keeps full alpha channel)
@@ -153,9 +155,14 @@ magick asset-raw.png -fuzz 20% -transparent black -trim +repage asset-final.png
 # Step 2: Check for and remove any white background that appeared
 magick asset-final.png -fuzz 10% -transparent white asset-final.png
 
-# Step 3: Clean up raw file
+# Step 3: OPTIMIZE with PNG8 (reduces file size from ~1MB to ~100KB)
+magick asset-final.png -colors 64 PNG8:asset-final.png
+
+# Step 4: Clean up raw file
 rm asset-raw.png
 ```
+
+**CRITICAL:** PNG8 must come AFTER transparency removal. Using PNG8 during transparency breaks alpha channels.
 
 ### Step 3: Verify Result
 
@@ -271,9 +278,10 @@ for part in response.candidates[0].content.parts:
 
 Then post-process:
 ```bash
-# Two-step transparency (no PNG8!)
+# Three-step: transparency first, then optimize
 magick card-promise-raw.png -fuzz 20% -transparent black -trim +repage card-promise-1.png
 magick card-promise-1.png -fuzz 10% -transparent white card-promise-1.png
+magick card-promise-1.png -colors 64 PNG8:card-promise-1.png
 rm card-promise-raw.png
 ```
 
@@ -282,7 +290,8 @@ rm card-promise-raw.png
 | Mistake | Solution |
 |---------|----------|
 | Not using reference image | ALWAYS pass a good existing asset as reference to Gemini |
-| Using PNG8 for optimization | PNG8 breaks transparency - creates white backgrounds |
+| PNG8 during transparency step | PNG8 breaks transparency - use PNG8 AFTER transparency removal |
+| Skipping PNG8 optimization | Files will be ~1MB. Always run PNG8 as final step for ~100KB files |
 | Only removing black background | Also check for and remove white: `-transparent white` |
 | Not checking HTML first | Always grep HTML for exact filename before generating |
 | Generating without reference | Reference images produce much more consistent results |
@@ -297,8 +306,8 @@ rm card-promise-raw.png
 - [ ] Single image generated (no variants)
 - [ ] Pure black background in raw output
 - [ ] Grid floor included (for card consistency)
-- [ ] Two-step transparency removal (black then white)
-- [ ] Did NOT use PNG8 (preserves alpha channel)
+- [ ] Transparency removal (black then white)
+- [ ] PNG8 optimization applied AFTER transparency (file ~100KB not ~1MB)
 - [ ] Whitespace trimmed
 - [ ] Background fully transparent on page
 - [ ] Correct green color (#22c55e)
