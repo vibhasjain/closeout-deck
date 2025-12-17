@@ -2501,12 +2501,12 @@ p[data-cursor-element-id],
     font-weight: 600;
     color: rgba(255, 255, 255, 0.75);
     margin-top: auto;
-    padding-top: 1.5rem;
+    padding-top: 0.5rem;
     margin-bottom: -0.15rem;
 }
 
 .confidence-source__image {
-    height: 130px;
+    height: 160px;
     width: 100%;
     display: flex;
     align-items: center;
@@ -2633,7 +2633,7 @@ p[data-cursor-element-id],
     }
 
     .confidence-source__image {
-        height: 70px;
+        height: 140px;
     }
 
     .confidence-source__arrow {
