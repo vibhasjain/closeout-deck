@@ -2344,9 +2344,10 @@ p[data-cursor-element-id],
 /* ============================================
    SLIDE 8: DATA CONFIDENCE
    ============================================ */
-.slide--confidence .slide__title + .slide__lead {
-    margin-top: -2.5rem;
-    margin-bottom: 3rem;
+@media (min-width: 769px) {
+    .slide--confidence .slide__title {
+        margin-top: 2rem;
+    }
 }
 
 .confidence-cards {
