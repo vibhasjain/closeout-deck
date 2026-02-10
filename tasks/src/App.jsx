@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   DndContext, DragOverlay, PointerSensor, TouchSensor,
   useSensor, useSensors, useDroppable, closestCenter,
@@ -9,14 +9,8 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { supabase } from './supabaseClient'
 import { DatePicker } from './components/DatePicker'
+import { StatusPicker } from './components/StatusPicker'
 import './App.css'
-
-const STATUS_CYCLE = ['todo', 'in-progress', 'done']
-const STATUS_LABELS = {
-  'todo': 'to do',
-  'in-progress': 'in progress',
-  'done': 'done',
-}
 
 export default function App() {
   const [people, setPeople] = useState({})
@@ -107,10 +101,26 @@ export default function App() {
     supabase.from('tasks').update(fields).eq('id', taskId).then()
   }
 
-  function cycleStatus(task) {
-    const idx = STATUS_CYCLE.indexOf(task.status)
-    const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length]
-    optimisticUpdate(task.id, { status: next })
+  function changeStatus(task, newStatus) {
+    optimisticUpdate(task.id, { status: newStatus })
+  }
+
+  async function addTask(personId, title, description) {
+    const personTasks = tasks.filter(t => t.person === personId && t.status !== 'done')
+    const position = personTasks.length + 1
+    const { data } = await supabase
+      .from('tasks')
+      .insert({ title, description: description || null, person: personId, status: 'todo', position })
+      .select()
+      .single()
+    if (data) {
+      setTasks(prev => [...prev, data])
+    }
+  }
+
+  async function deleteTask(taskId) {
+    setTasks(prev => prev.filter(t => t.id !== taskId))
+    await supabase.from('tasks').delete().eq('id', taskId)
   }
 
   // Find which person column a task belongs to
@@ -243,8 +253,10 @@ export default function App() {
               person={people[key]}
               tasks={tasks.filter(t => t.person === key)}
               flashIds={flashIds}
-              onCycleStatus={cycleStatus}
+              onChangeStatus={changeStatus}
               onUpdate={optimisticUpdate}
+              onAddTask={addTask}
+              onDeleteTask={deleteTask}
               isDragActive={!!activeTask}
               isDragTarget={activeTask && activeTask.person !== key}
             />
@@ -266,8 +278,9 @@ export default function App() {
   )
 }
 
-function Column({ personId, person, tasks, flashIds, onCycleStatus, onUpdate, isDragActive, isDragTarget }) {
+function Column({ personId, person, tasks, flashIds, onChangeStatus, onUpdate, onAddTask, onDeleteTask, isDragActive, isDragTarget }) {
   const [tab, setTab] = useState('todo')
+  const [adding, setAdding] = useState(false)
   const { setNodeRef, isOver } = useDroppable({ id: personId })
 
   const todoTasks = tasks.filter(t => t.status !== 'done').sort((a, b) => (a.position ?? 999) - (b.position ?? 999))
@@ -275,13 +288,39 @@ function Column({ personId, person, tasks, flashIds, onCycleStatus, onUpdate, is
   const displayTasks = tab === 'todo' ? todoTasks : doneTasks
   const taskIds = displayTasks.map(t => t.id)
 
+  function handleAdd() {
+    setTab('todo')
+    setAdding(true)
+  }
+
+  async function handleSaveNew(title, description) {
+    setAdding(false)
+    if (title.trim()) {
+      await onAddTask(personId, title.trim(), description.trim())
+    }
+  }
+
+  function handleCancelNew() {
+    setAdding(false)
+  }
+
   return (
     <div
       ref={setNodeRef}
       className={`column ${isOver ? 'column--over' : ''} ${isDragTarget ? 'column--drop-target' : ''}`}
     >
       <div className="column__header">
-        <span className="column__name" style={{ color: person.color }}>{person.name}</span>
+        <div className="column__header-left">
+          <span className="column__name" style={{ color: person.color }}>{person.name}</span>
+          <button
+            className="column__add-btn"
+            style={{ color: person.color }}
+            onClick={handleAdd}
+            title="Add task"
+          >
+            +
+          </button>
+        </div>
         <div className="column__tabs">
           <button
             className={`column__tab ${tab === 'todo' ? 'column__tab--active' : ''}`}
@@ -300,8 +339,15 @@ function Column({ personId, person, tasks, flashIds, onCycleStatus, onUpdate, is
         </div>
       </div>
       <div className="column__body">
+        {adding && (
+          <NewTaskCard
+            person={person}
+            onSave={handleSaveNew}
+            onCancel={handleCancelNew}
+          />
+        )}
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-          {displayTasks.length === 0 ? (
+          {displayTasks.length === 0 && !adding ? (
             <div className="section__empty">{tab === 'todo' ? 'no tasks' : 'nothing yet'}</div>
           ) : (
             displayTasks.map((task, i) => (
@@ -311,8 +357,9 @@ function Column({ personId, person, tasks, flashIds, onCycleStatus, onUpdate, is
                 num={i + 1}
                 person={person}
                 isFlashing={flashIds.has(task.id)}
-                onCycleStatus={onCycleStatus}
+                onChangeStatus={onChangeStatus}
                 onUpdate={onUpdate}
+                onDeleteTask={onDeleteTask}
               />
             ))
           )}
@@ -322,14 +369,97 @@ function Column({ personId, person, tasks, flashIds, onCycleStatus, onUpdate, is
   )
 }
 
-function SortableTask({ task, num, person, isFlashing, onCycleStatus, onUpdate }) {
+function NewTaskCard({ person, onSave, onCancel }) {
+  const titleRef = useRef(null)
+  const descRef = useRef(null)
+
+  useEffect(() => {
+    titleRef.current?.focus()
+  }, [])
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      onSave(titleRef.current?.textContent || '', descRef.current?.textContent || '')
+    }
+    if (e.key === 'Escape') {
+      onCancel()
+    }
+  }
+
+  function handleBlur(e) {
+    // Don't cancel if focus moves within the card
+    const card = e.currentTarget.closest('.task--new')
+    if (card && card.contains(e.relatedTarget)) return
+    const title = titleRef.current?.textContent || ''
+    if (title.trim()) {
+      onSave(title, descRef.current?.textContent || '')
+    } else {
+      onCancel()
+    }
+  }
+
+  return (
+    <div className="task task--new">
+      <span className="task__drag-handle" style={{ color: person.color, opacity: 0.15 }}>⠿</span>
+      <div className="task__body">
+        <span
+          ref={titleRef}
+          className="task__title task__title--editable"
+          contentEditable
+          suppressContentEditableWarning
+          data-placeholder="task title"
+          onKeyDown={handleKeyDown}
+          onBlur={handleBlur}
+        />
+        <p
+          ref={descRef}
+          className="task__desc task__desc--editable"
+          contentEditable
+          suppressContentEditableWarning
+          data-placeholder="description (optional)"
+          onKeyDown={handleKeyDown}
+          onBlur={handleBlur}
+        />
+        <div className="task__new-hint">enter to save · esc to cancel</div>
+      </div>
+    </div>
+  )
+}
+
+function SortableTask({ task, num, person, isFlashing, onChangeStatus, onUpdate, onDeleteTask }) {
   const {
     attributes, listeners, setNodeRef, transform, transition, isDragging,
   } = useSortable({ id: task.id })
+  const [ctxMenu, setCtxMenu] = useState(null)
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+  }
+
+  function handleContextMenu(e) {
+    e.preventDefault()
+    const rect = e.currentTarget.getBoundingClientRect()
+    setCtxMenu({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+  }
+
+  useEffect(() => {
+    if (!ctxMenu) return
+    function close() { setCtxMenu(null) }
+    window.addEventListener('click', close)
+    window.addEventListener('scroll', close, true)
+    return () => {
+      window.removeEventListener('click', close)
+      window.removeEventListener('scroll', close, true)
+    }
+  }, [ctxMenu])
+
+  function handleDelete() {
+    setCtxMenu(null)
+    if (window.confirm(`Delete "${task.title}"?`)) {
+      onDeleteTask(task.id)
+    }
   }
 
   return (
@@ -337,6 +467,7 @@ function SortableTask({ task, num, person, isFlashing, onCycleStatus, onUpdate }
       ref={setNodeRef}
       style={style}
       className={`task ${isFlashing ? 'task--flash' : ''} ${isDragging ? 'task--placeholder' : ''}`}
+      onContextMenu={handleContextMenu}
     >
       <span
         className="task__drag-handle"
@@ -351,13 +482,7 @@ function SortableTask({ task, num, person, isFlashing, onCycleStatus, onUpdate }
         <span className="task__title">{task.title}</span>
         {task.description && <p className="task__desc">{task.description}</p>}
         <div className="task__meta">
-          <button
-            className={`task__status task__status--${task.status}`}
-            onClick={() => onCycleStatus(task)}
-            title="Click to change status"
-          >
-            {STATUS_LABELS[task.status] || task.status}
-          </button>
+          <StatusPicker task={task} onChangeStatus={onChangeStatus} />
           <DatePicker task={task} personColor={person.color} onUpdate={onUpdate} />
         </div>
       </div>
@@ -369,6 +494,13 @@ function SortableTask({ task, num, person, isFlashing, onCycleStatus, onUpdate }
             <line x1="10" y1="14" x2="21" y2="3" />
           </svg>
         </a>
+      )}
+      {ctxMenu && (
+        <div className="task__ctx-menu" style={{ left: ctxMenu.x, top: ctxMenu.y }}>
+          <button className="task__ctx-menu-item task__ctx-menu-item--danger" onClick={handleDelete}>
+            delete task
+          </button>
+        </div>
       )}
     </div>
   )
