@@ -76,7 +76,7 @@ const TASKS = [
   {
     id: 2,
     title: "Make closeout login map to HyperTrack login",
-    person: "saurabh",
+    person: "thomas",
     status: "todo",
     due: "2025-02-12",
   },
