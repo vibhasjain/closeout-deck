@@ -457,9 +457,7 @@ function SortableTask({ task, num, person, isFlashing, onChangeStatus, onUpdate,
 
   function handleDelete() {
     setCtxMenu(null)
-    if (window.confirm(`Delete "${task.title}"?`)) {
-      onDeleteTask(task.id)
-    }
+    onDeleteTask(task.id)
   }
 
   return (
