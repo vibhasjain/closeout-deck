@@ -1,6 +1,12 @@
-import { useState, useEffect } from 'react'
-import { DndContext, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors, useDroppable, closestCenter } from '@dnd-kit/core'
-import { useDraggable } from '@dnd-kit/core'
+import { useState, useEffect, useCallback } from 'react'
+import {
+  DndContext, DragOverlay, PointerSensor, TouchSensor,
+  useSensor, useSensors, useDroppable, closestCenter,
+} from '@dnd-kit/core'
+import {
+  SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { supabase } from './supabaseClient'
 import { DatePicker } from './components/DatePicker'
 import './App.css'
@@ -22,7 +28,7 @@ export default function App() {
   const [activeTask, setActiveTask] = useState(null)
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
   )
 
@@ -58,7 +64,7 @@ export default function App() {
   async function fetchData() {
     const [peopleRes, tasksRes] = await Promise.all([
       supabase.from('people').select('*'),
-      supabase.from('tasks').select('*').order('due', { ascending: true, nullsFirst: false }),
+      supabase.from('tasks').select('*').order('position', { ascending: true, nullsFirst: false }),
     ])
 
     if (peopleRes.error || tasksRes.error) {
@@ -101,27 +107,81 @@ export default function App() {
     await supabase.from('tasks').update({ status: next }).eq('id', task.id)
   }
 
+  // Find which person column a task belongs to
+  const findContainer = useCallback((taskId) => {
+    const task = tasks.find(t => t.id === taskId)
+    return task?.person
+  }, [tasks])
+
   function handleDragStart(event) {
     const task = tasks.find(t => t.id === event.active.id)
     setActiveTask(task || null)
   }
 
-  function handleDragEnd(event) {
+  function handleDragOver(event) {
+    const { active, over } = event
+    if (!over) return
+
+    const activeId = active.id
+    const overId = over.id
+
+    const activeContainer = findContainer(activeId)
+    // over could be a task ID or a person column ID
+    const overContainer = findContainer(overId) || overId
+
+    if (activeContainer && overContainer && activeContainer !== overContainer) {
+      // Moving to a different column — update person optimistically
+      setTasks(prev => prev.map(t =>
+        t.id === activeId ? { ...t, person: overContainer } : t
+      ))
+    }
+  }
+
+  async function handleDragEnd(event) {
     setActiveTask(null)
     const { active, over } = event
     if (!over) return
 
-    const taskId = active.id
-    const targetPerson = over.id
+    const activeId = active.id
+    const overId = over.id
 
-    const task = tasks.find(t => t.id === taskId)
-    if (!task || task.person === targetPerson) return
+    const activeContainer = findContainer(activeId)
+    const overContainer = findContainer(overId) || overId
 
-    // Optimistic update
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, person: targetPerson } : t))
+    if (!activeContainer) return
 
-    // Persist to Supabase
-    supabase.from('tasks').update({ person: targetPerson }).eq('id', taskId).then()
+    // Get tasks in the target column (non-done for todo tab)
+    const columnTasks = tasks
+      .filter(t => t.person === activeContainer && t.status !== 'done')
+      .sort((a, b) => (a.position ?? 999) - (b.position ?? 999))
+
+    const oldIndex = columnTasks.findIndex(t => t.id === activeId)
+    const newIndex = columnTasks.findIndex(t => t.id === overId)
+
+    if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+      // Reorder within column
+      const reordered = arrayMove(columnTasks, oldIndex, newIndex)
+
+      // Optimistic update
+      const updates = reordered.map((t, i) => ({ ...t, position: i + 1 }))
+      setTasks(prev => {
+        const other = prev.filter(t => !(t.person === activeContainer && t.status !== 'done'))
+        return [...other, ...updates]
+      })
+
+      // Persist all position changes
+      for (const [i, t] of reordered.entries()) {
+        await supabase.from('tasks').update({ position: i + 1 }).eq('id', t.id)
+      }
+    } else if (activeContainer !== overContainer) {
+      // Cross-column move — persist person change
+      const targetTasks = tasks
+        .filter(t => t.person === overContainer && t.status !== 'done')
+        .sort((a, b) => (a.position ?? 999) - (b.position ?? 999))
+      const newPos = targetTasks.length + 1
+
+      await supabase.from('tasks').update({ person: overContainer, position: newPos }).eq('id', activeId)
+    }
   }
 
   if (loading) {
@@ -166,6 +226,7 @@ export default function App() {
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
         <main className="board">
@@ -177,6 +238,7 @@ export default function App() {
               tasks={tasks.filter(t => t.person === key)}
               flashIds={flashIds}
               onCycleStatus={cycleStatus}
+              isDragActive={!!activeTask}
               isDragTarget={activeTask && activeTask.person !== key}
             />
           ))}
@@ -185,7 +247,7 @@ export default function App() {
         <DragOverlay dropAnimation={null}>
           {activeTask ? (
             <div className="task task--dragging">
-              <span className="task__num" style={{ color: people[activeTask.person]?.color }}>⠿</span>
+              <span className="task__drag-handle">⠿</span>
               <div className="task__body">
                 <span className="task__title">{activeTask.title}</span>
               </div>
@@ -197,13 +259,14 @@ export default function App() {
   )
 }
 
-function Column({ personId, person, tasks, flashIds, onCycleStatus, isDragTarget }) {
+function Column({ personId, person, tasks, flashIds, onCycleStatus, isDragActive, isDragTarget }) {
   const [tab, setTab] = useState('todo')
   const { setNodeRef, isOver } = useDroppable({ id: personId })
 
-  const todoTasks = tasks.filter(t => t.status !== 'done')
-  const doneTasks = tasks.filter(t => t.status === 'done')
+  const todoTasks = tasks.filter(t => t.status !== 'done').sort((a, b) => (a.position ?? 999) - (b.position ?? 999))
+  const doneTasks = tasks.filter(t => t.status === 'done').sort((a, b) => (a.position ?? 999) - (b.position ?? 999))
   const displayTasks = tab === 'todo' ? todoTasks : doneTasks
+  const taskIds = displayTasks.map(t => t.id)
 
   return (
     <div
@@ -230,43 +293,59 @@ function Column({ personId, person, tasks, flashIds, onCycleStatus, isDragTarget
         </div>
       </div>
       <div className="column__body">
-        {displayTasks.length === 0 ? (
-          <div className="section__empty">{tab === 'todo' ? 'no tasks' : 'nothing yet'}</div>
-        ) : (
-          displayTasks.map((task, i) => (
-            <DraggableTask
-              key={task.id}
-              task={task}
-              num={i + 1}
-              person={person}
-              isFlashing={flashIds.has(task.id)}
-              onCycleStatus={onCycleStatus}
-            />
-          ))
-        )}
+        <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+          {displayTasks.length === 0 ? (
+            <div className="section__empty">{tab === 'todo' ? 'no tasks' : 'nothing yet'}</div>
+          ) : (
+            displayTasks.map((task, i) => (
+              <SortableTask
+                key={task.id}
+                task={task}
+                num={i + 1}
+                person={person}
+                isFlashing={flashIds.has(task.id)}
+                onCycleStatus={onCycleStatus}
+              />
+            ))
+          )}
+        </SortableContext>
       </div>
     </div>
   )
 }
 
-function DraggableTask({ task, num, person, isFlashing, onCycleStatus }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id })
+function SortableTask({ task, num, person, isFlashing, onCycleStatus }) {
+  const {
+    attributes, listeners, setNodeRef, transform, transition, isDragging,
+  } = useSortable({ id: task.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
 
   return (
     <div
       ref={setNodeRef}
+      style={style}
       className={`task ${isFlashing ? 'task--flash' : ''} ${isDragging ? 'task--placeholder' : ''}`}
-      {...attributes}
-      {...listeners}
     >
-      <span className="task__num" style={{ color: person.color }}>{num}</span>
+      <span
+        className="task__drag-handle"
+        style={{ color: person.color }}
+        {...attributes}
+        {...listeners}
+        title="Drag to reorder or move"
+      >
+        ⠿
+      </span>
       <div className="task__body">
         <span className="task__title">{task.title}</span>
         {task.description && <p className="task__desc">{task.description}</p>}
         <div className="task__meta">
           <button
             className={`task__status task__status--${task.status}`}
-            onClick={(e) => { e.stopPropagation(); onCycleStatus(task) }}
+            onClick={() => onCycleStatus(task)}
             title="Click to change status"
           >
             {STATUS_LABELS[task.status] || task.status}
@@ -275,8 +354,7 @@ function DraggableTask({ task, num, person, isFlashing, onCycleStatus }) {
         </div>
       </div>
       {task.doc && (
-        <a href={task.doc} target="_blank" rel="noopener noreferrer" className="task__doc" title="View source document"
-          onClick={(e) => e.stopPropagation()}>
+        <a href={task.doc} target="_blank" rel="noopener noreferrer" className="task__doc" title="View source document">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
             <polyline points="15 3 21 3 21 9" />
@@ -287,4 +365,3 @@ function DraggableTask({ task, num, person, isFlashing, onCycleStatus }) {
     </div>
   )
 }
-

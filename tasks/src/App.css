@@ -281,9 +281,8 @@ html, body {
   border: 1px solid #1c1c1f;
   border-radius: 6px;
   padding: 14px 16px;
-  cursor: grab;
+  cursor: default;
   transition: border-color 0.15s, background 0.15s, box-shadow 0.3s;
-  touch-action: none;
   display: flex;
   gap: 12px;
   align-items: flex-start;
@@ -316,6 +315,26 @@ html, body {
   flex-shrink: 0;
   min-width: 14px;
   padding-top: 2px;
+}
+
+.task__drag-handle {
+  font-size: 14px;
+  flex-shrink: 0;
+  min-width: 14px;
+  padding-top: 1px;
+  cursor: grab;
+  opacity: 0.3;
+  transition: opacity 0.15s;
+  touch-action: none;
+  user-select: none;
+}
+
+.task:hover .task__drag-handle {
+  opacity: 0.7;
+}
+
+.task__drag-handle:active {
+  cursor: grabbing;
 }
 
 .task__body {
