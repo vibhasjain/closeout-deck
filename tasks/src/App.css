@@ -1,3 +1,5 @@
+@import "tailwindcss" layer(tw);
+
 /* ============================================
    TASKS BOARD — Terminal aesthetic
    React version with Supabase realtime
@@ -399,21 +401,6 @@ html, body {
   opacity: 0.7;
 }
 
-.task__due-input {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  background: #18181b;
-  color: #e4e4e7;
-  border: 1px solid #27272a;
-  border-radius: 3px;
-  padding: 2px 6px;
-  outline: none;
-  color-scheme: dark;
-}
-
-.task__due-input:focus {
-  border-color: #22c55e66;
-}
 
 .task__doc {
   color: #3f3f46;
