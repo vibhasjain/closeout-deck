@@ -488,6 +488,12 @@ html, body {
 }
 
 
+/* Editing state */
+.task--editing {
+  border-color: #27272a;
+  background: #0f0f10;
+}
+
 /* New task inline card */
 .task--new {
   border-color: #27272a;

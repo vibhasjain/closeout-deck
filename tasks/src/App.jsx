@@ -432,6 +432,9 @@ function SortableTask({ task, num, person, isFlashing, onChangeStatus, onUpdate,
     attributes, listeners, setNodeRef, transform, transition, isDragging,
   } = useSortable({ id: task.id })
   const [ctxMenu, setCtxMenu] = useState(null)
+  const [editing, setEditing] = useState(false)
+  const titleRef = useRef(null)
+  const descRef = useRef(null)
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -460,11 +463,54 @@ function SortableTask({ task, num, person, isFlashing, onChangeStatus, onUpdate,
     onDeleteTask(task.id)
   }
 
+  function startEditing() {
+    if (editing) return
+    setEditing(true)
+  }
+
+  useEffect(() => {
+    if (editing && titleRef.current) {
+      titleRef.current.focus()
+      // Place cursor at end
+      const sel = window.getSelection()
+      sel.selectAllChildren(titleRef.current)
+      sel.collapseToEnd()
+    }
+  }, [editing])
+
+  function saveEdits() {
+    const newTitle = titleRef.current?.textContent?.trim() || task.title
+    const newDesc = descRef.current?.textContent?.trim() || ''
+    setEditing(false)
+    const fields = {}
+    if (newTitle !== task.title) fields.title = newTitle
+    if (newDesc !== (task.description || '')) fields.description = newDesc || null
+    if (Object.keys(fields).length > 0) {
+      onUpdate(task.id, fields)
+    }
+  }
+
+  function handleEditKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      saveEdits()
+    }
+    if (e.key === 'Escape') {
+      setEditing(false)
+    }
+  }
+
+  function handleEditBlur(e) {
+    const card = e.currentTarget.closest('.task')
+    if (card && card.contains(e.relatedTarget)) return
+    saveEdits()
+  }
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`task ${isFlashing ? 'task--flash' : ''} ${isDragging ? 'task--placeholder' : ''}`}
+      className={`task ${isFlashing ? 'task--flash' : ''} ${isDragging ? 'task--placeholder' : ''} ${editing ? 'task--editing' : ''}`}
       onContextMenu={handleContextMenu}
     >
       <span
@@ -476,10 +522,38 @@ function SortableTask({ task, num, person, isFlashing, onChangeStatus, onUpdate,
       >
         ⠿
       </span>
-      <div className="task__body">
-        <span className="task__title">{task.title}</span>
-        {task.description && <p className="task__desc">{task.description}</p>}
-        <div className="task__meta">
+      <div className="task__body" onClick={startEditing}>
+        {editing ? (
+          <>
+            <span
+              ref={titleRef}
+              className="task__title task__title--editable"
+              contentEditable
+              suppressContentEditableWarning
+              onKeyDown={handleEditKeyDown}
+              onBlur={handleEditBlur}
+            >
+              {task.title}
+            </span>
+            <p
+              ref={descRef}
+              className="task__desc task__desc--editable"
+              contentEditable
+              suppressContentEditableWarning
+              data-placeholder="add description"
+              onKeyDown={handleEditKeyDown}
+              onBlur={handleEditBlur}
+            >
+              {task.description || ''}
+            </p>
+          </>
+        ) : (
+          <>
+            <span className="task__title">{task.title}</span>
+            {task.description && <p className="task__desc">{task.description}</p>}
+          </>
+        )}
+        <div className="task__meta" onClick={(e) => e.stopPropagation()}>
           <StatusPicker task={task} onChangeStatus={onChangeStatus} />
           <DatePicker task={task} personColor={person.color} onUpdate={onUpdate} />
         </div>
