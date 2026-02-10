@@ -2,22 +2,21 @@ import { useState } from 'react'
 import { format, parseISO } from 'date-fns'
 import { Calendar } from './Calendar'
 import { Popover, PopoverContent, PopoverTrigger } from './Popover'
-import { supabase } from '../supabaseClient'
 
-export function DatePicker({ task, personColor }) {
+export function DatePicker({ task, personColor, onUpdate }) {
   const [open, setOpen] = useState(false)
   const currentDate = task.due ? parseISO(task.due) : undefined
 
-  async function handleSelect(date) {
+  function handleSelect(date) {
     setOpen(false)
     const newDue = date ? format(date, 'yyyy-MM-dd') : null
-    await supabase.from('tasks').update({ due: newDue }).eq('id', task.id)
+    onUpdate(task.id, { due: newDue })
   }
 
-  async function handleClear(e) {
+  function handleClear(e) {
     e.stopPropagation()
     setOpen(false)
-    await supabase.from('tasks').update({ due: null }).eq('id', task.id)
+    onUpdate(task.id, { due: null })
   }
 
   return (

@@ -101,10 +101,16 @@ export default function App() {
     }
   }
 
-  async function cycleStatus(task) {
+  // Optimistic update helper — update local state immediately, then persist
+  function optimisticUpdate(taskId, fields) {
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...fields } : t))
+    supabase.from('tasks').update(fields).eq('id', taskId).then()
+  }
+
+  function cycleStatus(task) {
     const idx = STATUS_CYCLE.indexOf(task.status)
     const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length]
-    await supabase.from('tasks').update({ status: next }).eq('id', task.id)
+    optimisticUpdate(task.id, { status: next })
   }
 
   // Find which person column a task belongs to
@@ -238,6 +244,7 @@ export default function App() {
               tasks={tasks.filter(t => t.person === key)}
               flashIds={flashIds}
               onCycleStatus={cycleStatus}
+              onUpdate={optimisticUpdate}
               isDragActive={!!activeTask}
               isDragTarget={activeTask && activeTask.person !== key}
             />
@@ -259,7 +266,7 @@ export default function App() {
   )
 }
 
-function Column({ personId, person, tasks, flashIds, onCycleStatus, isDragActive, isDragTarget }) {
+function Column({ personId, person, tasks, flashIds, onCycleStatus, onUpdate, isDragActive, isDragTarget }) {
   const [tab, setTab] = useState('todo')
   const { setNodeRef, isOver } = useDroppable({ id: personId })
 
@@ -305,6 +312,7 @@ function Column({ personId, person, tasks, flashIds, onCycleStatus, isDragActive
                 person={person}
                 isFlashing={flashIds.has(task.id)}
                 onCycleStatus={onCycleStatus}
+                onUpdate={onUpdate}
               />
             ))
           )}
@@ -314,7 +322,7 @@ function Column({ personId, person, tasks, flashIds, onCycleStatus, isDragActive
   )
 }
 
-function SortableTask({ task, num, person, isFlashing, onCycleStatus }) {
+function SortableTask({ task, num, person, isFlashing, onCycleStatus, onUpdate }) {
   const {
     attributes, listeners, setNodeRef, transform, transition, isDragging,
   } = useSortable({ id: task.id })
@@ -350,7 +358,7 @@ function SortableTask({ task, num, person, isFlashing, onCycleStatus }) {
           >
             {STATUS_LABELS[task.status] || task.status}
           </button>
-          <DatePicker task={task} personColor={person.color} />
+          <DatePicker task={task} personColor={person.color} onUpdate={onUpdate} />
         </div>
       </div>
       {task.doc && (
