@@ -250,6 +250,15 @@ function Column({ personId, person, tasks, flashIds, onCycleStatus, isDragTarget
 
 function DraggableTask({ task, num, person, isFlashing, onCycleStatus }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id })
+  const [editingDue, setEditingDue] = useState(false)
+
+  async function handleDueChange(e) {
+    e.stopPropagation()
+    const val = e.target.value
+    setEditingDue(false)
+    const newDue = val || null
+    await supabase.from('tasks').update({ due: newDue }).eq('id', task.id)
+  }
 
   return (
     <div
@@ -270,10 +279,32 @@ function DraggableTask({ task, num, person, isFlashing, onCycleStatus }) {
           >
             {STATUS_LABELS[task.status] || task.status}
           </button>
-          {task.due && (
-            <span className="task__due" style={{ color: person.color }}>
-              {formatDue(task.due)}
-            </span>
+          {editingDue ? (
+            <input
+              type="date"
+              className="task__due-input"
+              defaultValue={task.due || ''}
+              autoFocus
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              onBlur={handleDueChange}
+              onKeyDown={(e) => {
+                e.stopPropagation()
+                if (e.key === 'Enter') e.target.blur()
+                if (e.key === 'Escape') setEditingDue(false)
+              }}
+            />
+          ) : (
+            <button
+              className="task__due-btn"
+              style={{ color: task.due ? person.color : '#3f3f46' }}
+              onClick={(e) => { e.stopPropagation(); setEditingDue(true) }}
+              onPointerDown={(e) => e.stopPropagation()}
+              title={task.due ? 'Click to change date' : 'Add due date'}
+            >
+              {task.due ? formatDue(task.due) : '+ date'}
+            </button>
           )}
         </div>
       </div>
