@@ -24,7 +24,7 @@ export function StatusPicker({ task, onChangeStatus }) {
         <button
           className={`task__status task__status--${task.status}`}
           onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); e.preventDefault() }}
+          onClick={(e) => e.stopPropagation()}
         >
           {current.label}
         </button>
