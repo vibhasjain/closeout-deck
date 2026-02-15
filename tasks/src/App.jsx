@@ -199,7 +199,6 @@ function IssueCard({ issue, personColor }) {
         <span className="task__title">{issue.title}</span>
         {issue.description && <p className="task__desc">{issue.description}</p>}
         <div className="task__meta">
-          <span className={`task__status ${statusClass}`}>{statusLabel}</span>
           {issue.project && <span className="task__project">{issue.project.name}</span>}
           {issue.dueDate && (
             <span className="task__due" style={{ color: personColor }}>
