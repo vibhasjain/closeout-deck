@@ -309,10 +309,6 @@ html, body {
   color: #52525b;
   line-height: 1.5;
   margin-bottom: 6px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 .task__meta {
