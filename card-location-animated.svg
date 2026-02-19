@@ -1,0 +1,221 @@
+<svg viewBox="0 0 900 800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-15px); }
+      }
+      @keyframes ripple {
+        0% { transform: scale(0.05); opacity: 1; stroke-width: 4px; }
+        100% { transform: scale(1); opacity: 0; stroke-width: 0.5px; }
+      }
+      @keyframes flow {
+        from { stroke-dashoffset: 40; }
+        to { stroke-dashoffset: 0; }
+      }
+      @keyframes sweep {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      @keyframes flicker {
+        0%, 100% { opacity: 1; }
+        40% { opacity: 1; }
+        50% { opacity: 0.3; }
+        60% { opacity: 1; }
+        70% { opacity: 1; }
+        80% { opacity: 0.5; }
+        90% { opacity: 1; }
+      }
+      @keyframes pinPulse {
+        0% { transform: scale(0.9); opacity: 1; }
+        100% { transform: scale(1.6); opacity: 0; }
+      }
+      @keyframes dotPulse {
+        0%, 100% { transform: scale(1); opacity: 0.5; }
+        50% { transform: scale(1.5); opacity: 1; }
+      }
+      .ring {
+        transform-origin: 460px 525px;
+        animation: ripple 5s infinite linear;
+        vector-effect: non-scaling-stroke;
+      }
+      .dashed {
+        stroke-dasharray: 8 12;
+      }
+      .flow-line {
+        animation: flow 2s linear infinite;
+      }
+      .float-group {
+        animation: float 4s ease-in-out infinite;
+      }
+      .sweep-wedge {
+        transform-origin: 80px 150px;
+        animation: sweep 4s infinite linear;
+      }
+      .flicker-text {
+        animation: flicker 3s infinite;
+      }
+      .pin-pulse {
+        transform-origin: 80px 165px;
+        animation: pinPulse 2s infinite cubic-bezier(0.1, 0.8, 0.3, 1);
+      }
+      .data-dot {
+        transform-origin: center;
+        animation: dotPulse 2s infinite;
+      }
+    </style>
+
+    <!-- Glow Filter for the Location Pin -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Sweep Gradient -->
+    <linearGradient id="sweep-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4ade80" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#4ade80" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Mask to hide grid and rings behind the floating phone -->
+    <mask id="phone-mask">
+      <rect x="0" y="0" width="100%" height="100%" fill="white" />
+      <g class="float-group">
+        <!-- Front and Back faces -->
+        <rect x="0" y="0" width="160" height="340" rx="24" transform="matrix(0.866, 0.5, 0, 1, 380, 150)" fill="black" />
+        <rect x="0" y="0" width="160" height="340" rx="24" transform="matrix(0.866, 0.5, 0, 1, 400, 140)" fill="black" />
+        <!-- Connecting hull polygons to completely occlude the 3D volume -->
+        <polygon points="380,174 400,164 420.78,152 400.78,162" fill="black"/>
+        <polygon points="497.77,218 517.77,208 538.56,244 518.56,254" fill="black"/>
+        <polygon points="380,466 400,456 420.78,492 400.78,502" fill="black"/>
+        <polygon points="497.77,558 517.77,548 538.56,536 518.56,546" fill="black"/>
+        <polygon points="380,174 400,164 400,456 380,466" fill="black"/>
+        <polygon points="518.56,254 538.56,244 538.56,536 518.56,546" fill="black"/>
+        <polygon points="400.78,162 420.78,152 517.77,208 497.77,218" fill="black"/>
+        <polygon points="400.78,502 420.78,492 517.77,548 497.77,558" fill="black"/>
+      </g>
+    </mask>
+
+    <!-- Screen Clip Path for Radar Sweep -->
+    <clipPath id="screen-clip">
+      <rect x="8" y="8" width="144" height="324" rx="16" />
+    </clipPath>
+  </defs>
+
+  <!-- Background Layer (Grid and Radar Rings) masked by the phone -->
+  <g mask="url(#phone-mask)">
+    <!-- Isometric Grid Floor -->
+    <g transform="translate(460, 525) scale(1, 0.5) rotate(45)">
+      <!-- Standard Grid Lines -->
+      <path d="M-400 -350 L400 -350 M-400 -300 L400 -300 M-400 -250 L400 -250 M-400 -200 L400 -200 M-400 -150 L400 -150 M-400 -100 L400 -100 M-400 -50 L400 -50 M-400 0 L400 0 M-400 50 L400 50 M-400 100 L400 100 M-400 150 L400 150 M-400 200 L400 200 M-400 250 L400 250 M-400 300 L400 300 M-400 350 L400 350
+               M-350 -400 L-350 400 M-300 -400 L-300 400 M-250 -400 L-250 400 M-200 -400 L-200 400 M-150 -400 L-150 400 M-100 -400 L-100 400 M-50 -400 L-50 400 M0 -400 L0 400 M50 -400 L50 400 M100 -400 L100 400 M150 -400 L150 400 M200 -400 L200 400 M250 -400 L250 400 M300 -400 L300 400 M350 -400 L350 400" 
+            stroke="#1a9f4a" stroke-width="1.5" fill="none" opacity="0.6" />
+      
+      <!-- Flowing Data Lines -->
+      <path d="M-400 0 L400 0 M0 -400 L0 400 M-400 -200 L400 -200 M200 -400 L200 400" 
+            stroke="#4ade80" stroke-width="2" stroke-dasharray="10 20" fill="none" class="flow-line" opacity="0.8" />
+            
+      <!-- Grid Intersection Nodes -->
+      <circle cx="-200" cy="0" r="4" fill="#22c55e" class="data-dot" style="animation-delay: 0.5s;" />
+      <circle cx="200" cy="-200" r="4" fill="#22c55e" class="data-dot" style="animation-delay: 1.2s;" />
+      <circle cx="0" cy="200" r="4" fill="#22c55e" class="data-dot" style="animation-delay: 0.8s;" />
+      <circle cx="-100" cy="-100" r="4" fill="#22c55e" class="data-dot" style="animation-delay: 2.1s;" />
+    </g>
+
+    <!-- Expanding Radar Rings -->
+    <g fill="none" stroke="#22c55e">
+      <ellipse cx="460" cy="525" rx="380" ry="190" class="ring" style="animation-delay: 0s;" />
+      <ellipse cx="460" cy="525" rx="380" ry="190" class="ring dashed" style="animation-delay: 1s;" />
+      <ellipse cx="460" cy="525" rx="380" ry="190" class="ring" style="animation-delay: 2s;" />
+      <ellipse cx="460" cy="525" rx="380" ry="190" class="ring dashed" style="animation-delay: 3s;" />
+      <ellipse cx="460" cy="525" rx="380" ry="190" class="ring" style="animation-delay: 4s;" />
+    </g>
+  </g>
+
+  <!-- Floating Smartphone 3D Wireframe -->
+  <g class="float-group">
+    
+    <!-- Depth Slices (Back to Front) -->
+    <g fill="none" stroke="#1a9f4a" stroke-width="1.5">
+      <rect x="0" y="0" width="160" height="340" rx="24" transform="matrix(0.866, 0.5, 0, 1, 400, 140)" />
+      <rect x="0" y="0" width="160" height="340" rx="24" transform="matrix(0.866, 0.5, 0, 1, 396, 142)" />
+      <rect x="0" y="0" width="160" height="340" rx="24" transform="matrix(0.866, 0.5, 0, 1, 392, 144)" />
+      <rect x="0" y="0" width="160" height="340" rx="24" transform="matrix(0.866, 0.5, 0, 1, 388, 146)" />
+      <rect x="0" y="0" width="160" height="340" rx="24" transform="matrix(0.866, 0.5, 0, 1, 384, 148)" />
+    </g>
+
+    <!-- 3D Corner Connecting Lines -->
+    <g stroke="#22c55e" stroke-width="2" fill="none">
+      <line x1="400.78" y1="162" x2="420.78" y2="152" />
+      <line x1="497.77" y1="218" x2="517.77" y2="208" />
+      <line x1="380" y1="174" x2="400" y2="164" />
+      <line x1="380" y1="466" x2="400" y2="456" />
+      <line x1="518.56" y1="254" x2="538.56" y2="244" />
+      <line x1="518.56" y1="546" x2="538.56" y2="536" />
+      <line x1="400.78" y1="502" x2="420.78" y2="492" />
+      <line x1="497.77" y1="558" x2="517.77" y2="548" />
+    </g>
+
+    <!-- Front Face (Screen and UI) -->
+    <g transform="matrix(0.866, 0.5, 0, 1, 380, 150)">
+      
+      <!-- Phone Outer Bezel -->
+      <rect x="0" y="0" width="160" height="340" rx="24" fill="none" stroke="#22c55e" stroke-width="2" />
+      
+      <!-- Side Buttons (projected isometrically due to matrix) -->
+      <rect x="160" y="70" width="3" height="30" rx="1.5" fill="none" stroke="#22c55e" stroke-width="1.5" />
+      <rect x="160" y="115" width="3" height="40" rx="1.5" fill="none" stroke="#22c55e" stroke-width="1.5" />
+
+      <!-- Screen Border -->
+      <rect x="8" y="8" width="144" height="324" rx="16" fill="none" stroke="#22c55e" stroke-width="1.5" />
+      
+      <!-- Top Speaker Notch -->
+      <rect x="60" y="16" width="40" height="6" rx="3" fill="none" stroke="#22c55e" stroke-width="1.5" />
+
+      <!-- Screen Contents (Clipped to screen bounds) -->
+      <g clip-path="url(#screen-clip)">
+        
+        <!-- Subtle Screen Map Grid -->
+        <path d="M 8 80 L 152 80 M 8 240 L 152 240 M 40 8 L 40 332 M 120 8 L 120 332" 
+              stroke="#1a9f4a" stroke-width="1" stroke-dasharray="4 4" fill="none" opacity="0.5" />
+        
+        <!-- Concentric UI Rings -->
+        <circle cx="80" cy="150" r="45" fill="none" stroke="#1a9f4a" stroke-width="1.5" />
+        <circle cx="80" cy="150" r="75" fill="none" stroke="#1a9f4a" stroke-width="1.5" stroke-dasharray="6 6" />
+        <circle cx="80" cy="150" r="105" fill="none" stroke="#1a9f4a" stroke-width="1" />
+
+        <!-- Detected Data Points on Screen -->
+        <circle cx="45" cy="115" r="2.5" fill="#4ade80" class="data-dot" style="animation-delay: 0.3s;" />
+        <circle cx="110" cy="190" r="2.5" fill="#4ade80" class="data-dot" style="animation-delay: 1.5s;" />
+        <circle cx="130" cy="90" r="2.5" fill="#4ade80" class="data-dot" style="animation-delay: 0.7s;" />
+
+        <!-- Rotating Radar Sweep -->
+        <path d="M 80 150 L 80 40 A 110 110 0 0 1 157.7 72.3 Z" fill="url(#sweep-grad)" class="sweep-wedge" />
+        
+        <!-- Central Crosshair -->
+        <path d="M 75 150 L 85 150 M 80 145 L 80 155" stroke="#4ade80" stroke-width="1.5" fill="none" />
+
+        <!-- Pulsing Animation Ring Behind Pin -->
+        <path d="M 60 135 A 20 20 0 1 1 100 135 Q 100 155 80 185 Q 60 155 60 135 Z" 
+              fill="none" class="pin-pulse" />
+
+        <!-- Main Location Pin -->
+        <g filter="url(#glow)">
+          <path d="M 60 135 A 20 20 0 1 1 100 135 Q 100 155 80 185 Q 60 155 60 135 Z" 
+                fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linejoin="round" />
+          <circle cx="80" cy="135" r="7" fill="none" stroke="#4ade80" stroke-width="2" />
+        </g>
+
+        <!-- Flickering GPS Coordinates -->
+        <text x="80" y="275" font-family="monospace" font-size="10" fill="#4ade80" text-anchor="middle" class="flicker-text" letter-spacing="1">LAT: 34.0522</text>
+        <text x="80" y="290" font-family="monospace" font-size="10" fill="#4ade80" text-anchor="middle" class="flicker-text" letter-spacing="1" style="animation-delay: 0.5s">LNG: -118.24</text>
+        
+        <!-- Bottom Screen Indicator Line -->
+        <line x1="60" y1="315" x2="100" y2="315" stroke="#22c55e" stroke-width="3" stroke-linecap="round" />
+      </g>
+    </g>
+  </g>
+</svg>

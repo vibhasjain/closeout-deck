@@ -1011,6 +1011,12 @@ p[data-cursor-element-id],
     opacity: 0;
 }
 
+.source-card__animated-svg {
+    width: 85%;
+    height: 85%;
+    pointer-events: none;
+}
+
 /* Updated header with icon inline next to title */
 .source-card__title-row {
     display: flex;
