@@ -117,9 +117,7 @@ export default function App() {
         {columns.map(col => (
           <Column key={col.id} person={col} />
         ))}
-        {unassigned.length > 0 && (
-          <Column person={{ id: '_unassigned', name: 'Unassigned', color: '#71717a', issues: unassigned }} />
-        )}
+        <Column person={{ id: '_unassigned', name: 'Unassigned', color: '#71717a', issues: unassigned }} />
       </main>
     </>
   )
