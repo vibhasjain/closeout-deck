@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solutioning Agent — Game Plan | Closeout Copilot</title>
-    <meta name="description" content="Implementation plan for the AI-powered solutioning agent — the first interaction point for every Closeout Copilot customer.">
+    <meta name="description" content="Implementation plan for the AI-powered solutioning agent — the onboarding experience for every Closeout Copilot customer, old and new.">
     <link rel="icon" type="image/svg+xml" href="../favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -583,7 +583,7 @@
     <div class="hero-badge">Internal Game Plan</div>
     <h1>Solutioning <span class="accent">Agent</span></h1>
     <p class="subtitle">
-        Transform the solutioning page from a static diagram editor into an AI-powered conversational agent &mdash; the first interaction point for every Closeout Copilot customer. Five minutes from "hello" to a visual architecture blueprint.
+        Onboard old and new customers onto Closeout Copilot &mdash; the product that unifies everything HyperTrack does. An AI-powered conversational agent that discovers how a staffing firm operates and generates a visual architecture blueprint in five minutes.
     </p>
 
     <div class="phase-nav">
@@ -604,12 +604,19 @@
         <h2>What Was Decided</h2>
 
         <div class="callout green">
-            <div class="callout-title">The solutioning agent IS the Closeout Copilot</div>
-            <p>Not a separate tool. It's the first conversation a customer has with the product. Trust-building starts here. The agent is trained like a human solutioning hire &mdash; "Just the way we'd train a new SE to do solutioning... now we're just training an agent."</p>
+            <div class="callout-title">The solutioning agent IS customer onboarding</div>
+            <p>Not a separate tool. It's how every customer &mdash; new prospects and existing accounts &mdash; gets onboarded onto Closeout Copilot. Trust-building starts here. The agent is trained like a human solutioning hire &mdash; "Just the way we'd train a new SE to do solutioning... now we're just training an agent."</p>
         </div>
 
-        <h3>The Framing: Closeout</h3>
-        <p>Opening question: <strong>"How can I help you close out faster?"</strong> &mdash; where "closeout" = getting paid by customers error-free + paying workers error-free. Everything ladders up to this: scheduling, meal breaks, no-shows, time &amp; attendance, reconciliation, payments.</p>
+        <h3>The Framing: Automating the Middle &amp; Back Office</h3>
+        <p>Closeout Copilot unifies everything HyperTrack does: automating operations tasks in the middle and back office for staffing firms. The core value proposition &mdash; billing customers and paying workers faster and error-free.</p>
+        <p>Opening question: <strong>"How can I help you bill your customers and pay your workers faster?"</strong></p>
+        <p>Alternate framings the agent can use depending on context:</p>
+        <ul>
+            <li>"How can I automate your operations tasks in the middle and back office?"</li>
+            <li>"How can I help you close out faster?" &mdash; once the customer is familiar with the closeout concept</li>
+        </ul>
+        <p>The agent should discover additional natural openings through conversation &mdash; let the customer's own language guide the framing. Everything ladders up: scheduling, meal breaks, no-shows, time &amp; attendance, reconciliation, payments.</p>
         <p><strong>Out of scope</strong> (agent should deflect): hiring workers, winning contracts, ATS, payroll systems.</p>
 
         <h3>Three-Phase Solutioning Flow</h3>
@@ -622,7 +629,7 @@
             <div class="flow-step"><span class="step-num">3</span> Blueprint Generation</div>
         </div>
 
-        <p><strong>Phase 1 &mdash; Qualification:</strong> Open-ended conversation. "Are you in the business of managing workers going to facilities?" If no &rarr; deflect ("go to Gusto", even "delete your account"). If yes &rarr; proceed.</p>
+        <p><strong>Phase 1 &mdash; Qualification:</strong> Open-ended conversation. "Do you manage workers going to customer sites or facilities?" If no &rarr; deflect ("go to Gusto", even "delete your account"). If yes &rarr; discover how they bill customers and pay workers today.</p>
 
         <p><strong>Phase 2 &mdash; Situation Discovery:</strong> Targeted questions while diagram boxes appear empty. "Is it a native app? What framework? What's your system of record for timesheets?" Quick-click multiple choice, minimal cognitive load.</p>
 
@@ -886,12 +893,13 @@ interface DiagramConnection {
         <div class="phase-card p5">
             <div class="phase-tag">Phase 5</div>
             <h3>Qualification Intelligence</h3>
-            <p>Agent actually qualifies and routes effectively. Trained with HyperTrack's qualification criteria, deflection messages, product routing, and existing customer detection.</p>
+            <p>Agent actually qualifies and routes effectively. Trained with HyperTrack's qualification criteria, deflection messages, product routing, and existing customer detection. Handles both new prospects and existing customers being onboarded onto Closeout Copilot.</p>
             <ul>
                 <li>Train agent with HyperTrack's qualification criteria</li>
                 <li>Deflection messages with alternative recommendations</li>
                 <li>Product routing (Closeout Copilot vs. location tracking vs. other)</li>
                 <li>Existing customer detection (pre-populate from production data)</li>
+                <li>Tailored onboarding paths for existing HyperTrack accounts vs. net-new prospects</li>
             </ul>
         </div>
     </div>
