@@ -1,759 +1,830 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Solutioning Agent — Game Plan | Closeout Copilot</title>
-    <meta name="description" content="Implementation plan for the AI-powered solutioning agent — the onboarding experience for every Closeout Copilot customer, old and new.">
-    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --gray-950: #0a0a0b;
-            --gray-900: #111113;
-            --gray-850: #161618;
-            --gray-800: #1c1c1f;
-            --gray-750: #232326;
-            --gray-700: #2a2a2e;
-            --gray-600: #3a3a40;
-            --gray-500: #52525b;
-            --gray-400: #71717a;
-            --gray-300: #a1a1aa;
-            --gray-200: #d4d4d8;
-            --gray-100: #f4f4f5;
-            --green-500: #22c55e;
-            --green-400: #4ade80;
-            --green-300: #86efac;
-            --green-600: #16a34a;
-            --green-glow: rgba(34, 197, 94, 0.15);
-            --green-glow-strong: rgba(34, 197, 94, 0.3);
-            --purple-500: #a855f7;
-            --purple-400: #c084fc;
-            --purple-glow: rgba(168, 85, 247, 0.15);
-            --blue-500: #3b82f6;
-            --blue-400: #60a5fa;
-            --amber-500: #f59e0b;
-            --amber-400: #fbbf24;
-            --font-display: 'Space Grotesk', sans-serif;
-            --font-body: 'Inter', sans-serif;
-            --font-mono: 'JetBrains Mono', monospace;
-        }
-
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-        html { font-size: 16px; scroll-behavior: smooth; }
-
-        body {
-            font-family: var(--font-body);
-            background: var(--gray-950);
-            color: var(--gray-200);
-            line-height: 1.7;
-            overflow-x: hidden;
-        }
-
-        /* ---- Navigation ---- */
-        .top-bar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 1rem 2rem;
-            background: rgba(10, 10, 11, 0.85);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--gray-800);
-        }
-
-        .top-bar a {
-            color: var(--gray-300);
-            text-decoration: none;
-            font-size: 0.8rem;
-            font-weight: 500;
-            transition: color 0.2s;
-        }
-        .top-bar a:hover { color: var(--green-400); }
-
-        .logo-link {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .logo-link img {
-            width: 32px;
-            height: 32px;
-        }
-
-        .logo-link span {
-            font-family: var(--font-display);
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: var(--gray-300);
-        }
-
-        /* ---- Hero ---- */
-        .hero {
-            padding: 8rem 2rem 4rem;
-            max-width: 900px;
-            margin: 0 auto;
-        }
-
-        .hero-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 0.35rem 0.85rem;
-            background: var(--green-glow);
-            border: 1px solid rgba(34, 197, 94, 0.25);
-            border-radius: 100px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: var(--green-400);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 1.5rem;
-        }
-
-        .hero h1 {
-            font-family: var(--font-display);
-            font-size: clamp(2rem, 5vw, 3.2rem);
-            font-weight: 700;
-            color: var(--gray-100);
-            line-height: 1.15;
-            margin-bottom: 1rem;
-        }
-
-        .hero h1 .accent { color: var(--green-400); }
-
-        .hero .subtitle {
-            font-size: 1.1rem;
-            color: var(--gray-400);
-            max-width: 640px;
-            margin-bottom: 2.5rem;
-        }
-
-        /* ---- Phase navigation pills ---- */
-        .phase-nav {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-bottom: 3rem;
-        }
-
-        .phase-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 0.45rem 1rem;
-            background: var(--gray-850);
-            border: 1px solid var(--gray-700);
-            border-radius: 8px;
-            font-size: 0.78rem;
-            font-weight: 500;
-            color: var(--gray-300);
-            text-decoration: none;
-            transition: all 0.2s;
-        }
-
-        .phase-pill:hover {
-            border-color: var(--green-500);
-            color: var(--green-400);
-            background: var(--green-glow);
-        }
-
-        .phase-pill .num {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 20px;
-            height: 20px;
-            border-radius: 5px;
-            background: var(--gray-700);
-            font-size: 0.65rem;
-            font-weight: 700;
-            color: var(--gray-400);
-        }
-
-        .phase-pill:hover .num {
-            background: var(--green-glow-strong);
-            color: var(--green-400);
-        }
-
-        /* ---- Content sections ---- */
-        .content {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 0 2rem 6rem;
-        }
-
-        .section {
-            margin-bottom: 4rem;
-        }
-
-        .section-label {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.65rem;
-            font-weight: 700;
-            color: var(--gray-500);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 0.75rem;
-        }
-
-        .section h2 {
-            font-family: var(--font-display);
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: var(--gray-100);
-            margin-bottom: 1rem;
-            line-height: 1.25;
-        }
-
-        .section h3 {
-            font-family: var(--font-display);
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: var(--gray-200);
-            margin-top: 2rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .section p {
-            color: var(--gray-300);
-            margin-bottom: 1rem;
-        }
-
-        .section p strong {
-            color: var(--gray-100);
-            font-weight: 600;
-        }
-
-        .section ul, .section ol {
-            padding-left: 1.25rem;
-            margin-bottom: 1rem;
-        }
-
-        .section li {
-            color: var(--gray-300);
-            margin-bottom: 0.4rem;
-        }
-
-        .section li strong {
-            color: var(--gray-100);
-        }
-
-        /* ---- Callout cards ---- */
-        .callout {
-            background: var(--gray-850);
-            border: 1px solid var(--gray-700);
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin: 1.5rem 0;
-        }
-
-        .callout.green {
-            border-color: rgba(34, 197, 94, 0.25);
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.06), transparent);
-        }
-
-        .callout.purple {
-            border-color: rgba(168, 85, 247, 0.25);
-            background: linear-gradient(135deg, rgba(168, 85, 247, 0.06), transparent);
-        }
-
-        .callout.blue {
-            border-color: rgba(59, 130, 246, 0.25);
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.06), transparent);
-        }
-
-        .callout-title {
-            font-family: var(--font-display);
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: var(--gray-100);
-            margin-bottom: 0.5rem;
-        }
-
-        .callout p {
-            font-size: 0.9rem;
-            color: var(--gray-400);
-            margin-bottom: 0;
-        }
-
-        /* ---- Code blocks ---- */
-        pre {
-            background: var(--gray-900);
-            border: 1px solid var(--gray-700);
-            border-radius: 10px;
-            padding: 1.25rem;
-            overflow-x: auto;
-            margin: 1rem 0 1.5rem;
-            font-family: var(--font-mono);
-            font-size: 0.8rem;
-            line-height: 1.65;
-            color: var(--gray-300);
-        }
-
-        code {
-            font-family: var(--font-mono);
-            font-size: 0.85em;
-            background: var(--gray-800);
-            padding: 0.15em 0.4em;
-            border-radius: 4px;
-            color: var(--green-400);
-        }
-
-        pre code {
-            background: none;
-            padding: 0;
-            color: inherit;
-        }
-
-        .code-label {
-            font-size: 0.65rem;
-            font-weight: 600;
-            color: var(--gray-500);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 0.5rem;
-        }
-
-        /* ---- Tables ---- */
-        .table-wrap {
-            overflow-x: auto;
-            margin: 1rem 0 1.5rem;
-            border-radius: 10px;
-            border: 1px solid var(--gray-700);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.85rem;
-        }
-
-        thead {
-            background: var(--gray-850);
-        }
-
-        th {
-            text-align: left;
-            padding: 0.75rem 1rem;
-            font-weight: 600;
-            color: var(--gray-300);
-            border-bottom: 1px solid var(--gray-700);
-            white-space: nowrap;
-        }
-
-        td {
-            padding: 0.65rem 1rem;
-            color: var(--gray-400);
-            border-bottom: 1px solid var(--gray-800);
-            vertical-align: top;
-        }
-
-        tr:last-child td {
-            border-bottom: none;
-        }
-
-        td:first-child {
-            color: var(--gray-200);
-            font-weight: 500;
-        }
-
-        /* ---- Diagram (five-box) ---- */
-        .five-box {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 1rem;
-            margin: 2rem 0;
-        }
-
-        .box {
-            background: var(--gray-850);
-            border: 1px solid var(--gray-700);
-            border-radius: 10px;
-            padding: 1.25rem 1rem;
-            text-align: center;
-        }
-
-        .box-num {
-            font-family: var(--font-mono);
-            font-size: 0.65rem;
-            color: var(--gray-500);
-            margin-bottom: 0.5rem;
-        }
-
-        .box-label {
-            font-family: var(--font-display);
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: var(--gray-100);
-            margin-bottom: 0.35rem;
-        }
-
-        .box-desc {
-            font-size: 0.72rem;
-            color: var(--gray-500);
-            line-height: 1.4;
-        }
-
-        .box.ht {
-            border-color: rgba(34, 197, 94, 0.3);
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.08), var(--gray-850));
-        }
-
-        /* ---- Phase cards ---- */
-        .phase-card {
-            background: var(--gray-900);
-            border: 1px solid var(--gray-700);
-            border-radius: 14px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .phase-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-        }
-
-        .phase-card.p1::before { background: var(--green-500); }
-        .phase-card.p2::before { background: var(--purple-500); }
-        .phase-card.p3::before { background: var(--blue-500); }
-        .phase-card.p4::before { background: var(--amber-500); }
-        .phase-card.p5::before { background: #ef4444; }
-
-        .phase-card .phase-tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.65rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 0.75rem;
-        }
-
-        .phase-card.p1 .phase-tag { color: var(--green-400); }
-        .phase-card.p2 .phase-tag { color: var(--purple-400); }
-        .phase-card.p3 .phase-tag { color: var(--blue-400); }
-        .phase-card.p4 .phase-tag { color: var(--amber-400); }
-        .phase-card.p5 .phase-tag { color: #f87171; }
-
-        .phase-card h3 {
-            font-family: var(--font-display);
-            font-size: 1.35rem;
-            font-weight: 700;
-            color: var(--gray-100);
-            margin-bottom: 0.75rem;
-            margin-top: 0;
-        }
-
-        .phase-card p {
-            color: var(--gray-400);
-            font-size: 0.9rem;
-        }
-
-        .file-list {
-            margin: 1rem 0;
-            padding: 0;
-            list-style: none;
-        }
-
-        .file-list li {
-            display: flex;
-            align-items: baseline;
-            gap: 0.5rem;
-            padding: 0.35rem 0;
-            font-size: 0.82rem;
-            border-bottom: 1px solid var(--gray-850);
-        }
-
-        .file-list .file-path {
-            font-family: var(--font-mono);
-            font-size: 0.75rem;
-            color: var(--green-400);
-            white-space: nowrap;
-        }
-
-        .file-list .file-desc {
-            color: var(--gray-500);
-            font-size: 0.75rem;
-        }
-
-        .file-list .file-badge {
-            display: inline-flex;
-            padding: 0.1rem 0.4rem;
-            background: var(--gray-800);
-            border-radius: 4px;
-            font-size: 0.6rem;
-            font-weight: 600;
-            color: var(--gray-500);
-            text-transform: uppercase;
-            white-space: nowrap;
-        }
-
-        .file-list .file-badge.new {
-            background: var(--green-glow);
-            color: var(--green-400);
-        }
-
-        /* ---- Flow diagram ---- */
-        .flow {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-            margin: 1.5rem 0;
-        }
-
-        .flow-step {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 0.5rem 0.85rem;
-            background: var(--gray-850);
-            border: 1px solid var(--gray-700);
-            border-radius: 8px;
-            font-size: 0.78rem;
-            color: var(--gray-300);
-        }
-
-        .flow-step .step-num {
-            font-family: var(--font-mono);
-            font-size: 0.65rem;
-            color: var(--gray-500);
-        }
-
-        .flow-arrow {
-            color: var(--gray-600);
-            font-size: 1.2rem;
-        }
-
-        /* ---- Divider ---- */
-        hr {
-            border: none;
-            border-top: 1px solid var(--gray-800);
-            margin: 3rem 0;
-        }
-
-        /* ---- Responsive ---- */
-        @media (max-width: 768px) {
-            .hero { padding: 6rem 1.25rem 2rem; }
-            .content { padding: 0 1.25rem 4rem; }
-            .five-box { grid-template-columns: repeat(2, 1fr); }
-            .five-box .box:last-child { grid-column: span 2; }
-            .top-bar { padding: 0.75rem 1.25rem; }
-            .phase-card { padding: 1.5rem; }
-            pre { font-size: 0.72rem; padding: 1rem; }
-        }
-
-        @media (max-width: 480px) {
-            .five-box { grid-template-columns: 1fr; }
-            .five-box .box:last-child { grid-column: span 1; }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solutioning Product — Synthesis & Game Plan</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface-2: #1c1c1c;
+    --surface-3: #242424;
+    --border: #2a2a2a;
+    --border-subtle: #1e1e1e;
+    --text: #e8e8e8;
+    --text-secondary: #a0a0a0;
+    --text-muted: #666;
+    --accent-green: #22c55e;
+    --accent-green-dim: #15803d;
+    --accent-green-bg: rgba(34, 197, 94, 0.08);
+    --accent-blue: #3b82f6;
+    --accent-blue-dim: #1d4ed8;
+    --accent-blue-bg: rgba(59, 130, 246, 0.08);
+    --accent-purple: #a855f7;
+    --accent-purple-dim: #7e22ce;
+    --accent-purple-bg: rgba(168, 85, 247, 0.08);
+    --accent-amber: #f59e0b;
+    --accent-amber-bg: rgba(245, 158, 11, 0.08);
+    --accent-red: #ef4444;
+    --accent-cyan: #06b6d4;
+    --accent-cyan-bg: rgba(6, 182, 212, 0.08);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Hero */
+  .hero {
+    padding: 80px 0 60px;
+    text-align: center;
+    background: linear-gradient(180deg, rgba(34,197,94,0.06) 0%, transparent 100%);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .hero-badge {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 100px;
+    background: var(--accent-green-bg);
+    border: 1px solid rgba(34,197,94,0.2);
+    color: var(--accent-green);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .hero h1 {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -1.5px;
+    line-height: 1.15;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, #fff 0%, #a0a0a0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero p {
+    font-size: 18px;
+    color: var(--text-secondary);
+    max-width: 640px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+  .hero-date {
+    margin-top: 24px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  /* Container */
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  /* Section */
+  .section {
+    padding: 64px 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .section:last-child { border-bottom: none; }
+
+  .section-label {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .section-label.synthesis { background: var(--accent-blue-bg); color: var(--accent-blue); border: 1px solid rgba(59,130,246,0.15); }
+  .section-label.design { background: var(--accent-purple-bg); color: var(--accent-purple); border: 1px solid rgba(168,85,247,0.15); }
+  .section-label.architecture { background: var(--accent-cyan-bg); color: var(--accent-cyan); border: 1px solid rgba(6,182,212,0.15); }
+  .section-label.roadmap { background: var(--accent-green-bg); color: var(--accent-green); border: 1px solid rgba(34,197,94,0.15); }
+  .section-label.amber { background: var(--accent-amber-bg); color: var(--accent-amber); border: 1px solid rgba(245,158,11,0.15); }
+
+  h2 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 12px;
+  }
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    margin-top: 32px;
+    color: var(--text);
+  }
+  .section > .container > p {
+    color: var(--text-secondary);
+    font-size: 15px;
+    margin-bottom: 24px;
+  }
+
+  /* Cards */
+  .card-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .card-grid.three-col { grid-template-columns: 1fr 1fr 1fr; }
+  .card-grid.single-col { grid-template-columns: 1fr; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: #333; }
+
+  .card-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    margin-bottom: 14px;
+  }
+  .card-icon.green { background: var(--accent-green-bg); border: 1px solid rgba(34,197,94,0.15); }
+  .card-icon.blue { background: var(--accent-blue-bg); border: 1px solid rgba(59,130,246,0.15); }
+  .card-icon.purple { background: var(--accent-purple-bg); border: 1px solid rgba(168,85,247,0.15); }
+  .card-icon.amber { background: var(--accent-amber-bg); border: 1px solid rgba(245,158,11,0.15); }
+  .card-icon.cyan { background: var(--accent-cyan-bg); border: 1px solid rgba(6,182,212,0.15); }
+
+  .card h4 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .card p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  /* Numbered list cards */
+  .numbered-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 12px 0;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+  }
+  .numbered-card .num {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    background: var(--accent-green-bg);
+    color: var(--accent-green);
+    border: 1px solid rgba(34,197,94,0.2);
+  }
+  .numbered-card .content h4 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .numbered-card .content p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  /* Quote callout */
+  .callout {
+    background: var(--surface);
+    border-left: 3px solid var(--accent-green);
+    border-radius: 0 10px 10px 0;
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+  .callout.blue { border-left-color: var(--accent-blue); }
+  .callout.purple { border-left-color: var(--accent-purple); }
+  .callout.amber { border-left-color: var(--accent-amber); }
+  .callout p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+  }
+  .callout .quote {
+    font-style: italic;
+    color: var(--text);
+    font-size: 15px;
+  }
+  .callout .attribution {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 8px;
+  }
+
+  /* Five-box diagram */
+  .five-box {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin: 32px 0;
+    padding: 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+  }
+  .five-box-row {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+  }
+  .five-box-item {
+    padding: 14px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: center;
+    min-width: 140px;
+    border: 1.5px solid;
+  }
+  .five-box-item.user {
+    background: rgba(59,130,246,0.06);
+    border-color: rgba(59,130,246,0.25);
+    color: var(--accent-blue);
+  }
+  .five-box-item.ht {
+    background: rgba(34,197,94,0.06);
+    border-color: rgba(34,197,94,0.25);
+    color: var(--accent-green);
+  }
+  .five-box-item.backend {
+    background: rgba(168,85,247,0.06);
+    border-color: rgba(168,85,247,0.25);
+    color: var(--accent-purple);
+  }
+  .five-box-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .five-box-arrow {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  /* Design language table */
+  .design-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 24px 0;
+    font-size: 13px;
+  }
+  .design-table th {
+    text-align: left;
+    padding: 12px 16px;
+    background: var(--surface-2);
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+  }
+  .design-table th:first-child { border-radius: 8px 0 0 0; }
+  .design-table th:last-child { border-radius: 0 8px 0 0; }
+  .design-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: top;
+    color: var(--text-secondary);
+  }
+  .design-table tr:last-child td { border-bottom: none; }
+  .design-table .type-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .type-badge.person { background: rgba(245,158,11,0.1); color: var(--accent-amber); border: 1px solid rgba(245,158,11,0.2); }
+  .type-badge.app { background: rgba(59,130,246,0.1); color: var(--accent-blue); border: 1px solid rgba(59,130,246,0.2); }
+  .type-badge.backend { background: rgba(168,85,247,0.1); color: var(--accent-purple); border: 1px solid rgba(168,85,247,0.2); }
+  .type-badge.sdk { background: rgba(6,182,212,0.1); color: var(--accent-cyan); border: 1px solid rgba(6,182,212,0.2); }
+  .type-badge.cloud { background: rgba(156,163,175,0.1); color: #9ca3af; border: 1px solid rgba(156,163,175,0.2); }
+  .type-badge.hypertrack { background: rgba(34,197,94,0.1); color: var(--accent-green); border: 1px solid rgba(34,197,94,0.2); }
+  .type-badge.ai { background: rgba(168,85,247,0.1); color: var(--accent-purple); border: 1px solid rgba(168,85,247,0.2); }
+  .type-badge.output { background: rgba(239,68,68,0.1); color: var(--accent-red); border: 1px solid rgba(239,68,68,0.2); }
+
+  /* Phase timeline */
+  .phase-timeline {
+    position: relative;
+    margin: 32px 0;
+    padding-left: 40px;
+  }
+  .phase-timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg, var(--accent-green) 0%, var(--accent-blue) 30%, var(--accent-purple) 60%, var(--accent-amber) 80%, var(--accent-red) 100%);
+    border-radius: 2px;
+  }
+  .phase-item {
+    position: relative;
+    margin-bottom: 32px;
+    padding: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .phase-item:last-child { margin-bottom: 0; }
+  .phase-item::before {
+    content: '';
+    position: absolute;
+    left: -33px;
+    top: 28px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid;
+    background: var(--bg);
+  }
+  .phase-item:nth-child(1)::before { border-color: var(--accent-green); }
+  .phase-item:nth-child(2)::before { border-color: var(--accent-blue); }
+  .phase-item:nth-child(3)::before { border-color: var(--accent-purple); }
+  .phase-item:nth-child(4)::before { border-color: var(--accent-amber); }
+  .phase-item:nth-child(5)::before { border-color: var(--accent-red); }
+
+  .phase-item .phase-num {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 8px;
+  }
+  .phase-item:nth-child(1) .phase-num { color: var(--accent-green); }
+  .phase-item:nth-child(2) .phase-num { color: var(--accent-blue); }
+  .phase-item:nth-child(3) .phase-num { color: var(--accent-purple); }
+  .phase-item:nth-child(4) .phase-num { color: var(--accent-amber); }
+  .phase-item:nth-child(5) .phase-num { color: var(--accent-red); }
+
+  .phase-item h4 {
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .phase-item p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+  }
+  .phase-item ul {
+    margin: 10px 0 0;
+    padding-left: 18px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.8;
+  }
+  .phase-item li { margin-bottom: 2px; }
+
+  /* Code blocks */
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 2px 6px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--accent-cyan);
+  }
+
+  pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    overflow-x: auto;
+    line-height: 1.7;
+    color: var(--text-secondary);
+    margin: 16px 0;
+  }
+
+  /* Scope lists */
+  .scope-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .scope-list {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .scope-list h4 {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .scope-list ul {
+    list-style: none;
+    padding: 0;
+  }
+  .scope-list li {
+    font-size: 13px;
+    color: var(--text-secondary);
+    padding: 4px 0;
+    padding-left: 20px;
+    position: relative;
+  }
+  .scope-list li::before {
+    position: absolute;
+    left: 0;
+    font-size: 13px;
+  }
+  .scope-list.in li::before { content: '\2713'; color: var(--accent-green); }
+  .scope-list.out li::before { content: '\2717'; color: var(--accent-red); }
+
+  /* Edge type table */
+  .edge-strip {
+    display: flex;
+    gap: 12px;
+    margin: 20px 0;
+    flex-wrap: wrap;
+  }
+  .edge-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .edge-chip .line {
+    width: 24px;
+    height: 2px;
+    border-radius: 1px;
+  }
+  .edge-chip .line.solid { background: var(--accent-blue); }
+  .edge-chip .line.dashed { background: repeating-linear-gradient(90deg, var(--accent-cyan) 0px, var(--accent-cyan) 4px, transparent 4px, transparent 7px); }
+  .edge-chip .line.dotted { background: repeating-linear-gradient(90deg, var(--accent-amber) 0px, var(--accent-amber) 2px, transparent 2px, transparent 5px); }
+  .edge-chip .line.animated { background: linear-gradient(90deg, transparent, var(--accent-green), transparent); }
+  .edge-chip .line.bolt { background: var(--accent-purple); clip-path: polygon(0 0, 60% 0, 40% 40%, 100% 40%, 30% 100%, 50% 55%, 0 55%); height: 12px; width: 12px; }
+
+  /* Flow diagram */
+  .flow-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 24px 0;
+  }
+  .flow-step {
+    display: flex;
+    align-items: stretch;
+    gap: 16px;
+    padding: 16px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .flow-step .step-num {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent-green);
+    min-width: 18px;
+  }
+  .flow-step .step-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+  .flow-step .step-text strong {
+    color: var(--text);
+  }
+
+  /* Print styles */
+  @media print {
+    body { background: #fff; color: #111; }
+    .hero { background: none; padding: 40px 0; }
+    .hero h1 { background: none; -webkit-text-fill-color: #111; }
+    .card, .numbered-card, .phase-item, .scope-list, .five-box {
+      background: #fafafa;
+      border-color: #ddd;
+    }
+    .callout { background: #f8f8f8; }
+    .section { page-break-inside: avoid; }
+  }
+</style>
 </head>
 <body>
 
-<!-- Top bar -->
-<div class="top-bar">
-    <a href="../" class="logo-link">
-        <img src="../logo-small.svg" alt="Closeout Copilot">
-        <span>Closeout Copilot</span>
-    </a>
-    <a href="../">Back to Deck</a>
-</div>
-
-<!-- Hero -->
+<!-- ==================== HERO ==================== -->
 <div class="hero">
-    <div class="hero-badge">Internal Game Plan</div>
-    <h1>Solutioning <span class="accent">Agent</span></h1>
-    <p class="subtitle">
-        Onboard old and new customers onto Closeout Copilot &mdash; the product that unifies everything HyperTrack does. An AI-powered conversational agent that discovers how a staffing firm operates and generates a visual architecture blueprint in five minutes.
-    </p>
-
-    <div class="phase-nav">
-        <a href="#decisions" class="phase-pill">Key Decisions</a>
-        <a href="#five-box" class="phase-pill">Five-Box Model</a>
-        <a href="#design" class="phase-pill">Design Language</a>
-        <a href="#architecture" class="phase-pill">Architecture</a>
-        <a href="#phases" class="phase-pill">Phases</a>
-    </div>
+  <div class="container">
+    <div class="hero-badge">Product Strategy</div>
+    <h1>Solutioning Product<br>Synthesis & Game Plan</h1>
+    <p>From three team conversations to a concrete product vision: an AI-powered solutioning agent that replaces human solutions engineers, powered by Claude Agent SDK.</p>
+    <div class="hero-date">Closeout Copilot &middot; March 19, 2026</div>
+  </div>
 </div>
 
-<!-- Content -->
-<div class="content">
+<!-- ==================== THE BIG BET ==================== -->
+<div class="section">
+  <div class="container">
+    <span class="section-label synthesis">Synthesis</span>
+    <h2>The Big Bet</h2>
+    <p>An AI agent replaces human solutions engineers. Available 24/7 in every dashboard. Trained like you'd train a new hire. The solutioning agent <strong>IS</strong> customer onboarding &mdash; it's how every customer, new prospects and existing accounts, gets onboarded onto Closeout Copilot.</p>
 
-    <!-- ============ KEY DECISIONS ============ -->
-    <div class="section" id="decisions">
-        <div class="section-label">Synthesis</div>
-        <h2>What Was Decided</h2>
-
-        <div class="callout green">
-            <div class="callout-title">The solutioning agent IS customer onboarding</div>
-            <p>Not a separate tool. It's how every customer &mdash; new prospects and existing accounts &mdash; gets onboarded onto Closeout Copilot. Trust-building starts here. The agent is trained like a human solutioning hire &mdash; "Just the way we'd train a new SE to do solutioning... now we're just training an agent."</p>
-        </div>
-
-        <h3>The Framing: Automating the Middle &amp; Back Office</h3>
-        <p>Closeout Copilot unifies everything HyperTrack does: automating operations tasks in the middle and back office for staffing firms. The core value proposition &mdash; billing customers and paying workers faster and error-free.</p>
-        <p>Opening question: <strong>"How can I help you bill your customers and pay your workers faster?"</strong></p>
-        <p>Alternate framings the agent can use depending on context:</p>
-        <ul>
-            <li>"How can I automate your operations tasks in the middle and back office?"</li>
-            <li>"How can I help you close out faster?" &mdash; once the customer is familiar with the closeout concept</li>
-        </ul>
-        <p>The agent should discover additional natural openings through conversation &mdash; let the customer's own language guide the framing. Everything ladders up: scheduling, meal breaks, no-shows, time &amp; attendance, reconciliation, payments.</p>
-        <p><strong>Out of scope</strong> (agent should deflect): hiring workers, winning contracts, ATS, payroll systems.</p>
-
-        <h3>Three-Phase Solutioning Flow</h3>
-
-        <div class="flow">
-            <div class="flow-step"><span class="step-num">1</span> Qualification</div>
-            <span class="flow-arrow">&rarr;</span>
-            <div class="flow-step"><span class="step-num">2</span> Situation Discovery</div>
-            <span class="flow-arrow">&rarr;</span>
-            <div class="flow-step"><span class="step-num">3</span> Blueprint Generation</div>
-        </div>
-
-        <p><strong>Phase 1 &mdash; Qualification:</strong> Open-ended conversation. "Do you manage workers going to customer sites or facilities?" If no &rarr; deflect ("go to Gusto", even "delete your account"). If yes &rarr; discover how they bill customers and pay workers today.</p>
-
-        <p><strong>Phase 2 &mdash; Situation Discovery:</strong> Targeted questions while diagram boxes appear empty. "Is it a native app? What framework? What's your system of record for timesheets?" Quick-click multiple choice, minimal cognitive load.</p>
-
-        <p><strong>Phase 3 &mdash; Blueprint Generation:</strong> Five boxes populate with customer-specific details. Arrows between them show integrations. Each component links to docs.</p>
-
-        <h3>Baseline Requirements the Agent Must Qualify</h3>
-        <ul>
-            <li>Authority and ability to communicate with workers (app, phone, etc.)</li>
-            <li>Authority and ability to talk to customers/facilities</li>
-            <li>Knowledge of who's supposed to visit which facility when (shift intent)</li>
-        </ul>
-
-        <h3>Input Methods</h3>
-        <ul>
-            <li><strong>Conversation</strong> (primary)</li>
-            <li><strong>Business website URL</strong> (scrape for context)</li>
-            <li><strong>File upload</strong> (spreadsheets, presentations, PDFs)</li>
-        </ul>
-
-        <h3>Key UX Decisions</h3>
-        <ul>
-            <li><strong>Conversation over wizards</strong> &mdash; "We need to get out of the wizard thinking mode."</li>
-            <li><strong>Progressive disclosure</strong> &mdash; conversation &rarr; empty boxes appear &rarr; boxes fill in</li>
-            <li><strong>Split screen</strong> &mdash; conversation at bottom (~25%), diagram at top (~75%)</li>
-            <li><strong>One question at a time</strong> with quick-click answers</li>
-            <li><strong>Slack notification</strong> when a blueprint completes</li>
-        </ul>
+    <div class="callout">
+      <p class="quote">"Just the way we'd train a new SE to do solutioning &mdash; now we're just training an agent."</p>
+      <p class="attribution">&mdash; Kashyap</p>
     </div>
 
-    <hr>
-
-    <!-- ============ FIVE-BOX MODEL ============ -->
-    <div class="section" id="five-box">
-        <div class="section-label">Canonical Architecture</div>
-        <h2>The Five-Box Model</h2>
-        <p>Every customer maps to the same 5 system components. Three user types: <strong>Worker, Customer/Facility, Ops</strong>. Two backends (theirs + ours). The language inside boxes is generative per customer; the structure is constant.</p>
-
-        <div class="five-box">
-            <div class="box">
-                <div class="box-num">01</div>
-                <div class="box-label">Customer Backend</div>
-                <div class="box-desc">Their servers, APIs, business logic</div>
-            </div>
-            <div class="box ht">
-                <div class="box-num">02</div>
-                <div class="box-label">HyperTrack Backend</div>
-                <div class="box-desc">Our platform services</div>
-            </div>
-            <div class="box">
-                <div class="box-num">03</div>
-                <div class="box-label">Worker App</div>
-                <div class="box-desc">Mobile/web &mdash; theirs or ours</div>
-            </div>
-            <div class="box">
-                <div class="box-num">04</div>
-                <div class="box-label">Customer App</div>
-                <div class="box-desc">Their customer-facing interface</div>
-            </div>
-            <div class="box">
-                <div class="box-num">05</div>
-                <div class="box-label">Ops App</div>
-                <div class="box-desc">Operations dashboard</div>
-            </div>
-        </div>
+    <div class="callout blue">
+      <p class="quote">"Gone are the days where we have to break it out into sequential steps. That's where we were constantly getting stuck."</p>
+      <p class="attribution">&mdash; Kashyap, on why conversation beats wizards</p>
     </div>
 
-    <hr>
+    <h3>The Framing: Automating the Middle &amp; Back Office</h3>
+    <p>Closeout Copilot unifies everything HyperTrack does: automating operations tasks in the middle and back office for staffing firms. The core value proposition &mdash; billing customers and paying workers faster and error-free.</p>
+    <p>Every session starts with:</p>
+    <div class="callout">
+      <p class="quote">"How can I help you bill your customers and pay your workers faster?"</p>
+      <p style="margin-top:10px;font-size:13px;color:var(--text-muted)">Alternate framings the agent can use depending on context:</p>
+      <ul style="margin-top:8px;font-size:13px;color:var(--text-muted);padding-left:20px">
+        <li>"How can I automate your operations tasks in the middle and back office?"</li>
+        <li>"How can I help you close out faster?" &mdash; once the customer is familiar with the closeout concept</li>
+      </ul>
+      <p style="margin-top:8px;font-size:13px;color:var(--text-muted)">The agent should discover additional natural openings through conversation &mdash; let the customer's own language guide the framing. Everything ladders up: scheduling, meal breaks, no-shows, time &amp; attendance, reconciliation, payments.</p>
+    </div>
 
-    <!-- ============ DESIGN LANGUAGE ============ -->
-    <div class="section" id="design">
-        <div class="section-label">Visual System</div>
-        <h2>Design Language</h2>
-        <p>Replace the 4-color terminal-window aesthetic with a semantic node type system. The <code>color</code> field is replaced by <code>type</code> &mdash; color is derived from what something IS, not manually assigned. The LLM picks semantics, the renderer handles visuals.</p>
+    <div class="scope-grid">
+      <div class="scope-list in">
+        <h4><span style="color:var(--accent-green)">&#9679;</span> In Scope</h4>
+        <ul>
+          <li>Scheduling</li>
+          <li>Meal breaks / rest compliance</li>
+          <li>No-shows / attendance</li>
+          <li>Time &amp; attendance tracking</li>
+          <li>Payments reconciliation</li>
+          <li>Worker communication</li>
+          <li>Facility verification</li>
+        </ul>
+      </div>
+      <div class="scope-list out">
+        <h4><span style="color:var(--accent-red)">&#9679;</span> Out of Scope (Agent Deflects)</h4>
+        <ul>
+          <li>Hiring workers</li>
+          <li>Winning contracts</li>
+          <li>ATS (applicant tracking)</li>
+          <li>Payroll systems (Gusto, ADP)</li>
+          <li>Non-staffing use cases</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
 
-        <h3>Node Types</h3>
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr><th>Type</th><th>Represents</th><th>Visual Treatment</th></tr>
-                </thead>
-                <tbody>
-                    <tr><td>Person</td><td>Worker, Ops, Facility Manager</td><td>Avatar circle/silhouette, warm tones</td></tr>
-                    <tr><td>App</td><td>Mobile or web applications</td><td>Device frame &mdash; phone outline or browser chrome</td></tr>
-                    <tr><td>Backend</td><td>Server-side systems</td><td>Server rack / hexagonal, solid borders</td></tr>
-                    <tr><td>SDK</td><td>Code integration points</td><td>Code bracket <code>&lt;/&gt;</code> aesthetic, monospace</td></tr>
-                    <tr><td>Cloud/SaaS</td><td>Third-party services (Workday, ADP)</td><td>Cloud shape, gray with service logo</td></tr>
-                    <tr><td>HyperTrack</td><td>HyperTrack components</td><td>HT green (#15803d), glow effect</td></tr>
-                    <tr><td>AI</td><td>AI/Copilot components</td><td>Brain/sparkle icon, purple gradient</td></tr>
-                    <tr><td>Data Store</td><td>Databases, warehouses</td><td>Cylinder shape, neutral gray</td></tr>
-                    <tr><td>Output</td><td>Downstream (Payroll, HR)</td><td>Arrow-out / export shape</td></tr>
-                </tbody>
-            </table>
-        </div>
+<!-- ==================== FIVE BOX MODEL ==================== -->
+<div class="section">
+  <div class="container">
+    <span class="section-label synthesis">Synthesis</span>
+    <h2>The Five-Box Canonical Architecture</h2>
+    <p>Every customer maps to the same 5 system components. The structure is constant; the language inside is generative per customer.</p>
 
-        <h3>Edge Types</h3>
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr><th>Type</th><th>Visual</th><th>Use</th></tr>
-                </thead>
-                <tbody>
-                    <tr><td>API Call</td><td>Solid line + method badge</td><td>REST/webhook integrations</td></tr>
-                    <tr><td>SDK Embed</td><td>Dashed line with <code>&lt;/&gt;</code></td><td>SDK installed in an app</td></tr>
-                    <tr><td>Data Flow</td><td>Animated flowing dots</td><td>Real-time data streaming</td></tr>
-                    <tr><td>User Action</td><td>Dotted line + person icon</td><td>Human-initiated interactions</td></tr>
-                    <tr><td>Webhook</td><td>Lightning bolt marker</td><td>Event-driven connections</td></tr>
-                </tbody>
-            </table>
-        </div>
+    <div class="five-box">
+      <div class="five-box-label">3 User Types</div>
+      <div class="five-box-row">
+        <div class="five-box-item user">&#128100; Worker</div>
+        <div class="five-box-item user">&#127970; Customer / Facility</div>
+        <div class="five-box-item user">&#128187; Ops</div>
+      </div>
+      <div class="five-box-arrow">&darr;</div>
+      <div class="five-box-label">3 Apps</div>
+      <div class="five-box-row">
+        <div class="five-box-item user">Worker App</div>
+        <div class="five-box-item user">Customer App</div>
+        <div class="five-box-item user">Ops Dashboard</div>
+      </div>
+      <div class="five-box-arrow">&darr;</div>
+      <div class="five-box-label">2 Backends</div>
+      <div class="five-box-row">
+        <div class="five-box-item backend">Customer Backend</div>
+        <div class="five-box-item ht">HyperDrive Backend</div>
+      </div>
+    </div>
 
-        <h3>Type Definitions</h3>
-        <div class="code-label">TypeScript</div>
-<pre><code>interface DiagramNode {
+    <h3>Baseline Requirements</h3>
+    <p>The agent must confirm these three prerequisites before generating any blueprint:</p>
+
+    <div class="card-grid single-col">
+      <div class="card">
+        <h4>1. Authority &amp; ability to communicate with workers</h4>
+        <p>Through an app, phone, email, or other channel. The staffing company must be able to reach their workers.</p>
+      </div>
+      <div class="card">
+        <h4>2. Authority &amp; ability to talk to customers / facilities</h4>
+        <p>The staffing company must have a relationship with the facilities where workers go.</p>
+      </div>
+      <div class="card">
+        <h4>3. Knowledge of shift intent</h4>
+        <p>Who is supposed to visit which facility, when. Without this, there's nothing to close out against.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== THREE PHASE FLOW ==================== -->
+<div class="section">
+  <div class="container">
+    <span class="section-label synthesis">Synthesis</span>
+    <h2>Three-Phase Solutioning Flow</h2>
+    <p>The conversation progresses through three natural phases. The UX transforms as the customer moves deeper.</p>
+
+    <div class="numbered-card">
+      <div class="num">1</div>
+      <div class="content">
+        <h4>Qualification</h4>
+        <p>Open-ended conversation. "Do you manage workers going to customer sites or facilities?" If no &rarr; deflect honestly ("Go to Gusto," or even "Delete your account &mdash; we have no joy in holding onto your email"). If yes &rarr; discover how they bill customers and pay workers today. Can also route to specific products: Closeout Copilot vs. location tracking.</p>
+        <p style="margin-top:8px"><strong>UX:</strong> Full-screen chat. No diagram visible yet.</p>
+      </div>
+    </div>
+
+    <div class="numbered-card">
+      <div class="num">2</div>
+      <div class="content">
+        <h4>Situation Discovery</h4>
+        <p>Targeted questions with quick-click multiple choice answers. "Is your worker app native or web?" "What's your system of record for timesheets?" Minimal cognitive load. One question at a time.</p>
+        <p style="margin-top:8px"><strong>UX:</strong> Split screen emerges. Chat at bottom (25%), diagram at top (75%). Five empty boxes appear with pulsing outlines. Boxes fill in as questions are answered.</p>
+      </div>
+    </div>
+
+    <div class="numbered-card">
+      <div class="num">3</div>
+      <div class="content">
+        <h4>Blueprint Generation</h4>
+        <p>Five boxes fully populated with customer-specific details. Arrows show integrations. Each component links to relevant SDK/API documentation. Internal Slack notification fires.</p>
+        <p style="margin-top:8px"><strong>UX:</strong> Complete architecture diagram. Interactive &mdash; click nodes for docs, iterate via conversation. "What if we also wanted to track no-shows?"</p>
+      </div>
+    </div>
+
+    <div class="callout purple">
+      <p class="quote">"Anyone who starts using this has a phenomenal experience of, in a five-minute conversation, I got from my problem to my solution with a blueprint."</p>
+      <p class="attribution">&mdash; Kashyap</p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== INPUT METHODS ==================== -->
+<div class="section">
+  <div class="container">
+    <span class="section-label synthesis">Synthesis</span>
+    <h2>Input Methods</h2>
+    <p>Multiple ways for the customer to provide context to the agent.</p>
+
+    <div class="card-grid three-col">
+      <div class="card">
+        <div class="card-icon green">&#128172;</div>
+        <h4>Conversation</h4>
+        <p>Primary method. Natural language dialogue. "Tell me what you want." The agent asks follow-up questions conversationally.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon blue">&#127760;</div>
+        <h4>Website URL</h4>
+        <p>Scrape the business website for context. "So you want this for your nurses, right?" But don't put all eggs in this basket &mdash; complex companies need conversation too.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon purple">&#128206;</div>
+        <h4>File Upload</h4>
+        <p>Spreadsheets, presentations, PDFs. "I'm trying to get column D of this file done through a machine-assisted way." The agent extracts context and tailors questions.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== DESIGN LANGUAGE ==================== -->
+<div class="section">
+  <div class="container">
+    <span class="section-label design">Design Language</span>
+    <h2>From Terminal Windows to Semantic Types</h2>
+    <p>Currently every node looks the same &mdash; mac-style title bars in 4 colors. The new design language makes each element instantly recognizable by <em>what it is</em>, not just what color it's assigned.</p>
+
+    <h3>Node Type System</h3>
+    <p>Color is derived from semantic type. The LLM picks what something IS; the renderer knows how to draw it.</p>
+
+    <table class="design-table">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Represents</th>
+          <th>Visual Treatment</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="type-badge person">Person</span></td>
+          <td>Users &amp; personas: Worker, Ops, Facility Manager</td>
+          <td>Avatar circle, softer rounded shape, warm amber tones, no title bar chrome</td>
+        </tr>
+        <tr>
+          <td><span class="type-badge app">App</span></td>
+          <td>Mobile or web applications</td>
+          <td>Device frame &mdash; phone outline for mobile, browser chrome for web, blue tint</td>
+        </tr>
+        <tr>
+          <td><span class="type-badge backend">Backend</span></td>
+          <td>Server-side systems</td>
+          <td>Hexagonal / server-rack aesthetic, solid borders, muted purple</td>
+        </tr>
+        <tr>
+          <td><span class="type-badge sdk">SDK</span></td>
+          <td>Code integration points</td>
+          <td>Code bracket <code>&lt;/&gt;</code> accent, monospace font, cyan tint, code-editor look</td>
+        </tr>
+        <tr>
+          <td><span class="type-badge cloud">Cloud / SaaS</span></td>
+          <td>Third-party services (Workday, ADP, etc.)</td>
+          <td>Cloud shape outline, gray with service initial or logo</td>
+        </tr>
+        <tr>
+          <td><span class="type-badge hypertrack">HyperTrack</span></td>
+          <td>HyperTrack / HyperDrive components</td>
+          <td>Distinctive green (#15803d), subtle glow effect, HT logo mark, gradient border</td>
+        </tr>
+        <tr>
+          <td><span class="type-badge ai">Closeout AI</span></td>
+          <td>AI / Copilot intelligence layer</td>
+          <td>Brain/sparkle icon, purple gradient border, subtle animation hint</td>
+        </tr>
+        <tr>
+          <td><span class="type-badge output">Output</span></td>
+          <td>Downstream: Payroll, HR, Accounting</td>
+          <td>Arrow-out / export shape, warm muted tones</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Edge (Connection) Types</h3>
+    <div class="edge-strip">
+      <div class="edge-chip"><div class="line solid"></div> API Call &mdash; solid line + method badge</div>
+      <div class="edge-chip"><div class="line dashed"></div> SDK Embed &mdash; dashed with <code>&lt;/&gt;</code></div>
+      <div class="edge-chip"><div class="line animated"></div> Data Flow &mdash; animated flowing dots</div>
+      <div class="edge-chip"><div class="line dotted"></div> User Action &mdash; dotted with person icon</div>
+      <div class="edge-chip"><div class="line bolt"></div> Webhook &mdash; lightning marker</div>
+    </div>
+
+    <h3>Updated Type Model</h3>
+<pre>interface DiagramNode {
   id: string;
   label: string;
   description?: string;
   icon?: string;
   type: 'person' | 'app' | 'backend' | 'sdk' | 'cloud'
       | 'hypertrack' | 'ai' | 'datastore' | 'output';
-  subtype?: string;    // 'mobile' | 'web' | 'worker' | 'ops' | 'facility'
+  subtype?: string;   // 'mobile' | 'web' | 'worker' | 'ops' | 'facility'
   row: number;
   col: number;
-  docUrl?: string;     // link to relevant documentation
-  empty?: boolean;     // placeholder box (Phase 2 progressive fill)
+  docUrl?: string;    // link to SDK/API documentation
+  empty?: boolean;    // placeholder box (Phase 2 progressive fill)
 }
 
 interface DiagramConnection {
@@ -761,177 +832,224 @@ interface DiagramConnection {
   to: string;
   label?: string;
   type?: 'api' | 'sdk' | 'data-flow' | 'user-action' | 'webhook';
-  method?: string;     // HTTP method for API type
-}</code></pre>
+  method?: string;    // HTTP method: 'POST', 'GET', etc.
+}</pre>
+  </div>
+</div>
+
+<!-- ==================== ARCHITECTURE ==================== -->
+<div class="section">
+  <div class="container">
+    <span class="section-label architecture">Architecture</span>
+    <h2>Claude Agent SDK as the Thinking Engine</h2>
+    <p>The current backend does single-shot OpenAI calls to generate diagram JSON. The solutioning agent needs multi-turn conversation, tool use, structured reasoning, and streaming. Claude Agent SDK provides all of this.</p>
+
+    <h3>Why Agent SDK (Not Raw LLM Calls)</h3>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon cyan">&#128257;</div>
+        <h4>Multi-Turn Conversation</h4>
+        <p>Session memory across the entire solutioning flow. The agent remembers what was asked and answered.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon blue">&#128295;</div>
+        <h4>Tool Use</h4>
+        <p>The agent calls tools: <code>update_blueprint</code>, <code>show_quick_choices</code>, <code>qualify</code>, <code>search_docs</code>, <code>notify_team</code>.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon purple">&#129504;</div>
+        <h4>Structured Reasoning</h4>
+        <p>Qualification logic, follow-up question selection, entity extraction, conflict resolution.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon green">&#9889;</div>
+        <h4>Streaming</h4>
+        <p>Real-time conversation text + diagram updates via SSE to the frontend.</p>
+      </div>
     </div>
 
-    <hr>
+    <h3>Agent Tools</h3>
 
-    <!-- ============ ARCHITECTURE ============ -->
-    <div class="section" id="architecture">
-        <div class="section-label">Technical Design</div>
-        <h2>Architecture</h2>
+    <div class="card-grid single-col">
+      <div class="card">
+        <h4><code>update_blueprint</code></h4>
+        <p>Modifies the architecture diagram &mdash; adds, updates, or removes nodes and connections. Returns updated diagram to frontend via SSE. The primary output mechanism.</p>
+      </div>
+      <div class="card">
+        <h4><code>show_quick_choices</code></h4>
+        <p>Sends a multiple-choice question to the frontend. User clicks an option; response flows back as a user message. Keeps cognitive load low.</p>
+      </div>
+      <div class="card">
+        <h4><code>qualify</code></h4>
+        <p>Internal tool. Marks the customer as qualified or not-qualified with a reason. If not qualified, triggers a deflection message with recommendations.</p>
+      </div>
+      <div class="card">
+        <h4><code>search_docs</code></h4>
+        <p>Searches HyperDrive documentation to find relevant SDK/API docs. Links are embedded in blueprint nodes via <code>docUrl</code>.</p>
+      </div>
+      <div class="card">
+        <h4><code>notify_team</code></h4>
+        <p>Sends a Slack notification when a blueprint completes. Customer name, conversation summary, blueprint link. "Boom, we're ready for a call."</p>
+      </div>
+    </div>
 
-        <div class="callout purple">
-            <div class="callout-title">Claude Agent SDK as the Thinking Engine</div>
-            <p>Multi-turn conversation with memory, tool use (update_diagram, qualify_customer, search_docs, notify_slack), structured reasoning, and streaming &mdash; all out of the box.</p>
-        </div>
+    <h3>Conversation Flow (Agent Perspective)</h3>
+    <div class="flow-steps">
+      <div class="flow-step">
+        <div class="step-num">1</div>
+        <div class="step-text">Customer opens solutioning page &rarr; agent introduces itself: <strong>"I'm your Closeout Copilot. How can I help you close out faster?"</strong></div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">2</div>
+        <div class="step-text">Customer describes their problem in natural language</div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">3</div>
+        <div class="step-text">Agent uses <code>qualify()</code> internally. Not a fit? &rarr; <strong>deflect with recommendation</strong>. Qualified? &rarr; proceed.</div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">4</div>
+        <div class="step-text">Agent uses <code>show_quick_choices()</code> for targeted questions. <strong>Quick-click answers.</strong> Empty boxes appear in diagram.</div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">5</div>
+        <div class="step-text">After each answer, agent uses <code>update_blueprint()</code> to <strong>populate a box</strong>. Frontend animates the fill-in.</div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">6</div>
+        <div class="step-text">Complete blueprint generated. Agent uses <code>notify_team()</code> to <strong>alert internally via Slack</strong>.</div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">7</div>
+        <div class="step-text">Customer iterates: <strong>"What if we also wanted to track no-shows?"</strong> &rarr; blueprint updates in real-time.</div>
+      </div>
+    </div>
 
-        <h3>Backend Structure</h3>
-<pre><code>backend/
-  app/api/solutioning.py       &mdash; SSE endpoint for agent conversation
+    <h3>Backend Structure</h3>
+<pre>backend/
   app/agents/
-    solutioning_agent.py       &mdash; Claude Agent SDK agent definition
+    solutioning_agent.py       # Claude Agent SDK agent definition
     tools/
-      diagram.py               &mdash; update_blueprint, clear_diagram
-      qualification.py         &mdash; qualify, route_product
-      context.py               &mdash; scrape_website, parse_file
-      notify.py                &mdash; slack_notification
+      diagram.py               # update_blueprint, clear_diagram
+      qualification.py         # qualify, route_product
+      context.py               # scrape_website, parse_file
+      notify.py                # slack_notification
     prompts/
-      system.py                &mdash; Agent system prompt
-      five_box.py              &mdash; Five-box architecture template</code></pre>
+      system.py                # Agent system prompt ("the training")
+      five_box.py              # Five-box architecture template
 
-        <h3>Agent Tools</h3>
-        <ol>
-            <li><strong><code>update_blueprint</code></strong> &mdash; Modifies the architecture diagram. Returns updated diagram via SSE.</li>
-            <li><strong><code>show_quick_choices</code></strong> &mdash; Sends a multiple-choice question to the frontend.</li>
-            <li><strong><code>qualify</code></strong> &mdash; Internal tool. Marks customer as qualified/not-qualified.</li>
-            <li><strong><code>search_docs</code></strong> &mdash; Searches HyperTrack docs to link in the blueprint.</li>
-            <li><strong><code>notify_team</code></strong> &mdash; Sends Slack notification when blueprint completes.</li>
-        </ol>
+  app/api/
+    solutioning.py             # SSE endpoint for multi-turn conversation</pre>
+  </div>
+</div>
 
-        <h3>Conversation Flow</h3>
-        <div class="flow">
-            <div class="flow-step"><span class="step-num">1</span> New session</div>
-            <span class="flow-arrow">&rarr;</span>
-            <div class="flow-step"><span class="step-num">2</span> Introduction</div>
-            <span class="flow-arrow">&rarr;</span>
-            <div class="flow-step"><span class="step-num">3</span> Customer describes problem</div>
-            <span class="flow-arrow">&rarr;</span>
-            <div class="flow-step"><span class="step-num">4</span> qualify()</div>
-            <span class="flow-arrow">&rarr;</span>
-            <div class="flow-step"><span class="step-num">5</span> show_quick_choices()</div>
-            <span class="flow-arrow">&rarr;</span>
-            <div class="flow-step"><span class="step-num">6</span> update_blueprint()</div>
-            <span class="flow-arrow">&rarr;</span>
-            <div class="flow-step"><span class="step-num">7</span> notify_team()</div>
-        </div>
+<!-- ==================== IMPLEMENTATION ROADMAP ==================== -->
+<div class="section">
+  <div class="container">
+    <span class="section-label roadmap">Roadmap</span>
+    <h2>Implementation Phases</h2>
+    <p>Five phases, each independently shippable. Each builds on the previous.</p>
 
-        <h3>Session Persistence</h3>
+    <div class="phase-timeline">
+      <div class="phase-item">
+        <div class="phase-num">Phase 1</div>
+        <h4>Design Language Overhaul</h4>
+        <p>Replace the 4-color terminal-window aesthetic with the semantic node type system. Same diagram editor UX, but nodes look visually distinct based on what they represent.</p>
         <ul>
-            <li>Conversations stored in PostgreSQL (<code>solutioning_sessions</code> table)</li>
-            <li>Blueprint diagrams stored per session (not just localStorage)</li>
-            <li>Sessions linked to accounts &mdash; returning users see previous blueprints</li>
-            <li>"Erase all memory and start fresh" or "Start a new project"</li>
+          <li>New <code>type</code> field replaces <code>color</code> on nodes</li>
+          <li>Distinct renderers per type (person, app, backend, SDK, cloud, HyperTrack, AI, output)</li>
+          <li>Edge types with visual differentiation (API, SDK, data flow, webhook)</li>
+          <li>Update LLM system prompt for new type vocabulary</li>
         </ul>
+      </div>
+
+      <div class="phase-item">
+        <div class="phase-num">Phase 2</div>
+        <h4>Conversational Agent Backend</h4>
+        <p>Replace the single-shot OpenAI call with a Claude Agent SDK-powered conversational agent. Multi-turn, tool-using, streaming.</p>
+        <ul>
+          <li>Agent definition with system prompt (the "solutioning training")</li>
+          <li>Five tools: <code>update_blueprint</code>, <code>show_quick_choices</code>, <code>qualify</code>, <code>search_docs</code>, <code>notify_team</code></li>
+          <li>SSE endpoint for streaming text + diagram updates</li>
+          <li>Session state management</li>
+        </ul>
+      </div>
+
+      <div class="phase-item">
+        <div class="phase-num">Phase 3</div>
+        <h4>Split-Screen Conversational UX</h4>
+        <p>Transform the page from a prompt bar to a split-screen: chat at bottom, diagram progressively building at top.</p>
+        <ul>
+          <li>Chat panel with message history, typing indicator, streaming</li>
+          <li>Quick-choice button component for multiple-choice questions</li>
+          <li>Phase transitions: full-screen chat &rarr; split screen &rarr; full diagram</li>
+          <li>Empty/placeholder boxes with pulsing outlines</li>
+        </ul>
+      </div>
+
+      <div class="phase-item">
+        <div class="phase-num">Phase 4</div>
+        <h4>Progressive Revelation &amp; Polish</h4>
+        <p>The wow factor: animations, doc links, internal notifications, session persistence.</p>
+        <ul>
+          <li>Smooth fill-in animations when agent populates a box</li>
+          <li>Documentation URL links on nodes (click to open SDK/API docs)</li>
+          <li>Slack notification on blueprint completion</li>
+          <li>Website URL + file upload input methods in chat</li>
+          <li>Session persistence in PostgreSQL (replace localStorage)</li>
+        </ul>
+      </div>
+
+      <div class="phase-item">
+        <div class="phase-num">Phase 5</div>
+        <h4>Qualification Intelligence</h4>
+        <p>Train the agent to actually qualify and route effectively. Honest deflection. Existing customer detection. Handles both new prospects and existing customers being onboarded onto Closeout Copilot.</p>
+        <ul>
+          <li>Qualification criteria from HyperDrive's sales playbook</li>
+          <li>Deflection messages with alternative recommendations</li>
+          <li>Product routing: Closeout Copilot vs. location tracking vs. other</li>
+          <li>Pre-populate blueprints for existing production customers</li>
+          <li>Tailored onboarding paths for existing HyperTrack accounts vs. net-new prospects</li>
+          <li>Upsell identification ("these guys should totally be using on-shift also")</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== PARALLEL WORKSTREAM ==================== -->
+<div class="section">
+  <div class="container">
+    <span class="section-label amber">Parallel Workstream</span>
+    <h2>Existing Customer Mapping</h2>
+    <p>Separately from building the agent: map all production customers onto the five-box model.</p>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon amber">&#128204;</div>
+        <h4>For Each Customer</h4>
+        <p>Document: which worker app, which SDKs, which customer app, which backends, which downstream systems. Map arrows to features and API calls.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon green">&#128200;</div>
+        <h4>Outcome</h4>
+        <p>Existing customers immediately see their architecture. Reveals upsell: "Can we intuitively say, these guys should totally be using on-shift also?"</p>
+      </div>
     </div>
 
-    <hr>
-
-    <!-- ============ IMPLEMENTATION PHASES ============ -->
-    <div class="section" id="phases">
-        <div class="section-label">Execution</div>
-        <h2>Implementation Phases</h2>
-
-        <!-- Phase 1 -->
-        <div class="phase-card p1">
-            <div class="phase-tag">Phase 1</div>
-            <h3>Design Language Overhaul</h3>
-            <p>Replace the 4-color terminal-window aesthetic with the semantic node type system. Same diagram editor UX, but nodes look visually distinct based on what they represent.</p>
-            <ul class="file-list">
-                <li><span class="file-badge">modify</span> <span class="file-path">components/solutioning/types.ts</span> <span class="file-desc">New node/connection types</span></li>
-                <li><span class="file-badge">modify</span> <span class="file-path">components/solutioning/DiagramRenderer.tsx</span> <span class="file-desc">Rewrite for semantic rendering</span></li>
-                <li><span class="file-badge">modify</span> <span class="file-path">components/solutioning/DiagramRenderer.module.css</span> <span class="file-desc">Visual styles per type</span></li>
-                <li><span class="file-badge">modify</span> <span class="file-path">components/solutioning/defaultDiagram.ts</span> <span class="file-desc">Update to new type system</span></li>
-                <li><span class="file-badge">modify</span> <span class="file-path">backend/app/api/solutioning.py</span> <span class="file-desc">Update prompt for new types</span></li>
-            </ul>
-        </div>
-
-        <!-- Phase 2 -->
-        <div class="phase-card p2">
-            <div class="phase-tag">Phase 2</div>
-            <h3>Conversational Agent Backend</h3>
-            <p>Replace the single-shot OpenAI call with a Claude Agent SDK-powered conversational agent. Multi-turn conversation, tools, and SSE streaming.</p>
-            <ul class="file-list">
-                <li><span class="file-badge new">new</span> <span class="file-path">app/agents/solutioning_agent.py</span> <span class="file-desc">Agent definition with tools</span></li>
-                <li><span class="file-badge new">new</span> <span class="file-path">app/agents/tools/*.py</span> <span class="file-desc">Agent tools (diagram, qualification, context, notify)</span></li>
-                <li><span class="file-badge new">new</span> <span class="file-path">app/agents/prompts/*.py</span> <span class="file-desc">System prompt and templates</span></li>
-                <li><span class="file-badge">modify</span> <span class="file-path">app/api/solutioning.py</span> <span class="file-desc">New SSE endpoint for multi-turn</span></li>
-                <li><span class="file-badge">modify</span> <span class="file-path">pyproject.toml</span> <span class="file-desc">Add anthropic + agent SDK</span></li>
-            </ul>
-        </div>
-
-        <!-- Phase 3 -->
-        <div class="phase-card p3">
-            <div class="phase-tag">Phase 3</div>
-            <h3>Split-Screen Conversational UX</h3>
-            <p>Transform from prompt-bar to split-screen chat + diagram. Customer sees chat at bottom, diagram progressively building at top. Quick-click answers.</p>
-            <ul class="file-list">
-                <li><span class="file-badge new">new</span> <span class="file-path">components/solutioning/ChatPanel.tsx</span> <span class="file-desc">Chat interface</span></li>
-                <li><span class="file-badge new">new</span> <span class="file-path">components/solutioning/QuickChoiceInput.tsx</span> <span class="file-desc">Multiple choice UI</span></li>
-                <li><span class="file-badge">modify</span> <span class="file-path">pages/SolutioningPage.tsx</span> <span class="file-desc">Split-screen layout</span></li>
-                <li><span class="file-badge">modify</span> <span class="file-path">pages/SolutioningPage.module.css</span> <span class="file-desc">New layout styles</span></li>
-            </ul>
-        </div>
-
-        <!-- Phase 4 -->
-        <div class="phase-card p4">
-            <div class="phase-tag">Phase 4</div>
-            <h3>Progressive Revelation &amp; Polish</h3>
-            <p>The "wow factor" &mdash; empty boxes with pulsing outlines, smooth fill-in animations, doc links on nodes, Slack notifications, file upload, session persistence.</p>
-            <ul>
-                <li>Empty/placeholder nodes with pulsing outline</li>
-                <li>Smooth fill-in animation when agent populates a box</li>
-                <li>Doc URL links on nodes (click to open SDK/API docs)</li>
-                <li>Slack notification on blueprint completion</li>
-                <li>Input methods: website URL field, file upload in chat</li>
-                <li>Session persistence (new DB table, replace localStorage)</li>
-            </ul>
-        </div>
-
-        <!-- Phase 5 -->
-        <div class="phase-card p5">
-            <div class="phase-tag">Phase 5</div>
-            <h3>Qualification Intelligence</h3>
-            <p>Agent actually qualifies and routes effectively. Trained with HyperTrack's qualification criteria, deflection messages, product routing, and existing customer detection. Handles both new prospects and existing customers being onboarded onto Closeout Copilot.</p>
-            <ul>
-                <li>Train agent with HyperTrack's qualification criteria</li>
-                <li>Deflection messages with alternative recommendations</li>
-                <li>Product routing (Closeout Copilot vs. location tracking vs. other)</li>
-                <li>Existing customer detection (pre-populate from production data)</li>
-                <li>Tailored onboarding paths for existing HyperTrack accounts vs. net-new prospects</li>
-            </ul>
-        </div>
+    <div class="callout amber">
+      <p class="quote">"For all production customers, they should see that mental model of 'these are the problems I'm solving for you, and this is the working solution architecture for it.'"</p>
+      <p class="attribution">&mdash; Kashyap</p>
     </div>
+  </div>
+</div>
 
-    <hr>
-
-    <!-- ============ VERIFICATION ============ -->
-    <div class="section">
-        <div class="section-label">Quality</div>
-        <h2>Verification Plan</h2>
-
-        <div class="callout">
-            <div class="callout-title">Phase 1 &mdash; Design Language</div>
-            <p>Visual inspection: each node type renders distinctly. Existing diagrams work with new types. LLM generates using new type system. <code>npm run build</code> and <code>tsc --noEmit</code> pass.</p>
-        </div>
-
-        <div class="callout">
-            <div class="callout-title">Phase 2 &mdash; Agent Backend</div>
-            <p><code>ruff check</code> + <code>pyright</code> pass. Agent responds to conversation, uses tools, streams via SSE. Multi-turn context maintained. Tools produce valid diagram JSON.</p>
-        </div>
-
-        <div class="callout">
-            <div class="callout-title">Phase 3 &mdash; Split-Screen UX</div>
-            <p>Chat renders at bottom, diagram at top. Quick-choice buttons appear and send responses. Diagram updates in real-time. <code>npm run lint</code> + <code>tsc --noEmit</code> + <code>npm run build</code> pass.</p>
-        </div>
-
-        <div class="callout">
-            <div class="callout-title">Phase 4-5 &mdash; Polish &amp; Intelligence</div>
-            <p>Empty boxes animate on fill. Slack notification fires on completion. File upload and URL input work. Qualification deflection works correctly.</p>
-        </div>
-    </div>
-
+<!-- ==================== FOOTER ==================== -->
+<div style="padding:48px 0; text-align:center; border-top:1px solid var(--border-subtle);">
+  <div class="container">
+    <p style="font-size:13px; color:var(--text-muted);">Synthesized from three team conversations &middot; March 18-19, 2026</p>
+    <p style="font-size:12px; color:var(--text-muted); margin-top:4px;">Closeout Copilot &middot; HyperTrack</p>
+  </div>
 </div>
 
 </body>
