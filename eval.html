@@ -1,0 +1,2453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evals Feature — Wireframe Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & Theme ──────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Light Mode (default) */
+  --gray-950: #ffffff;
+  --gray-900: #f9fafb;
+  --gray-850: #f3f4f6;
+  --gray-800: #e5e7eb;
+  --gray-700: #d1d5db;
+  --gray-600: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-400: #4b5563;
+  --gray-300: #374151;
+  --gray-200: #1f2937;
+  --gray-100: #111827;
+  --green-900: #dcfce7;
+  --green-600: #16a34a;
+  --green-500: #22c55e;
+  --green-400: #4ade80;
+  --green-300: #166534;
+  --green-glow: rgba(34, 197, 94, 0.1);
+  --green-glow-strong: rgba(34, 197, 94, 0.2);
+  --red-900: #fef2f2;
+  --red-700: #fecaca;
+  --red-500: #ef4444;
+  --red-400: #f87171;
+  --red-300: #991b1b;
+  --blue-900: #dbeafe;
+  --blue-500: #3b82f6;
+  --blue-400: #60a5fa;
+  --blue-100: #1e40af;
+  --yellow-500: #f59e0b;
+  --yellow-400: #fbbf24;
+  --purple-500: #a855f7;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --sidebar-width: 64px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  background: #f5f5f7;
+  color: var(--gray-300);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Document Layout ────────────────────────────────── */
+.doc-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 60px 40px 120px;
+}
+
+.doc-header {
+  text-align: center;
+  margin-bottom: 60px;
+  padding-bottom: 40px;
+  border-bottom: 1px solid var(--gray-700);
+}
+
+.doc-header h1 {
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: var(--gray-100);
+  margin-bottom: 12px;
+}
+
+.doc-header p {
+  font-size: 1rem;
+  color: var(--gray-400);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* ── Table of Contents ──────────────────────────────── */
+.toc {
+  background: var(--gray-900);
+  border: 1px solid var(--gray-700);
+  border-radius: 12px;
+  padding: 24px 28px;
+  margin-bottom: 60px;
+}
+
+.toc h2 {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gray-400);
+  margin-bottom: 16px;
+}
+
+.toc ol {
+  list-style: none;
+  counter-reset: toc;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 32px;
+}
+
+.toc li {
+  counter-increment: toc;
+}
+
+.toc li a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--gray-300);
+  text-decoration: none;
+  font-size: 0.88rem;
+  padding: 6px 0;
+  transition: color 0.15s;
+}
+
+.toc li a:hover { color: var(--green-400); }
+
+.toc li a::before {
+  content: counter(toc, decimal-leading-zero);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--gray-500);
+  min-width: 22px;
+}
+
+/* ── Section Layout ─────────────────────────────────── */
+.section {
+  margin-bottom: 80px;
+}
+
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--green-500);
+  margin-bottom: 8px;
+}
+
+.section h2 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--gray-100);
+  margin-bottom: 16px;
+}
+
+.section .narrative {
+  color: var(--gray-400);
+  font-size: 0.92rem;
+  line-height: 1.7;
+  max-width: 720px;
+  margin-bottom: 28px;
+}
+
+.section .narrative strong { color: var(--gray-200); }
+
+.corner-cases {
+  background: var(--gray-900);
+  border: 1px solid var(--gray-700);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-top: 20px;
+  font-size: 0.84rem;
+}
+
+.corner-cases h4 {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gray-400);
+  margin-bottom: 10px;
+}
+
+.corner-cases ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.corner-cases li {
+  padding-left: 16px;
+  position: relative;
+  color: var(--gray-400);
+}
+
+.corner-cases li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--gray-600);
+}
+
+/* ── Screen Frame (browser chrome) ──────────────────── */
+.screen-frame {
+  background: var(--gray-950);
+  border: 1px solid var(--gray-700);
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 24px 0;
+}
+
+.screen-chrome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  background: var(--gray-900);
+  border-bottom: 1px solid var(--gray-700);
+}
+
+.screen-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--gray-700);
+}
+
+.screen-dot:nth-child(1) { background: #ff5f57; }
+.screen-dot:nth-child(2) { background: #febc2e; }
+.screen-dot:nth-child(3) { background: #28c840; }
+
+.screen-title {
+  flex: 1;
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--gray-500);
+  font-family: var(--font-mono);
+}
+
+.screen-content {
+  display: flex;
+  min-height: 520px;
+}
+
+/* ── App Sidebar ────────────────────────────────────── */
+.app-sidebar {
+  width: 64px;
+  background: var(--gray-900);
+  border-right: 1px solid var(--gray-700);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  flex-shrink: 0;
+}
+
+.app-sidebar .logo {
+  width: 32px;
+  height: 32px;
+  background: var(--green-500);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.app-sidebar .logo svg { width: 18px; height: 18px; }
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  color: var(--gray-500);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s;
+}
+
+.sidebar-item:hover {
+  color: var(--gray-200);
+  background: var(--gray-800);
+}
+
+.sidebar-item.active {
+  color: var(--green-500);
+  background: var(--green-glow);
+  border-right: 3px solid var(--green-500);
+}
+
+.sidebar-item svg { width: 20px; height: 20px; }
+
+/* ── App Main Area ──────────────────────────────────── */
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--gray-950);
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+  border-bottom: 1px solid var(--gray-700);
+  background: var(--gray-900);
+  flex-shrink: 0;
+}
+
+.app-header h1 {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--gray-100);
+}
+
+.app-header .subtitle {
+  font-size: 0.85rem;
+  color: var(--gray-400);
+  margin-top: 2px;
+}
+
+.app-body {
+  flex: 1;
+  padding: 32px;
+  overflow-y: auto;
+}
+
+/* ── Two-Panel Layout (rulebook sidebar + content) ─── */
+.two-panel {
+  display: flex;
+  border: 1px solid var(--gray-700);
+  border-radius: 12px;
+  min-height: 440px;
+  overflow: hidden;
+}
+
+.panel-sidebar {
+  width: 220px;
+  background: var(--gray-900);
+  border-right: 1px solid var(--gray-700);
+  flex-shrink: 0;
+}
+
+.panel-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--gray-700);
+}
+
+.panel-sidebar-header span {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gray-400);
+}
+
+.panel-sidebar-header .add-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid var(--gray-700);
+  background: transparent;
+  color: var(--gray-400);
+  cursor: pointer;
+}
+
+.panel-sidebar-header .add-btn:hover {
+  background: var(--gray-800);
+  color: var(--gray-200);
+}
+
+.rulebook-list {
+  list-style: none;
+}
+
+.rulebook-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--gray-800);
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: all 0.15s;
+  font-size: 0.88rem;
+  color: var(--gray-300);
+}
+
+.rulebook-item:hover { background: var(--gray-850); }
+
+.rulebook-item.active {
+  border-left-color: var(--green-500);
+  background: var(--gray-850);
+  color: var(--gray-100);
+}
+
+.rulebook-count {
+  font-size: 0.72rem;
+  color: var(--gray-500);
+  font-family: var(--font-mono);
+}
+
+.rulebook-count .pass { color: var(--green-400); }
+.rulebook-count .fail { color: var(--red-400); }
+
+.panel-content {
+  flex: 1;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Empty State ────────────────────────────────────── */
+.empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.empty-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: var(--gray-800);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray-500);
+  margin-bottom: 4px;
+}
+
+.empty-icon svg { width: 28px; height: 28px; }
+
+.empty-state h3 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--gray-200);
+}
+
+.empty-state p {
+  font-size: 0.85rem;
+  color: var(--gray-500);
+  max-width: 320px;
+  line-height: 1.5;
+}
+
+/* ── Buttons ────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: all 0.15s;
+  border: none;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--green-500);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--green-400);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--gray-700);
+  color: var(--gray-400);
+}
+
+.btn-ghost:hover {
+  background: var(--gray-800);
+  color: var(--gray-200);
+  border-color: var(--gray-600);
+}
+
+.btn-danger {
+  background: var(--red-500);
+  color: white;
+}
+
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 0.8rem;
+}
+
+.btn-xs {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  border-radius: 5px;
+}
+
+.btn:disabled, .btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ── Badges ─────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.badge-success {
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--green-300);
+}
+
+.badge-danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--red-300);
+}
+
+.badge-neutral {
+  background: var(--gray-800);
+  color: var(--gray-300);
+}
+
+.badge-warning {
+  background: rgba(245, 158, 11, 0.12);
+  color: #92400e;
+}
+
+.badge-info {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--blue-100);
+}
+
+.badge-lg {
+  padding: 6px 14px;
+  font-size: 0.85rem;
+}
+
+/* ── Evals Table ────────────────────────────────────── */
+.eval-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.eval-toolbar .left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.eval-toolbar .count {
+  font-size: 0.85rem;
+  color: var(--gray-400);
+}
+
+.eval-table-wrap {
+  background: var(--gray-950);
+  border: 1px solid var(--gray-700);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.eval-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.eval-table th {
+  padding: 14px 16px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gray-500);
+  text-align: left;
+  border-bottom: 1px solid var(--gray-700);
+  background: var(--gray-950);
+}
+
+.eval-table td {
+  padding: 14px 16px;
+  font-size: 0.85rem;
+  color: var(--gray-300);
+  border-bottom: 1px solid var(--gray-800);
+  vertical-align: middle;
+}
+
+.eval-table tr:last-child td { border-bottom: none; }
+
+.eval-table tbody tr {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.eval-table tbody tr:hover { background: var(--gray-800); }
+
+.eval-table .col-desc { width: 38%; }
+.eval-table .col-outcome { width: 28%; }
+.eval-table .col-status { width: 12%; }
+.eval-table .col-lastrun { width: 12%; }
+.eval-table .col-actions { width: 10%; text-align: right; }
+
+.eval-table td.col-actions { text-align: right; }
+
+.eval-table .outcome-text { color: var(--gray-400); font-size: 0.82rem; }
+
+.eval-table .desc-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid var(--gray-700);
+}
+
+.table-footer .summary {
+  font-size: 0.82rem;
+  color: var(--gray-500);
+}
+
+/* ── Icon Buttons (actions) ─────────────────────────── */
+.icon-btn {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--gray-500);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.icon-btn:hover {
+  background: var(--gray-800);
+  color: var(--gray-200);
+}
+
+.icon-btn.play:hover { color: var(--green-400); }
+.icon-btn.trash:hover { color: var(--red-400); }
+.icon-btn svg { width: 16px; height: 16px; }
+
+/* ── Modal ──────────────────────────────────────────── */
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-overlay.hidden { display: none; }
+
+.modal {
+  background: var(--gray-850);
+  border: 1px solid var(--gray-700);
+  border-radius: 12px;
+  width: 480px;
+  max-height: 80%;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--gray-700);
+}
+
+.modal-header h3 {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--gray-100);
+}
+
+.modal-body { padding: 20px; }
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--gray-700);
+}
+
+.modal-textarea {
+  width: 100%;
+  min-height: 100px;
+  background: var(--gray-800);
+  border: 1px solid var(--gray-700);
+  border-radius: 8px;
+  padding: 12px;
+  color: var(--gray-200);
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+}
+
+.modal-textarea::placeholder { color: var(--gray-600); }
+.modal-textarea:focus { border-color: var(--green-500); }
+
+.modal-hint {
+  font-size: 0.78rem;
+  color: var(--gray-500);
+  margin-top: 10px;
+  line-height: 1.5;
+}
+
+/* ── Shift Detail Layout ────────────────────────────── */
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 32px;
+  border-bottom: 1px solid var(--gray-700);
+  background: var(--gray-900);
+  flex-shrink: 0;
+}
+
+.back-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid var(--gray-700);
+  background: transparent;
+  color: var(--gray-400);
+  cursor: pointer;
+}
+
+.back-btn:hover { background: var(--gray-800); color: var(--gray-200); }
+
+.detail-title {
+  flex: 1;
+}
+
+.detail-title h2 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--gray-100);
+}
+
+.detail-title .detail-sub {
+  font-size: 0.82rem;
+  color: var(--gray-400);
+  margin-top: 2px;
+}
+
+.detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Shift Info Box ─────────────────────────────────── */
+.shift-info-box {
+  background: var(--gray-900);
+  border: 1px solid var(--gray-800);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+
+.shift-subtitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.shift-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--gray-400);
+  flex-wrap: wrap;
+}
+
+.shift-meta .dot { color: var(--gray-600); }
+
+.shift-id {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  background: var(--gray-800);
+  padding: 3px 8px;
+  border-radius: 4px;
+  color: var(--gray-400);
+}
+
+.hero-bar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.hero-card {
+  background: var(--gray-850);
+  border: 1px solid var(--gray-800);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.hero-card.filled {
+  border-color: rgba(34, 197, 94, 0.2);
+  background: rgba(34, 197, 94, 0.04);
+}
+
+.hero-card .hero-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gray-500);
+  margin-bottom: 8px;
+}
+
+.hero-card .hero-times {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hero-card .hero-time {
+  font-size: 0.85rem;
+  color: var(--gray-300);
+}
+
+.hero-card .hero-time span { color: var(--gray-500); font-size: 0.78rem; }
+
+.hero-card.empty .hero-times {
+  color: var(--gray-600);
+  font-size: 0.82rem;
+  font-style: italic;
+}
+
+/* ── Suggestion Island (replaces MiniRulebook for failed evals) ── */
+.suggestion-island {
+  background: var(--gray-900);
+  border: 1px solid var(--gray-800);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.suggestion-section {
+  padding: 14px 16px;
+}
+
+.suggestion-section + .suggestion-section {
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+
+.suggestion-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.suggestion-label.fail { color: var(--red-400); }
+.suggestion-label.fix { color: var(--blue-400); }
+
+.suggestion-text {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--gray-300);
+}
+
+.suggestion-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+
+/* ── Diff View ──────────────────────────────────────── */
+.diff-box { border-top: 1px solid rgba(255,255,255,0.04); }
+
+.diff-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.diff-stats {
+  display: flex;
+  gap: 8px;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+}
+
+.diff-stats .add { color: var(--green-400); }
+.diff-stats .remove { color: var(--red-400); }
+
+.diff-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.diff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+
+.diff-table .line-num {
+  width: 32px;
+  padding: 1px 6px 1px 4px;
+  text-align: right;
+  color: var(--gray-600);
+  user-select: none;
+  vertical-align: top;
+  border-right: 1px solid var(--gray-800);
+}
+
+.diff-table .line-content {
+  padding: 1px 10px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.diff-table tr.line-add { background: rgba(34, 197, 94, 0.08); }
+.diff-table tr.line-add .line-content { color: #166534; }
+.diff-table tr.line-add .line-num { color: var(--green-600); }
+.diff-table tr.line-add .prefix { color: var(--green-600); }
+
+.diff-table tr.line-remove { background: rgba(239, 68, 68, 0.08); }
+.diff-table tr.line-remove .line-content { color: #991b1b; }
+.diff-table tr.line-remove .line-num { color: #b91c1c; }
+.diff-table tr.line-remove .prefix { color: var(--red-500); }
+
+.diff-table .prefix {
+  display: inline-block;
+  width: 14px;
+  user-select: none;
+}
+
+/* ── Success Box ────────────────────────────────────── */
+.success-box {
+  background: var(--gray-900);
+  border: 1px solid var(--gray-800);
+  border-left: 3px solid var(--green-500);
+  border-radius: 10px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.success-box svg { color: var(--green-400); flex-shrink: 0; }
+.success-box p { font-size: 0.88rem; color: var(--gray-300); }
+
+/* ── Accepted Box ───────────────────────────────────── */
+.accepted-box {
+  background: var(--gray-900);
+  border: 1px solid var(--gray-800);
+  border-radius: 10px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.accepted-box .check-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(34, 197, 94, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--green-400);
+}
+
+.accepted-box h3 {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--gray-100);
+}
+
+.accepted-box .hint {
+  font-size: 0.82rem;
+  color: var(--gray-500);
+}
+
+/* ── Eval Banner ────────────────────────────────────── */
+.eval-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  margin-bottom: 16px;
+}
+
+.eval-banner.info {
+  background: rgba(59, 130, 246, 0.06);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: var(--blue-100);
+}
+
+.eval-banner.warning {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  color: #92400e;
+}
+
+.eval-banner svg { flex-shrink: 0; width: 16px; height: 16px; }
+
+/* ── Timeline (simplified) ──────────────────────────── */
+.timeline-grid {
+  background: var(--gray-900);
+  border: 1px solid var(--gray-800);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.timeline-header {
+  display: grid;
+  grid-template-columns: 120px 1fr 1fr 1fr 1fr;
+  border-bottom: 1px solid var(--gray-700);
+}
+
+.timeline-header div {
+  padding: 10px 14px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gray-500);
+  border-right: 1px solid var(--gray-800);
+}
+
+.timeline-header div:last-child { border-right: none; }
+
+.timeline-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 1fr 1fr 1fr;
+  border-bottom: 1px solid var(--gray-800);
+}
+
+.timeline-row:last-child { border-bottom: none; }
+
+.timeline-row div {
+  padding: 8px 14px;
+  font-size: 0.8rem;
+  color: var(--gray-400);
+  border-right: 1px solid var(--gray-800);
+  font-family: var(--font-mono);
+}
+
+.timeline-row div:last-child { border-right: none; }
+
+.timeline-cell-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  font-family: var(--font-body);
+}
+
+.timeline-cell-badge.agent {
+  background: rgba(168, 85, 247, 0.12);
+  color: #7e22ce;
+}
+
+.timeline-cell-badge.worker {
+  background: rgba(59, 130, 246, 0.12);
+  color: #1e40af;
+}
+
+.timeline-cell-badge.facility {
+  background: rgba(245, 158, 11, 0.12);
+  color: #92400e;
+}
+
+/* ── Spinner ────────────────────────────────────────── */
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--gray-800);
+  border-top-color: var(--yellow-500);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+.spinner.green { border-top-color: var(--green-600); }
+
+/* ── Info banner for auto-update ────────────────────── */
+.update-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: rgba(59, 130, 246, 0.06);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 0.84rem;
+  color: var(--blue-100);
+}
+
+.update-banner svg { flex-shrink: 0; }
+
+.eval-table tr.highlight-new {
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.eval-table tr.highlight-new td { color: var(--blue-100); }
+
+/* ── Interactive states ─────────────────────────────── */
+.state-toggle {
+  display: flex;
+  gap: 4px;
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+.state-toggle button {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--gray-700);
+  background: transparent;
+  color: var(--gray-500);
+  font-size: 0.78rem;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.state-toggle button:hover { background: var(--gray-800); color: var(--gray-300); }
+.state-toggle button.active { background: var(--gray-800); color: var(--gray-200); border-color: var(--gray-600); }
+
+.state-panel { display: none; }
+.state-panel.active { display: block; }
+
+/* ── Interaction Arrow ──────────────────────────────── */
+.interaction-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  margin: 12px 0;
+  border-left: 2px solid var(--green-600);
+  background: rgba(34, 197, 94, 0.05);
+  border-radius: 0 6px 6px 0;
+  font-size: 0.82rem;
+  color: var(--green-300);
+}
+
+.interaction-note svg { flex-shrink: 0; width: 14px; height: 14px; }
+</style>
+</head>
+<body>
+
+<div class="doc-container">
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- HEADER                                             -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="doc-header">
+  <h1>Evals Feature Wireframe</h1>
+  <p>Automated testing framework for closeout agent rulebooks. Every screen, every interaction, every corner case.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- TABLE OF CONTENTS                                  -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="toc">
+  <h2>Screens</h2>
+  <ol>
+    <li><a href="#s1">Evals Tab &mdash; Empty State</a></li>
+    <li><a href="#s2">Auto-Generation In Progress</a></li>
+    <li><a href="#s3">Evals Tab &mdash; Populated Table</a></li>
+    <li><a href="#s4">Add Eval Modal</a></li>
+    <li><a href="#s5">Eval Running (Table View)</a></li>
+    <li><a href="#s6">Eval Detail &mdash; Running</a></li>
+    <li><a href="#s7">Eval Detail &mdash; Passed</a></li>
+    <li><a href="#s8">Eval Detail &mdash; Failed</a></li>
+    <li><a href="#s9">Accept Flow &mdash; Diff View</a></li>
+    <li><a href="#s10">After Accept &mdash; Re-evaluate</a></li>
+    <li><a href="#s11">Auto-Update Notification</a></li>
+  </ol>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- SCREEN 1: EMPTY STATE                              -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="section" id="s1">
+  <div class="section-label">Screen 01</div>
+  <h2>Evals Tab &mdash; Empty State</h2>
+  <div class="narrative">
+    The user navigates to the <strong>Evals</strong> tab (flask icon in sidebar). The two-panel layout mirrors the Workflows page: a 220px sidebar lists all rulebooks, and the main area shows the evals for the selected rulebook. When no evals exist yet, we show an empty state with a clear call to action.
+  </div>
+
+  <div class="screen-frame">
+    <div class="screen-chrome">
+      <div class="screen-dot"></div><div class="screen-dot"></div><div class="screen-dot"></div>
+      <div class="screen-title">closeoutcopilot.com</div>
+    </div>
+    <div class="screen-content">
+      <!-- App Sidebar -->
+      <div class="app-sidebar">
+        <div class="logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+        <div class="sidebar-nav">
+          <div class="sidebar-item" title="Shifts">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div class="sidebar-item" title="Workflows">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 12h4v8h12v-8h4z"/></svg>
+          </div>
+          <div class="sidebar-item active" title="Evals">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg>
+          </div>
+          <div class="sidebar-item" title="Connections">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Area -->
+      <div class="app-main">
+        <div class="app-header">
+          <div>
+            <h1>Evals</h1>
+            <div class="subtitle">Automated tests for your rulebooks</div>
+          </div>
+        </div>
+        <div class="app-body">
+          <div class="two-panel">
+            <div class="panel-sidebar">
+              <div class="panel-sidebar-header">
+                <span>Rulebooks</span>
+              </div>
+              <ul class="rulebook-list">
+                <li class="rulebook-item active">GigSmart Default</li>
+                <li class="rulebook-item">Wonolo Standard</li>
+                <li class="rulebook-item">Break Enforcement</li>
+              </ul>
+            </div>
+            <div class="panel-content">
+              <div class="empty-state">
+                <div class="empty-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg>
+                </div>
+                <h3>No evals yet</h3>
+                <p>Evals are automatically generated when a rulebook is created. You can also add manual evals.</p>
+                <button class="btn btn-primary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                  Generate Evals
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="corner-cases">
+    <h4>Corner Cases</h4>
+    <ul>
+      <li>No workflows exist at all: show "Create a workflow first" with link to Workflows tab</li>
+      <li>Workflow exists but has no rules_document: show "Add rules to your workflow before generating evals"</li>
+      <li>Generation fails (API error): show inline error with "Retry" button in the empty state area</li>
+    </ul>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- SCREEN 2: AUTO-GENERATION IN PROGRESS              -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="section" id="s2">
+  <div class="section-label">Screen 02</div>
+  <h2>Auto-Generation In Progress</h2>
+  <div class="narrative">
+    After clicking "Generate Evals" or whenever a rulebook is created/updated, the <strong>Generator agent</strong> analyzes the rulebook and produces eval scenarios. Evals stream in one at a time, appearing in the table as they're created. The user can switch to a different rulebook in the sidebar during generation.
+  </div>
+
+  <div class="screen-frame">
+    <div class="screen-chrome">
+      <div class="screen-dot"></div><div class="screen-dot"></div><div class="screen-dot"></div>
+      <div class="screen-title">closeoutcopilot.com</div>
+    </div>
+    <div class="screen-content">
+      <div class="app-sidebar">
+        <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+        <div class="sidebar-nav">
+          <div class="sidebar-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <div class="sidebar-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 12h4v8h12v-8h4z"/></svg></div>
+          <div class="sidebar-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg></div>
+          <div class="sidebar-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+        </div>
+      </div>
+      <div class="app-main">
+        <div class="app-header">
+          <div>
+            <h1>Evals</h1>
+            <div class="subtitle">Automated tests for your rulebooks</div>
+          </div>
+        </div>
+        <div class="app-body">
+          <div class="two-panel">
+            <div class="panel-sidebar">
+              <div class="panel-sidebar-header"><span>Rulebooks</span></div>
+              <ul class="rulebook-list">
+                <li class="rulebook-item active">GigSmart Default</li>
+                <li class="rulebook-item">Wonolo Standard</li>
+                <li class="rulebook-item">Break Enforcement</li>
+              </ul>
+            </div>
+            <div class="panel-content">
+              <div class="eval-banner info">
+                <div class="spinner green"></div>
+                Generating evals from rulebook&hellip; 3 of ~6 created
+              </div>
+              <div class="eval-table-wrap">
+                <table class="eval-table">
+                  <thead>
+                    <tr>
+                      <th class="col-desc">Description</th>
+                      <th class="col-outcome">Expected Outcome</th>
+                      <th class="col-status">Status</th>
+                      <th class="col-lastrun">Last Run</th>
+                      <th class="col-actions"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><div class="desc-text">Worker clocks in 15 minutes late and reports it accurately via SMS</div></td>
+                      <td class="outcome-text">Agent accepts the late clock-in without flagging discrepancy</td>
+                      <td><span class="badge badge-neutral">Never Run</span></td>
+                      <td style="color: var(--gray-600)">&mdash;</td>
+                      <td class="col-actions">
+                        <button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
+                        <button class="icon-btn trash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><div class="desc-text">Facility reports a no-show but worker claims they were on site</div></td>
+                      <td class="outcome-text">Agent investigates discrepancy and requests evidence from both parties</td>
+                      <td><span class="badge badge-neutral">Never Run</span></td>
+                      <td style="color: var(--gray-600)">&mdash;</td>
+                      <td class="col-actions">
+                        <button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
+                        <button class="icon-btn trash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><div class="desc-text">Worker takes an unauthorized 45-minute break during a 4-hour shift</div></td>
+                      <td class="outcome-text">Agent flags the break as exceeding the allowed duration per rulebook</td>
+                      <td><span class="badge badge-neutral">Never Run</span></td>
+                      <td style="color: var(--gray-600)">&mdash;</td>
+                      <td class="col-actions">
+                        <button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
+                        <button class="icon-btn trash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                      </td>
+                    </tr>
+                    <tr style="opacity: 0.5;">
+                      <td colspan="5" style="text-align: center; padding: 20px; color: var(--gray-600);">
+                        <div class="spinner green" style="margin-right: 8px;"></div>
+                        Generating next eval&hellip;
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="interaction-note">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+    The Generator agent uses the rulebook content to identify key scenarios. Each eval is a self-contained test script. Generation typically produces 5-8 evals per rulebook.
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- SCREEN 3: POPULATED TABLE                          -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="section" id="s3">
+  <div class="section-label">Screen 03</div>
+  <h2>Evals Tab &mdash; Populated Table</h2>
+  <div class="narrative">
+    The main view once evals are generated. Each row is a distinct test scenario. The table shows the scenario description, what success looks like, the current status, and when it was last run. Sidebar shows pass/fail summary per rulebook. Users can <strong>run individual evals</strong>, <strong>delete evals</strong>, <strong>add manual evals</strong>, or <strong>run all</strong>.
+  </div>
+
+  <div class="screen-frame">
+    <div class="screen-chrome">
+      <div class="screen-dot"></div><div class="screen-dot"></div><div class="screen-dot"></div>
+      <div class="screen-title">closeoutcopilot.com</div>
+    </div>
+    <div class="screen-content">
+      <div class="app-sidebar">
+        <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+        <div class="sidebar-nav">
+          <div class="sidebar-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <div class="sidebar-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 12h4v8h12v-8h4z"/></svg></div>
+          <div class="sidebar-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg></div>
+          <div class="sidebar-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+        </div>
+      </div>
+      <div class="app-main">
+        <div class="app-header">
+          <div>
+            <h1>Evals</h1>
+            <div class="subtitle">Automated tests for your rulebooks</div>
+          </div>
+        </div>
+        <div class="app-body">
+          <div class="two-panel">
+            <div class="panel-sidebar">
+              <div class="panel-sidebar-header"><span>Rulebooks</span></div>
+              <ul class="rulebook-list">
+                <li class="rulebook-item active">
+                  GigSmart Default
+                  <span class="rulebook-count"><span class="pass">4</span>/<span class="fail">1</span></span>
+                </li>
+                <li class="rulebook-item">
+                  Wonolo Standard
+                  <span class="rulebook-count"><span class="pass">6</span>/<span class="pass">0</span></span>
+                </li>
+                <li class="rulebook-item">
+                  Break Enforcement
+                  <span class="rulebook-count" style="color: var(--gray-600)">0/0</span>
+                </li>
+              </ul>
+            </div>
+            <div class="panel-content">
+              <div class="eval-toolbar">
+                <div class="left">
+                  <span class="count">6 evals &middot; <span style="color: var(--green-400)">4 passing</span> &middot; <span style="color: var(--red-400)">1 failing</span> &middot; <span style="color: var(--gray-500)">1 never run</span></span>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="toggleModal('add-eval-modal')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                  Add Eval
+                </button>
+              </div>
+              <div class="eval-table-wrap">
+                <table class="eval-table">
+                  <thead>
+                    <tr>
+                      <th class="col-desc">Description</th>
+                      <th class="col-outcome">Expected Outcome</th>
+                      <th class="col-status">Status</th>
+                      <th class="col-lastrun">Last Run</th>
+                      <th class="col-actions"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><div class="desc-text">Worker clocks in 15 minutes late and reports it accurately via SMS</div></td>
+                      <td class="outcome-text">Agent accepts the late clock-in without flagging discrepancy</td>
+                      <td><span class="badge badge-success">Pass</span></td>
+                      <td>Mar 28</td>
+                      <td class="col-actions">
+                        <button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
+                        <button class="icon-btn trash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><div class="desc-text">Facility reports a no-show but worker claims they were on site</div></td>
+                      <td class="outcome-text">Agent investigates discrepancy and requests evidence from both parties</td>
+                      <td><span class="badge badge-success">Pass</span></td>
+                      <td>Mar 28</td>
+                      <td class="col-actions">
+                        <button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
+                        <button class="icon-btn trash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><div class="desc-text">Worker takes an unauthorized 45-minute break during a 4-hour shift</div></td>
+                      <td class="outcome-text">Agent flags the break as exceeding the allowed duration per rulebook</td>
+                      <td><span class="badge badge-danger">Fail</span></td>
+                      <td>Mar 28</td>
+                      <td class="col-actions">
+                        <button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
+                        <button class="icon-btn trash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><div class="desc-text">Worker clocks out 30 minutes early without notifying the facility supervisor</div></td>
+                      <td class="outcome-text">Agent detects early departure and sends alert to supervisor</td>
+                      <td><span class="badge badge-success">Pass</span></td>
+                      <td>Mar 27</td>
+                      <td class="col-actions">
+                        <button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
+                        <button class="icon-btn trash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><div class="desc-text">Shift spans midnight and worker reports times using AM/PM ambiguously</div></td>
+                      <td class="outcome-text">Agent correctly resolves the AM/PM ambiguity using shift schedule context</td>
+                      <td><span class="badge badge-success">Pass</span></td>
+                      <td>Mar 27</td>
+                      <td class="col-actions">
+                        <button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
+                        <button class="icon-btn trash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><div class="desc-text">Worker sends gibberish text messages instead of valid clock-in reports</div></td>
+                      <td class="outcome-text">Agent recognizes invalid input and re-prompts worker for valid data</td>
+                      <td><span class="badge badge-neutral">Never Run</span></td>
+                      <td style="color: var(--gray-600)">&mdash;</td>
+                      <td class="col-actions">
+                        <button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
+                        <button class="icon-btn trash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div class="table-footer">
+                  <span class="summary">6 evals for GigSmart Default</span>
+                  <button class="btn btn-ghost btn-sm">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    Run All
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="interaction-note">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+    Click any row to see the eval detail (shift view in eval mode). Click the play icon to run a single eval. The sidebar counts show green/red pass/fail ratios per rulebook.
+  </div>
+
+  <div class="corner-cases">
+    <h4>Corner Cases</h4>
+    <ul>
+      <li>All evals passing: show a small success summary in the toolbar ("All 6 evals passing")</li>
+      <li>Eval currently running: that row shows a spinner in the status column (see Screen 5)</li>
+      <li>"Run All" executes evals sequentially, showing progress in the toolbar</li>
+      <li>Delete confirmation: clicking trash shows a small confirm tooltip "Delete this eval?" with confirm/cancel</li>
+    </ul>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- SCREEN 4: ADD EVAL MODAL                           -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="section" id="s4">
+  <div class="section-label">Screen 04</div>
+  <h2>Add Eval Modal</h2>
+  <div class="narrative">
+    Users can create manual evals by describing the scenario in natural language. The Generator agent takes this description plus the current rulebook to produce the eval's expected outcome automatically. The new eval appears in the table with "Never Run" status.
+  </div>
+
+  <div class="screen-frame" style="position: relative;">
+    <div class="screen-chrome">
+      <div class="screen-dot"></div><div class="screen-dot"></div><div class="screen-dot"></div>
+      <div class="screen-title">closeoutcopilot.com</div>
+    </div>
+    <div class="screen-content" style="filter: brightness(0.4); min-height: 400px;">
+      <div class="app-sidebar">
+        <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+        <div class="sidebar-nav">
+          <div class="sidebar-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <div class="sidebar-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 12h4v8h12v-8h4z"/></svg></div>
+          <div class="sidebar-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg></div>
+          <div class="sidebar-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+        </div>
+      </div>
+      <div class="app-main" style="opacity: 0.5;">
+        <div class="app-header"><div><h1>Evals</h1></div></div>
+        <div class="app-body"><div style="color: var(--gray-600); text-align: center; padding: 100px 0;">Table behind modal</div></div>
+      </div>
+    </div>
+    <!-- Modal Overlay -->
+    <div style="position: absolute; inset: 32px 0 0 0; display: flex; align-items: center; justify-content: center; z-index: 10;">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>Add Eval</h3>
+          <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg></button>
+        </div>
+        <div class="modal-body">
+          <textarea class="modal-textarea" placeholder="Describe the scenario you want to test...&#10;&#10;Example: Worker clocks in from a different location than the assigned facility and claims they are on site">Worker sends clock-in and clock-out at the exact same time (zero-duration shift)</textarea>
+          <div class="modal-hint">The agent will generate the eval's expected outcome based on your description and the current rulebook.</div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost btn-sm">Cancel</button>
+          <button class="btn btn-primary btn-sm">Create Eval</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="corner-cases">
+    <h4>Corner Cases</h4>
+    <ul>
+      <li>Empty input: "Create Eval" button is disabled</li>
+      <li>Very long description: textarea scrolls vertically, max ~500 characters recommended</li>
+      <li>Agent generates both the description refinement and the expected outcome</li>
+      <li>Network error during creation: show inline error in modal, keep the textarea content</li>
+    </ul>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- SCREEN 5: EVAL RUNNING (TABLE VIEW)                -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="section" id="s5">
+  <div class="section-label">Screen 05</div>
+  <h2>Eval Running (Table View)</h2>
+  <div class="narrative">
+    When an eval is triggered (play button or "Run All"), the row shows an <strong>"Evaluating..."</strong> badge with a spinner. This matches the yellow "Testing" pattern already used for test mode shifts. The play button for that row is disabled. Other evals remain interactive.
+  </div>
+
+  <div class="screen-frame">
+    <div class="screen-chrome">
+      <div class="screen-dot"></div><div class="screen-dot"></div><div class="screen-dot"></div>
+      <div class="screen-title">closeoutcopilot.com</div>
+    </div>
+    <div class="screen-content">
+      <div class="app-sidebar">
+        <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+        <div class="sidebar-nav">
+          <div class="sidebar-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <div class="sidebar-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 12h4v8h12v-8h4z"/></svg></div>
+          <div class="sidebar-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg></div>
+          <div class="sidebar-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+        </div>
+      </div>
+      <div class="app-main">
+        <div class="app-header"><div><h1>Evals</h1><div class="subtitle">Automated tests for your rulebooks</div></div></div>
+        <div class="app-body">
+          <div class="two-panel">
+            <div class="panel-sidebar">
+              <div class="panel-sidebar-header"><span>Rulebooks</span></div>
+              <ul class="rulebook-list">
+                <li class="rulebook-item active">GigSmart Default <span class="rulebook-count"><span class="pass">4</span>/<span class="fail">1</span></span></li>
+                <li class="rulebook-item">Wonolo Standard</li>
+              </ul>
+            </div>
+            <div class="panel-content">
+              <div class="eval-toolbar">
+                <div class="left"><span class="count">Evaluating 1 of 6&hellip;</span></div>
+                <button class="btn btn-primary btn-sm disabled">Add Eval</button>
+              </div>
+              <div class="eval-table-wrap">
+                <table class="eval-table">
+                  <thead>
+                    <tr>
+                      <th class="col-desc">Description</th>
+                      <th class="col-outcome">Expected Outcome</th>
+                      <th class="col-status">Status</th>
+                      <th class="col-lastrun">Last Run</th>
+                      <th class="col-actions"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><div class="desc-text">Worker clocks in 15 minutes late and reports it accurately via SMS</div></td>
+                      <td class="outcome-text">Agent accepts the late clock-in without flagging discrepancy</td>
+                      <td><span class="badge badge-success">Pass</span></td>
+                      <td>Mar 28</td>
+                      <td class="col-actions"><button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button></td>
+                    </tr>
+                    <tr style="background: rgba(245, 158, 11, 0.04);">
+                      <td><div class="desc-text">Facility reports a no-show but worker claims they were on site</div></td>
+                      <td class="outcome-text">Agent investigates discrepancy and requests evidence</td>
+                      <td><span class="badge badge-warning"><div class="spinner" style="width: 10px; height: 10px; border-width: 1.5px;"></div> Evaluating&hellip;</span></td>
+                      <td style="color: var(--gray-500)">Running</td>
+                      <td class="col-actions"><button class="icon-btn" style="opacity: 0.3;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg></button></td>
+                    </tr>
+                    <tr>
+                      <td><div class="desc-text">Worker takes an unauthorized 45-minute break during a 4-hour shift</div></td>
+                      <td class="outcome-text">Agent flags the break as exceeding the allowed duration</td>
+                      <td><span class="badge badge-danger">Fail</span></td>
+                      <td>Mar 28</td>
+                      <td class="col-actions"><button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="interaction-note">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+    The running row has a subtle yellow tint. The play icon is replaced with a pause icon (disabled). The toolbar shows "Evaluating 1 of 6..." during Run All. Click the row to navigate to the live eval detail view.
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- SCREEN 6: EVAL DETAIL — RUNNING                    -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="section" id="s6">
+  <div class="section-label">Screen 06</div>
+  <h2>Eval Detail &mdash; Running</h2>
+  <div class="narrative">
+    When you click into a running eval, you see the <strong>shift detail page in eval mode</strong>. It reuses the existing shift layout but with key differences: <strong>no MiniRulebook island</strong>, <strong>no reply input</strong> (user cannot message), and an info banner explaining the conductor agent is driving the eval. The timeline updates in real-time as the conductor agent simulates worker and facility interactions.
+  </div>
+
+  <div class="screen-frame">
+    <div class="screen-chrome">
+      <div class="screen-dot"></div><div class="screen-dot"></div><div class="screen-dot"></div>
+      <div class="screen-title">closeoutcopilot.com &mdash; eval detail</div>
+    </div>
+    <div class="screen-content">
+      <div class="app-sidebar">
+        <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+        <div class="sidebar-nav">
+          <div class="sidebar-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <div class="sidebar-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 12h4v8h12v-8h4z"/></svg></div>
+          <div class="sidebar-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg></div>
+          <div class="sidebar-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+        </div>
+      </div>
+      <div class="app-main">
+        <div class="detail-header">
+          <button class="back-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+          </button>
+          <div class="detail-title">
+            <h2>Facility reports a no-show but worker claims on site</h2>
+            <div class="detail-sub">GigSmart Default &middot; Eval Mode</div>
+          </div>
+          <div class="detail-actions">
+            <span class="badge badge-warning badge-lg"><div class="spinner" style="width: 12px; height: 12px; border-width: 1.5px;"></div> Evaluating&hellip;</span>
+          </div>
+        </div>
+        <div style="padding: 24px 32px; overflow-y: auto;">
+          <!-- Shift Info Box -->
+          <div class="shift-info-box">
+            <div class="shift-subtitle">
+              <div class="shift-meta">
+                <strong style="color: var(--gray-200);">Sarah Johnson</strong>
+                <span class="dot">&middot;</span> +1 (555) 012-3456
+                <span class="dot">&middot;</span> Metro Distribution Center
+                <span class="dot">&middot;</span> Mar 30, 2026 &middot; 6:00 AM - 2:00 PM
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="badge badge-warning" style="font-size: 0.7rem;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/></svg>
+                  EVAL
+                </span>
+                <span class="shift-id">eval_8f3k2m</span>
+              </div>
+            </div>
+            <div class="hero-bar">
+              <div class="hero-card filled">
+                <div class="hero-label">Worker Reported</div>
+                <div class="hero-times">
+                  <div class="hero-time">Clock In <span>6:12 AM</span></div>
+                  <div class="hero-time">Clock Out <span>&mdash;</span></div>
+                </div>
+              </div>
+              <div class="hero-card">
+                <div class="hero-label">Facility Reported</div>
+                <div class="hero-times empty">Awaiting response&hellip;</div>
+              </div>
+              <div class="hero-card">
+                <div class="hero-label">Reconciled</div>
+                <div class="hero-times empty">Awaiting data&hellip;</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Eval Banner (replaces MiniRulebook) -->
+          <div class="eval-banner warning">
+            <div class="spinner" style="width: 14px; height: 14px;"></div>
+            Eval in progress &mdash; the conductor agent is acting as both worker and facility. You cannot send messages during evaluation.
+          </div>
+
+          <!-- Timeline (simplified) -->
+          <div class="timeline-grid">
+            <div class="timeline-header">
+              <div>Time</div>
+              <div>Agent</div>
+              <div>Worker</div>
+              <div>Facility</div>
+              <div>Operations</div>
+            </div>
+            <div class="timeline-row">
+              <div>6:00 AM</div>
+              <div><span class="timeline-cell-badge agent">SMS Sent</span></div>
+              <div></div>
+              <div></div>
+              <div></div>
+            </div>
+            <div class="timeline-row">
+              <div>6:12 AM</div>
+              <div></div>
+              <div><span class="timeline-cell-badge worker">Clock In</span></div>
+              <div></div>
+              <div></div>
+            </div>
+            <div class="timeline-row">
+              <div>6:15 AM</div>
+              <div><span class="timeline-cell-badge agent">Processing</span></div>
+              <div></div>
+              <div></div>
+              <div></div>
+            </div>
+            <div class="timeline-row">
+              <div>6:30 AM</div>
+              <div></div>
+              <div></div>
+              <div><span class="timeline-cell-badge facility">No-Show</span></div>
+              <div></div>
+            </div>
+            <div class="timeline-row" style="opacity: 0.4;">
+              <div>6:31 AM</div>
+              <div style="color: var(--gray-600);"><div class="spinner green" style="width: 10px; height: 10px; border-width: 1.5px; margin-right: 6px;"></div></div>
+              <div></div>
+              <div></div>
+              <div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="corner-cases">
+    <h4>Corner Cases</h4>
+    <ul>
+      <li>Eval takes longer than 5 minutes: show elapsed time next to "Evaluating..." badge</li>
+      <li>Eval errors out (agent crash): show red error badge with "Retry" button in the header</li>
+      <li>User navigates away during eval: eval continues in background, table view shows progress</li>
+      <li>The conductor agent generates realistic synthetic data (names, times, messages) for the scenario</li>
+    </ul>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- SCREEN 7: EVAL DETAIL — PASSED                     -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="section" id="s7">
+  <div class="section-label">Screen 07</div>
+  <h2>Eval Detail &mdash; Passed</h2>
+  <div class="narrative">
+    A completed eval that passed. The header shows a green <strong>"Pass"</strong> badge. In place of the MiniRulebook, a simple success box with green left-border accent confirms the outcome. The full timeline below shows everything that happened during the eval. A "Re-run" button in the header allows re-execution.
+  </div>
+
+  <div class="screen-frame">
+    <div class="screen-chrome">
+      <div class="screen-dot"></div><div class="screen-dot"></div><div class="screen-dot"></div>
+      <div class="screen-title">closeoutcopilot.com &mdash; eval detail</div>
+    </div>
+    <div class="screen-content">
+      <div class="app-sidebar">
+        <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+        <div class="sidebar-nav">
+          <div class="sidebar-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <div class="sidebar-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 12h4v8h12v-8h4z"/></svg></div>
+          <div class="sidebar-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg></div>
+          <div class="sidebar-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+        </div>
+      </div>
+      <div class="app-main">
+        <div class="detail-header">
+          <button class="back-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg></button>
+          <div class="detail-title">
+            <h2>Worker clocks in 15 minutes late, reports accurately</h2>
+            <div class="detail-sub">GigSmart Default &middot; Eval Mode &middot; Ran Mar 28</div>
+          </div>
+          <div class="detail-actions">
+            <button class="btn btn-ghost btn-sm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Re-run
+            </button>
+            <span class="badge badge-success badge-lg">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              Pass
+            </span>
+          </div>
+        </div>
+        <div style="padding: 24px 32px; overflow-y: auto;">
+          <div class="shift-info-box">
+            <div class="shift-subtitle">
+              <div class="shift-meta">
+                <strong style="color: var(--gray-200);">Mike Chen</strong>
+                <span class="dot">&middot;</span> +1 (555) 987-6543
+                <span class="dot">&middot;</span> FreshMart Warehouse
+                <span class="dot">&middot;</span> Mar 28, 2026 &middot; 7:00 AM - 3:00 PM
+              </div>
+              <span class="shift-id">eval_2j9d7p</span>
+            </div>
+            <div class="hero-bar">
+              <div class="hero-card filled"><div class="hero-label">Worker Reported</div><div class="hero-times"><div class="hero-time">Clock In <span>7:15 AM</span></div><div class="hero-time">Clock Out <span>3:02 PM</span></div></div></div>
+              <div class="hero-card filled"><div class="hero-label">Facility Reported</div><div class="hero-times"><div class="hero-time">Clock In <span>7:15 AM</span></div><div class="hero-time">Clock Out <span>3:00 PM</span></div></div></div>
+              <div class="hero-card filled"><div class="hero-label">Reconciled</div><div class="hero-times"><div class="hero-time">Clock In <span>7:15 AM</span></div><div class="hero-time">Clock Out <span>3:01 PM</span></div></div></div>
+            </div>
+          </div>
+
+          <!-- Success Box -->
+          <div class="success-box">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <p><strong style="color: var(--gray-100);">This eval passed.</strong> The agent correctly accepted the late clock-in (7:15 AM vs 7:00 AM scheduled) without flagging a discrepancy, as the worker self-reported the delay accurately.</p>
+          </div>
+
+          <!-- Timeline -->
+          <div class="timeline-grid">
+            <div class="timeline-header">
+              <div>Time</div><div>Agent</div><div>Worker</div><div>Facility</div><div>Operations</div>
+            </div>
+            <div class="timeline-row"><div>7:00 AM</div><div><span class="timeline-cell-badge agent">SMS Sent</span></div><div></div><div></div><div></div></div>
+            <div class="timeline-row"><div>7:15 AM</div><div></div><div><span class="timeline-cell-badge worker">Clock In</span></div><div></div><div></div></div>
+            <div class="timeline-row"><div>7:16 AM</div><div><span class="timeline-cell-badge agent">Accepted</span></div><div></div><div></div><div></div></div>
+            <div class="timeline-row"><div>3:00 PM</div><div></div><div></div><div><span class="timeline-cell-badge facility">Clock Out</span></div><div></div></div>
+            <div class="timeline-row"><div>3:02 PM</div><div></div><div><span class="timeline-cell-badge worker">Clock Out</span></div><div></div><div></div></div>
+            <div class="timeline-row"><div>3:05 PM</div><div><span class="timeline-cell-badge agent">Reconciled</span></div><div></div><div></div><div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- SCREEN 8: EVAL DETAIL — FAILED                     -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="section" id="s8">
+  <div class="section-label">Screen 08</div>
+  <h2>Eval Detail &mdash; Failed (Critical UX)</h2>
+  <div class="narrative">
+    This is the most important screen in the feature. When an eval fails, the <strong>Suggestion Island</strong> appears in the MiniRulebook's position. It has two sections: <strong>"Why it failed"</strong> (red header, explanation from the Grader agent) and <strong>"Suggested rulebook change"</strong> (blue header, the Grader's recommendation). The CTAs are <strong>"Re-evaluate"</strong> (re-run without changes) and <strong>"Accept"</strong> (view the proposed diff). This is the core loop: fail &rarr; suggestion &rarr; accept &rarr; diff &rarr; re-evaluate.
+  </div>
+
+  <div class="screen-frame">
+    <div class="screen-chrome">
+      <div class="screen-dot"></div><div class="screen-dot"></div><div class="screen-dot"></div>
+      <div class="screen-title">closeoutcopilot.com &mdash; eval detail (failed)</div>
+    </div>
+    <div class="screen-content">
+      <div class="app-sidebar">
+        <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+        <div class="sidebar-nav">
+          <div class="sidebar-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <div class="sidebar-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 12h4v8h12v-8h4z"/></svg></div>
+          <div class="sidebar-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg></div>
+          <div class="sidebar-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+        </div>
+      </div>
+      <div class="app-main">
+        <div class="detail-header">
+          <button class="back-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg></button>
+          <div class="detail-title">
+            <h2>Unauthorized 45-min break during 4-hour shift</h2>
+            <div class="detail-sub">GigSmart Default &middot; Eval Mode &middot; Ran Mar 28</div>
+          </div>
+          <div class="detail-actions">
+            <span class="badge badge-danger badge-lg">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+              Fail
+            </span>
+          </div>
+        </div>
+        <div style="padding: 24px 32px; overflow-y: auto;">
+          <div class="shift-info-box">
+            <div class="shift-subtitle">
+              <div class="shift-meta">
+                <strong style="color: var(--gray-200);">Jordan Williams</strong>
+                <span class="dot">&middot;</span> +1 (555) 234-5678
+                <span class="dot">&middot;</span> QuickServe Logistics
+                <span class="dot">&middot;</span> Mar 28, 2026 &middot; 2:00 PM - 6:00 PM
+              </div>
+              <span class="shift-id">eval_4n1x8q</span>
+            </div>
+            <div class="hero-bar">
+              <div class="hero-card filled"><div class="hero-label">Worker Reported</div><div class="hero-times"><div class="hero-time">Clock In <span>2:00 PM</span></div><div class="hero-time">Clock Out <span>6:00 PM</span></div></div></div>
+              <div class="hero-card filled"><div class="hero-label">Facility Reported</div><div class="hero-times"><div class="hero-time">Clock In <span>2:00 PM</span></div><div class="hero-time">Break <span>3:15 PM - 4:00 PM</span></div></div></div>
+              <div class="hero-card filled"><div class="hero-label">Reconciled</div><div class="hero-times"><div class="hero-time">Clock In <span>2:00 PM</span></div><div class="hero-time">Clock Out <span>6:00 PM</span></div></div></div>
+            </div>
+          </div>
+
+          <!-- SUGGESTION ISLAND -->
+          <div class="suggestion-island" id="suggestion-island">
+            <!-- State: Suggestion (default) -->
+            <div class="state-panel active" id="island-suggestion">
+              <div class="suggestion-section">
+                <div class="suggestion-label fail">Why it failed</div>
+                <div class="suggestion-text">The agent accepted the 45-minute break without flagging it. The rulebook states breaks over 30 minutes require supervisor approval, but the current rules don't specify what action the agent should take when an unapproved break is detected. The agent treated the break as informational only and did not escalate.</div>
+              </div>
+              <div class="suggestion-section">
+                <div class="suggestion-label fix">Suggested rulebook change</div>
+                <div class="suggestion-text">Add an explicit escalation rule: when a break exceeds the allowed duration (30 minutes) and no supervisor approval is on record, the agent should send an alert to the supervisor and flag the shift for review. This gives the agent a clear action path instead of silently accepting the break.</div>
+              </div>
+              <div class="suggestion-actions">
+                <button class="btn btn-ghost btn-xs" onclick="showIslandState('island-suggestion')">Re-evaluate</button>
+                <button class="btn btn-primary btn-xs" onclick="showIslandState('island-diff')">Accept</button>
+              </div>
+            </div>
+
+            <!-- State: Diff View -->
+            <div class="state-panel" id="island-diff">
+              <div class="diff-box" style="border-top: none;">
+                <div class="diff-header">
+                  <div class="diff-stats">
+                    <span class="add">+3</span>
+                    <span class="remove">-1</span>
+                  </div>
+                  <div class="diff-actions">
+                    <button class="btn-xs btn btn-ghost" onclick="showIslandState('island-suggestion')">Discard</button>
+                    <button class="btn-xs btn btn-primary" style="background: var(--green-600);" onclick="showIslandState('island-accepted')">Apply Changes</button>
+                  </div>
+                </div>
+                <table class="diff-table">
+                  <tbody>
+                    <tr class="line-remove">
+                      <td class="line-num">12</td>
+                      <td class="line-num"></td>
+                      <td class="line-content"><span class="prefix">-</span> If worker reports a break, log it in the timesheet</td>
+                    </tr>
+                    <tr class="line-add">
+                      <td class="line-num"></td>
+                      <td class="line-num">12</td>
+                      <td class="line-content"><span class="prefix">+</span> If worker reports a break within the allowed duration (30 min), log it in the timesheet</td>
+                    </tr>
+                    <tr class="line-add">
+                      <td class="line-num"></td>
+                      <td class="line-num">13</td>
+                      <td class="line-content"><span class="prefix">+</span> If a break exceeds 30 minutes and no supervisor approval exists, send an alert to the facility supervisor</td>
+                    </tr>
+                    <tr class="line-add">
+                      <td class="line-num"></td>
+                      <td class="line-num">14</td>
+                      <td class="line-content"><span class="prefix">+</span> Flag the shift for manual review when an unapproved long break is detected</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- State: Accepted -->
+            <div class="state-panel" id="island-accepted">
+              <div class="accepted-box" style="margin: 0; border: none; border-radius: 0;">
+                <div class="check-circle">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <h3>Rulebook updated</h3>
+                <p class="hint">3 rules added to GigSmart Default. Run the eval again to verify the fix.</p>
+                <button class="btn btn-primary btn-sm" style="margin-top: 4px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  Re-evaluate
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- State Toggle for demo -->
+          <div class="state-toggle">
+            <button class="active" onclick="showIslandState('island-suggestion')">Suggestion</button>
+            <button onclick="showIslandState('island-diff')">Diff View</button>
+            <button onclick="showIslandState('island-accepted')">Accepted</button>
+          </div>
+
+          <!-- Timeline -->
+          <div class="timeline-grid" style="margin-top: 16px;">
+            <div class="timeline-header">
+              <div>Time</div><div>Agent</div><div>Worker</div><div>Facility</div><div>Operations</div>
+            </div>
+            <div class="timeline-row"><div>2:00 PM</div><div><span class="timeline-cell-badge agent">SMS Sent</span></div><div></div><div></div><div></div></div>
+            <div class="timeline-row"><div>2:00 PM</div><div></div><div><span class="timeline-cell-badge worker">Clock In</span></div><div></div><div></div></div>
+            <div class="timeline-row"><div>2:01 PM</div><div><span class="timeline-cell-badge agent">Accepted</span></div><div></div><div></div><div></div></div>
+            <div class="timeline-row"><div>3:15 PM</div><div></div><div></div><div><span class="timeline-cell-badge facility">Break Start</span></div><div></div></div>
+            <div class="timeline-row"><div>4:00 PM</div><div></div><div></div><div><span class="timeline-cell-badge facility">Break End</span></div><div></div></div>
+            <div class="timeline-row" style="background: rgba(239, 68, 68, 0.04);"><div>4:01 PM</div><div><span class="timeline-cell-badge agent" style="background: rgba(239,68,68,0.1); color: #991b1b;">No Action</span></div><div></div><div></div><div style="font-size: 0.72rem; color: #991b1b; font-family: var(--font-body);">45-min break not flagged</div></div>
+            <div class="timeline-row"><div>6:00 PM</div><div></div><div><span class="timeline-cell-badge worker">Clock Out</span></div><div></div><div></div></div>
+            <div class="timeline-row"><div>6:02 PM</div><div><span class="timeline-cell-badge agent">Reconciled</span></div><div></div><div></div><div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="interaction-note">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+    Use the toggle buttons above to switch between the three states of the Suggestion Island: initial suggestion view, diff view after clicking "Accept", and the post-accept confirmation with "Re-evaluate" button.
+  </div>
+
+  <div class="corner-cases">
+    <h4>Corner Cases</h4>
+    <ul>
+      <li>Grader can't determine a fix: hide "Accept" button, show only "Re-evaluate" with a note "The grader couldn't suggest a specific rulebook change for this failure"</li>
+      <li>Multiple issues in one eval: grader lists all failure reasons, suggestion addresses the primary one</li>
+      <li>Diff is very large (10+ line changes): the diff area scrolls within the island, capped at 300px height</li>
+      <li>User clicks "Re-evaluate" without accepting: eval re-runs with current (unchanged) rulebook</li>
+      <li>The problematic timeline row is highlighted in red to make the failure point obvious</li>
+    </ul>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- SCREEN 9: ACCEPT FLOW — DIFF VIEW                  -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="section" id="s9">
+  <div class="section-label">Screen 09</div>
+  <h2>Accept Flow &mdash; Diff View</h2>
+  <div class="narrative">
+    When the user clicks <strong>"Accept"</strong> on the failed eval's suggestion, the Suggestion Island transitions to show a diff view. This uses the <strong>exact same diff UI</strong> as the existing MiniRulebook component: monospace font, green additions, red removals, line numbers, <code>+N</code>/<code>-N</code> stats. The buttons are "Discard" (return to suggestion) and <strong>"Apply Changes"</strong> (commit the rulebook modification). This is shown as an interactive state in Screen 08 above &mdash; click "Diff View" in the toggle to see it.
+  </div>
+
+  <div class="interaction-note">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+    The diff view is embedded in Screen 08's Suggestion Island. Use the state toggle buttons to switch between Suggestion &rarr; Diff View &rarr; Accepted states. The diff reuses the exact same component pattern as MiniRulebook.tsx's diff phase.
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- SCREEN 10: AFTER ACCEPT                            -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="section" id="s10">
+  <div class="section-label">Screen 10</div>
+  <h2>After Accept &mdash; Re-evaluate</h2>
+  <div class="narrative">
+    After applying the diff, the Suggestion Island collapses to a compact confirmation: a green checkmark, <strong>"Rulebook updated"</strong> message, and a prominent <strong>"Re-evaluate"</strong> button. The user's natural next action is to click Re-evaluate to verify the fix works. This is shown as the "Accepted" state in Screen 08's toggle above.
+  </div>
+
+  <div class="interaction-note">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+    The full flow: Fail &rarr; read suggestion &rarr; "Accept" &rarr; review diff &rarr; "Apply Changes" &rarr; "Re-evaluate" &rarr; (eval runs again) &rarr; hopefully Pass. If it fails again, the cycle repeats with a new suggestion.
+  </div>
+
+  <div class="corner-cases">
+    <h4>Corner Cases</h4>
+    <ul>
+      <li>User navigates away without re-evaluating: eval stays as "Fail" in the table, rulebook is already updated</li>
+      <li>User wants to manually edit the rulebook further before re-evaluating: they can go to the Workflows tab, make additional changes, then come back to re-evaluate</li>
+      <li>Re-evaluate fails again: new suggestion appears with updated reasoning (the grader knows the previous fix was applied)</li>
+    </ul>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- SCREEN 11: AUTO-UPDATE NOTIFICATION                -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="section" id="s11">
+  <div class="section-label">Screen 11</div>
+  <h2>Auto-Update Notification</h2>
+  <div class="narrative">
+    Every time a rulebook is edited (via Workflows page, MiniRulebook, or eval suggestion acceptance), the Generator agent <strong>automatically re-assesses</strong> the eval set. It may add new evals, modify existing ones, or remove evals that are no longer relevant. A blue info banner on the evals tab shows this is happening. New or modified evals are highlighted in blue.
+  </div>
+
+  <div class="screen-frame">
+    <div class="screen-chrome">
+      <div class="screen-dot"></div><div class="screen-dot"></div><div class="screen-dot"></div>
+      <div class="screen-title">closeoutcopilot.com</div>
+    </div>
+    <div class="screen-content">
+      <div class="app-sidebar">
+        <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+        <div class="sidebar-nav">
+          <div class="sidebar-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <div class="sidebar-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 12h4v8h12v-8h4z"/></svg></div>
+          <div class="sidebar-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg></div>
+          <div class="sidebar-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+        </div>
+      </div>
+      <div class="app-main">
+        <div class="app-header"><div><h1>Evals</h1><div class="subtitle">Automated tests for your rulebooks</div></div></div>
+        <div class="app-body">
+          <div class="two-panel">
+            <div class="panel-sidebar">
+              <div class="panel-sidebar-header"><span>Rulebooks</span></div>
+              <ul class="rulebook-list">
+                <li class="rulebook-item active">GigSmart Default <span class="rulebook-count"><span class="pass">4</span>/<span class="fail">1</span></span></li>
+                <li class="rulebook-item">Wonolo Standard</li>
+              </ul>
+            </div>
+            <div class="panel-content">
+              <div class="update-banner">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                <span>Rulebook was updated on Mar 30. The agent is reviewing evals&hellip; <div class="spinner green" style="width: 10px; height: 10px; border-width: 1.5px; border-top-color: var(--blue-400); margin-left: 4px;"></div></span>
+              </div>
+              <div class="eval-toolbar">
+                <div class="left"><span class="count">7 evals</span></div>
+                <button class="btn btn-primary btn-sm">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                  Add Eval
+                </button>
+              </div>
+              <div class="eval-table-wrap">
+                <table class="eval-table">
+                  <thead>
+                    <tr>
+                      <th class="col-desc">Description</th>
+                      <th class="col-outcome">Expected Outcome</th>
+                      <th class="col-status">Status</th>
+                      <th class="col-lastrun">Last Run</th>
+                      <th class="col-actions"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><div class="desc-text">Worker clocks in 15 minutes late and reports it accurately via SMS</div></td>
+                      <td class="outcome-text">Agent accepts the late clock-in without flagging discrepancy</td>
+                      <td><span class="badge badge-success">Pass</span></td>
+                      <td>Mar 28</td>
+                      <td class="col-actions"><button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button></td>
+                    </tr>
+                    <tr>
+                      <td><div class="desc-text">Worker takes an unauthorized 45-minute break during a 4-hour shift</div></td>
+                      <td class="outcome-text">Agent flags the break and alerts the supervisor</td>
+                      <td><span class="badge badge-neutral">Never Run</span></td>
+                      <td style="color: var(--gray-600)">&mdash;</td>
+                      <td class="col-actions"><button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button></td>
+                    </tr>
+                    <!-- New eval highlighted -->
+                    <tr class="highlight-new">
+                      <td><div class="desc-text">Break exceeds 30 minutes but supervisor pre-approved the extended break via email</div></td>
+                      <td class="outcome-text">Agent recognizes pre-approval and does not escalate the break</td>
+                      <td><span class="badge badge-info">New</span></td>
+                      <td style="color: var(--gray-600)">&mdash;</td>
+                      <td class="col-actions"><button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button></td>
+                    </tr>
+                    <tr class="highlight-new">
+                      <td><div class="desc-text">Supervisor approval for extended break arrives after the break has already ended</div></td>
+                      <td class="outcome-text">Agent retroactively updates the break status and removes the flag</td>
+                      <td><span class="badge badge-info">New</span></td>
+                      <td style="color: var(--gray-600)">&mdash;</td>
+                      <td class="col-actions"><button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button></td>
+                    </tr>
+                    <tr>
+                      <td><div class="desc-text">Facility reports a no-show but worker claims they were on site</div></td>
+                      <td class="outcome-text">Agent investigates discrepancy and requests evidence</td>
+                      <td><span class="badge badge-success">Pass</span></td>
+                      <td>Mar 28</td>
+                      <td class="col-actions"><button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button></td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div class="table-footer">
+                  <span class="summary">7 evals &middot; 2 new from rulebook update</span>
+                  <button class="btn btn-ghost btn-sm">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    Run All
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="interaction-note">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+    The Generator agent added 2 new evals related to the break rules that were just modified. New evals are highlighted in blue with a "New" badge. The previously-failing break eval now has an updated expected outcome reflecting the new rules, and shows "Never Run" since it needs re-evaluation.
+  </div>
+
+  <div class="corner-cases">
+    <h4>Corner Cases</h4>
+    <ul>
+      <li>Rapid successive edits: debounce the re-assessment, only trigger on the latest version</li>
+      <li>Agent removes an eval: show a brief toast notification "1 eval removed (no longer relevant)"</li>
+      <li>Agent modifies an eval's expected outcome: show "Modified" badge instead of "New", reset status to "Never Run"</li>
+      <li>No changes needed: banner briefly shows then dismisses with "No eval changes needed"</li>
+    </ul>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- AGENTS SUMMARY                                     -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">Architecture</div>
+  <h2>The Three Agents</h2>
+  <div class="narrative">
+    The evals system relies on three distinct agents, each with a focused responsibility. All use Claude (Haiku to start, for cost management).
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 20px;">
+    <div style="background: var(--gray-900); border: 1px solid var(--gray-800); border-radius: 10px; padding: 20px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+        <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(168, 85, 247, 0.15); display: flex; align-items: center; justify-content: center; color: #7e22ce;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+        </div>
+        <strong style="color: var(--gray-100); font-family: var(--font-display); font-size: 0.92rem;">Generator</strong>
+      </div>
+      <p style="font-size: 0.82rem; color: var(--gray-400); line-height: 1.6;">Reads the rulebook and produces eval scenarios with expected outcomes. Triggered on rulebook create/update. Adds, modifies, or removes evals as rules change.</p>
+    </div>
+    <div style="background: var(--gray-900); border: 1px solid var(--gray-800); border-radius: 10px; padding: 20px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+        <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(59, 130, 246, 0.15); display: flex; align-items: center; justify-content: center; color: #1e40af;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </div>
+        <strong style="color: var(--gray-100); font-family: var(--font-display); font-size: 0.92rem;">Conductor</strong>
+      </div>
+      <p style="font-size: 0.82rem; color: var(--gray-400); line-height: 1.6;">Executes evals by simulating both the worker and facility. Creates synthetic shift data, sends realistic messages, and follows the eval script. The agent being tested responds as it normally would.</p>
+    </div>
+    <div style="background: var(--gray-900); border: 1px solid var(--gray-800); border-radius: 10px; padding: 20px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+        <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(34, 197, 94, 0.15); display: flex; align-items: center; justify-content: center; color: #16a34a;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <strong style="color: var(--gray-100); font-family: var(--font-display); font-size: 0.92rem;">Grader</strong>
+      </div>
+      <p style="font-size: 0.82rem; color: var(--gray-400); line-height: 1.6;">Reviews the eval results against the expected outcome. Determines pass/fail. On failure, analyzes root cause and suggests specific rulebook changes with a concrete diff.</p>
+    </div>
+  </div>
+</div>
+
+
+</div><!-- /doc-container -->
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- INTERACTIVE JS                                     -->
+<!-- ═══════════════════════════════════════════════════ -->
+<script>
+// Toggle modal visibility
+function toggleModal(id) {
+  const modal = document.getElementById(id);
+  if (modal) modal.classList.toggle('hidden');
+}
+
+// Switch suggestion island states
+function showIslandState(stateId) {
+  const panels = document.querySelectorAll('#suggestion-island .state-panel');
+  panels.forEach(p => p.classList.remove('active'));
+
+  const target = document.getElementById(stateId);
+  if (target) target.classList.add('active');
+
+  // Update toggle buttons
+  const toggles = document.querySelectorAll('.state-toggle button');
+  toggles.forEach(btn => {
+    btn.classList.remove('active');
+    if (
+      (stateId === 'island-suggestion' && btn.textContent === 'Suggestion') ||
+      (stateId === 'island-diff' && btn.textContent === 'Diff View') ||
+      (stateId === 'island-accepted' && btn.textContent === 'Accepted')
+    ) {
+      btn.classList.add('active');
+    }
+  });
+}
+
+// Smooth scroll for TOC links
+document.querySelectorAll('.toc a').forEach(link => {
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
+</script>
+
+</body>
+</html>
