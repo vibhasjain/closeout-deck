@@ -336,6 +336,55 @@ body {
   background: var(--gray-950);
 }
 
+/* ── Inline Tab Nav (pill group, right side of header) ── */
+.app-tabs-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--gray-850);
+  border: 1px solid var(--gray-700);
+  border-radius: 8px;
+  padding: 3px;
+  margin-left: auto;
+}
+
+.app-tabs-nav .tab-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--gray-500);
+  font-size: 0.78rem;
+  font-weight: 500;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.app-tabs-nav .tab-pill:hover {
+  color: var(--gray-300);
+  background: var(--gray-800);
+}
+
+.app-tabs-nav .tab-pill.active {
+  background: var(--green-900);
+  color: var(--green-300);
+}
+
+.app-tabs-nav .tab-pill.active:hover {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--green-300);
+}
+
+.app-tabs-nav .tab-pill svg {
+  width: 14px;
+  height: 14px;
+}
+
 .app-header {
   display: flex;
   align-items: center;
@@ -790,7 +839,7 @@ body {
 .detail-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 20px;
   padding: 16px 32px;
   border-bottom: 1px solid var(--gray-700);
   background: var(--gray-900);
@@ -821,6 +870,7 @@ body {
   font-size: 1.1rem;
   font-weight: 600;
   color: var(--gray-100);
+  margin-bottom: 0;
 }
 
 .detail-title .detail-sub {
@@ -1331,6 +1381,12 @@ body {
             <h1>Evals</h1>
             <div class="subtitle">Automated tests for your rulebooks</div>
           </div>
+          <div class="app-tabs-nav">
+            <button class="tab-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Shifts</button>
+            <button class="tab-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18"/><path d="m19 8 3 8a5 5 0 0 1-6 0z"/><path d="M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1"/><path d="m5 8 3 8a5 5 0 0 1-6 0z"/><path d="M7 21h10"/></svg> Rules</button>
+            <button class="tab-pill active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg> Evals</button>
+            <button class="tab-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22v-5"/><path d="M15 8V2"/><path d="M17 8a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z"/><path d="M9 8V2"/></svg> Connect</button>
+          </div>
         </div>
         <div class="app-body">
           <div class="two-panel">
@@ -1404,6 +1460,12 @@ body {
           <div>
             <h1>Evals</h1>
             <div class="subtitle">Automated tests for your rulebooks</div>
+          </div>
+          <div class="app-tabs-nav">
+            <button class="tab-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Shifts</button>
+            <button class="tab-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18"/><path d="m19 8 3 8a5 5 0 0 1-6 0z"/><path d="M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1"/><path d="m5 8 3 8a5 5 0 0 1-6 0z"/><path d="M7 21h10"/></svg> Rules</button>
+            <button class="tab-pill active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg> Evals</button>
+            <button class="tab-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22v-5"/><path d="M15 8V2"/><path d="M17 8a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z"/><path d="M9 8V2"/></svg> Connect</button>
           </div>
         </div>
         <div class="app-body">
@@ -1516,6 +1578,12 @@ body {
           <div>
             <h1>Evals</h1>
             <div class="subtitle">Automated tests for your rulebooks</div>
+          </div>
+          <div class="app-tabs-nav">
+            <button class="tab-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Shifts</button>
+            <button class="tab-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18"/><path d="m19 8 3 8a5 5 0 0 1-6 0z"/><path d="M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1"/><path d="m5 8 3 8a5 5 0 0 1-6 0z"/><path d="M7 21h10"/></svg> Rules</button>
+            <button class="tab-pill active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg> Evals</button>
+            <button class="tab-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22v-5"/><path d="M15 8V2"/><path d="M17 8a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z"/><path d="M9 8V2"/></svg> Connect</button>
           </div>
         </div>
         <div class="app-body">
@@ -1679,7 +1747,7 @@ body {
         </div>
       </div>
       <div class="app-main" style="opacity: 0.5;">
-        <div class="app-header"><div><h1>Evals</h1></div></div>
+        <div class="app-header"><div><h1>Evals</h1></div><div class="app-tabs-nav"><button class="tab-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Shifts</button><button class="tab-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18"/><path d="m19 8 3 8a5 5 0 0 1-6 0z"/><path d="M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1"/><path d="m5 8 3 8a5 5 0 0 1-6 0z"/><path d="M7 21h10"/></svg> Rules</button><button class="tab-pill active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg> Evals</button><button class="tab-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22v-5"/><path d="M15 8V2"/><path d="M17 8a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z"/><path d="M9 8V2"/></svg> Connect</button></div></div>
         <div class="app-body"><div style="color: var(--gray-600); text-align: center; padding: 100px 0;">Table behind modal</div></div>
       </div>
     </div>
@@ -1740,7 +1808,7 @@ body {
         </div>
       </div>
       <div class="app-main">
-        <div class="app-header"><div><h1>Evals</h1><div class="subtitle">Automated tests for your rulebooks</div></div></div>
+        <div class="app-header"><div><h1>Evals</h1><div class="subtitle">Automated tests for your rulebooks</div></div><div class="app-tabs-nav"><button class="tab-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Shifts</button><button class="tab-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18"/><path d="m19 8 3 8a5 5 0 0 1-6 0z"/><path d="M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1"/><path d="m5 8 3 8a5 5 0 0 1-6 0z"/><path d="M7 21h10"/></svg> Rules</button><button class="tab-pill active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg> Evals</button><button class="tab-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22v-5"/><path d="M15 8V2"/><path d="M17 8a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z"/><path d="M9 8V2"/></svg> Connect</button></div></div>
         <div class="app-body">
           <div class="two-panel">
             <div class="panel-sidebar">
@@ -2259,7 +2327,12 @@ body {
   <div class="section-label">Screen 11</div>
   <h2>Auto-Update Notification</h2>
   <div class="narrative">
-    Every time a rulebook is edited (via Workflows page, MiniRulebook, or eval suggestion acceptance), the Generator agent <strong>automatically re-assesses</strong> the eval set. It may add new evals, modify existing ones, or remove evals that are no longer relevant. A blue info banner on the evals tab shows this is happening. New or modified evals are highlighted in blue.
+    When a rulebook changes, the system&rsquo;s response depends on <strong>how</strong> the change originated. For <strong>manual edits</strong> (user changed rules on the Workflows page or via MiniRulebook), the Generator agent both <strong>re-runs existing evals</strong> and <strong>generates new evals</strong> to cover the changed rules. For <strong>eval-suggestion-accepted</strong> changes (a rulebook edit that came from accepting a failed eval&rsquo;s suggestion), the system <strong>only re-runs existing evals</strong> &mdash; it does NOT generate new evals. This prevents a circular dependency: failed eval &rarr; suggestion &rarr; rulebook change &rarr; new evals &rarr; possible failure &rarr; another suggestion &rarr; infinite loop.
+  </div>
+
+  <div class="state-toggle" style="margin-bottom: 16px;">
+    <button class="active" onclick="showScreen11State('s11-manual')">Manual Edit</button>
+    <button onclick="showScreen11State('s11-eval-fix')">Eval Suggestion Accepted</button>
   </div>
 
   <div class="screen-frame">
@@ -2278,7 +2351,7 @@ body {
         </div>
       </div>
       <div class="app-main">
-        <div class="app-header"><div><h1>Evals</h1><div class="subtitle">Automated tests for your rulebooks</div></div></div>
+        <div class="app-header"><div><h1>Evals</h1><div class="subtitle">Automated tests for your rulebooks</div></div><div class="app-tabs-nav"><button class="tab-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Shifts</button><button class="tab-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18"/><path d="m19 8 3 8a5 5 0 0 1-6 0z"/><path d="M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1"/><path d="m5 8 3 8a5 5 0 0 1-6 0z"/><path d="M7 21h10"/></svg> Rules</button><button class="tab-pill active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg> Evals</button><button class="tab-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22v-5"/><path d="M15 8V2"/><path d="M17 8a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z"/><path d="M9 8V2"/></svg> Connect</button></div></div>
         <div class="app-body">
           <div class="two-panel">
             <div class="panel-sidebar">
@@ -2289,73 +2362,148 @@ body {
               </ul>
             </div>
             <div class="panel-content">
-              <div class="update-banner">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-                <span>Rulebook was updated on Mar 30. The agent is reviewing evals&hellip; <div class="spinner green" style="width: 10px; height: 10px; border-width: 1.5px; border-top-color: var(--blue-400); margin-left: 4px;"></div></span>
-              </div>
-              <div class="eval-toolbar">
-                <div class="left"><span class="count">7 evals</span></div>
-                <button class="btn btn-primary btn-sm">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                  Add Eval
-                </button>
-              </div>
-              <div class="eval-table-wrap">
-                <table class="eval-table">
-                  <thead>
-                    <tr>
-                      <th class="col-desc">Description</th>
-                      <th class="col-outcome">Expected Outcome</th>
-                      <th class="col-status">Status</th>
-                      <th class="col-lastrun">Last Run</th>
-                      <th class="col-actions"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><div class="desc-text">Worker clocks in 15 minutes late and reports it accurately via SMS</div></td>
-                      <td class="outcome-text">Agent accepts the late clock-in without flagging discrepancy</td>
-                      <td><span class="badge badge-success">Pass</span></td>
-                      <td>Mar 28</td>
-                      <td class="col-actions"><button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button></td>
-                    </tr>
-                    <tr>
-                      <td><div class="desc-text">Worker takes an unauthorized 45-minute break during a 4-hour shift</div></td>
-                      <td class="outcome-text">Agent flags the break and alerts the supervisor</td>
-                      <td><span class="badge badge-neutral">Never Run</span></td>
-                      <td style="color: var(--gray-600)">&mdash;</td>
-                      <td class="col-actions"><button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button></td>
-                    </tr>
-                    <!-- New eval highlighted -->
-                    <tr class="highlight-new">
-                      <td><div class="desc-text">Break exceeds 30 minutes but supervisor pre-approved the extended break via email</div></td>
-                      <td class="outcome-text">Agent recognizes pre-approval and does not escalate the break</td>
-                      <td><span class="badge badge-info">New</span></td>
-                      <td style="color: var(--gray-600)">&mdash;</td>
-                      <td class="col-actions"><button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button></td>
-                    </tr>
-                    <tr class="highlight-new">
-                      <td><div class="desc-text">Supervisor approval for extended break arrives after the break has already ended</div></td>
-                      <td class="outcome-text">Agent retroactively updates the break status and removes the flag</td>
-                      <td><span class="badge badge-info">New</span></td>
-                      <td style="color: var(--gray-600)">&mdash;</td>
-                      <td class="col-actions"><button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button></td>
-                    </tr>
-                    <tr>
-                      <td><div class="desc-text">Facility reports a no-show but worker claims they were on site</div></td>
-                      <td class="outcome-text">Agent investigates discrepancy and requests evidence</td>
-                      <td><span class="badge badge-success">Pass</span></td>
-                      <td>Mar 28</td>
-                      <td class="col-actions"><button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button></td>
-                    </tr>
-                  </tbody>
-                </table>
-                <div class="table-footer">
-                  <span class="summary">7 evals &middot; 2 new from rulebook update</span>
-                  <button class="btn btn-ghost btn-sm">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                    Run All
+              <!-- State A: Manual Edit (default) -->
+              <div id="s11-manual" class="state-panel active">
+                <div class="update-banner">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                  <span>Rulebook manually edited on Mar 30. Re-running evals and generating new ones&hellip; <div class="spinner green" style="width: 10px; height: 10px; border-width: 1.5px; border-top-color: var(--blue-400); margin-left: 4px;"></div></span>
+                </div>
+                <div class="eval-toolbar">
+                  <div class="left"><span class="count">7 evals</span></div>
+                  <button class="btn btn-primary btn-sm">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                    Add Eval
                   </button>
+                </div>
+                <div class="eval-table-wrap">
+                  <table class="eval-table">
+                    <thead>
+                      <tr>
+                        <th class="col-desc">Description</th>
+                        <th class="col-outcome">Expected Outcome</th>
+                        <th class="col-status">Status</th>
+                        <th class="col-lastrun">Last Run</th>
+                        <th class="col-actions"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><div class="desc-text">Worker clocks in 15 minutes late and reports it accurately via SMS</div></td>
+                        <td class="outcome-text">Agent accepts the late clock-in without flagging discrepancy</td>
+                        <td><span class="badge badge-success">Pass</span></td>
+                        <td>Mar 28</td>
+                        <td class="col-actions"><button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button></td>
+                      </tr>
+                      <tr>
+                        <td><div class="desc-text">Worker takes an unauthorized 45-minute break during a 4-hour shift</div></td>
+                        <td class="outcome-text">Agent flags the break and alerts the supervisor</td>
+                        <td><span class="badge badge-neutral">Never Run</span></td>
+                        <td style="color: var(--gray-600)">&mdash;</td>
+                        <td class="col-actions"><button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button></td>
+                      </tr>
+                      <!-- New evals from manual edit -->
+                      <tr class="highlight-new">
+                        <td><div class="desc-text">Break exceeds 30 minutes but supervisor pre-approved the extended break via email</div></td>
+                        <td class="outcome-text">Agent recognizes pre-approval and does not escalate the break</td>
+                        <td><span class="badge badge-info">New</span></td>
+                        <td style="color: var(--gray-600)">&mdash;</td>
+                        <td class="col-actions"><button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button></td>
+                      </tr>
+                      <tr class="highlight-new">
+                        <td><div class="desc-text">Supervisor approval for extended break arrives after the break has already ended</div></td>
+                        <td class="outcome-text">Agent retroactively updates the break status and removes the flag</td>
+                        <td><span class="badge badge-info">New</span></td>
+                        <td style="color: var(--gray-600)">&mdash;</td>
+                        <td class="col-actions"><button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button></td>
+                      </tr>
+                      <tr>
+                        <td><div class="desc-text">Facility reports a no-show but worker claims they were on site</div></td>
+                        <td class="outcome-text">Agent investigates discrepancy and requests evidence</td>
+                        <td><span class="badge badge-success">Pass</span></td>
+                        <td>Mar 28</td>
+                        <td class="col-actions"><button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div class="table-footer">
+                    <span class="summary">7 evals &middot; 2 new from rulebook update</span>
+                    <button class="btn btn-ghost btn-sm">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                      Run All
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- State B: Eval Suggestion Accepted (re-run only, no new evals) -->
+              <div id="s11-eval-fix" class="state-panel">
+                <div class="update-banner">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                  <span>Rulebook updated via eval suggestion. Re-running existing evals only&hellip; <div class="spinner green" style="width: 10px; height: 10px; border-width: 1.5px; border-top-color: var(--blue-400); margin-left: 4px;"></div></span>
+                </div>
+                <div class="eval-toolbar">
+                  <div class="left"><span class="count">5 evals</span></div>
+                  <button class="btn btn-primary btn-sm">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                    Add Eval
+                  </button>
+                </div>
+                <div class="eval-table-wrap">
+                  <table class="eval-table">
+                    <thead>
+                      <tr>
+                        <th class="col-desc">Description</th>
+                        <th class="col-outcome">Expected Outcome</th>
+                        <th class="col-status">Status</th>
+                        <th class="col-lastrun">Last Run</th>
+                        <th class="col-actions"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><div class="desc-text">Worker clocks in 15 minutes late and reports it accurately via SMS</div></td>
+                        <td class="outcome-text">Agent accepts the late clock-in without flagging discrepancy</td>
+                        <td><span class="badge badge-success">Pass</span></td>
+                        <td>Mar 28</td>
+                        <td class="col-actions"><button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button></td>
+                      </tr>
+                      <tr>
+                        <td><div class="desc-text">Worker takes an unauthorized 45-minute break during a 4-hour shift</div></td>
+                        <td class="outcome-text">Agent flags the break and alerts the supervisor</td>
+                        <td><span class="badge badge-warning"><div class="spinner green" style="width: 10px; height: 10px; border-width: 1.5px; margin-right: 4px;"></div> Re-running</span></td>
+                        <td style="color: var(--gray-600)">Mar 28</td>
+                        <td class="col-actions"><button class="icon-btn play disabled"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button></td>
+                      </tr>
+                      <tr>
+                        <td><div class="desc-text">Facility reports a no-show but worker claims they were on site</div></td>
+                        <td class="outcome-text">Agent investigates discrepancy and requests evidence</td>
+                        <td><span class="badge badge-success">Pass</span></td>
+                        <td>Mar 28</td>
+                        <td class="col-actions"><button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button></td>
+                      </tr>
+                      <tr>
+                        <td><div class="desc-text">Worker disputes clock-out time, provides photo evidence</div></td>
+                        <td class="outcome-text">Agent escalates to supervisor for manual review</td>
+                        <td><span class="badge badge-success">Pass</span></td>
+                        <td>Mar 28</td>
+                        <td class="col-actions"><button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button></td>
+                      </tr>
+                      <tr>
+                        <td><div class="desc-text">Shift ends but worker hasn&rsquo;t clocked out within grace period</div></td>
+                        <td class="outcome-text">Agent sends SMS reminder and alerts supervisor after 15 min</td>
+                        <td><span class="badge badge-success">Pass</span></td>
+                        <td>Mar 28</td>
+                        <td class="col-actions"><button class="icon-btn play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div class="table-footer">
+                    <span class="summary">5 evals &middot; re-running after eval fix</span>
+                    <button class="btn btn-ghost btn-sm">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                      Run All
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2367,16 +2515,19 @@ body {
 
   <div class="interaction-note">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
-    The Generator agent added 2 new evals related to the break rules that were just modified. New evals are highlighted in blue with a "New" badge. The previously-failing break eval now has an updated expected outcome reflecting the new rules, and shows "Never Run" since it needs re-evaluation.
+    <strong>Manual edit path:</strong> The Generator agent added 2 new evals related to the break rules that were just modified, and re-runs all existing evals. New evals are highlighted in blue with a &ldquo;New&rdquo; badge. <strong>Eval-fix path:</strong> When the change came from accepting an eval suggestion, only existing evals are re-run &mdash; no new evals are generated. This prevents the circular loop where a fix generates new evals that might fail and suggest further fixes indefinitely. Use the toggle above to compare both states.
   </div>
 
   <div class="corner-cases">
     <h4>Corner Cases</h4>
     <ul>
       <li>Rapid successive edits: debounce the re-assessment, only trigger on the latest version</li>
-      <li>Agent removes an eval: show a brief toast notification "1 eval removed (no longer relevant)"</li>
-      <li>Agent modifies an eval's expected outcome: show "Modified" badge instead of "New", reset status to "Never Run"</li>
-      <li>No changes needed: banner briefly shows then dismisses with "No eval changes needed"</li>
+      <li>Agent removes an eval: show a brief toast notification &ldquo;1 eval removed (no longer relevant)&rdquo;</li>
+      <li>Agent modifies an eval&rsquo;s expected outcome: show &ldquo;Modified&rdquo; badge instead of &ldquo;New&rdquo;, reset status to &ldquo;Never Run&rdquo;</li>
+      <li>No changes needed: banner briefly shows then dismisses with &ldquo;No eval changes needed&rdquo;</li>
+      <li><strong>Eval suggestion accepted &rarr; re-run only:</strong> The system tags the rulebook change with <code>source: &ldquo;eval_suggestion&rdquo;</code>. The Generator checks this tag and skips new eval generation, only triggering re-runs of existing evals.</li>
+      <li><strong>Manual edit after accepting suggestion:</strong> If the user makes additional manual edits before the re-run completes, the change source escalates to &ldquo;manual&rdquo; and full generation occurs.</li>
+      <li><strong>Multiple suggestions accepted rapidly:</strong> Each acceptance triggers its own re-run-only cycle. Debouncing still applies &mdash; only the final state is evaluated.</li>
     </ul>
   </div>
 </div>
@@ -2456,6 +2607,24 @@ function showIslandState(stateId) {
       btn.classList.add('active');
     }
   });
+}
+
+function showScreen11State(stateId) {
+  const panels = ['s11-manual', 's11-eval-fix'];
+  panels.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('active', id === stateId);
+  });
+  // Update toggle buttons within the s11 section
+  const section = document.getElementById('s11');
+  if (section) {
+    section.querySelectorAll('.state-toggle button').forEach(btn => {
+      btn.classList.toggle('active',
+        (stateId === 's11-manual' && btn.textContent.trim() === 'Manual Edit') ||
+        (stateId === 's11-eval-fix' && btn.textContent.trim() === 'Eval Suggestion Accepted')
+      );
+    });
+  }
 }
 
 // Smooth scroll for TOC links
