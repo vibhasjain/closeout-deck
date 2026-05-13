@@ -3117,3 +3117,300 @@ p[data-cursor-element-id],
         background: var(--gray-800);
     }
 }
+
+/* ============================================
+   ACCELERATOR-PITCH ADDITIONS (2026-05-13)
+   Slides: customers, architecture, why-now, team
+   ============================================ */
+
+/* Slide: Live Customers */
+.customer-cards {
+    display: flex;
+    gap: clamp(1rem, 3vw, 2.5rem);
+    justify-content: center;
+    align-items: stretch;
+    margin: clamp(2rem, 5vw, 4rem) auto;
+    max-width: 800px;
+    width: 100%;
+}
+
+.customer-card {
+    flex: 1;
+    background: var(--gray-900);
+    border: 1px solid var(--gray-700);
+    border-radius: 16px;
+    padding: clamp(1.5rem, 3vw, 2.5rem);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    transition: border-color 0.2s, transform 0.2s;
+}
+
+.customer-card:hover {
+    border-color: var(--green-500);
+    transform: translateY(-2px);
+}
+
+.customer-card__logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: clamp(60px, 9vw, 110px);
+}
+
+.customer-logo-img {
+    max-width: 80%;
+    max-height: clamp(40px, 6vw, 72px);
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+.customer-logo-img--wonolo {
+    /* Wonolo yellow variant is already optimized for dark bg */
+    max-height: clamp(38px, 5.5vw, 64px);
+}
+
+.customer-logo-img--gigsmart {
+    /* GigSmart SVG is recolored white in /logos/gigsmart.svg */
+    max-height: clamp(28px, 4vw, 48px);
+}
+
+/* Slide: The Crisis */
+.crisis-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(1rem, 2vw, 1.75rem);
+    margin: clamp(1.5rem, 3vw, 2.5rem) auto 0;
+    max-width: 1200px;
+    width: 100%;
+}
+
+.crisis-card {
+    background: var(--gray-900);
+    border: 1px solid var(--gray-700);
+    border-radius: 14px;
+    padding: clamp(1rem, 2vw, 1.75rem);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    transition: border-color 0.2s, transform 0.2s;
+}
+
+.crisis-card:hover {
+    border-color: var(--green-500);
+    transform: translateY(-2px);
+}
+
+.crisis-card__head {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+}
+
+.crisis-card__icon {
+    width: 22px;
+    height: 22px;
+    color: var(--green-400);
+    flex-shrink: 0;
+}
+
+.crisis-card__title {
+    font-family: var(--font-display);
+    font-size: clamp(1.05rem, 1.5vw, 1.25rem);
+    font-weight: 700;
+    color: var(--gray-100);
+    letter-spacing: -0.01em;
+}
+
+.crisis-card__body {
+    font-family: var(--font-body);
+    font-size: clamp(0.9rem, 1.15vw, 1rem);
+    line-height: 1.55;
+    color: var(--gray-300);
+    flex-grow: 1;
+}
+
+.crisis-card__tag {
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--green-400);
+    letter-spacing: 0.01em;
+    border-top: 1px solid var(--gray-800);
+    padding-top: 0.625rem;
+    margin-top: 0.25rem;
+}
+
+.crisis-footer {
+    max-width: 760px;
+    margin: clamp(1.5rem, 3vw, 2.5rem) auto 0;
+    text-align: center;
+}
+
+.crisis-footer__text {
+    font-family: var(--font-body);
+    font-size: clamp(1rem, 1.3vw, 1.15rem);
+    line-height: 1.6;
+    color: var(--gray-300);
+}
+
+.crisis-footer__text strong {
+    color: var(--green-400);
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .crisis-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Slide: Why Now */
+.whynow-body {
+    max-width: 800px;
+    margin: clamp(1.5rem, 4vw, 3rem) auto;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(1rem, 2vw, 1.5rem);
+}
+
+.whynow-para {
+    font-family: var(--font-body);
+    font-size: clamp(1.05rem, 1.4vw, 1.25rem);
+    line-height: 1.7;
+    color: var(--gray-200);
+}
+
+.whynow-para strong {
+    color: var(--green-400);
+    font-weight: 600;
+}
+
+/* Slide: Team */
+.team-hero {
+    display: grid;
+    grid-template-columns: minmax(220px, 320px) 1fr;
+    gap: clamp(1.5rem, 4vw, 3rem);
+    align-items: center;
+    max-width: 1000px;
+    margin: clamp(2rem, 5vw, 3.5rem) auto;
+}
+
+.team-hero__photo {
+    border-radius: 16px;
+    overflow: hidden;
+    aspect-ratio: 3 / 4;
+    background: var(--gray-900);
+    border: 1px solid var(--gray-700);
+}
+
+.team-hero__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    display: block;
+}
+
+.team-hero__body {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.75rem, 1.5vw, 1.25rem);
+}
+
+.team-hero__name {
+    font-family: var(--font-display);
+    font-size: clamp(1.75rem, 3vw, 2.5rem);
+    font-weight: 700;
+    color: var(--gray-100);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+}
+
+.team-hero__role {
+    font-family: var(--font-body);
+    font-size: clamp(1rem, 1.3vw, 1.15rem);
+    color: var(--green-400);
+    font-weight: 500;
+}
+
+.team-hero__exits {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: clamp(0.75rem, 1.5vw, 1.25rem) 0;
+    border-top: 1px solid var(--gray-700);
+    border-bottom: 1px solid var(--gray-700);
+}
+
+.team-exit {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-body);
+    font-size: clamp(0.9rem, 1.2vw, 1.05rem);
+    line-height: 1.5;
+}
+
+.team-exit__company {
+    color: var(--gray-100);
+    font-weight: 600;
+}
+
+.team-exit__arrow {
+    color: var(--gray-500);
+    font-family: var(--font-display);
+    font-weight: 500;
+}
+
+.team-exit__acquirer {
+    color: var(--gray-300);
+}
+
+.team-hero__bio {
+    font-family: var(--font-body);
+    font-size: clamp(0.9rem, 1.15vw, 1rem);
+    color: var(--gray-300);
+    line-height: 1.6;
+}
+
+.team-hero__bio em {
+    color: var(--gray-100);
+    font-style: italic;
+    font-weight: 500;
+}
+
+.team-hero__link {
+    color: var(--green-400);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.team-hero__link:hover {
+    color: var(--green-300);
+}
+
+@media (max-width: 768px) {
+    .team-hero {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+    .team-hero__photo {
+        max-width: 280px;
+        margin: 0 auto;
+    }
+    .team-hero__exits {
+        align-items: center;
+    }
+    .team-exit {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .customer-cards {
+        flex-direction: column;
+    }
+}

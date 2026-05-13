@@ -160,6 +160,70 @@
             </div>
         </section>
 
+        <!-- Slide: The Crisis (three-party human interest) -->
+        <section class="slide slide--crisis" data-slide="13">
+            <div class="slide__content">
+                <h2 class="slide__title">Workers paid wrong. Clients overcharged. Ops teams drowning.</h2>
+                <p class="slide__lead">Every shift is a three-way trust problem. When it's not reconciled, everyone pays.</p>
+
+                <div class="crisis-grid">
+                    <div class="crisis-card">
+                        <div class="crisis-card__head">
+                            <svg class="crisis-card__icon"><use href="#icon-user-x"/></svg>
+                            <h3 class="crisis-card__title">The worker</h3>
+                        </div>
+                        <p class="crisis-card__body">Paycheck is wrong. Or late. Or both. They chase what they're owed — and the next shift becomes "no thanks."</p>
+                        <span class="crisis-card__tag">Trust is paid in the same currency as wages.</span>
+                    </div>
+
+                    <div class="crisis-card">
+                        <div class="crisis-card__head">
+                            <svg class="crisis-card__icon"><use href="#icon-building"/></svg>
+                            <h3 class="crisis-card__title">The end client</h3>
+                        </div>
+                        <p class="crisis-card__body">Overcharged for hours nobody worked. Undercharged when the platform eats the loss. Reconciliation overhead scales linearly with shifts.</p>
+                        <span class="crisis-card__tag">Either way the relationship corrodes.</span>
+                    </div>
+
+                    <div class="crisis-card">
+                        <div class="crisis-card__head">
+                            <svg class="crisis-card__icon"><use href="#icon-wallet"/></svg>
+                            <h3 class="crisis-card__title">The staffing platform</h3>
+                        </div>
+                        <p class="crisis-card__body">Float payroll they shouldn't carry. Legal risk for misclassified hours. Churn workers on one side, clients on the other.</p>
+                        <span class="crisis-card__tag">NPS dies on both ends.</span>
+                    </div>
+                </div>
+
+                <div class="crisis-footer">
+                    <p class="crisis-footer__text">Today this is patched by ops teams of 50+ reconciling shifts by hand. <strong>The math stops working past a certain scale.</strong></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide: Live Customers -->
+        <section class="slide slide--customers" data-slide="9">
+            <div class="slide__content">
+                <h2 class="slide__title">Live with US staffing leaders</h2>
+                <p class="slide__lead">Real customers. Real shifts. Real payroll.</p>
+
+                <div class="customer-cards">
+                    <div class="customer-card">
+                        <div class="customer-card__logo">
+                            <img src="logos/wonolo-yellow.svg" alt="Wonolo" class="customer-logo-img customer-logo-img--wonolo">
+                        </div>
+                    </div>
+                    <div class="customer-card">
+                        <div class="customer-card__logo">
+                            <img src="logos/gigsmart.svg" alt="GigSmart" class="customer-logo-img customer-logo-img--gigsmart">
+                        </div>
+                    </div>
+                </div>
+
+                <p class="slide__tagline">In production. Reconciling shifts across the US.</p>
+            </div>
+        </section>
+
         <!-- Slide 2: The Problem -->
         <section class="slide slide--problem" data-slide="1">
             <div class="slide__content">
@@ -554,6 +618,71 @@
             </div>
         </section>
 
+        <!-- Slide: Architecture -->
+        <section class="slide slide--architecture" data-slide="10">
+            <div class="slide__content">
+                <h2 class="slide__title">Built as a real agent. Not a wrapper.</h2>
+                <p class="slide__lead">A per-shift Claude agent that calls tools, applies versioned rulebooks, and shows its work.</p>
+
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-card__title-row">
+                            <h3 class="feature-card__title">Multi-step reasoning</h3>
+                            <svg class="feature-card__icon"><use href="#icon-ai"/></svg>
+                        </div>
+                        <p class="feature-card__desc">Reconciles 4+ conflicting evidence sources per shift: schedule, supervisor sign-off, mobile clock, location intelligence.</p>
+                        <span class="feature-card__tag">Resolves conflict like a human</span>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-card__title-row">
+                            <h3 class="feature-card__title">Tool use</h3>
+                            <svg class="feature-card__icon"><use href="#icon-plug"/></svg>
+                        </div>
+                        <p class="feature-card__desc">Calls scheduling, time-tracking, location, and notification APIs to gather evidence and dispatch outreach mid-conversation.</p>
+                        <span class="feature-card__tag">Talks to every system</span>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-card__title-row">
+                            <h3 class="feature-card__title">Rulebook-driven</h3>
+                            <svg class="feature-card__icon"><use href="#icon-fingerprint"/></svg>
+                        </div>
+                        <p class="feature-card__desc">Customer escalation tiers, refund authority, source-priority logic — versioned, A/B-evaluatable, human-readable.</p>
+                        <span class="feature-card__tag">Customer rules, not hardcoded heuristics</span>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-card__title-row">
+                            <h3 class="feature-card__title">Eval-driven iteration</h3>
+                            <svg class="feature-card__icon"><use href="#icon-radar"/></svg>
+                        </div>
+                        <p class="feature-card__desc">Run a rule change against the last 100 shifts before promoting. Langfuse traces every input, tool call, and decision rationale end-to-end.</p>
+                        <span class="feature-card__tag">Auditable from input to outcome</span>
+                    </div>
+                </div>
+
+                <p class="slide__tagline">Built on Claude. Running on AWS. India + US team.</p>
+            </div>
+        </section>
+
+        <!-- Slide: Why Now -->
+        <section class="slide slide--whynow" data-slide="11">
+            <div class="slide__content">
+                <h2 class="slide__title">Agents become the system of record</h2>
+
+                <div class="whynow-body">
+                    <p class="whynow-para">Manual reconciliation worked when staffing platforms processed thousands of shifts a month. Networks processing millions can't catch every discrepancy by hand — and the cost is paid in inaccurate payouts, delayed invoices, and worker churn.</p>
+
+                    <p class="whynow-para">Closeout Copilot is the first agent purpose-built to <strong>be</strong> the system of record for shift payroll — not a copilot beside a human, but an autonomous decision-maker that's auditable, opinionated, and right by default.</p>
+                </div>
+
+                <div class="tagline-box">
+                    <span class="tagline">Agentic AI is finally good enough to take this seat. We're taking it.</span>
+                </div>
+            </div>
+        </section>
+
         <!-- Slide 6: Everything Included -->
         <section class="slide slide--included" data-slide="5">
             <div class="slide__content">
@@ -877,6 +1006,45 @@
                     </div>
                 </div>
 
+            </div>
+        </section>
+
+        <!-- Slide: Team -->
+        <section class="slide slide--team" data-slide="12">
+            <div class="slide__content">
+                <h2 class="slide__title">Built by a 4x serial entrepreneur</h2>
+
+                <div class="team-hero">
+                    <div class="team-hero__photo">
+                        <img src="kashyap-portrait.jpg" alt="Kashyap Deorah" class="team-hero__img">
+                    </div>
+                    <div class="team-hero__body">
+                        <h3 class="team-hero__name">Kashyap Deorah</h3>
+                        <p class="team-hero__role">Founder &amp; CEO, HyperTrack</p>
+
+                        <div class="team-hero__exits">
+                            <div class="team-exit">
+                                <span class="team-exit__company">Chaupaati Bazaar</span>
+                                <span class="team-exit__arrow">→</span>
+                                <span class="team-exit__acquirer">Future Group, 2010</span>
+                            </div>
+                            <div class="team-exit">
+                                <span class="team-exit__company">Chalo</span>
+                                <span class="team-exit__arrow">→</span>
+                                <span class="team-exit__acquirer">OpenTable, $11M, 2013</span>
+                            </div>
+                            <div class="team-exit">
+                                <span class="team-exit__company">Righthalf</span>
+                                <span class="team-exit__arrow">→</span>
+                                <span class="team-exit__acquirer">Stratify, NYT front page</span>
+                            </div>
+                        </div>
+
+                        <p class="team-hero__bio">IIT Bombay CSE. Author, <em>The Golden Tap</em>. Keynote speaker — India Internet Day, Gig Work Summit. <a href="https://www.linkedin.com/in/kdeorah/" target="_blank" rel="noopener" class="team-hero__link">LinkedIn ↗</a></p>
+                    </div>
+                </div>
+
+                <p class="slide__tagline">Team across Berkeley + India. Building HyperTrack since 2015.</p>
             </div>
         </section>
 
