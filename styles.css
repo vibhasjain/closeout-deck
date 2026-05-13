@@ -3269,12 +3269,62 @@ p[data-cursor-element-id],
 }
 
 /* Slide: Why Now */
+.slide--whynow .slide__content {
+    align-items: center;
+    text-align: center;
+}
+
+.slide--whynow .tagline-box {
+    margin-left: auto;
+    margin-right: auto;
+    align-self: center;
+}
+
+.whynow-layout {
+    display: grid;
+    grid-template-columns: minmax(280px, 1fr) 1.25fr;
+    gap: clamp(1.5rem, 4vw, 3rem);
+    align-items: center;
+    max-width: 1100px;
+    width: 100%;
+    margin: clamp(1.25rem, 3vw, 2.25rem) auto;
+    text-align: left;
+}
+
+.whynow-visual {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.whynow-image {
+    max-width: 100%;
+    max-height: 420px;
+    height: auto;
+    width: auto;
+    border-radius: 12px;
+    border: 1px solid var(--gray-800);
+    box-shadow: 0 8px 32px rgba(34, 197, 94, 0.08);
+}
+
 .whynow-body {
-    max-width: 800px;
-    margin: clamp(1.5rem, 4vw, 3rem) auto;
     display: flex;
     flex-direction: column;
-    gap: clamp(1rem, 2vw, 1.5rem);
+    gap: clamp(0.85rem, 1.6vw, 1.3rem);
+}
+
+.whynow-tagline {
+    margin-top: clamp(0.75rem, 1.5vw, 1.25rem);
+}
+
+@media (max-width: 768px) {
+    .whynow-layout {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+    .whynow-image {
+        max-height: 280px;
+    }
 }
 
 .whynow-para {
