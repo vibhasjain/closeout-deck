@@ -1,0 +1,512 @@
+/* Healthcare-specific deck refinements. The core visual system remains in /styles.css. */
+
+.healthcare-deck .hero-content {
+    max-width: 680px;
+}
+
+.healthcare-deck .hero-content .title {
+    font-size: clamp(2.5rem, 5vw, 3.75rem);
+}
+
+.healthcare-deck .hero-content .subtitle {
+    max-width: 560px;
+    font-size: clamp(1rem, 1.65vw, 1.2rem);
+    line-height: 1.45;
+}
+
+/* Buyer-backward opening story */
+.healthcare-deck .slide--crisis .slide__title {
+    margin-bottom: 1.8rem;
+}
+
+.healthcare-deck .slide--crisis .slide__lead {
+    margin-bottom: 1.25rem;
+    max-width: 820px;
+}
+
+.healthcare-deck .crisis-grid {
+    gap: clamp(0.8rem, 1.4vw, 1.25rem);
+    margin-top: 1rem;
+}
+
+.healthcare-deck .crisis-card {
+    gap: 0.6rem;
+    padding: clamp(0.9rem, 1.5vw, 1.25rem);
+}
+
+.crisis-card__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.48rem;
+    list-style: none;
+    color: var(--gray-300);
+    font-size: clamp(0.78rem, 0.95vw, 0.9rem);
+    line-height: 1.38;
+    flex-grow: 1;
+}
+
+.crisis-card__list li {
+    position: relative;
+    padding-left: 1rem;
+}
+
+.crisis-card__list li::before {
+    content: '';
+    position: absolute;
+    top: 0.52em;
+    left: 0;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--green-500);
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+}
+
+.healthcare-deck .crisis-card__tag {
+    font-size: 0.7rem;
+}
+
+.healthcare-deck .crisis-footer {
+    margin-top: 1.15rem;
+}
+
+/* Healthcare proof */
+.customer-cards--healthcare {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: clamp(0.65rem, 1.2vw, 1rem);
+    max-width: 1100px;
+    margin: clamp(2rem, 4vw, 3rem) auto;
+}
+
+.customer-cards--healthcare .customer-card {
+    min-width: 0;
+    min-height: 130px;
+    padding: 1rem 0.8rem;
+    justify-content: center;
+    background: linear-gradient(145deg, rgba(34, 197, 94, 0.06), rgba(17, 17, 19, 0.95));
+}
+
+.customer-cards--healthcare .customer-card__logo {
+    min-height: 72px;
+}
+
+.customer-logo-img--healthcare {
+    max-width: 88%;
+    max-height: 54px;
+}
+
+.customer-logo-img--healthcare[src*="shiftkey"],
+.customer-logo-img--healthcare[src*="nursa"] {
+    filter: grayscale(1) brightness(0) invert(1);
+    opacity: 0.92;
+}
+
+.customer-card__logo--vitalis {
+    gap: 0.62rem;
+}
+
+.customer-logo-mark {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 auto;
+    border-radius: 11px;
+    object-fit: cover;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+}
+
+.customer-logo-img--tandem {
+    max-width: 92%;
+    max-height: 60px;
+}
+
+.customer-wordmark {
+    font-family: var(--font-display);
+    font-size: clamp(1.1rem, 1.7vw, 1.55rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--gray-100);
+}
+
+/* Optional signal label */
+.optional-badge {
+    display: inline-flex;
+    align-items: center;
+    width: max-content;
+    padding: 0.15rem 0.45rem;
+    border: 1px solid rgba(74, 222, 128, 0.45);
+    border-radius: 999px;
+    color: var(--green-400);
+    background: rgba(34, 197, 94, 0.08);
+    font-family: var(--font-body);
+    font-size: 0.58rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.healthcare-deck .flow-input-header .optional-badge {
+    margin-left: auto;
+}
+
+.healthcare-deck .feature-card__title .optional-badge {
+    margin-left: 0.35rem;
+    transform: translateY(-1px);
+}
+
+/* Three-mode pricing */
+.pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(0.85rem, 1.8vw, 1.4rem);
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.pricing-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 360px;
+    padding: clamp(1.2rem, 2vw, 1.65rem);
+    overflow: hidden;
+    border: 1px solid var(--gray-700);
+    border-radius: 16px;
+    background: linear-gradient(155deg, rgba(34, 197, 94, 0.06), rgba(17, 17, 19, 0.95) 48%);
+}
+
+.pricing-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at 90% 0%, rgba(34, 197, 94, 0.13), transparent 42%);
+}
+
+.pricing-card--featured {
+    border-color: rgba(74, 222, 128, 0.72);
+    box-shadow: 0 0 40px rgba(34, 197, 94, 0.12);
+    transform: translateY(-6px);
+}
+
+.pricing-card__eyebrow {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 1rem;
+    color: var(--green-400);
+    font-family: var(--font-display);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.pricing-card__head {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    min-height: 54px;
+    gap: 0.65rem;
+}
+
+.pricing-card__head h3 {
+    color: var(--gray-100);
+    font-family: var(--font-display);
+    font-size: clamp(1.05rem, 1.6vw, 1.35rem);
+    line-height: 1.2;
+}
+
+.pricing-card__icon {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+    color: var(--green-400);
+}
+
+.pricing-card__price {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    margin: 1rem 0 1.2rem;
+}
+
+.pricing-card__price span {
+    color: var(--gray-100);
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 3.2vw, 3rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.05em;
+}
+
+.pricing-card__price small {
+    color: var(--gray-400);
+    font-size: 0.8rem;
+}
+
+.pricing-card__features {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.72rem;
+    list-style: none;
+    color: var(--gray-300);
+    font-size: 0.86rem;
+    line-height: 1.45;
+}
+
+.pricing-card__features li {
+    position: relative;
+    padding-left: 1.35rem;
+}
+
+.pricing-card__features li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--green-400);
+    font-weight: 700;
+}
+
+.pricing-card__included {
+    position: relative;
+    z-index: 1;
+    width: max-content;
+    max-width: 100%;
+    margin-top: auto;
+    padding: 0.45rem 0.7rem;
+    border-radius: 999px;
+    background: var(--green-glow);
+    color: var(--green-300);
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+/* Core team */
+.team-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(0.7rem, 1.4vw, 1rem);
+    max-width: 1100px;
+    margin: 1.5rem auto 1.8rem;
+}
+
+.team-member {
+    display: grid;
+    grid-template-columns: 86px minmax(0, 1fr);
+    min-height: 106px;
+    overflow: hidden;
+    border: 1px solid var(--gray-700);
+    border-radius: 13px;
+    background: linear-gradient(145deg, rgba(34, 197, 94, 0.06), rgba(17, 17, 19, 0.95));
+}
+
+.team-member__photo,
+.team-member__monogram {
+    width: 86px;
+    height: 100%;
+    min-height: 106px;
+}
+
+.team-member__photo {
+    display: block;
+    object-fit: cover;
+    object-position: center;
+    filter: grayscale(0.2) contrast(1.04);
+}
+
+.team-member__photo--jared {
+    object-position: center 28%;
+}
+
+.team-member__monogram {
+    display: grid;
+    place-items: center;
+    background:
+        linear-gradient(rgba(34, 197, 94, 0.12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(34, 197, 94, 0.12) 1px, transparent 1px),
+        #0d1711;
+    background-size: 16px 16px;
+    color: var(--green-400);
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.team-member__meta {
+    display: flex;
+    min-width: 0;
+    padding: 0.8rem 0.8rem;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+.team-member__meta h3 {
+    color: var(--gray-100);
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    line-height: 1.25;
+}
+
+.team-member__meta p {
+    color: var(--green-400);
+    font-size: 0.72rem;
+    line-height: 1.35;
+}
+
+.healthcare-deck .slide--team .slide__title {
+    margin-bottom: 1.8rem;
+}
+
+.healthcare-deck .slide--team .slide__lead {
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 1100px) {
+    .customer-cards--healthcare {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        max-width: 760px;
+        margin: 1.25rem auto;
+    }
+
+    .customer-cards--healthcare .customer-card {
+        min-height: 88px;
+    }
+
+    .customer-cards--healthcare .customer-card__logo {
+        min-height: 52px;
+    }
+
+    .team-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .healthcare-deck .hero-content .subtitle {
+        max-width: 340px;
+    }
+
+    .healthcare-deck .crisis-card__list {
+        font-size: 0.9rem;
+    }
+
+    .customer-cards--healthcare,
+    .pricing-grid,
+    .team-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .customer-cards--healthcare {
+        max-width: 360px;
+    }
+
+    .pricing-card {
+        min-height: 0;
+    }
+
+    .pricing-card--featured {
+        transform: none;
+    }
+
+    .team-member {
+        grid-template-columns: 92px minmax(0, 1fr);
+    }
+
+    .team-member__photo,
+    .team-member__monogram {
+        width: 92px;
+    }
+
+    .healthcare-deck .whynow-tagline {
+        max-width: calc(100vw - 3rem);
+    }
+
+    .healthcare-deck .whynow-tagline .tagline {
+        display: block;
+        white-space: normal;
+        text-align: center;
+        line-height: 1.45;
+    }
+}
+
+@media (max-height: 820px) and (min-width: 769px) {
+    .healthcare-deck .slide--crisis .slide__title,
+    .healthcare-deck .slide--team .slide__title {
+        margin-bottom: 1.25rem;
+    }
+
+    .healthcare-deck .slide--crisis .slide__lead,
+    .healthcare-deck .slide--team .slide__lead {
+        margin-bottom: 0.75rem;
+    }
+
+    .pricing-card {
+        min-height: 315px;
+        padding: 1.1rem;
+    }
+
+    .pricing-card__price {
+        margin: 0.65rem 0 0.9rem;
+    }
+
+    .team-grid {
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .healthcare-deck .slide--pain .slide__title {
+        margin-bottom: 1.25rem;
+    }
+
+    .healthcare-deck .pain-split {
+        gap: 1.25rem;
+        margin-bottom: 1rem;
+    }
+
+    .healthcare-deck .pain-box {
+        padding: 0.9rem 1.25rem;
+    }
+
+    .healthcare-deck .pain-box__image {
+        width: 245px;
+        height: 185px;
+        margin-bottom: 0.45rem;
+    }
+
+    .healthcare-deck .pain-box h3 {
+        font-size: 1.2rem;
+    }
+
+    .healthcare-deck .pain-box p,
+    .healthcare-deck .pain-reality__text {
+        font-size: 0.92rem;
+    }
+
+    .healthcare-deck .pain-reality {
+        margin-bottom: 0.8rem;
+    }
+
+    .healthcare-deck .pain-reality__text {
+        margin-bottom: 0.5rem;
+    }
+
+    .healthcare-deck .pain-reality__tags span {
+        padding: 0.35rem 0.75rem;
+        font-size: 0.76rem;
+    }
+
+    .healthcare-deck .insight-box {
+        padding: 0.65rem 1.5rem;
+    }
+}
