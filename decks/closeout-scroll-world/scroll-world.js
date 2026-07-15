@@ -59,6 +59,7 @@
         : index === count - 1
           ? clamp((position - index + fadeRadius) / fadeRadius)
           : clamp((position - index + fadeRadius) / (fadeRadius * 2));
+      const videoProgress = index === 0 ? Math.max(0.02, local) : local;
       const depth = reducedMotion.matches ? 1 : 1.035 + local * 0.105;
       const drift = reducedMotion.matches ? 0 : (0.5 - local) * 2.4;
 
@@ -67,7 +68,7 @@
       scene.style.setProperty('--scene-drift', `${drift.toFixed(3)}%`);
 
       const video = scene.querySelector('video');
-      if (video && opacity > 0.01) queueSeek(video, local);
+      if (video && opacity > 0.01) queueSeek(video, videoProgress);
     });
 
     stories.forEach((story, index) => {
