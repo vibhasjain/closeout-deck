@@ -53,7 +53,12 @@
 
     scenes.forEach((scene, index) => {
       const opacity = sceneOpacity(position, index);
-      const local = clamp(position - index + 0.5);
+      const fadeRadius = 0.72;
+      const local = index === 0
+        ? clamp(position / fadeRadius)
+        : index === count - 1
+          ? clamp((position - index + fadeRadius) / fadeRadius)
+          : clamp((position - index + fadeRadius) / (fadeRadius * 2));
       const depth = reducedMotion.matches ? 1 : 1.035 + local * 0.105;
       const drift = reducedMotion.matches ? 0 : (0.5 - local) * 2.4;
 
