@@ -9,6 +9,8 @@
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   const count = scenes.length;
+  const fadeStart = 0.9;
+  const fadeDuration = 0.1;
   let activeIndex = -1;
   let ticking = false;
   let viewportWidth = window.innerWidth;
@@ -26,8 +28,14 @@
   }
 
   function sceneOpacity(position, index) {
-    const distance = Math.abs(position - index);
-    return smoothstep(1 - clamp(distance / 0.72));
+    const current = Math.min(count - 1, Math.floor(position));
+    if (current === count - 1) return index === current ? 1 : 0;
+
+    const chapterProgress = position - current;
+    const fade = smoothstep(clamp((chapterProgress - fadeStart) / fadeDuration));
+    if (index === current) return 1 - fade;
+    if (index === current + 1) return fade;
+    return 0;
   }
 
   function queueSeek(video, progress) {
@@ -46,7 +54,12 @@
 
     const progress = worldProgress();
     const position = progress * (count - 1);
-    const nextActive = Math.round(position);
+    const chapterIndex = Math.floor(position);
+    const chapterProgress = position - chapterIndex;
+    const nextActive = Math.min(
+      count - 1,
+      chapterIndex + (chapterProgress >= fadeStart + fadeDuration / 2 ? 1 : 0)
+    );
 
     world.style.setProperty('--world-progress', progress.toFixed(4));
     progressBar.style.transform = `scaleX(${progress})`;
