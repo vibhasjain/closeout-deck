@@ -8,3 +8,8 @@
 [[edge_functions]]
   function = "linear"
   path = "/api/linear"
+
+[[redirects]]
+  from = "/experiment/*"
+  to = "/decks/closeout-scroll-world/:splat"
+  status = 200
