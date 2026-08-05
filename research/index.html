@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>What a Pay Dispute Actually Costs — Closeout Copilot Research</title>
+<meta name="description" content="A defensible, fully-sourced cost model of hourly-worker pay disputes: every component quantified, every claim cited, drillable to real cases.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>document.documentElement.classList.add('js');</script>
+<style>
+:root {
+  --gray-950:#0a0a0b; --gray-900:#111113; --gray-850:#161618; --gray-800:#1c1c1f;
+  --gray-750:#232326; --gray-700:#2a2a2e; --gray-600:#3a3a40; --gray-500:#52525b;
+  --gray-400:#71717a; --gray-300:#a1a1aa; --gray-200:#d4d4d8; --gray-100:#f4f4f5;
+  --green-500:#22c55e; --green-400:#4ade80; --green-300:#86efac; --green-600:#16a34a;
+  --green-glow:rgba(34,197,94,.15); --amber-500:#f59e0b; --amber-400:#fbbf24;
+  --red-500:#ef4444; --red-400:#f87171;
+  --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-body);background:var(--gray-950);color:var(--gray-200);line-height:1.6;font-size:16.5px}
+a{color:var(--green-400);text-decoration:none}
+a:hover{text-decoration:underline}
+abbr[title]{text-decoration:underline dotted var(--gray-500);text-underline-offset:3px;cursor:help}
+.wrap{max-width:1080px;margin:0 auto;padding:0 clamp(1.25rem,4vw,2.5rem)}
+.topbar{position:sticky;top:0;z-index:50;background:rgba(10,10,11,.88);backdrop-filter:blur(10px);border-bottom:1px solid var(--gray-800)}
+.topbar .wrap{display:flex;align-items:center;justify-content:space-between;padding-top:.8rem;padding-bottom:.8rem}
+.topbar img{height:26px;display:block}
+.topbar nav{display:flex;gap:1.4rem;font-size:13px;color:var(--gray-400)}
+.topbar nav a{color:var(--gray-300)}
+h1,h2,h3,h4{font-family:var(--font-display);color:var(--gray-100);line-height:1.12;letter-spacing:-.01em}
+h1{font-size:clamp(2.1rem,5vw,3.6rem);font-weight:700}
+h2{font-size:clamp(1.5rem,3vw,2.2rem);font-weight:700;margin-bottom:1rem}
+h2 .g{color:var(--green-400)}
+section{padding:4.5rem 0;border-bottom:1px solid var(--gray-850)}
+.lede{color:var(--gray-300);font-size:1.1rem;max-width:70ch;margin-top:1rem}
+.lede b,.body b{color:var(--gray-100)}
+.hero{display:grid;grid-template-columns:1.05fr .95fr;gap:2.5rem;align-items:center;padding:4.5rem 0 3.5rem}
+.hero img{width:100%;border-radius:12px;border:1px solid var(--gray-800)}
+.eyenote{font-size:13px;color:var(--gray-500);margin-top:1.2rem;line-height:1.6}
+.bignum{font-family:var(--font-display);font-weight:700;font-size:clamp(2.6rem,6vw,4.4rem);color:var(--green-400);line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.bignum small{font-size:.35em;color:var(--gray-400);font-weight:500;letter-spacing:0}
+/* cost stack */
+.stackbar{display:flex;width:100%;height:64px;border-radius:10px;overflow:hidden;border:1px solid var(--gray-700);margin:1.6rem 0 .6rem}
+.stackbar button{border:0;cursor:pointer;font-family:var(--font-display);font-weight:600;font-size:12px;color:#04160b;display:flex;align-items:center;justify-content:center;padding:0 4px;white-space:nowrap;overflow:hidden;transition:filter .15s}
+.stackbar button:hover{filter:brightness(1.15)}
+.stackbar button.dim{color:var(--gray-100)}
+.stacklegend{font-size:12.5px;color:var(--gray-500);margin-bottom:1.6rem}
+.drill{display:none;background:var(--gray-900);border:1px solid var(--gray-750);border-radius:12px;padding:1.6rem 1.7rem;margin-bottom:1rem}
+.drill.open{display:block}
+.drill h3{font-size:1.15rem;margin-bottom:.35rem}
+.drill .range{font-family:var(--font-display);color:var(--green-400);font-weight:700;font-size:1.5rem;margin-bottom:.8rem;font-variant-numeric:tabular-nums}
+.drill p,.drill li{font-size:15px;color:var(--gray-300)}
+.drill ul{padding-left:1.2rem;margin:.6rem 0}
+.drill li{margin:.45rem 0}
+details{background:var(--gray-850);border:1px solid var(--gray-750);border-radius:10px;margin:.7rem 0;overflow:hidden}
+details summary{cursor:pointer;padding:.85rem 1.1rem;font-weight:600;color:var(--gray-200);font-size:14.5px;list-style:none;display:flex;justify-content:space-between;align-items:center}
+details summary::after{content:"+";color:var(--green-400);font-family:var(--font-display);font-size:1.15rem}
+details[open] summary::after{content:"–"}
+details .inner{padding:0 1.1rem 1rem;font-size:14.5px;color:var(--gray-300)}
+blockquote{border-radius:8px;background:var(--gray-800);padding:.9rem 1.1rem;margin:.7rem 0;font-size:14px;color:var(--gray-200);font-style:italic}
+blockquote cite{display:block;font-style:normal;color:var(--gray-500);font-size:12.5px;margin-top:.5rem}
+table{width:100%;border-collapse:collapse;font-size:14.5px;margin:1.2rem 0}
+th{text-align:left;font-family:var(--font-display);font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);padding:.6rem .8rem .5rem;border-bottom:1px solid var(--gray-600)}
+td{padding:.65rem .8rem;border-bottom:1px solid var(--gray-800);vertical-align:top;color:var(--gray-300)}
+td:first-child{color:var(--gray-100);font-weight:600}
+.tablewrap{overflow-x:auto}
+.tag{display:inline-block;font-family:var(--font-display);font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:20px;vertical-align:2px;margin-left:.4rem}
+.tag.human{background:rgba(245,158,11,.15);color:var(--amber-400)}
+.tag.auto{background:var(--green-glow);color:var(--green-400)}
+.tag.est{background:rgba(113,113,122,.2);color:var(--gray-400)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem}
+.card{background:var(--gray-900);border:1px solid var(--gray-750);border-radius:12px;padding:1.3rem 1.4rem}
+.card h3{font-size:1.02rem;margin-bottom:.4rem}
+.card .cnum{font-family:var(--font-display);color:var(--green-400);font-weight:700;font-size:1.35rem;font-variant-numeric:tabular-nums}
+.card p{font-size:14px;color:var(--gray-400)}
+.steps{counter-reset:s;list-style:none;margin-top:1.4rem}
+.steps>li{counter-increment:s;position:relative;padding:1rem 0 1rem 3.2rem;border-bottom:1px solid var(--gray-850)}
+.steps>li::before{content:counter(s);position:absolute;left:0;top:1.05rem;width:32px;height:32px;border-radius:50%;background:var(--gray-850);border:1px solid var(--green-600);color:var(--green-400);font-family:var(--font-display);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center}
+.steps b{color:var(--gray-100)}
+.steps .meta{font-size:13.5px;color:var(--gray-500);margin-top:.2rem}
+.callout{background:linear-gradient(135deg,var(--gray-900),var(--gray-850));border:1px solid var(--green-600);border-radius:14px;padding:1.8rem 2rem;margin-top:2rem}
+.callout h3{color:var(--green-400);font-size:1.2rem;margin-bottom:.6rem}
+.footer{padding:3rem 0 4rem;font-size:13px;color:var(--gray-500)}
+.methodology p{font-size:14px;color:var(--gray-400);max-width:80ch;margin:.5rem 0}
+@media(max-width:860px){.hero,.grid2,.grid3{grid-template-columns:1fr}.stackbar{height:52px}.stackbar button{font-size:0}.topbar nav{display:none}}
+
+/* Editorial scrollytelling redesign */
+:root{
+  --ink:#f1f3f1;--body:#c7cbc8;--muted:#969c98;--faint:#7f8581;
+  --paper:#0a0a0b;--paper-raised:#101311;--paper-high:#171b18;--rule:#272c29;
+  --green:#22c55e;--green-pale:#9ff0bb;--amber:#fbbf24;--red:#f45d5d;
+  --page:min(1180px,calc(100vw - 2rem));--reading:min(680px,calc(100vw - 2rem));
+  --ease-out-expo:cubic-bezier(.16,1,.3,1);--topbar-h:3.75rem;
+}
+*{scroll-margin-top:calc(var(--topbar-h) + 1.25rem)}
+html{background:var(--paper);scroll-behavior:smooth;overflow-x:clip}
+body{
+  min-width:0;overflow-x:clip;background:var(--paper);color:var(--body);
+  font-size:1rem;line-height:1.78;font-weight:400;font-kerning:normal;
+  text-rendering:optimizeLegibility;
+}
+body::before{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.22;
+  background-image:linear-gradient(to right,transparent calc(50% - .5px),#1b211d 50%,transparent calc(50% + .5px));
+  background-size:min(100%,1180px) 100%;background-position:center;
+}
+::selection{background:var(--green);color:#071108}
+a{color:var(--green-pale);text-decoration-color:#34754b;text-underline-offset:.2em;text-decoration-thickness:1px}
+a:hover{color:#c5f8d7;text-decoration-color:currentColor}
+a:focus-visible,button:focus-visible,summary:focus-visible{
+  outline:2px solid var(--green);outline-offset:4px;border-radius:2px;
+}
+abbr[title]{text-decoration-color:#6d7a71;text-underline-offset:.22em}
+.wrap{max-width:none;width:var(--page);padding:0;margin-inline:auto}
+
+.read-progress{
+  position:fixed;inset:0 0 auto;z-index:100;height:3px;background:#172019;
+}
+.read-progress__fill{
+  display:block;width:100%;height:100%;transform:scaleX(0);transform-origin:left;
+  background:var(--green);will-change:transform;
+}
+.topbar{
+  height:var(--topbar-h);position:sticky;top:0;z-index:90;background:#0a0a0bf0;
+  border-bottom:1px solid #202421;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+}
+.topbar .wrap{height:100%;padding:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:clamp(1.25rem,4vw,4rem)}
+.topbar img{width:auto;height:1.45rem}
+.topbar>a,.topbar .wrap>a{display:flex;align-items:center;min-height:44px}
+.topbar nav{
+  display:flex;align-items:stretch;justify-content:flex-end;gap:0;min-width:0;overflow-x:auto;
+  scrollbar-width:none;overscroll-behavior-inline:contain;
+}
+.topbar nav::-webkit-scrollbar{display:none}
+.topbar nav a{
+  position:relative;display:flex;align-items:center;flex:0 0 auto;padding-inline:.72rem;
+  color:#a8aeaa;font-family:var(--font-display);font-size:.68rem;font-weight:600;
+  letter-spacing:.055em;text-transform:uppercase;text-decoration:none;white-space:nowrap;
+}
+.topbar nav a::after{
+  content:"";position:absolute;inset:auto .7rem 0;height:2px;background:var(--green);
+  transform:scaleX(0);transform-origin:left;transition:transform .35s var(--ease-out-expo);
+}
+.topbar nav a.active{color:var(--ink)}
+.topbar nav a.active::after{transform:scaleX(1)}
+
+h1,h2,h3,h4{color:var(--ink);letter-spacing:-.035em;text-wrap:balance}
+h1{font-size:clamp(3rem,8vw,7.6rem);line-height:.92;font-weight:600;max-width:10.5ch}
+h2{font-size:clamp(2.15rem,5vw,4.75rem);line-height:.98;font-weight:600;margin:0;max-width:18ch}
+h3{line-height:1.15}
+h2 .g{color:var(--green)}
+section{
+  position:relative;padding:clamp(6rem,12vw,11rem) 0;border-bottom:1px solid var(--rule);
+}
+section::before{
+  content:attr(data-section);position:absolute;top:clamp(3rem,6vw,5rem);left:0;
+  color:var(--faint);font-family:var(--font-display);font-size:.68rem;font-weight:700;
+  letter-spacing:.16em;text-transform:uppercase;
+}
+.lede{max-width:64ch;margin-top:1.5rem;color:#b9bfbb;font-size:clamp(1.06rem,1.5vw,1.25rem);line-height:1.65}
+.lede b,.body b,p b,li b{color:var(--ink)}
+.eyenote{max-width:72ch;margin-top:1.5rem;color:#898f8b;font-size:.79rem;line-height:1.65}
+
+.hero{
+  position:relative;isolation:isolate;display:flex;align-items:flex-end;width:100%;max-width:none;
+  min-height:calc(100svh - var(--topbar-h));padding:clamp(4rem,10vh,8rem) max(1rem,calc((100vw - 1180px)/2));
+  width:100vw;margin:0 0 0 calc(50% - 50vw);border-bottom:1px solid var(--rule);overflow:hidden;
+}
+.hero::before{
+  content:"";position:absolute;z-index:-2;inset:0;background:url('hero-cost-breakdown.png') center 30%/cover no-repeat;
+  transform:scale(1.025);animation:hero-settle 1.4s var(--ease-out-expo) both;
+}
+.hero::after{
+  content:"";position:absolute;z-index:-1;inset:0;
+  background:linear-gradient(90deg,#080a09f5 0%,#080a09d9 42%,#080a0966 75%,#080a0926 100%),
+    linear-gradient(0deg,#080a09f5 0%,transparent 55%),linear-gradient(180deg,#080a098f 0%,transparent 25%);
+}
+.hero>div{width:min(780px,100%);animation:hero-copy 1s .12s var(--ease-out-expo) both}
+.hero>img{display:none}
+.hero .lede{max-width:48ch;color:#cdd2cf;font-size:clamp(1.08rem,1.8vw,1.35rem)}
+.hero .bignum{
+  display:flex;flex-wrap:wrap;align-items:baseline;gap:.08em;margin-top:clamp(1.2rem,3vh,2.2rem);
+  color:var(--green);font-size:clamp(3.4rem,8vw,7rem);letter-spacing:-.07em;
+}
+.hero .bignum small{margin-left:.55rem;color:#acb3ae;font-size:clamp(.75rem,1.2vw,.95rem);letter-spacing:.03em}
+.hero .eyenote{max-width:67ch;color:#9ba19d}
+.scroll-cue{
+  position:absolute;right:max(1rem,calc((100vw - 1180px)/2));bottom:2.25rem;display:flex;
+  align-items:center;gap:.75rem;color:#c2c8c4;font-family:var(--font-display);font-size:.68rem;
+  font-weight:600;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;
+}
+.scroll-cue::before{
+  content:"";width:1px;height:3rem;background:linear-gradient(var(--green),transparent);
+  transform-origin:top;animation:scroll-pulse 1.8s var(--ease-out-expo) infinite;
+}
+@keyframes hero-settle{from{opacity:0;transform:scale(1.09)}to{opacity:1;transform:scale(1.025)}}
+@keyframes hero-copy{from{opacity:0;transform:translateY(2rem)}to{opacity:1;transform:none}}
+@keyframes scroll-pulse{0%,100%{transform:scaleY(.35);opacity:.5}50%{transform:scaleY(1);opacity:1}}
+
+.cost-heading{max-width:780px;margin-bottom:4rem}
+.cost-scrolly{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(270px,.65fr);gap:clamp(2rem,5vw,6rem);align-items:start}
+.cost-visual{position:sticky;top:calc(var(--topbar-h) + 1.5rem);height:calc(100vh - var(--topbar-h) - 3rem);min-height:500px;display:flex;align-items:center}
+.cost-stick{width:100%}
+.cost-visual__eyebrow{display:flex;justify-content:space-between;gap:1rem;margin-bottom:1.1rem;color:#878e89;font-family:var(--font-display);font-size:.7rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+.stackbar{
+  display:flex;align-items:flex-end;width:100%;height:min(47vh,28rem);margin:0;border:0;border-radius:0;
+  overflow:visible;background:repeating-linear-gradient(to top,#1d2420 0,#1d2420 1px,transparent 1px,transparent 25%);
+}
+.stackbar button{
+  position:relative;isolation:isolate;flex:var(--weight) 1 0;height:var(--height);min-width:0;padding:.7rem .3rem;
+  border:1px solid #090b0a;border-bottom:0;border-radius:0;background:var(--layer);color:#061109;
+  font-family:var(--font-display);font-size:.7rem;font-weight:700;line-height:1.15;white-space:normal;overflow:hidden;
+  cursor:pointer;opacity:.09;transform:scaleY(.015);transform-origin:center bottom;
+  transition:transform .8s var(--ease-out-expo),opacity .35s linear,filter .12s linear;
+}
+.stackbar button::after{content:"";position:absolute;z-index:-1;inset:0;background:#fff;opacity:0;transition:opacity .12s linear}
+.stackbar button.is-built{opacity:1;transform:scaleY(1)}
+.stackbar button.is-active::after{opacity:.17}
+.stackbar button:hover{filter:brightness(1.08);text-decoration:none}
+.stackbar button .layer-name{display:block;opacity:.76;font-size:.56rem;letter-spacing:.05em;text-transform:uppercase}
+.stackbar button .layer-amount{display:block;margin-top:.25rem;font-size:clamp(.64rem,1vw,.82rem)}
+.stackbar button.tail{color:#fff4f4;text-shadow:0 1px 0 #5d1010}
+.stacklegend{max-width:68ch;margin:.9rem 0 0;color:#8f9691;font-size:.76rem;line-height:1.55}
+.cost-total{
+  display:flex;align-items:baseline;justify-content:space-between;gap:1rem;margin-top:1.25rem;padding-top:1rem;
+  border-top:1px solid var(--rule);color:#929993;font-family:var(--font-display);font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;
+}
+.cost-total strong{color:var(--ink);font-size:clamp(1.45rem,3vw,2.5rem);letter-spacing:-.045em;text-transform:none;font-variant-numeric:tabular-nums}
+.cost-steps{padding-bottom:20vh}
+.cost-step{
+  min-height:65vh;display:flex;flex-direction:column;justify-content:center;padding:4rem 0;opacity:.72;
+  transform:translateY(1.5rem);transition:opacity .45s linear,transform .75s var(--ease-out-expo);
+}
+.cost-step.is-active{opacity:1;transform:none}
+.cost-step__number{color:var(--green);font-family:var(--font-display);font-size:.66rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+.cost-step.tail .cost-step__number{color:var(--red)}
+.cost-step h3{margin-top:.7rem;font-size:clamp(1.55rem,3vw,2.3rem);letter-spacing:-.035em}
+.cost-step__amount{margin:.7rem 0;color:var(--ink);font-family:var(--font-display);font-size:clamp(2.15rem,4.8vw,4.2rem);font-weight:600;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.06em}
+.cost-step.tail .cost-step__amount{color:#ff8f8f}
+.cost-step p{max-width:35ch;color:#acb2ae;font-size:.98rem}
+.step-open{
+  width:max-content;min-height:44px;margin-top:1.2rem;padding:.55rem 0;border:0;border-bottom:1px solid #3c704d;
+  background:transparent;color:var(--green-pale);font:600 .78rem var(--font-display);letter-spacing:.04em;cursor:pointer;
+}
+.step-open::after{content:"  ↘"}
+.drill-deck{width:min(900px,100%);margin:clamp(1rem,4vw,3rem) auto 0}
+.drill{
+  display:none;margin:0;padding:clamp(1.3rem,4vw,3rem);border:1px solid #343b36;border-radius:0;background:#101311;
+}
+.drill.open{display:block;animation:drill-in .55s var(--ease-out-expo) both}
+.drill h3{font-size:clamp(1.35rem,3vw,2rem);margin-bottom:.55rem}
+.drill .range{margin-bottom:1.25rem;color:var(--green-pale);font-size:clamp(1.25rem,2.6vw,1.8rem)}
+.drill p,.drill li{color:#b9bfbb;font-size:.93rem;line-height:1.72}
+.drill ul{padding-left:1.2rem;margin:.8rem 0}
+.drill li{margin:.6rem 0}
+@keyframes drill-in{from{opacity:0;transform:translateY(1rem)}to{opacity:1;transform:none}}
+
+details{border:1px solid #303632;border-radius:0;background:#131714}
+details summary{
+  min-height:50px;padding:.9rem 1.05rem;color:#d6dad7;font-family:var(--font-display);font-size:.85rem;
+  font-weight:600;line-height:1.35;
+}
+details summary::after{color:var(--green);font-weight:400}
+details .inner{padding:0 1.05rem 1.2rem;color:#b2b8b4;font-size:.9rem}
+blockquote{
+  position:relative;margin:1rem 0;padding:1.1rem 1.25rem 1.15rem 2.25rem;border-radius:0;border-left:1px solid #4b6654;
+  background:#181c19;color:#d2d6d3;font-family:var(--font-display);font-size:.88rem;font-style:normal;line-height:1.65;
+}
+blockquote::before{content:"“";position:absolute;left:.65rem;top:.1rem;color:#589068;font-size:2.2rem;line-height:1}
+blockquote cite{margin-top:.65rem;color:#8d948f;font-family:var(--font-body);font-size:.72rem;line-height:1.5}
+
+.cluster-explorer{margin-top:3rem}
+.cluster-tabs{
+  position:sticky;top:var(--topbar-h);z-index:20;display:flex;gap:.25rem;padding:.65rem 0;overflow-x:auto;
+  background:linear-gradient(#0a0a0b 78%,transparent);scrollbar-width:none;
+}
+.cluster-tabs::-webkit-scrollbar{display:none}
+.cluster-tab{
+  flex:0 0 auto;min-width:44px;min-height:44px;padding:.65rem .85rem;border:1px solid #343a36;background:#111411;
+  color:#9da49f;font:600 .72rem var(--font-display);letter-spacing:.04em;cursor:pointer;
+}
+.cluster-tab[aria-selected="true"]{border-color:var(--green);background:var(--green);color:#051008}
+.cluster-explorer.enhanced>details{display:none;margin:0;padding:clamp(1.2rem,4vw,3.25rem);border-color:#343a36;background:#101311}
+.cluster-explorer.enhanced>details.active{display:block;animation:drill-in .55s var(--ease-out-expo) both}
+.cluster-explorer.enhanced>details>summary{display:none}
+.cluster-explorer.enhanced>details .inner{max-width:760px;padding:0;font-size:.97rem}
+.cluster-explorer.enhanced>details .inner::before{
+  content:attr(data-title);display:block;margin-bottom:1.4rem;color:var(--ink);font-family:var(--font-display);
+  font-size:clamp(1.55rem,3.5vw,2.65rem);font-weight:600;line-height:1.08;letter-spacing:-.04em;
+}
+
+.fines-moment{margin-top:clamp(5rem,10vw,9rem)}
+.fines-heading{max-width:14ch;color:#f0b1b1;font-size:clamp(1.7rem,4vw,3.5rem);line-height:1.04}
+.fines-table{display:block;width:100%;min-width:0;margin-top:2rem}
+.fines-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+.fines-table tbody{display:grid;grid-template-columns:repeat(12,1fr);gap:1px;background:#2b302d;border:1px solid #2b302d}
+.fines-table tr{display:flex;flex-direction:column;min-height:14rem;padding:clamp(1.15rem,2.4vw,2rem);background:#0e110f}
+.fines-table tr:nth-child(1),.fines-table tr:nth-child(2){grid-column:span 6}
+.fines-table tr:nth-child(n+3){grid-column:span 4}
+.fines-table td{display:block;padding:0;border:0;color:#aeb4b0}
+.fines-table td:first-child{order:2;margin-top:auto;color:#dce0dd;font-family:var(--font-display);font-size:.88rem;font-weight:600}
+.fines-table td:nth-child(2){order:1;color:#ff7979;font-family:var(--font-display);font-size:clamp(2.3rem,5vw,4.6rem);font-weight:600;line-height:.92;letter-spacing:-.07em;font-variant-numeric:tabular-nums}
+.fines-table td:nth-child(3){order:3;margin-top:.5rem;color:#898f8b;font-size:.77rem;line-height:1.5}
+
+.steps{margin-top:3rem}
+.timeline{position:relative;max-width:880px;margin-left:auto;counter-reset:s}
+.timeline::before{content:"";position:absolute;left:1.15rem;top:1.5rem;bottom:1.5rem;width:1px;background:linear-gradient(var(--green),#334139 70%,transparent)}
+.steps>li{
+  border:0;padding:1.4rem 0 3.4rem 4rem;color:#b4bab6;font-size:1rem;line-height:1.7;
+  transform:none;
+}
+.timeline>li{opacity:1}
+.js .timeline>li{opacity:.68;transform:translateY(1.25rem);transition:opacity .45s linear,transform .75s var(--ease-out-expo)}
+.js .timeline>li.is-visible{opacity:1;transform:none}
+.steps>li::before{
+  left:0;top:1.3rem;z-index:2;width:2.3rem;height:2.3rem;border:1px solid #3d8b57;border-radius:50%;
+  background:#0d120f;color:var(--green);font-size:.78rem;
+}
+.steps b{font-family:var(--font-display);font-size:1.08rem}
+.steps .meta{
+  width:fit-content;margin-top:.75rem;padding:.4rem .65rem;border:1px solid #313934;background:#101411;
+  color:#989f9a;font-size:.76rem;line-height:1.5;
+}
+.tag{
+  margin-left:.35rem;padding:.18rem .48rem;border-radius:999px;font-size:.58rem;line-height:1.3;letter-spacing:.1em;
+}
+.tag.human{background:#332810;color:#ffd773}.tag.auto{background:#13351f;color:#75e99e}.tag.est{background:#272b28;color:#afb5b1}
+
+.tablewrap{
+  width:100%;margin-top:2.5rem;overflow-x:auto;border:1px solid #2c322e;overscroll-behavior-inline:contain;
+  scrollbar-color:#3d4841 #101311;
+}
+table{min-width:760px;margin:0;background:#0d100e;font-size:.86rem;line-height:1.65}
+th{position:sticky;top:0;padding:.8rem 1rem;border-color:#39413c;background:#151916;color:#9ea49f;font-size:.67rem}
+td{padding:1rem;border-color:#242a26;color:#aeb4b0}
+td:first-child{color:#e0e3e1}
+tr:last-child td{border-bottom:0}
+
+.grid2,.grid3{display:grid;gap:1px;margin-top:2.5rem;background:#2a302c;border:1px solid #2a302c}
+.grid2{grid-template-columns:1fr 1fr}.grid3{grid-template-columns:repeat(3,1fr)}
+.card{min-width:0;padding:clamp(1.25rem,3vw,2.3rem);border:0;border-radius:0;background:#101311}
+.card h3{margin:.45rem 0 .65rem;font-size:clamp(1.05rem,2vw,1.35rem)}
+.card .cnum{color:var(--green);font-size:clamp(1.8rem,4vw,3.4rem);line-height:1;letter-spacing:-.055em}
+.card p{color:#a7ada9;font-size:.88rem;line-height:1.7}
+.callout{
+  position:relative;margin:clamp(3rem,6vw,6rem) 0 0;padding:clamp(1.5rem,4vw,3.5rem);border:1px solid #34754a;border-radius:0;
+  background:#0f1611;
+}
+.callout::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:var(--green)}
+.callout h3{color:var(--green);font-size:clamp(1.35rem,3vw,2rem)}
+.callout p{max-width:75ch;margin-top:1rem;color:#b7bdb9}
+
+#software h2,#humans h2,#agent h2,#risk h2,.methodology h2{max-width:15ch}
+#humans>.lede{max-width:80ch}
+#agent .grid2 .card{min-height:20rem;display:flex;flex-direction:column;justify-content:center}
+#risk .grid2 .card:first-child{background:#1c1111}#risk .grid2 .card:last-child{background:#0e1711}
+#risk>.steps{max-width:880px;margin-left:auto}
+.methodology p{max-width:78ch;margin:.85rem 0;color:#a1a7a3;font-size:.87rem;line-height:1.75}
+.footer{padding:3rem 0 max(4rem,env(safe-area-inset-bottom));color:#7e8580;font-size:.73rem}
+
+.reveal{opacity:1;transform:none}
+.js .reveal{opacity:0;transform:translateY(1.5rem)}
+.js .reveal.is-visible{opacity:1;transform:none;transition:opacity .55s linear,transform .85s var(--ease-out-expo)}
+.countup{font-variant-numeric:tabular-nums}
+
+@media (max-width:899px){
+  :root{--topbar-h:3.5rem;--page:calc(100vw - 2rem)}
+  .topbar .wrap{width:100%;padding-left:1rem;gap:1rem}
+  .topbar nav{justify-content:flex-start}
+  .topbar nav a{padding-inline:.65rem;font-size:.62rem}
+  .hero{min-height:calc(100svh - var(--topbar-h));padding:4rem 1rem 6rem}
+  .hero::before{background-position:58% center}
+  .hero::after{background:linear-gradient(90deg,#080a09ed 0%,#080a09b8 68%,#080a0955),linear-gradient(0deg,#080a09fa 0%,transparent 75%)}
+  .hero .lede{font-size:1rem;line-height:1.62}.hero .eyenote{font-size:.73rem}
+  .scroll-cue{right:1rem;bottom:1.25rem}
+  .cost-scrolly{grid-template-columns:1fr;gap:0}
+  .cost-visual{top:var(--topbar-h);z-index:10;height:45svh;min-height:300px;margin-inline:-1rem;padding:1.1rem 1rem 1rem;background:#0a0a0bf4;border-bottom:1px solid var(--rule)}
+  .cost-visual__eyebrow{margin-bottom:.45rem;font-size:.58rem}
+  .stackbar{flex-direction:column;align-items:stretch;height:calc(45svh - 8.5rem);min-height:190px;background:repeating-linear-gradient(to right,#1d2420 0,#1d2420 1px,transparent 1px,transparent 25%)}
+  .stackbar button{flex:var(--weight) 1 0;width:100%;height:auto;min-height:0;padding:.08rem .5rem;text-align:left;transform:scaleX(.01);transform-origin:left center;display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+  .stackbar button.is-built{transform:scaleX(1)}
+  .stackbar button .layer-name{font-size:.48rem}.stackbar button .layer-amount{margin:0;font-size:.6rem}
+  .stacklegend{display:none}.cost-total{align-items:flex-start;flex-direction:column;gap:.15rem;margin-top:.5rem;padding-top:.4rem}.cost-total strong{font-size:1.35rem}
+  .cost-steps{padding-bottom:0}
+  .cost-step{min-height:92svh;padding:calc(45svh + 2.75rem) 0 5rem;justify-content:flex-start;opacity:.72}
+  .cost-step.is-active{opacity:1}.cost-step p{max-width:42ch}
+  .cluster-tabs{top:var(--topbar-h);margin-inline:-1rem;padding-inline:1rem}
+  .grid3{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}
+  .fines-table tbody{grid-template-columns:1fr}.fines-table tr,.fines-table tr:nth-child(n){grid-column:1;min-height:12rem}
+  .timeline{margin-left:0}
+  .tablewrap{width:calc(100vw - 2rem)}
+}
+@media (max-width:560px){
+  h1{font-size:clamp(3rem,15vw,5.2rem)}h2{font-size:clamp(2.1rem,11vw,3.4rem)}
+  section{padding:7.5rem 0 6rem}section::before{top:3.25rem}
+  .hero .bignum{font-size:clamp(3.1rem,16vw,4.8rem)}.hero .bignum small{width:100%;margin:.5rem 0 0}
+  .cost-heading{margin-bottom:2rem}
+  .cluster-explorer.enhanced>details{padding:1.25rem 1rem 1.5rem}
+  .steps>li{padding-left:3.3rem}.steps .meta{width:100%}
+  .timeline::before{left:1rem}.steps>li::before{width:2rem;height:2rem}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  .js .reveal,.js .timeline>li,.cost-step{opacity:1;transform:none}
+  .stackbar button.is-built{transform:none}.stackbar button{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+
+<div class="read-progress" role="progressbar" aria-label="Reading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+  <span class="read-progress__fill"></span>
+</div>
+
+<div class="topbar">
+  <div class="wrap">
+    <a href="/"><img src="../wordmark.svg" alt="Closeout Copilot"></a>
+    <nav>
+      <a href="#stack">Cost stack</a><a href="#clusters">Dispute clusters</a><a href="#lifecycle">Lifecycle</a>
+      <a href="#software">Software</a><a href="#humans">The humans</a><a href="#agent">The agent case</a><a href="#risk">If it goes wrong</a>
+    </nav>
+  </div>
+</div>
+
+<main class="wrap">
+
+<!-- HERO -->
+<div class="hero">
+  <div>
+    <h1>What does one pay dispute actually cost?</h1>
+    <p class="lede">A worker says <b>"my pay is wrong."</b> Resolving a disputed <b>$50</b> shift payment costs the operator roughly</p>
+    <div class="bignum">$<span class="countup" data-value="85">85</span>–<span class="countup" data-value="200">200</span> <small>all-in&nbsp;·&nbsp;4–12 days</small></div>
+    <p class="lede" style="font-size:.98rem;margin-top:1rem">— of which only ~$50 is the money itself. The rest is support labor, investigation, client back-and-forth, payment reruns and invoice rework. And that's before the two tails that dwarf everything: <b>churn</b> and <b>legal</b>.</p>
+    <p class="eyenote">Every number on this page is sourced or explicitly flagged as a constructed estimate. Click any component to drill into the math, the citations, and real cases. Research for the Reconciliation agent · Aug 2026.</p>
+  </div>
+  <img src="hero-cost-breakdown.png" alt="Isometric wireframe of a paycheck exploded into cost layers" width="1200" height="669">
+  <a class="scroll-cue" href="#stack">Build the cost</a>
+</div>
+
+<!-- COST STACK -->
+<section id="stack" data-section="01 / Build the cost">
+  <div class="cost-heading reveal">
+    <h2>The cost stack — <span class="g">click each layer</span></h2>
+    <p class="lede">Per-dispute costs for a typical disputed shift payment at a staffing platform or agency. Widths proportional to the midpoint of each range.</p>
+  </div>
+
+  <div class="cost-scrolly">
+    <div class="cost-visual" aria-label="Cost stack visualization">
+      <div class="cost-stick">
+        <div class="cost-visual__eyebrow"><span>Cost accumulated</span><span>Tap a layer for evidence</span></div>
+        <div class="stackbar" id="stackbar">
+          <button data-drill="d-payout" style="--weight:50;--height:30%;--layer:#16a34a" title="The payout — $50" aria-controls="d-payout" aria-expanded="false"><span class="layer-name">Payout</span><span class="layer-amount">$50</span></button>
+          <button data-drill="d-support" style="--weight:34;--height:38%;--layer:#22c55e" title="Support handling — $27–40" aria-controls="d-support" aria-expanded="false"><span class="layer-name">Support</span><span class="layer-amount">$27–40</span></button>
+          <button data-drill="d-invest" style="--weight:11;--height:46%;--layer:#4ade80" title="Investigation — $7–15" aria-controls="d-invest" aria-expanded="false"><span class="layer-name">Investigate</span><span class="layer-amount">$7–15</span></button>
+          <button data-drill="d-client" style="--weight:10;--height:54%;--layer:#86efac" title="Client-side review — $5–15" aria-controls="d-client" aria-expanded="false"><span class="layer-name">Client</span><span class="layer-amount">$5–15</span></button>
+          <button data-drill="d-rail" style="--weight:25;--height:62%;--layer:#f59e0b" title="Payment execution — $0–100" aria-controls="d-rail" aria-expanded="false"><span class="layer-name">Rail</span><span class="layer-amount">$0–100</span></button>
+          <button data-drill="d-bill" style="--weight:19;--height:70%;--layer:#fbbf24" title="Invoice rework — $25–50" aria-controls="d-bill" aria-expanded="false"><span class="layer-name">Rebill</span><span class="layer-amount">$25–50</span></button>
+          <button data-drill="d-churn" style="--weight:90;--height:84%;--layer:#ef4444" class="tail" title="Churn tail (expected value)" aria-controls="d-churn" aria-expanded="false"><span class="layer-name">Churn tail</span><span class="layer-amount">≈$235–470 EV</span></button>
+          <button data-drill="d-legal" style="--weight:110;--height:100%;--layer:#991b1b" class="tail" title="Legal & regulatory tail" aria-controls="d-legal" aria-expanded="false"><span class="layer-name">Legal tail</span><span class="layer-amount">$3,200 + 29h</span></button>
+        </div>
+        <p class="stacklegend">Green = the dispute itself · Amber = money-movement &amp; paperwork · Red = probabilistic tails (expected values, not per-dispute invoices). Process cost excluding the payout: <b style="color:var(--gray-200)">$45–105</b> platform-side; add invoice rework for agencies.</p>
+        <div class="cost-total"><span>Typical dispute</span><strong>$85–200 · 4–12 days</strong></div>
+      </div>
+    </div>
+
+    <div class="cost-steps" aria-label="Cost stack narrative">
+      <article class="cost-step" data-layer="0" data-drill="d-payout">
+        <span class="cost-step__number">Layer 01 · bounded</span><h3>The payout itself</h3>
+        <div class="cost-step__amount">$<span class="countup" data-value="50">50</span></div>
+        <p>The disputed amount — typically $10–$400. This is the only capped, recoverable component of the whole stack.</p>
+        <button class="step-open" type="button">Open the math and sources</button>
+      </article>
+      <article class="cost-step" data-layer="1" data-drill="d-support">
+        <span class="cost-step__number">Layer 02 · human today</span><h3>Support handling</h3>
+        <div class="cost-step__amount">$<span class="countup" data-value="27">27</span>–<span class="countup" data-value="40">40</span></div>
+        <p>A pay dispute is an escalation class, not a T1 ticket. Issues average ~2.3 contacts.</p>
+        <button class="step-open" type="button">Open the math and tickets</button>
+      </article>
+      <article class="cost-step" data-layer="2" data-drill="d-invest">
+        <span class="cost-step__number">Layer 03 · human today</span><h3>Investigation &amp; evidence</h3>
+        <div class="cost-step__amount">$<span class="countup" data-value="7">7</span>–<span class="countup" data-value="15">15</span></div>
+        <p>Evidence gathering runs 20–45 min per case: pull punches, GPS, schedule, timesheet history, message the supervisor.</p>
+        <button class="step-open" type="button">Open the evidence</button>
+      </article>
+      <article class="cost-step" data-layer="3" data-drill="d-client">
+        <span class="cost-step__number">Layer 04 · human today</span><h3>Client-side review</h3>
+        <div class="cost-step__amount">$<span class="countup" data-value="5">5</span>–<span class="countup" data-value="15">15</span></div>
+        <p>Almost every platform makes the client business the judge. The hidden cost is the unclicked button.</p>
+        <button class="step-open" type="button">Open the math and sources</button>
+      </article>
+      <article class="cost-step" data-layer="4" data-drill="d-rail">
+        <span class="cost-step__number">Layer 05 · automated, but metered</span><h3>Payment execution</h3>
+        <div class="cost-step__amount">$<span class="countup" data-value="0">0</span>–<span class="countup" data-value="100">100</span></div>
+        <p>Batched into next weekly run: ≈$0 marginal. Off-cycle corrections can cost $50–100.</p>
+        <button class="step-open" type="button">Open the rail detail</button>
+      </article>
+      <article class="cost-step" data-layer="5" data-drill="d-bill">
+        <span class="cost-step__number">Layer 06 · agency side</span><h3>Invoice rework</h3>
+        <div class="cost-step__amount">$<span class="countup" data-value="25">25</span>–<span class="countup" data-value="50">50</span></div>
+        <p>Pay-fix and bill-fix are separate machines: paycheck reversal on one side, credit memo + rebill on the other.</p>
+        <button class="step-open" type="button">Open the invoice detail</button>
+      </article>
+      <article class="cost-step tail" data-layer="6" data-drill="d-churn">
+        <span class="cost-step__number">Layer 07 · expected value</span><h3>The churn tail</h3>
+        <div class="cost-step__amount">≈$<span class="countup" data-value="235">235</span>–<span class="countup" data-value="470">470</span> EV</div>
+        <p>Several times the entire process stack. On a marketplace, supply is the product: fill-rate loss compounds this.</p>
+        <button class="step-open" type="button">Open the churn model</button>
+      </article>
+      <article class="cost-step tail" data-layer="7" data-drill="d-legal">
+        <span class="cost-step__number">Layer 08 · probabilistic</span><h3>The legal &amp; regulatory tail</h3>
+        <div class="cost-step__amount">$<span class="countup" data-value="3200" data-format="comma">3,200</span> + 29h</div>
+        <p>When litigated. Six–eight figures systemic. A $40 shortfall can become a four-figure liability.</p>
+        <button class="step-open" type="button">Open the legal evidence</button>
+      </article>
+    </div>
+  </div>
+
+  <div class="drill-deck" id="drill-deck">
+  <div class="drill" id="d-payout">
+    <h3>The payout itself <span class="tag auto">bounded</span></h3>
+    <div class="range">the disputed amount — typically $10–$400</div>
+    <p>Pay disputes are small-dollar: a deducted 30-min break on an $18/hr shift is <b>$9</b>; a CA meal-break violation adds a <a href="https://www.calchamber.com/california-labor-law/meal-and-rest-breaks">1-hour premium (~$18)</a>; a full missing shift is a few hundred. When the FTC forced Amazon Flex to repay withheld tips, the <a href="https://www.ftc.gov/news-events/news/press-releases/2021/11/ftc-returns-nearly-60-million-drivers-whose-tips-were-illegally-withheld-amazon">average check was $422</a>.</p>
+    <p style="margin-top:.5rem">This is the <b>only capped, recoverable component</b> of the whole stack — which is why "below $X, just pay it" is the universal industry policy (<a href="https://myamazonguy.com/amazon-reimbursement/amazon-returnless-refund/">Amazon returnless refunds &lt;$75</a>, <a href="https://www.claimlane.com/resources/blog/ai-warranty-claims-automation">warranty auto-approval &lt;$30</a>, <a href="https://www.ridesharingdriver.com/who-pays-for-delivery-refunds/">delivery apps' first 1–2 refunds free</a>).</p>
+    <p style="margin-top:.5rem">In EY's landmark payroll study, the money paid out dominates: of the <b>$291 average cost per payroll error</b>, <a href="https://eyquest.com/files/Cost_and_Risks_Due_to_Payroll_Errors_2022_Final.pdf">$281 is "direct" — mostly overpayment or compensation paid to settle</a> — and only $10 is counted HR labor (~26 min). The process costs below come <i>on top</i> for anyone running a support operation.</p>
+  </div>
+
+  <div class="drill" id="d-support">
+    <h3>Support handling <span class="tag human">human today</span></h3>
+    <div class="range">$27–40 <span class="tag est">constructed</span></div>
+    <p>A pay dispute is an <b>escalation class, not a T1 ticket</b> — first-line agents work scripts and can't touch money; a payments/escalations specialist has to pick it up. The math:</p>
+    <ul>
+      <li>Assisted support contact: <a href="https://www.gartner.com/en/documents/5164231">$13.50 median (Gartner)</a>; vendor benchmarks put email/ticket at <a href="https://theofficegurus.com/customer-support-cost-benchmarks-for-2026-what-you-need-to-know/">$6–11/case, $24–60 per multi-touch resolved issue</a></li>
+      <li>First-contact resolution runs <a href="https://stealthagents.com/research/first-contact-resolution-statistics-2026">70–75%</a>, and issues average <a href="https://livechatai.com/blog/customer-support-cost-benchmarks">~2.3 contacts</a> → 2–3 contacts per dispute → <b>$27–40</b></li>
+      <li>Offshore variant: with PH/India BPO agents billed at <a href="https://callforce.global/blog/call-center-outsourcing-cost/">$8–12/hr</a>, a resolved dispute runs <b>$8–20</b> — until it reaches an onshore specialist ($30–75)</li>
+    </ul>
+    <details><summary>What the tickets look like in the wild</summary><div class="inner">
+      <blockquote>"I sent countless emails to instawork about my money... I verified everything that they needed &amp; yet they refuse to pay me."<cite><a href="https://www.complaintsboard.com/instawork-b149649">ComplaintsBoard — Instawork, Nashville, Sep 2023</a> (missing shift record, unresolved)</cite></blockquote>
+      <blockquote>"Phone support actively refuses to escalate my dispute to a supervisor."<cite><a href="https://www.bbb.org/us/ca/san-francisco/profile/employee-benefit-consultants/branch-messenger-inc-1116-959329/complaints">BBB — Branch (gig payout wallet), Jun 2026</a></cite></blockquote>
+      <p>ShiftKey has logged <a href="https://www.bbb.org/us/tx/dallas/profile/medical-staffing/shiftkey-0875-91062781">212 BBB complaints in 3 years — 17 marked resolved</a>. The dominant pattern is repeat contacts and canned replies: exactly the 2–3× contact multiplier that drives this cost line.</p>
+    </div></details>
+  </div>
+
+  <div class="drill" id="d-invest">
+    <h3>Investigation &amp; evidence <span class="tag human">human today</span></h3>
+    <div class="range">$7–15 platform · $16–53 agency <span class="tag est">constructed</span></div>
+    <ul>
+      <li>Evidence gathering runs <a href="https://www.riskified.com/learning/chargebacks/chargeback-dispute/">20–45 min per case</a> (payments-dispute benchmark): pull punches, GPS, schedule, timesheet history, message the supervisor</li>
+      <li>At a staffing agency this lands on a pay/bill specialist earning <a href="https://www.ziprecruiter.com/Salaries/Payroll-And-Billing-Specialist-Salary">$22.71/hr</a> (fully loaded ~$32–35/hr) → 30–90 min = <b>$16–53</b></li>
+      <li>EY: missing/incorrect time punches alone consume <a href="https://eyquest.com/files/Cost_and_Risks_Due_to_Payroll_Errors_2022_Final.pdf">26 min per employee per year</a>, and payroll pros spend <a href="https://www.paycom.com/resources/blog/common-payroll-mistakes/">29 full-time workweeks a year</a> correcting common errors</li>
+      <li>Chargeback all-in analog: a $70 dispute + $25 fee + 1.5h staff time ≈ <a href="https://truelayer.com/blog/payments/chargeback-costs-explained/">$125 to fight</a> — why nobody investigates small claims</li>
+    </ul>
+    <details><summary>The evidence absurdity our agent fixes</summary><div class="inner">
+      <blockquote>"I arrived as scheduled for a 4:00 PM shift" — the on-site clock was broken; the worker supplied GPS tracking showing presence 3:56 PM to 8:57 PM; Wonolo denied payment twice citing "lack of evidence."<cite><a href="https://www.bbb.org/us/ca/san-francisco/profile/recruitment-services/wonolo-inc-1116-547163/complaints">BBB — Wonolo, Jun 2026</a></cite></blockquote>
+      <blockquote>"I worked 6 hours but was paid for fewer hours... why is GPS tracked at all if supervisors can manually adjust time?"<cite><a href="https://www.bbb.org/us/ca/san-francisco/profile/job-listing-service/instawork-1116-907006/complaints">BBB — Instawork, Jun 2026</a></cite></blockquote>
+      <p>Today the industry pays humans to <i>manually assemble</i> evidence that platforms already possess — then sometimes rejects that same evidence when the worker submits it.</p>
+    </div></details>
+  </div>
+
+  <div class="drill" id="d-client">
+    <h3>Client-side review <span class="tag human">human today</span></h3>
+    <div class="range">$5–15 <span class="tag est">constructed</span></div>
+    <p>Almost every platform makes the <b>client business the judge</b>: <a href="https://help.instawork.com/en/articles/3758225-how-to-review-disputes">Instawork</a> gives it 72 hours, <a href="https://gigsmart.com/blog/how-to-work-a-shift-gig-and-get-paid">GigSmart</a> 2 business days. A facility manager spends 10–30 min reviewing — at supervisor rates, $5–15 of the client's time per dispute.</p>
+    <p style="margin-top:.5rem">The hidden cost is the <b>unclicked button</b>: one missed timesheet approval delays an entire invoice a full cycle while payroll already went out (<a href="https://madisonresources.com/vms-software-for-staffing-firms-what-actually-matters-when-youre-the-supplier/">Madison Resources</a>; <a href="https://www.bu.edu/sourcing/files/2018/08/Manager-Guide-Time-and-Expense-Approval.pdf">SAP Fieldglass manager guide</a>). Reminder cadences (T-48h email, T-24h SMS, T-4h escalation) exist purely to chase this human (<a href="https://ustechautomations.com/resources/blog/automate-contractor-timesheet-payroll-staffing-2026">US Tech Automations</a>).</p>
+  </div>
+
+  <div class="drill" id="d-rail">
+    <h3>Payment execution <span class="tag auto">automated, but metered</span></h3>
+    <div class="range">$0 batched · $50–100 off-cycle</div>
+    <ul>
+      <li>Batched into next weekly run: ≈$0 marginal — but the worker waits up to 7 more days (Instawork adjusted payments only ride the <a href="https://help.instawork.com/en/articles/13113958-how-does-instawork-handle-payment-processing-when-there-are-disputes-about-worked-hours">Wednesday cycle, never instant pay</a>)</li>
+      <li>Off-cycle correction run: providers bill per run — <a href="https://tomorrowdesk.com/info/adp-payroll">ADP off-cycle runs ≈ $150–500/yr extra for 3–5 runs</a>; a university payroll office charges a flat <a href="https://bppm.missouri.edu/policy/fees-payroll-off-cycle-payments-accounting-express-checks">$100 per off-cycle payment</a></li>
+      <li>Every retro payment is also a <b>tax event</b>: supplemental-wage withholding + FLSA regular-rate/<abbr title="overtime">OT</abbr> recalculation per affected week — <a href="https://onpay.com/insights/retroactive-pay-law-employer-guide/">the most commonly botched step</a></li>
+      <li>Orgs average <a href="https://www.paycom.com/about/press-room/ey-survey-payroll-errors-average-291-each-impacting-the-economy/">~345 off-cycle payments a year</a>, mostly corrections</li>
+      <li>Instant rails are one-way: <a href="https://docs.stripe.com/connect/payout-reversals">Stripe Instant Payouts can't be reversed</a>, <a href="https://developers.tabapay.com/docs/exceptions-handling-for-push-payments">TabaPay push-to-card is final</a> — underpay is easy to top up, overpay becomes a consent-gated collections problem</li>
+    </ul>
+    <details><summary>When the rail itself fails</summary><div class="inner">
+      <blockquote>"Qwick Pro withdrew funds from my bank account of $396.30. I did not authorize this."<cite><a href="https://www.bbb.org/us/az/scottsdale/profile/staffing-agencies/qwick-1126-1000085330/complaints">BBB — Qwick payment-processor incident, Nov 2025</a> (refunds + overdraft reimbursement offered)</cite></blockquote>
+      <p>The CFPB sued Walmart + Branch (Dec 2024) alleging deposit accounts were opened for 1M+ Spark drivers without consent, with <a href="https://www.cpapracticeadvisor.com/2024/12/30/cfpb-sues-walmart-and-branch-for-illegally-opening-deposit-accounts-for-more-than-a-million-spark-delivery-drivers/153696/">$10M+ paid in fees</a> to access their own earnings.</p>
+    </div></details>
+  </div>
+
+  <div class="drill" id="d-bill">
+    <h3>Invoice rework (agency side) <span class="tag human">human today</span></h3>
+    <div class="range">$25–50 per corrected invoice</div>
+    <ul>
+      <li>Error-correction cost per invoice mistake: <a href="https://resolvepay.com/blog/17-statistics-showing-the-hidden-cost-of-invoice-errors-and-rework">$25–50</a> (staff research, client communication, system adjustment); baseline invoice processing already costs <a href="https://www.wexinc.com/resources/blog/what-does-it-cost-to-process-an-invoice-ap-benchmarks-every-finance-team-should-know/">$9.40 and 9.2 days on average</a></li>
+      <li>Pay-fix and bill-fix are separate machines: paycheck reversal on one side, credit memo + rebill on the other (<a href="https://kb.tempworks.com/help/invoice-corrections">TempWorks</a>, <a href="https://avionteclassicsupport.zendesk.com/hc/en-us/articles/360045867793-AR-Write-Offs-Adjustments">Avionté</a>); once invoiced in a <abbr title="Vendor Management System">VMS</abbr>, corrections land in the <b>next invoice cycle</b> (<a href="https://userapps.support.sap.com/sap/support/knowledge/en/3065127">Fieldglass</a>, <a href="https://webapps.beeline.com/beelinetms/!_HelpMenu_Beeline/CS_Reprocess_Timesheet_or_Expense.pdf">Beeline</a>)</li>
+      <li>Disputed <abbr title="accounts payable">AP</abbr> exceptions take <a href="https://www.kenfromfinance.com/blog/invoice-processing-time-metrics">5–8 days on average, 30+ days when contested</a>; ~85% of staffing billing disputes are timesheet-vs-invoice hours mismatches (<a href="https://www.forwardly.com/blog/best-invoicing-practices-for-staffing-agencies/">Forwardly</a>)</li>
+      <li>Portfolio effect: revenue leakage from rate mismatches + timesheet discrepancies exceeds <a href="https://www.staffingindustry.com/editorial/staffing-stream/revenue-leakage-the-silent-threat-to-staffing-firm-margins">5% of billable revenue</a> against <a href="https://www.theresource.com/2025/10/27/average-staffing-agency-markup-in-2025/">3–8% net margins</a>; a disputed invoice also <b>freezes factoring reserves</b> — funders advance only against dispute-free verified timesheets (<a href="https://peersense.com/financing/invoice-factoring-staffing-agencies">1–4% factoring fees</a>)</li>
+    </ul>
+  </div>
+
+  <div class="drill" id="d-churn">
+    <h3>The churn tail <span class="tag est">expected value — model, not invoice</span></h3>
+    <div class="range">≈$235–470 EV per badly-handled dispute</div>
+    <p>The evidence chain, each link sourced:</p>
+    <ul>
+      <li><a href="https://www.hrdive.com/news/just-two-payroll-errors-can-cause-49-of-employees-to-start-job-hunting/444377/">49% of workers start job-hunting after two paycheck errors</a>; 29% of men / 30% of working parents after <b>one</b> (Workforce Institute)</li>
+      <li>Replacing a frontline worker costs <a href="https://www.applauz.me/resources/cost-of-frontline-employee-turnover">$4,700 (SHRM average)</a>; Gallup pegs it at 40% of salary</li>
+      <li><b>The model (ours, flagged):</b> if a badly-handled dispute raises quit probability by even 5–10 points, expected churn cost = 5–10% × $4,700 ≈ <b>$235–470</b> — several times the entire process stack. On a marketplace, supply is the product: fill-rate loss compounds this.</li>
+      <li>The dispute experience itself drives the quitting: on every platform sampled, workers report deactivation or shift-blocking <i>after</i> disputing — <blockquote style="margin:.6rem 0">"Wonolo... CANCELLED ALL MY JOBS FOR NEXT MONTH AND RESTRICTED ME FROM ACCEPTING ANYMORE."<cite><a href="https://www.bbb.org/us/ca/san-francisco/profile/recruitment-services/wonolo-inc-1116-547163/complaints">BBB, Jun 2026</a></cite></blockquote></li>
+    </ul>
+  </div>
+
+  <div class="drill" id="d-legal">
+    <h3>The legal &amp; regulatory tail <span class="tag est">probabilistic</span></h3>
+    <div class="range">$3,200 + 29h when litigated · six–eight figures systemic</div>
+    <ul>
+      <li>EY: 14% of companies had payroll-error litigation — averaging <a href="https://eyquest.com/files/Cost_and_Risks_Due_to_Payroll_Errors_2022_Final.pdf">32 complaints/yr at $3,200 direct + 29 internal hours each</a>; 12% were fined by a regulator ($5,200 avg fines + $4,600 legal; 91 hours to settle one issue)</li>
+      <li>Statutory multipliers make slow correction expensive: <a href="https://legalclarity.org/flsa-liquidated-damages-doubling-unpaid-wages-and-overtime/">FLSA 100% liquidated damages</a> + <a href="https://www.shouselaw.com/ca/labor/labor-code-203/">CA waiting-time penalties up to 30 days' wages</a> — a $40 shortfall can become a four-figure liability</li>
+      <li>When the pattern is systemic, it's an AG action: <a href="https://illinoisattorneygeneral.gov/news/story/attorney-general-raoul-recovers-more-than-600-000-in-unpaid-overtime-wages-for-misclassified-temporary-workers">Wonolo $600K (IL, 3,320 workers)</a> · <a href="https://ag.ny.gov/attorney-general-james-secures-1675-million-doordash-cheating-delivery-workers-out-tips">DoorDash $16.75M (NY tips)</a> · <a href="https://www.cbsnews.com/sanfrancisco/news/san-francisco-sues-hospitality-staffing-firm-qwick-workers-guaranteed-wages-benefits/">Qwick $1.75M (SF)</a> · <a href="https://coag.gov/press-releases/instawork-to-pay-under-settlement-with-weiser/">Instawork $400K (CO)</a> · <a href="https://www.ftc.gov/news-events/news/press-releases/2021/02/amazon-pay-617-million-settle-ftc-charges-it-withheld-some-customer-tips-amazon-flex-drivers">Amazon Flex $61.7M (FTC)</a></li>
+      <li>DOL recovered <a href="https://www.dol.gov/newsroom/releases/whd/whd20241203-0">$2.4M from a single healthcare staffing firm</a> (341 workers); <a href="https://inthesetimes.com/article/temporary-work-wage-theft-poverty-pay-job-insecurity-workers-rights-workplace-organizing-equal-pay-low-wage">24% of temp workers report wage theft</a></li>
+      <li>Burden of proof favors the worker: under <a href="https://en.wikipedia.org/wiki/Anderson_v._Mt._Clemens_Pottery_Co.">Anderson v. Mt. Clemens</a>, if employer records are inadequate the worker's reasonable estimate wins</li>
+    </ul>
+  </div>
+  </div>
+</section>
+
+<!-- CLUSTERS -->
+<section id="clusters" data-section="02 / The patterns">
+  <h2>Dispute clusters — <span class="g">each has its own economics</span></h2>
+  <p class="lede">Eight recurring dispute types from complaint records, litigation, and platform policy docs. Click to drill into real cases.</p>
+
+  <div class="cluster-explorer" id="clusterExplorer">
+  <details><summary>1 · Missing / cut hours — the volume leader</summary><div class="inner">
+    <p><b>Economics:</b> payout = the wage delta (often $20–120); full process stack applies; highest frequency — missing/incorrect punches alone occur <a href="https://eyquest.com/files/Cost_and_Risks_Due_to_Payroll_Errors_2022_Final.pdf">404 times per 1,000 employees/yr (EY)</a>.</p>
+    <blockquote>"After a couple [hours] I checked my earnings again and had seen that my hours were adjusted to 0." — worked 7h15m, lost $122.38.<cite><a href="https://www.complaintsboard.com/instawork-b149649">ComplaintsBoard — Instawork, Jan 2024</a></cite></blockquote>
+    <blockquote>"The staffer changed my hours to 14.5 hrs worked" — the signed timesheet said 16.<cite><a href="https://www.complaintsboard.com/shiftkey-llc-b134156">ComplaintsBoard — ShiftKey</a></cite></blockquote>
+    <p>Root cause is the re-keying seam: client-system punches (UKG/Kronos clocks, paper) re-entered into agency pay/bill — <a href="https://www.forwardly.com/blog/best-invoicing-practices-for-staffing-agencies/">~85% of staffing billing disputes are hours mismatches</a>.</p>
+  </div></details>
+
+  <details><summary>2 · Meal-break deducted, break never taken — the class-action factory</summary><div class="inner">
+    <p><b>Economics:</b> tiny payout (30 min ≈ $9–15, + <a href="https://www.calchamber.com/california-labor-law/meal-and-rest-breaks">1-hr CA premium</a>) but the <b>fattest legal tail</b> — auto-deduction is the #1 wage-theft litigation pattern (<a href="https://www.rmlegalgroup.com/the-auto-deduct-trap-in-hospitals-and-elder-care-turning-unpaid-meal-breaks-into-a-successful-class-action/">the "auto-deduct trap"</a>), and identical deductions across a workforce = automatic class certification.</p>
+    <blockquote>Medicalodges "required them to stay late waiting for other CNAs to take over, directed them to not take breaks and sometimes deducted wages for breaks that were not taken." — class conditionally certified for all CNAs placed via ShiftKey in 3 years.<cite><a href="https://www.mcknights.com/news/gig-app-cnas-can-pursue-gap-time-wages-from-nursing-home-court/">Deleon v. Medicalodges, D. Kan.</a></cite></blockquote>
+    <p>Instawork's own help center treats wrong break deductions as a standard dispute type — worker must prove the negative <a href="https://help.instawork.com/en/articles/3838890-adjusting-and-disputing-your-hours-after-shift">within 12 hours</a>.</p>
+  </div></details>
+
+  <details><summary>3 · Sent home early / show-up pay denied — the defined-benefit dispute</summary><div class="inner">
+    <p><b>Economics:</b> the payout is <i>statutorily defined</i> — 4-hr minimums (<a href="https://help.instawork.com/en/articles/2062235-what-happens-if-i-get-sent-home-early-or-asked-to-stay-later">Instawork policy</a>, <a href="https://labor.illinois.gov/laws-rules/fls/day-temporary-labor.html">IL temp law</a>, <a href="https://mosey.com/blog/nj-temporary-workers-bill-of-rights/">NJ temp law</a>), 50% of shift (<a href="https://help.gigsmart.com/requester-cancellation-policy-for-workers">GigSmart</a>, CA reporting-time). Denying a defined benefit is what turns into AG actions — Wonolo's IL settlement included exactly this: workers "<a href="https://illinoisattorneygeneral.gov/news/story/attorney-general-raoul-recovers-more-than-600-000-in-unpaid-overtime-wages-for-misclassified-temporary-workers">not paid a mandatory four-hour minimum</a>."</p>
+    <blockquote>"They refused it was crazy, even though the policy clearly states if you show up and are sent home bc of lack of business you get paid for 4 hours."<cite><a href="https://www.bbb.org/us/az/scottsdale/profile/staffing-agencies/qwick-1126-1000085330/complaints">BBB — Qwick, Jul 2026</a></cite></blockquote>
+    <blockquote>"Instawork refuses to pay me the minimum 4h. The reason is that I was late 15 min."<cite><a href="https://www.complaintsboard.com/instawork-b149649">ComplaintsBoard — Instawork, Aug 2023</a></cite></blockquote>
+  </div></details>
+
+  <details><summary>4 · Wrongful no-show mark — the $0-payout, maximum-churn dispute</summary><div class="inner">
+    <p><b>Economics:</b> worker gets <i>nothing</i> and often a strike/suspension — so the dispute costs the platform little in payout but the <b>maximum in churn and trust</b>; it's the highest-volume complaint category found. Usually caused by the platform's own clock-in/geofence failing.</p>
+    <blockquote>"The app had marked me as 'no show' even though I took a screenshot of my location/time and the managers had emailed them that I had worked my shift."<cite><a href="https://www.complaintsboard.com/instawork-b149649">ComplaintsBoard — Instawork</a></cite></blockquote>
+    <blockquote>"The job was closed so I couldn't clock in or out but they still put me as a no show" — account then permanently suspended for "time theft," citing the platform's own geofence.<cite><a href="https://www.bbb.org/us/tx/dallas/profile/employment-agencies/veryable-0875-90846386/complaints">BBB — Veryable, Jun 2026</a></cite></blockquote>
+    <blockquote>"I tried for 2 years to get no call no shows that were false taken off of my profile and ShiftKey did nothing."<cite><a href="https://www.complaintsboard.com/shiftkey-llc-b134156">ComplaintsBoard — ShiftKey</a></cite></blockquote>
+  </div></details>
+
+  <details><summary>5 · Shift missing from the system — the expensive investigation</summary><div class="inner">
+    <p><b>Economics:</b> full-shift payout ($100–400) + the <b>heaviest investigation</b> (there's no record to check — support must reconstruct from supervisor emails and screenshots). Instawork maintains a standing help article titled "<a href="https://help.instawork.com/en/articles/8548261-booked-shifts-disappeared">Booked Shifts Disappeared</a>."</p>
+    <blockquote>"My employer didn't sign my payment... He said he had never heard of something like that." — Qwick pays only when the employer verifies time; unverified 48h post-shift means the worker chases support.<cite><a href="https://qwick.pissedconsumer.com/review.html">PissedConsumer — Qwick, Feb 2026</a> · <a href="https://support.qwick.com/en/articles/5563137">policy</a></cite></blockquote>
+  </div></details>
+
+  <details><summary>6 · Rate mismatch / unpaid OT — the misclassification tripwire</summary><div class="inner">
+    <p><b>Economics:</b> payout = rate delta × hours (can be large: $12.39/hr × 12h = $148 in the ShiftKey case below); systemic version is a misclassification action — <a href="https://www.cbsnews.com/sanfrancisco/news/san-francisco-sues-hospitality-staffing-firm-qwick-workers-guaranteed-wages-benefits/">Qwick paid $1.75M</a>, Wonolo's IL settlement covered OT premiums never paid.</p>
+    <blockquote>"They told me I lied about my pay... ShiftKey paid me $30 instead of $42.39" after a 12-hour shift.<cite><a href="https://www.complaintsboard.com/shiftkey-llc-b134156">ComplaintsBoard — ShiftKey</a> (resolved)</cite></blockquote>
+    <blockquote>$79.86 received on a ~$500 shift via an unexplained $365 deduction dated to 2022 — before the worker was even on the platform.<cite><a href="https://www.bbb.org/us/tx/irving/profile/medical-staffing/shiftkey-llc-0875-91062781/complaints">BBB — ShiftKey, Jun 2026</a></cite></blockquote>
+  </div></details>
+
+  <details><summary>7 · Payment-rail failure — the regulator magnet</summary><div class="inner">
+    <p><b>Economics:</b> the wages are usually right — the <i>money movement</i> failed (instant pay missing, wrong account, processor clawback). Cheap individually, but it's the fastest-growing regulatory target: <a href="https://www.cpapracticeadvisor.com/2024/12/30/cfpb-sues-walmart-and-branch-for-illegally-opening-deposit-accounts-for-more-than-a-million-spark-delivery-drivers/153696/">CFPB v. Walmart &amp; Branch</a> alleges $10M+ in worker fees; Qwick's processor <a href="https://www.bbb.org/us/az/scottsdale/profile/staffing-agencies/qwick-1126-1000085330/complaints">pulled money out of workers' bank accounts</a>, forcing refunds + overdraft reimbursements (goodwill spend).</p>
+    <blockquote>"$93.60... completely vanished from my digital ledger while my available funds remained unchanged."<cite><a href="https://www.bbb.org/us/ca/san-francisco/profile/employee-benefit-consultants/branch-messenger-inc-1116-959329/complaints">BBB — Branch, May 2026</a></cite></blockquote>
+  </div></details>
+
+  <details><summary>8 · Retaliation after disputing — the amplifier</summary><div class="inner">
+    <p><b>Economics:</b> not a dispute type but a multiplier on every other cluster: when disputing is punished, workers eat small underpayments (suppressing ticket volume while building churn and legal exposure — the <a href="https://www.cbsnews.com/news/unitedhealth-lawsuit-ai-deny-claims-medicare-advantage-health-insurance-denials/">nH Predict lesson</a>: low appeal rates ≠ correct decisions).</p>
+    <blockquote>"Today my account was deactivated for something that I did not do" — the same day she chased a missing payment.<cite><a href="https://www.complaintsboard.com/instawork-b149649">ComplaintsBoard — Instawork, Nov 2023</a></cite></blockquote>
+    <blockquote>A "top ten operator" was permanently suspended after disputing fraudulent wallet transactions.<cite><a href="https://www.bbb.org/us/tx/dallas/profile/employment-agencies/veryable-0875-90846386/complaints">BBB — Veryable, Sep 2025</a></cite></blockquote>
+  </div></details>
+  </div>
+
+  <div class="fines-moment reveal">
+  <h3 class="fines-heading">When the pattern scales, so does the cost.</h3>
+  <table class="fines-table">
+    <thead><tr><th>Enforcement action</th><th>Amount</th><th>Core allegation</th></tr></thead>
+    <tbody>
+      <tr><td><a href="https://ag.ny.gov/attorney-general-james-secures-1675-million-doordash-cheating-delivery-workers-out-tips">NY AG v. DoorDash</a></td><td>$<span class="countup" data-value="16.75" data-decimals="2">16.75</span>M</td><td>Tips offset guaranteed base pay, ~63,000 workers</td></tr>
+      <tr><td><a href="https://www.ftc.gov/news-events/news/press-releases/2021/02/amazon-pay-617-million-settle-ftc-charges-it-withheld-some-customer-tips-amazon-flex-drivers">FTC v. Amazon Flex</a></td><td>$<span class="countup" data-value="61.7" data-decimals="1">61.7</span>M</td><td>Customer tips silently backfilled lowered base rates</td></tr>
+      <tr><td><a href="https://www.cbsnews.com/sanfrancisco/news/san-francisco-sues-hospitality-staffing-firm-qwick-workers-guaranteed-wages-benefits/">SF City Attorney v. Qwick</a></td><td>$<span class="countup" data-value="1.5" data-decimals="1">1.5</span>M + $<span class="countup" data-value="250">250</span>K</td><td>Misclassification / wage theft (AB5)</td></tr>
+      <tr><td><a href="https://illinoisattorneygeneral.gov/news/story/attorney-general-raoul-recovers-more-than-600-000-in-unpaid-overtime-wages-for-misclassified-temporary-workers">IL AG v. Wonolo</a></td><td>$<span class="countup" data-value="600">600</span>K</td><td>No OT premium, sub-minimum wage, no 4-hr minimum — 3,320+ workers</td></tr>
+      <tr><td><a href="https://coag.gov/press-releases/instawork-to-pay-under-settlement-with-weiser/">CO AG v. Instawork</a></td><td>$<span class="countup" data-value="400">400</span>K</td><td>Misclassification; must stop 1099 shifts in CO</td></tr>
+      <tr><td><a href="https://www.dol.gov/newsroom/releases/whd/whd20241203-0">DOL consent judgment, healthcare staffing</a></td><td>$<span class="countup" data-value="2.4" data-decimals="1">2.4</span>M</td><td>Back wages/damages, 341 workers</td></tr>
+      <tr><td><a href="https://files.consumerfinance.gov/f/documents/cfpb_ea-walmart-complaint_2024-12.pdf">CFPB v. Walmart &amp; Branch</a></td><td>$<span class="countup" data-value="10">10</span>M+ alleged</td><td>Unconsented deposit accounts, fee-gated wage access</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- LIFECYCLE -->
+<section id="lifecycle" data-section="03 / The clock">
+  <h2>The lifecycle of a $50 dispute — <span class="g">time and cost per step</span></h2>
+  <p class="lede">Who does what today, how long it takes, what it costs. Door-to-door: <b>4–12 calendar days typical; 30–60+ on appeal</b>.</p>
+  <ol class="steps timeline">
+    <li><b>Intake</b> <span class="tag auto">app form</span> — worker files within 12–24h window (<a href="https://help.instawork.com/en/articles/3838890-adjusting-and-disputing-your-hours-after-shift">Instawork 12h</a>, <a href="https://gigsmart.com/blog/how-to-work-a-shift-gig-and-get-paid">GigSmart 24h, one dispute per shift</a>)<div class="meta">Worker: 5–15 min unpaid · Platform: $0.25 self-serve, $13.50 if assisted (<a href="https://www.gartner.com/en/documents/5164231">Gartner</a>)</div></li>
+    <li><b>Triage</b> <span class="tag human">T1 agent</span> — first response 4–24h email SLA; billing-type <abbr title="average handle time">AHT</abbr> 4–6 min (<a href="https://kayako.com/blog/average-handle-time-industry-standard/">Kayako</a>)<div class="meta">~$13.50/contact; pay disputes exceed T1 authority → escalation to payments specialist</div></li>
+    <li><b>Evidence pull</b> <span class="tag human">specialist</span> — punches, GPS, schedule, supervisor emails: 20–45 min (<a href="https://www.riskified.com/learning/chargebacks/chargeback-dispute/">chargeback benchmark</a>)<div class="meta">$7–15 platform / $16–53 agency labor</div></li>
+    <li><b>Business's side</b> <span class="tag human">client manager</span> — 72h window (<a href="https://help.instawork.com/en/articles/3758225-how-to-review-disputes">Instawork; silence = worker wins</a>) or 2 business days (GigSmart)<div class="meta">10–30 min of client time ($5–15); the single longest wall-clock step</div></li>
+    <li><b>Decision</b> <span class="tag human">agent + rules</span> — minutes once evidence is in; 25–30% of volume is repeat contacts (<a href="https://stealthagents.com/research/first-contact-resolution-statistics-2026">FCR data</a>)<div class="meta">1–2 more contacts: $13.50–27</div></li>
+    <li><b>Payment</b> <span class="tag auto">metered</span> — next weekly cycle (1–7 days; disputed hours excluded from instant pay) or off-cycle run 1–2 banking days<div class="meta">$0 batched / $50–100 off-cycle + tax recompute</div></li>
+    <li><b>Appeal</b> <span class="tag human">escalations/legal</span> — minority of cases; Uber-style reviews 7–21 days, DoorDash informal conference up to 60 days<div class="meta">EY: litigated error avg $3,200 + 29 internal hours</div></li>
+  </ol>
+  <p class="eyenote">Real-world outcomes when this breaks: 10 months unpaid with rolling "24–48 hour" promises (<a href="https://www.complaintsboard.com/shiftkey-llc-b134156">ShiftKey</a>); 2 years of ignored no-show appeals; 8+ weeks for an untrackable mailed check (<a href="https://www.bbb.org/us/tx/dallas/profile/employment-agencies/veryable-0875-90846386/complaints">Veryable</a>).</p>
+</section>
+
+<!-- SOFTWARE -->
+<section id="software" data-section="04 / The seams">
+  <h2>The software stack — <span class="g">every layer linked</span></h2>
+  <p class="lede">Seven layers move a shift from punch to paycheck to invoice. Disputes are born at the seams — and <b>no layer resolves them</b>.</p>
+  <div class="tablewrap">
+  <table>
+    <tr><th>Layer</th><th>Products</th><th>Dispute-relevant fact</th></tr>
+    <tr><td>Punch capture</td><td><a href="https://www.ukg.com/products/features/time-and-attendance">UKG/Kronos</a> · <a href="https://www.deputy.com/pricing">Deputy</a> ($4.99/user/mo) · <a href="https://wheniwork.com">When I Work</a> · <a href="https://tcpsoftware.com">TCP</a> · <a href="https://smartbarrel.io/">SmartBarrel</a> · <a href="https://connecteam.com">Connecteam</a> · <a href="https://quickbooks.intuit.com/time-tracking/">QB Time</a> · <a href="https://hypertrack.com/">HyperTrack</a> · <a href="https://radar.com/industry/workforce-management">Radar</a></td><td>Most temp punches happen on the <b>client's</b> clock, then get re-keyed into agency systems — the root seam of hours mismatches</td></tr>
+    <tr><td>Staffing ATS + pay/bill</td><td><a href="https://www.bullhorn.com/">Bullhorn</a> (Kelly, Randstad, Adecco among <a href="https://www.readycontacts.com/target-account-profiling/bullhorn/">~10K customers</a>) · <a href="https://www.avionte.com/">Avionté</a> · <a href="https://www.tempworks.com/">TempWorks</a> ($49–100+/user/mo) · <a href="https://www.jobdiva.com/">JobDiva</a> · <a href="https://www.ceipal.com/">Ceipal</a> · <a href="https://aqore.com">Aqore</a> · <a href="https://www.coatssql.com/">COATS</a></td><td>Bullhorn ships a "<a href="https://kb.bullhorn.com/bte/Content/BHTE/Topics/disputeTime.htm">Two day guarantee – no bill</a>" dispute code — remove billing, keep worker pay: the codified loss path</td></tr>
+    <tr><td><abbr title="Vendor Management System">VMS</abbr> / <abbr title="Managed Service Provider">MSP</abbr></td><td><a href="https://www.fieldglass.com/">SAP Fieldglass</a> · <a href="https://www.beeline.com/">Beeline</a> · <a href="https://magnitglobal.com/">Magnit</a> · <a href="https://www.coupa.com/">Coupa CWM</a> · <a href="https://www.simplifyvms.com/">SimplifyVMS</a></td><td>Fees run <a href="https://app.humancloud.com/compare/sap-fieldglass-vs-beeline">1–3% of spend</a> (2–6% all-in supplier-funded); invoiced timesheets can only be fixed by next-cycle credit/debit memos</td></tr>
+    <tr><td>Payroll engines</td><td><a href="https://www.adp.com/">ADP</a> ($16–32 <abbr title="per employee per month">PEPM</abbr>) · <a href="https://www.paychex.com/">Paychex</a> · <a href="https://www.paylocity.com/">Paylocity</a> · <a href="https://gusto.com/">Gusto</a> · embedded APIs: <a href="https://www.checkhq.com/">Check</a>, <a href="https://www.zeal.com/">Zeal</a> (staffing/gig-specialized), <a href="https://embedded.gusto.com/">Gusto Embedded</a></td><td>Corrections are metered off-cycle runs + supplemental-wage tax events</td></tr>
+    <tr><td>Instant pay / <abbr title="Earned Wage Access">EWA</abbr></td><td><a href="https://branchapp.com/">Branch</a> (GigSmart) · <a href="https://www.dailypay.com/">DailyPay</a> · <a href="https://www.tapcheck.com/">Tapcheck</a> · <a href="https://www.rainapp.com/">Rain</a> · <a href="https://www.payactiv.com/">Payactiv</a> · <a href="https://docs.stripe.com/connect/instant-payouts">Stripe Instant Payouts</a> (Wonolo, Qwick) · <a href="https://developers.tabapay.com/docs/overview-of-push-to-card">TabaPay</a></td><td>Money can move in 30 min — but payout speed everywhere is gated on "timesheet approval," and disputed hours are excluded from instant pay</td></tr>
+    <tr><td>Support / CX</td><td><a href="https://www.zendesk.com/">Zendesk</a> ($1.50–2.00/AI resolution) · <a href="https://fin.ai/">Intercom Fin</a> ($0.99/resolution) · <a href="https://www.kustomer.com/">Kustomer</a> ($0.60/AI conversation) · <a href="https://decagon.ai/">Decagon</a> · <a href="https://sierra.ai/">Sierra</a> · <a href="https://forethought.ai/">Forethought</a> · <a href="https://www.salesforce.com/service/">Agentforce</a></td><td>Horizontal AI deflects FAQs; none ships meal-break law, geofence evidence, or pay/bill rate-card understanding. "Deflection ≠ resolution"</td></tr>
+    <tr><td><b>Dispute resolution</b></td><td style="color:var(--red-400);font-weight:600">No product category exists.</td><td>Searched hard: every layer prevents or records; nothing adjudicates. The only product marketing shift-level dispute resolution found is <a href="https://hypertrack.com/">HyperTrack's staffing agent</a> — i.e., us. Adjacent-but-different: <a href="https://www.highradius.com/product/automated-dispute-management/">HighRadius</a> (AR short-pays), <a href="https://www.lorikeetcx.ai/articles/ai-for-transaction-dispute-automation">Lorikeet</a> (card disputes)</td></tr>
+  </table>
+  </div>
+</section>
+
+<!-- HUMANS -->
+<section id="humans" data-section="05 / The people">
+  <h2>The humans doing this today — <span class="g">and what they cost</span></h2>
+  <div class="grid3">
+    <div class="card"><div class="cnum">$28.01/hr</div><h3>US payroll &amp; timekeeping clerk</h3><p>median; 161,100 employed (<a href="https://www.onetonline.org/link/summary/43-3051.00">BLS/O*NET</a>). Staffing pay/bill specialist: <a href="https://www.ziprecruiter.com/Salaries/Payroll-And-Billing-Specialist-Salary">$22.71/hr avg</a></p></div>
+    <div class="card"><div class="cnum">$8–12/hr</div><h3>Offshore BPO seat (billed)</h3><p>PH/India agents earning <a href="https://hiretalent.ph/blog/filipino-customer-service-salary-guide">$2.50–4/hr</a> billed via <a href="https://callforce.global/blog/call-center-outsourcing-cost/">TaskUs-class BPOs</a>; onshore US $28–45/hr</p></div>
+    <div class="card"><div class="cnum">$90–100K</div><h3>Trust &amp; Safety specialist</h3><p><a href="https://builtin.com/job/trust-safety-specialist/8796777">Instawork posting</a>: "objective, unbiased, evidence-based investigations." Payments/escalations sit onshore</p></div>
+  </div>
+  <p class="lede" style="font-size:1rem;margin-top:1.4rem">The pattern everywhere: <b>T1 volume offshore, money decisions onshore.</b> Uber ran 7+ Centers of Excellence (Manila 1,000+, Hyderabad ~1,000) plus <a href="https://qz.com/465613/uber-customer-complaints-from-the-us-are-increasingly-handled-in-the-philippines">TaskUs outsourcing</a>; DoorDash was <a href="https://www.sec.gov/Archives/edgar/data/1829864/000119312521179177/d200167ds1a.htm">TaskUs's #2 client (11–12% of revenue)</a>. Labor is <a href="https://crmcurator.com/articles/general/gartner-80-billion-call-center-savings/">~95% of contact-center cost</a> — which is why Uber's July 2026 <a href="https://www.bloomberg.com/news/articles/2026-07-22/uber-cuts-10-of-customer-service-jobs-citing-embrace-of-ai">10% Community-Operations layoff citing AI</a> hit exactly this org. At a staffing agency, the pay/bill clerk absorbs dispute work inside a <a href="https://www.theresource.com/2025/10/27/average-staffing-agency-markup-in-2025/">3–8% net margin</a> — one $291 error eats the entire margin on ~$5–10K of billings.</p>
+</section>
+
+<!-- AGENT CASE -->
+<section id="agent" data-section="06 / The alternative">
+  <h2>The agent case — <span class="g">same dispute, different economics</span></h2>
+  <div class="grid2">
+    <div class="card">
+      <h3 style="color:var(--amber-400)">Today: human process</h3>
+      <div class="cnum" style="color:var(--amber-400)">$45–105 process + payout</div>
+      <p style="margin-top:.5rem">2–3 support contacts · 20–45 min manual evidence assembly · 72h client window idles · payment waits for the weekly cycle · <b>4–12 days door-to-door</b>. Evidence the platform already owns gets re-requested from the worker — then sometimes rejected.</p>
+    </div>
+    <div class="card" style="border-color:var(--green-600)">
+      <h3 style="color:var(--green-400)">Closeout agent</h3>
+      <div class="cnum">single-digit $ per dispute</div>
+      <p style="margin-top:.5rem">Evidence pull is instant — GPS/geofence ground truth, shift timeline, SMS thread are first-party data. Rule-check against state-keyed pay law runs in seconds. Market anchors for AI resolution: <a href="https://fin.ai/">$0.99</a>–<a href="https://www.partnerhero.com/pricing">$2.99</a>; the residual human cost is one ops approval click on the agent's workup. <b>Minutes-to-hours, same pay cycle.</b></p>
+    </div>
+  </div>
+  <div class="callout">
+    <h3>Why the numbers move so far</h3>
+    <p style="font-size:15px">The stack above is ~90% <b>human coordination cost</b> around evidence that already exists in machine-readable form. The industry's own benchmark says self-service costs <a href="https://www.gartner.com/en/documents/5164231">$1.84 vs $13.50 assisted</a> and <a href="https://alhena.ai/blog/how-ai-automates-returns-and-refunds-in-ecommerce/">60–80% of refund-type requests are automatable zero-touch</a> — but nobody built it for pay disputes because adjudication needs the evidence layer (geofence + timeline + conversation) that we already run. Speed is also a direct legal variable: prompt, documented correction is the statutory defense against <a href="https://legalclarity.org/flsa-liquidated-damages-doubling-unpaid-wages-and-overtime/">liquidated damages</a> and <a href="https://www.shouselaw.com/ca/labor/labor-code-203/">waiting-time penalties</a>, and fast fixes are what keep the <b>$235–470 churn tail</b> from ever accruing.</p>
+  </div>
+</section>
+
+<!-- RISK -->
+<section id="risk" data-section="07 / The guardrails">
+  <h2>What if it goes wrong? — <span class="g">the asymmetry is the design</span></h2>
+  <p class="lede">Automation failures in money decisions are well documented. The evidence points one way: <b>the wrong denial is the expensive error; the wrong approval is capped.</b></p>
+  <div class="grid2">
+    <div class="card">
+      <h3 style="color:var(--red-400)">Wrong denial — uncapped</h3>
+      <p><a href="https://legal-info.lawyers.com/labor-employment-law/wage-and-hour-law/liquidated-damages-and-flsa-claims.html">FLSA 2× liquidated damages</a> + CA penalties + attorneys' fees; and an automated policy error is <i>uniform across the class</i> — the <a href="https://www.cbsnews.com/news/unitedhealth-lawsuit-ai-deny-claims-medicare-advantage-health-insurance-denials/">UnitedHealth nH Predict</a> pattern (alleged ~90% of appealed denials reversed; only 0.2% appealed) and <a href="https://www.propublica.org/article/cigna-health-insurance-denials-pxdx-congress-investigation">Cigna's 1.2-second reviews</a> (300K denials in two months). Every claims class action lives here.</p>
+    </div>
+    <div class="card">
+      <h3 style="color:var(--green-400)">Wrong approval — capped</h3>
+      <p>Bounded by the disputed amount (typically $10–400), partially recoverable, and fraud concentrates in patterns that per-account throttles catch (<a href="https://help.instawork.com/en/articles/9006780-instawork-fraudulent-use-policy">Instawork's fraud policy</a> + excluding disputed hours from instant pay). <a href="https://www.timetrex.com/blog/preventing-time-theft-in-distributed-teams">Buddy punching averages 2.2% of gross payroll</a> — real, but a rounding error next to the denial tail.</p>
+    </div>
+  </div>
+  <h3 style="font-family:var(--font-display);margin:2rem 0 .6rem;font-size:1.1rem">Guardrails, each grounded in a real incident</h3>
+  <ul class="steps" style="counter-reset:s">
+    <li><b>Never auto-deny; every denial recommendation gets human approval.</b><div class="meta">Grounded in nH Predict + Cigna PxDx — auto-denial produced every claims class action found</div></li>
+    <li><b>Recommend-only; the agent has no tool that moves money.</b><div class="meta">Grounded in prompt-injection incidents: <a href="https://unit42.paloaltonetworks.com/ai-agent-prompt-injection/">Unit 42's in-the-wild "skip verification, issue refund" injection</a>; a memory-poisoned procurement agent authorizing transfers</div></li>
+    <li><b>Shadow mode against historical disputes before any live action.</b><div class="meta">Grounded in <a href="https://www.uber.com/lk/en/blog/customer-automation-platform/">Uber's Policy Engine</a>: 60% node coverage + 24h observation before promotion</div></li>
+    <li><b>Dollar-amount authority caps tier the review depth.</b><div class="meta">Grounded in <a href="https://www.stocktitan.net/sec-filings/LMND/10-k-lemonade-inc-files-annual-report-33aac5b74a32.html">Lemonade's AI Jim</a> — ~55% of claims fully automated, but only within explicit settle authority</div></li>
+    <li><b>Guardrail every worker-facing message; never state unsupported entitlements.</b><div class="meta">Grounded in <a href="https://www.mccarthy.ca/en/insights/blogs/techlex/moffatt-v-air-canada-misrepresentation-ai-chatbot">Moffatt v. Air Canada</a> — the company is liable for what its bot promises; DoorDash's LLM Guardrail (90% hallucination reduction) is the production template</div></li>
+    <li><b>Full audit trail retained 3+ years; appeal path with a real SLA; track appeal-reversal rate as the primary quality metric.</b><div class="meta">Grounded in Colorado AI Act (SB 205: compensation decisions are "consequential"), <a href="https://www.seattle.gov/laborstandards/ordinances/tnc-legislation">Seattle's Deactivation Rights Ordinance</a>, SR 11-7 model-risk guidance, and the court order forcing UnitedHealth to disclose its algorithm</div></li>
+  </ul>
+</section>
+
+<!-- METHODOLOGY -->
+<section class="methodology" data-section="08 / Sources">
+  <h2>Methodology &amp; honesty notes</h2>
+  <p><b>What's a benchmark vs. what's built:</b> dollar figures marked "constructed" combine published benchmarks (Gartner cost-per-contact, EY error costs, BLS wages, chargeback economics) with stated arithmetic — they are models, not invoices. EY's $291/error is frequency-weighted across all payroll error types and its "direct" component is dominated by money paid out, not process labor; our $45–105 process figure is deliberately separate from the payout for that reason.</p>
+  <p><b>Known gaps:</b> no platform publishes its true cost-per-resolved-pay-dispute, support-agents-per-1,000-workers, or goodwill-spend benchmarks; APQC payroll ratios are paywalled; Reddit was crawl-blocked so worker quotes come from BBB/ComplaintsBoard/PissedConsumer and court records. Internal SLAs and BPO contracts are triangulated from job postings, rate surveys, and SEC filings.</p>
+  <p><b>Provenance:</b> assembled Aug 2026 from ~10 structured research passes for the Reconciliation agent design exploration (closeout-copilot #828/#886). Corrections welcome — every claim links to its source precisely so it can be checked.</p>
+</section>
+
+<div class="footer">
+  <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+    <span>© 2026 HyperTrack · Closeout Copilot Research</span>
+    <span><a href="/">closeoutcopilot.com</a></span>
+  </div>
+</div>
+
+</main>
+
+<script>
+(() => {
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const supportsObserver = 'IntersectionObserver' in window;
+  const smooth = reducedMotion ? 'auto' : 'smooth';
+
+  /* Reading progress: one passive listener, one transform write per frame. */
+  const progress = document.querySelector('.read-progress');
+  const progressFill = document.querySelector('.read-progress__fill');
+  let progressTicking = false;
+  const updateProgress = () => {
+    const distance = document.documentElement.scrollHeight - window.innerHeight;
+    const value = distance > 0 ? Math.min(1, Math.max(0, window.scrollY / distance)) : 0;
+    progressFill.style.transform = `scaleX(${value})`;
+    progress.setAttribute('aria-valuenow', String(Math.round(value * 100)));
+    progressTicking = false;
+  };
+  window.addEventListener('scroll', () => {
+    if (!progressTicking) {
+      progressTicking = true;
+      requestAnimationFrame(updateProgress);
+    }
+  }, { passive: true });
+  updateProgress();
+
+  /* Editorial entrances. Content remains visible when JS is unavailable. */
+  const revealTargets = document.querySelectorAll(
+    'section:not(#stack) > h2, section:not(#stack) > .lede, .grid2, .grid3, .callout, .tablewrap, .methodology p'
+  );
+  revealTargets.forEach((element) => element.classList.add('reveal'));
+  if (supportsObserver && !reducedMotion) {
+    const revealObserver = new IntersectionObserver((entries, observer) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+    document.querySelectorAll('.reveal').forEach((element) => revealObserver.observe(element));
+  } else {
+    document.querySelectorAll('.reveal').forEach((element) => element.classList.add('is-visible'));
+  }
+
+  /* Animated figures. */
+  const animateNumber = (element) => {
+    if (element.dataset.counted === 'true') return;
+    element.dataset.counted = 'true';
+    const target = Number(element.dataset.value);
+    const decimals = Number(element.dataset.decimals || 0);
+    const comma = element.dataset.format === 'comma';
+    if (reducedMotion || !Number.isFinite(target) || target === 0) {
+      element.textContent = Number.isFinite(target)
+        ? target.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+        : element.textContent;
+      return;
+    }
+    const start = performance.now();
+    const duration = 900;
+    const frame = (now) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+      const value = target * eased;
+      element.textContent = comma
+        ? Math.round(value).toLocaleString('en-US')
+        : value.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+      if (t < 1) requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  };
+  const counters = document.querySelectorAll('.countup');
+  if (supportsObserver) {
+    const counterObserver = new IntersectionObserver((entries, observer) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          animateNumber(entry.target);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.55 });
+    counters.forEach((counter) => counterObserver.observe(counter));
+  } else {
+    counters.forEach(animateNumber);
+  }
+
+  /* Signature scrolly: prose steps progressively assemble the pinned cost stack. */
+  const costSteps = [...document.querySelectorAll('.cost-step')];
+  const layers = [...document.querySelectorAll('#stackbar button')];
+  const setCostLayer = (index) => {
+    costSteps.forEach((step, stepIndex) => step.classList.toggle('is-active', stepIndex === index));
+    layers.forEach((layer, layerIndex) => {
+      layer.classList.toggle('is-built', layerIndex <= index);
+      layer.classList.toggle('is-active', layerIndex === index);
+    });
+  };
+  if (supportsObserver && !reducedMotion) {
+    const costObserver = new IntersectionObserver((entries) => {
+      const visible = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (visible) setCostLayer(Number(visible.target.dataset.layer));
+    }, { threshold: [0.2, 0.45, 0.7], rootMargin: '-28% 0px -38% 0px' });
+    costSteps.forEach((step) => costObserver.observe(step));
+  } else {
+    layers.forEach((layer) => layer.classList.add('is-built'));
+    costSteps.forEach((step) => step.classList.add('is-active'));
+  }
+
+  /* Cost drill-downs: one panel at a time, reachable from the chart or prose. */
+  const drillPanels = [...document.querySelectorAll('.drill')];
+  drillPanels.forEach((panel) => panel.setAttribute('aria-hidden', 'true'));
+  const openDrill = (id, allowToggle = true) => {
+    const panel = document.getElementById(id);
+    if (!panel) return;
+    const wasOpen = panel.classList.contains('open');
+    drillPanels.forEach((item) => {
+      item.classList.remove('open');
+      item.setAttribute('aria-hidden', 'true');
+    });
+    layers.forEach((layer) => layer.setAttribute('aria-expanded', 'false'));
+    if (allowToggle && wasOpen) return;
+    panel.classList.add('open');
+    panel.setAttribute('aria-hidden', 'false');
+    layers.filter((layer) => layer.dataset.drill === id).forEach((layer) => layer.setAttribute('aria-expanded', 'true'));
+    requestAnimationFrame(() => panel.scrollIntoView({ behavior: smooth, block: 'center' }));
+  };
+  layers.forEach((layer) => layer.addEventListener('click', () => openDrill(layer.dataset.drill, true)));
+  document.querySelectorAll('.step-open').forEach((button) => {
+    button.addEventListener('click', () => openDrill(button.closest('.cost-step').dataset.drill, false));
+  });
+
+  /* Eight dispute clusters become a keyboard-operable tabbed case explorer. */
+  const clusterExplorer = document.getElementById('clusterExplorer');
+  if (clusterExplorer) {
+    const panels = [...clusterExplorer.children].filter((child) => child.tagName === 'DETAILS');
+    const tabList = document.createElement('div');
+    tabList.className = 'cluster-tabs';
+    tabList.setAttribute('role', 'tablist');
+    tabList.setAttribute('aria-label', 'Dispute clusters');
+    const tabs = panels.map((panel, index) => {
+      const title = panel.querySelector('summary').textContent.trim();
+      const tab = document.createElement('button');
+      tab.type = 'button';
+      tab.className = 'cluster-tab';
+      tab.id = `cluster-tab-${index + 1}`;
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-controls', `cluster-panel-${index + 1}`);
+      tab.textContent = title;
+      panel.id = `cluster-panel-${index + 1}`;
+      panel.dataset.title = title;
+      panel.querySelector('.inner').dataset.title = title;
+      panel.setAttribute('role', 'tabpanel');
+      panel.setAttribute('aria-labelledby', tab.id);
+      return tab;
+    });
+    tabs.forEach((tab) => tabList.appendChild(tab));
+    clusterExplorer.insertBefore(tabList, panels[0]);
+    clusterExplorer.classList.add('enhanced');
+    const activateCluster = (index, moveFocus = false, scrollTab = true) => {
+      tabs.forEach((tab, tabIndex) => {
+        const active = tabIndex === index;
+        tab.setAttribute('aria-selected', String(active));
+        tab.tabIndex = active ? 0 : -1;
+      });
+      panels.forEach((panel, panelIndex) => {
+        const active = panelIndex === index;
+        panel.hidden = !active;
+        panel.open = active;
+        panel.classList.toggle('active', active);
+      });
+      if (scrollTab) {
+        const left = tabs[index].offsetLeft - (tabList.clientWidth - tabs[index].offsetWidth) / 2;
+        tabList.scrollTo({ left: Math.max(0, left), behavior: smooth });
+      }
+      if (moveFocus) tabs[index].focus();
+    };
+    tabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => activateCluster(index));
+      tab.addEventListener('keydown', (event) => {
+        let next = null;
+        if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
+        if (event.key === 'ArrowLeft') next = (index - 1 + tabs.length) % tabs.length;
+        if (event.key === 'Home') next = 0;
+        if (event.key === 'End') next = tabs.length - 1;
+        if (next !== null) {
+          event.preventDefault();
+          activateCluster(next, true);
+        }
+      });
+    });
+    activateCluster(0, false, false);
+  }
+
+  /* Lifecycle stages reveal in sequence. */
+  const timelineSteps = document.querySelectorAll('.timeline > li');
+  if (supportsObserver && !reducedMotion) {
+    const timelineObserver = new IntersectionObserver((entries, observer) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.45, rootMargin: '0px 0px -12% 0px' });
+    timelineSteps.forEach((step) => timelineObserver.observe(step));
+  } else {
+    timelineSteps.forEach((step) => step.classList.add('is-visible'));
+  }
+
+  /* Minimal section nav state. */
+  if (supportsObserver) {
+    const navLinks = [...document.querySelectorAll('.topbar nav a')];
+    const navById = new Map(navLinks.map((link) => [link.getAttribute('href').slice(1), link]));
+    const sectionObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting && navById.has(entry.target.id)) {
+          navLinks.forEach((link) => link.classList.remove('active'));
+          navById.get(entry.target.id).classList.add('active');
+        }
+      });
+    }, { rootMargin: '-38% 0px -55% 0px', threshold: 0 });
+    document.querySelectorAll('section[id]').forEach((section) => sectionObserver.observe(section));
+  }
+})();
+</script>
+</body>
+</html>
