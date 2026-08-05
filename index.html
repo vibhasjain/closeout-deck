@@ -1,35 +1,225 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HyperTrack Closeout Copilot | AI-Powered Payout Reconciliation</title>
-    <meta name="description" content="From chaos to closeout in seconds. AI-powered closeout for staffing companies. $1 per shift.">
+  <meta charset="utf-8">
+  <title>HyperTrack Closeout Agent | Same-Day Time-to-Pay for Staffing</title>
+  <link rel="canonical" href="https://hypertrack.com/closeout">
+  <meta content="AI-powered time-to-pay for staffing teams. Reconcile worker time, client approvals, payroll, and invoices in one auditable closeout." name="description">
+  <meta content="Closeout Agent | Time-to-Pay for Staffing" property="og:title">
+  <meta content="One verified closeout record from worker clock-in to client invoice." property="og:description">
+  <meta content="https://hypertrack.com/images/closeout-enterprise/hero-closeout-intelligence.jpg" property="og:image">
+  <meta property="og:url" content="https://hypertrack.com/closeout">
+  <meta content="Closeout Agent | Time-to-Pay for Staffing" property="twitter:title">
+  <meta content="One verified closeout record from worker clock-in to client invoice." property="twitter:description">
+  <meta content="https://hypertrack.com/images/closeout-enterprise/hero-closeout-intelligence.jpg" property="twitter:image">
+  <meta property="og:type" content="website">
+  <meta content="summary_large_image" name="twitter:card">
+  <meta content="width=device-width, initial-scale=1" name="viewport">
+  <meta content="1LwSqJfYMZFz736CRZyCE57_L5FJ_K40PkA94lLLvr4" name="google-site-verification">
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <!-- Site is light-mode-only for now. Force light, ignore any prior localStorage value. -->
+  <script>(function(){ document.documentElement.classList.remove('dark'); })();</script>
 
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://closeoutcopilot.com">
-    <meta property="og:title" content="HyperTrack Closeout Copilot">
-    <meta property="og:description" content="AI-powered closeout for staffing companies. $1 per shift.">
-    <meta property="og:image" content="https://closeoutcopilot.com/og-image.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            satoshi: ['Satoshi', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+          },
+          colors: {
+            neutral: {
+              50:  '#f5f5f6', 100: '#ebebec', 200: '#dbdcdd', 300: '#c4c5c7',
+              400: '#a1a2a4', 500: '#84827e', 600: '#656360', 700: '#4d4a44',
+              800: '#32302c', 900: '#1c1b18', 950: '#0e0d0b',
+            },
+            green: {
+              50:  '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac',
+              400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d',
+              800: '#166534', 900: '#14532d', 950: '#052e16',
+            },
+          }
+        }
+      }
+    }
+  </script>
 
-    <!-- Twitter -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:url" content="https://closeoutcopilot.com">
-    <meta name="twitter:title" content="HyperTrack Closeout Copilot">
-    <meta name="twitter:description" content="AI-powered closeout for staffing companies. $1 per shift.">
-    <meta name="twitter:image" content="https://closeoutcopilot.com/og-image.png">
+  <link href="https://fonts.googleapis.com" rel="preconnect">
+  <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    @font-face { font-family: 'Satoshi'; src: url('fonts/Satoshi-Light.woff') format('woff'); font-weight: 300; font-display: swap; }
+    @font-face { font-family: 'Satoshi'; src: url('fonts/Satoshi-Regular.woff') format('woff'); font-weight: 400; font-display: swap; }
+    @font-face { font-family: 'Satoshi'; src: url('fonts/Satoshi-Medium.woff') format('woff'); font-weight: 500; font-display: swap; }
+    @font-face { font-family: 'Satoshi'; src: url('fonts/Satoshi-Bold.woff') format('woff'); font-weight: 700; font-display: swap; }
+    @font-face { font-family: 'Satoshi'; src: url('fonts/Satoshi-Black.woff') format('woff'); font-weight: 900; font-display: swap; }
+    body { font-family: 'Satoshi', sans-serif; overflow-x: clip; }
+    html { overflow-x: clip; }
+    /* ===== Canonical top-nav (from index.html) ===== */
+    nav.site-nav { position: sticky; top: 0; z-index: 40; }
+    [data-nav-product][aria-expanded="true"] svg.chev { transform: rotate(180deg); }
+    .mobile-menu { transition: max-height 240ms ease, opacity 200ms ease; max-height: 0; opacity: 0; overflow: hidden; }
+    .mobile-menu.is-open { max-height: 80vh; opacity: 1; }
+    .mobile-submenu { transition: max-height 200ms ease, opacity 180ms ease; max-height: 0; opacity: 0; overflow: hidden; }
+    .mobile-submenu.is-open { max-height: 60vh; opacity: 1; }
+  </style>
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+  <!-- Shared Edgework frame + zone-box system (do NOT inline primitives) -->
+  <link rel="stylesheet" href="css/edgework.css">
+  <link rel="stylesheet" href="css/deck-base.css">
+  <link rel="stylesheet" href="css/deck-closeout.css">
+  <link rel="stylesheet" href="css/deck-closeout-light.css">
+
+  <link href="images/favicon.png" rel="shortcut icon" type="image/x-icon">
+  <link href="images/webclip.png" rel="apple-touch-icon">
+
+  <script async="" src="https://www.googletagmanager.com/gtag/js?id=G-L5V1GJ51D6"></script>
+  <script type="text/javascript">window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag('set', 'developer_id.dZGVlNj', true);gtag('js', new Date());gtag('config', 'G-L5V1GJ51D6');</script>
+
+  <script>function initApollo(){var n=Math.random().toString(36).substring(7),o=document.createElement("script");
+o.src="https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache="+n,o.async=!0,o.defer=!0,
+o.onload=function(){window.trackingFunctions.onLoad({appId:"66311630953c7805723de5b5"})},
+document.head.appendChild(o)}initApollo();</script>
+
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-5H3R6GZ');</script>
+
+  <style>
+    body #hubspot-messages-iframe-container { z-index: 90; }
+  </style>
+  <script src="/js/hubspot-chat-visibility.js?v=20260716"></script>
 </head>
-<body>
+<body class="bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 font-satoshi antialiased deck closeout-deck">
+  <!-- Google Tag Manager (noscript) -->
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5H3R6GZ" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  <!-- End Google Tag Manager (noscript) -->
+
+
+  <nav class="site-nav bg-white/80 dark:bg-neutral-950/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800">
+    <div class="max-w-[1200px] mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
+      <div class="flex items-center gap-8">
+        <a href="https://hypertrack.com/index.html" class="flex items-center"><img src="images/Green0svg.svg" class="h-6" alt="HyperTrack"></a>
+        <div class="hidden lg:flex items-center gap-6">
+          <button type="button" data-nav-product aria-expanded="false" aria-haspopup="true" aria-controls="nav-product-panel" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer flex items-center gap-1">
+            Product
+            <svg class="chev w-3 h-3 transition-transform duration-200" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <a href="https://hypertrack.com/shift-work-marketplace.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer">Solutions</a>
+          <a href="https://hypertrack.com/customers.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer">Customers</a>
+          <a href="https://hypertrack.com/pricing.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer">Pricing</a>
+          <a href="https://hypertrack.com/docs" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer">Docs</a>
+          <a href="https://stories.hypertrack.com/" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer">Blog</a>
+          <a href="https://hypertrack.com/shiftworksummit.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer">Shift Work Summit</a>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="https://dashboard.hypertrack.com/login" data-landing-cta="Sign in (nav)" class="hidden lg:inline-flex text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer">Sign in</a>
+        <a href="https://dashboard.hypertrack.com/signup" data-landing-cta="Get started (nav)" class="hidden lg:inline-flex items-center px-4 py-2 bg-white dark:bg-neutral-900 text-sm font-semibold text-neutral-700 dark:text-neutral-300 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer">Get started</a>
+        <!-- Hamburger (lg:hidden) -->
+        <button type="button" id="mobile-menu-toggle" aria-expanded="false" aria-controls="mobile-menu" aria-label="Toggle navigation"
+                class="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-md border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">
+          <svg class="hamburger-open w-5 h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <svg class="hamburger-close w-5 h-5 hidden" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M6 18L18 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Product mega-dropdown (desktop) — full-width panel anchored below the nav. -->
+    <div id="nav-product-panel" data-nav-product-panel hidden class="absolute inset-x-0 top-full mt-px bg-white dark:bg-neutral-950 border-b border-neutral-200 dark:border-neutral-800">
+      <div class="absolute z-10 inset-0 pointer-events-none">
+        <div class="max-w-[1200px] mx-auto px-6 h-full relative">
+          <div class="absolute left-0 top-0 bottom-0 w-px bg-neutral-300/40 dark:bg-neutral-700/50"></div>
+          <div class="absolute right-0 top-0 bottom-0 w-px bg-neutral-300/40 dark:bg-neutral-700/50"></div>
+        </div>
+      </div>
+      <!-- v8: restructured Product submenu.
+           Col 1 (col-span-4): Closeout Agent (NEW chip) + divider + Location-Based Workflows (Backfilling, On-Demand)
+           Col 2 (col-span-5): Basic Vis (Geotags) + Proof-of-Work (Pre-Shift, On-Shift, Nearby)
+           Col 3 (col-span-3): Plan, Assign & Track (Self-Improving Routes) + Partners (Integrations) -->
+      <div class="relative z-20 max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-12 md:divide-x md:divide-neutral-200 md:dark:divide-neutral-800">
+        <!-- COL 1: Location-Based Workflows -->
+        <div class="md:col-span-4 px-6 lg:px-8 py-8">
+          <p class="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-500 mb-4">Location-Based Workflows</p>
+          <ul class="space-y-3.5">
+            <li><a href="https://hypertrack.com/backfilling-last-minute-cancellations.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Backfilling Last-Minute Cancellations</a></li>
+            <li><a href="https://hypertrack.com/on-demand-assignment.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">On-Demand Assignment</a></li>
+          </ul>
+        </div>
+
+        <!-- COL 2: Basic Vis + Proof-of-Work -->
+        <div class="md:col-span-5 px-6 lg:px-8 py-8 border-t md:border-t-0 border-neutral-200 dark:border-neutral-800">
+          <p class="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-500 mb-4">Basic Vis</p>
+          <ul class="space-y-3.5 mb-6">
+            <li><a href="https://hypertrack.com/geotags.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Geotags</a></li>
+          </ul>
+          <p class="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-500 mb-4">Proof-of-Work</p>
+          <ul class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3.5">
+            <li><a href="https://hypertrack.com/pre-shift-tracking.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Pre-Shift Tracking</a></li>
+            <li><a href="https://hypertrack.com/on-shift-tracking.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">On-Shift Tracking</a></li>
+            <li><a href="https://hypertrack.com/nearby-search.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Nearby Search</a></li>
+          </ul>
+        </div>
+
+        <!-- COL 3: Plan, Assign & Track + Partners -->
+        <div class="md:col-span-3 px-6 lg:px-8 py-8 border-t md:border-t-0 border-neutral-200 dark:border-neutral-800">
+          <p class="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-500 mb-4">Plan, Assign &amp; Track</p>
+          <ul class="space-y-3.5 mb-6">
+            <li><a href="https://hypertrack.com/self-improving-routes.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Self-Improving Routes</a></li>
+          </ul>
+          <p class="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-500 mb-4">Partners</p>
+          <ul class="space-y-3.5 mb-6">
+            <li><a href="https://hypertrack.com/partners.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Integrations</a></li>
+          </ul>
+          <p class="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-500 mb-4">Industries</p>
+          <ul class="space-y-3.5">
+            <li><a href="https://hypertrack.com/customers.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Industries</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile menu (lg:hidden) -->
+    <div id="mobile-menu" class="mobile-menu lg:hidden bg-white dark:bg-neutral-950 border-t border-neutral-200 dark:border-neutral-800">
+      <div class="max-w-[1200px] mx-auto px-4 sm:px-6 py-4 flex flex-col">
+        <div>
+          <button type="button" id="mobile-product-toggle" aria-expanded="false" class="w-full flex items-center justify-between py-3 text-base font-medium text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors">
+            <span>Product</span>
+            <svg class="chev w-3 h-3 transition-transform duration-200" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <!-- v8 — flattened mobile Product menu: no eyebrows, single chronological list of 8 items -->
+          <div id="mobile-product-submenu" class="mobile-submenu pl-4">
+            <ul class="space-y-1 mt-1 mb-2">
+              <li><a href="https://hypertrack.com/backfilling-last-minute-cancellations.html" class="block py-1.5 text-sm text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Backfilling Last-Minute Cancellations</a></li>
+              <li><a href="https://hypertrack.com/on-demand-assignment.html" class="block py-1.5 text-sm text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">On-Demand Assignment</a></li>
+              <li><a href="https://hypertrack.com/pre-shift-tracking.html" class="block py-1.5 text-sm text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Pre-Shift Tracking</a></li>
+              <li><a href="https://hypertrack.com/on-shift-tracking.html" class="block py-1.5 text-sm text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">On-Shift Tracking</a></li>
+              <li><a href="https://hypertrack.com/nearby-search.html" class="block py-1.5 text-sm text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Nearby Search</a></li>
+              <li><a href="https://hypertrack.com/self-improving-routes.html" class="block py-1.5 text-sm text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Self-Improving Routes</a></li>
+              <li><a href="https://hypertrack.com/geotags.html" class="block py-1.5 text-sm text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Geotags</a></li>
+              <li><a href="https://hypertrack.com/partners.html" class="block py-1.5 text-sm text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Integrations</a></li>
+              <li><a href="https://hypertrack.com/customers.html" class="block py-1.5 text-sm text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Industries</a></li>
+            </ul>
+          </div>
+        </div>
+        <a href="https://hypertrack.com/shift-work-marketplace.html" class="block py-3 text-base font-medium text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors">Solutions</a>
+        <a href="https://hypertrack.com/customers.html" class="block py-3 text-base font-medium text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors">Customers</a>
+        <a href="https://hypertrack.com/pricing.html" class="block py-3 text-base font-medium text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors">Pricing</a>
+        <a href="https://hypertrack.com/docs" class="block py-3 text-base font-medium text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors">Docs</a>
+        <a href="https://stories.hypertrack.com/" class="block py-3 text-base font-medium text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors">Blog</a>
+        <a href="https://hypertrack.com/shiftworksummit.html" class="block py-3 text-base font-medium text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors">Shift Work Summit</a>
+        <hr class="my-3 border-neutral-200 dark:border-neutral-800">
+        <a href="https://dashboard.hypertrack.com/login" class="block py-3 text-base font-medium text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors">Sign in</a>
+        <a href="https://dashboard.hypertrack.com/signup" class="block py-3 text-base font-medium text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors">Get started</a>
+      </div>
+    </div>
+  </nav>
+
     <!-- SVG Icon Sprite -->
     <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
         <symbol id="icon-building" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -47,9 +237,6 @@
         <symbol id="icon-invoice" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/>
         </symbol>
-        <symbol id="icon-merge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><path d="M6 9v3a3 3 0 003 3h6a3 3 0 003-3V9"/><path d="M12 15v-3"/>
-        </symbol>
         <symbol id="icon-check-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>
         </symbol>
@@ -62,17 +249,8 @@
         <symbol id="icon-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/>
         </symbol>
-        <symbol id="icon-check-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/>
-        </symbol>
         <symbol id="icon-user-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M18 8l5 5M23 8l-5 5"/>
-        </symbol>
-        <symbol id="icon-map-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2"/>
-        </symbol>
-        <symbol id="icon-bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="8" width="18" height="12" rx="2"/><circle cx="9" cy="14" r="1.5"/><circle cx="15" cy="14" r="1.5"/><path d="M12 2v4M8 6h8"/>
         </symbol>
         <symbol id="icon-coffee" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><path d="M6 1v3M10 1v3M14 1v3"/>
@@ -82,9 +260,6 @@
         </symbol>
         <symbol id="icon-plug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 22v-5"/><path d="M9 8V2M15 8V2"/><path d="M18 8v4a6 6 0 01-12 0V8h12z"/>
-        </symbol>
-        <symbol id="icon-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/><path d="M5 19l.5 1.5L7 21l-1.5.5L5 23l-.5-1.5L3 21l1.5-.5L5 19z"/><path d="M19 3l.5 1.5L21 5l-1.5.5L19 7l-.5-1.5L17 5l1.5-.5L19 3z"/>
         </symbol>
         <symbol id="icon-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 12a8 8 0 0114.5-4.5"/><path d="M20 12a8 8 0 01-14.5 4.5"/><path d="M19 3v5h-5M5 21v-5h5"/>
@@ -104,99 +279,86 @@
         <symbol id="icon-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/>
         </symbol>
-        <symbol id="icon-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
-        </symbol>
     </svg>
 
     <div class="progress-bar" id="progressBar"></div>
-
-    <header class="global-logo">
-        <a href="https://www.hypertrack.com" target="_blank" rel="noopener" class="global-logo__link">
-            <img src="logo-small.svg" alt="HyperTrack" class="global-logo__img">
-            <span class="global-logo__tag">
-                hypertrack.com
-                <svg class="global-logo__external" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                    <polyline points="15 3 21 3 21 9"></polyline>
-                    <line x1="10" y1="14" x2="21" y2="3"></line>
-                </svg>
-            </span>
-        </a>
-    </header>
-
-    <a href="https://closeoutcopilot.com/xray/" target="_blank" class="persistent-demo-btn">
-        <svg class="persistent-demo-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M10 8l6 4-6 4V8z" fill="currentColor"/>
-        </svg>
-        <span>Demo</span>
-    </a>
-
 
     <main class="deck">
         <!-- Slide 1: Title -->
         <section class="slide slide--title active" data-slide="0">
             <div class="hero-wrapper">
-                <!-- Mobile logo (shows only on mobile) - just wordmark, icon is in header -->
-                <img src="wordmark.svg" alt="HyperTrack" class="mobile-logo">
-                <!-- Full-height hero image on left (desktop) / top (mobile) -->
+                <!-- Futuristic Closeout intelligence hero -->
                 <div class="hero-image-panel">
-                    <img src="hero-sprite-1.jpg" alt="" class="hero-sprite hero-sprite--1">
-                    <img src="hero-sprite-2.jpg" alt="" class="hero-sprite hero-sprite--2">
+                    <video class="hero-closeout-photo" autoplay muted loop playsinline preload="auto" poster="images/closeout-enterprise/hero-closeout-loop-poster.webp" aria-label="Closeout intelligence converging shift evidence into one verified record for worker pay and client billing">
+                        <source src="videos/closeout-hero-loop.mp4" type="video/mp4">
+                    </video>
                 </div>
                 <div class="slide__content hero-content">
-                    <img src="vertical-wordmark.png" alt="HyperTrack" class="logo-vertical">
-                    <h1 class="title">Closeout Copilot</h1>
-                    <p class="subtitle">AI-Powered Payout Reconciliation</p>
+                    <h1 class="title">Closeout Agent</h1>
+                    <p class="subtitle">AI-Powered Time-to-Pay for Staffing</p>
                     <div class="tagline-box">
-                        <span class="tagline">Chaos to Closeout in Seconds</span>
+                        <span class="tagline">Close every shift with confidence</span>
                     </div>
-                    <p class="quote">Time is money. We save you both.</p>
+                    <p class="quote">Faster pay. Accurate billing. Defensible records.</p>
                 </div>
-            </div>
-            <div class="slide__hint">
-                <span class="hint-text">Press <kbd>&rarr;</kbd> or scroll to continue</span>
             </div>
         </section>
 
         <!-- Slide: The Crisis (three-party human interest) -->
         <section class="slide slide--crisis" data-slide="13">
             <div class="slide__content">
-                <h2 class="slide__title">Workers paid wrong. Clients overcharged. Ops teams drowning.</h2>
-                <p class="slide__lead">Every shift is a three-way trust problem. When it's not reconciled, everyone pays.</p>
+                <h2 class="slide__title">One shift. Three parties waiting to get paid right.</h2>
+                <p class="slide__lead">Start with the staffing buyer and work backward: confirmed worked hours are the shared record every party needs.</p>
 
                 <div class="crisis-grid">
                     <div class="crisis-card">
-                        <div class="crisis-card__head">
-                            <svg class="crisis-card__icon"><use href="#icon-user-x"/></svg>
-                            <h3 class="crisis-card__title">The worker</h3>
-                        </div>
-                        <p class="crisis-card__body">Paycheck is wrong. Or late. Or both. They chase what they're owed — and the next shift becomes "no thanks."</p>
-                        <span class="crisis-card__tag">Trust is paid in the same currency as wages.</span>
-                    </div>
-
-                    <div class="crisis-card">
+                        <img src="images/closeout-enterprise/buyer-coverage-review.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(31vw, 510px)" width="1600" height="900" loading="lazy" decoding="async" alt="Staffing buyer and agency partner reviewing coverage and confirmed hours" class="crisis-card__photo">
                         <div class="crisis-card__head">
                             <svg class="crisis-card__icon"><use href="#icon-building"/></svg>
-                            <h3 class="crisis-card__title">The end client</h3>
+                            <h3 class="crisis-card__title">Staffing buyers</h3>
                         </div>
-                        <p class="crisis-card__body">Overcharged for hours nobody worked. Undercharged when the platform eats the loss. Reconciliation overhead scales linearly with shifts.</p>
-                        <span class="crisis-card__tag">Either way the relationship corrodes.</span>
+                        <ul class="crisis-card__list">
+                            <li>Consolidate different agency T&amp;A systems</li>
+                            <li>Pay only for confirmed worked hours</li>
+                            <li>Stop chasing approvals across vendors</li>
+                            <li>Defend invoices and compliance with evidence</li>
+                        </ul>
+                        <span class="crisis-card__tag">Reliable evidence makes every client relationship easier.</span>
                     </div>
 
                     <div class="crisis-card">
+                        <img src="images/closeout-enterprise/exception-resolution.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(31vw, 510px)" width="1600" height="900" loading="lazy" decoding="async" alt="Staffing operations lead coordinating a shift exception across systems" class="crisis-card__photo">
                         <div class="crisis-card__head">
                             <svg class="crisis-card__icon"><use href="#icon-wallet"/></svg>
-                            <h3 class="crisis-card__title">The staffing platform</h3>
+                            <h3 class="crisis-card__title">Agencies &amp; marketplaces</h3>
                         </div>
-                        <p class="crisis-card__body">Float payroll they shouldn't carry. Legal risk for misclassified hours. Churn workers on one side, clients on the other.</p>
-                        <span class="crisis-card__tag">NPS dies on both ends.</span>
+                        <ul class="crisis-card__list">
+                            <li>Get paid faster and protect working capital</li>
+                            <li>Validate client-controlled T&amp;A correctly</li>
+                            <li>Resolve worker–client discrepancies fast</li>
+                            <li>Reduce misclassification and underpayment risk</li>
+                        </ul>
+                        <span class="crisis-card__tag">Exception handling should not become a branch queue.</span>
+                    </div>
+
+                    <div class="crisis-card">
+                        <img src="images/closeout-enterprise/worker-clock-in.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(31vw, 510px)" width="1600" height="900" loading="lazy" decoding="async" alt="Worker checking a shift app after clocking out" class="crisis-card__photo">
+                        <div class="crisis-card__head">
+                            <svg class="crisis-card__icon"><use href="#icon-user-x"/></svg>
+                            <h3 class="crisis-card__title">Workers</h3>
+                        </div>
+                        <ul class="crisis-card__list">
+                            <li>Get paid faster — ideally the same day</li>
+                            <li>Get paid accurately for every hour</li>
+                            <li>Report time easily and focus on the work</li>
+                            <li>Avoid repeated questions about hours and breaks</li>
+                        </ul>
+                        <span class="crisis-card__tag">A better closeout experience builds trust.</span>
                     </div>
                 </div>
 
                 <div class="crisis-footer">
-                    <p class="crisis-footer__text">Today this is patched by ops teams of 50+ reconciling shifts by hand. <strong>The math stops working past a certain scale.</strong></p>
+                    <p class="crisis-footer__text">One verified closeout aligns the client, the staffing team, and the worker — <strong>without another reconciliation queue.</strong></p>
                 </div>
             </div>
         </section>
@@ -204,23 +366,88 @@
         <!-- Slide: Live Customers -->
         <section class="slide slide--customers" data-slide="9">
             <div class="slide__content">
-                <h2 class="slide__title">Live with US staffing leaders</h2>
-                <p class="slide__lead">Real customers. Real shifts. Real payroll.</p>
+                <h2 class="slide__title">Built for staffing at scale</h2>
+                <p class="slide__lead">Across local branches, centralized delivery, onsite programs, and digital marketplaces, every shift needs one trusted record.</p>
 
-                <div class="customer-cards">
-                    <div class="customer-card">
-                        <div class="customer-card__logo">
-                            <img src="logos/wonolo-yellow.svg" alt="Wonolo" class="customer-logo-img customer-logo-img--wonolo">
+                <div class="customer-cards customer-cards--closeout">
+                    <article class="customer-card staffing-model-card">
+                        <div class="staffing-model-visual" aria-hidden="true">
+                            <svg class="staffing-model-icon" viewBox="0 0 80 80" fill="none">
+                                <rect class="icon-panel" x="13" y="17" width="54" height="48" rx="9"/>
+                                <path class="icon-ink" d="M24 11v13M56 11v13M13 31h54"/>
+                                <path class="icon-ink" d="M23 43h15M23 52h11"/>
+                                <circle class="icon-accent-fill" cx="53" cy="50" r="11"/>
+                                <path class="icon-accent" d="M53 44v7l5 3"/>
+                            </svg>
                         </div>
-                    </div>
-                    <div class="customer-card">
-                        <div class="customer-card__logo">
-                            <img src="logos/gigsmart.svg" alt="GigSmart" class="customer-logo-img customer-logo-img--gigsmart">
+                        <div class="customer-card__logo staffing-model-copy">
+                            <span class="customer-name">Temporary staffing</span>
+                            <span class="staffing-model-note">Rapid capacity for changing demand</span>
                         </div>
-                    </div>
+                    </article>
+                    <article class="customer-card staffing-model-card">
+                        <div class="staffing-model-visual" aria-hidden="true">
+                            <svg class="staffing-model-icon" viewBox="0 0 80 80" fill="none">
+                                <circle class="icon-panel" cx="32" cy="29" r="12"/>
+                                <path class="icon-ink" d="M13 61c2-14 9-21 19-21s17 7 19 21"/>
+                                <rect class="icon-accent-fill" x="45" y="42" width="24" height="22" rx="7"/>
+                                <path class="icon-accent" d="m51 53 5 5 8-10"/>
+                            </svg>
+                        </div>
+                        <div class="customer-card__logo staffing-model-copy">
+                            <span class="customer-name">Permanent hiring</span>
+                            <span class="staffing-model-note">Long-term placement with confidence</span>
+                        </div>
+                    </article>
+                    <article class="customer-card staffing-model-card">
+                        <div class="staffing-model-visual" aria-hidden="true">
+                            <svg class="staffing-model-icon" viewBox="0 0 80 80" fill="none">
+                                <circle class="icon-panel" cx="19" cy="40" r="11"/>
+                                <path class="icon-ink" d="M19 34v7l4 3M30 40h18"/>
+                                <path class="icon-accent" d="m42 34 7 6-7 6"/>
+                                <rect class="icon-accent-fill" x="51" y="28" width="19" height="24" rx="5"/>
+                                <path class="icon-accent" d="M56 28v-4h9v4M56 41l4 4 6-8"/>
+                            </svg>
+                        </div>
+                        <div class="customer-card__logo staffing-model-copy">
+                            <span class="customer-name">Flex-to-perm</span>
+                            <span class="staffing-model-note">Convert proven talent without friction</span>
+                        </div>
+                    </article>
+                    <article class="customer-card staffing-model-card">
+                        <div class="staffing-model-visual" aria-hidden="true">
+                            <svg class="staffing-model-icon" viewBox="0 0 80 80" fill="none">
+                                <path class="icon-panel" d="M11 63V29l24-11v45M35 63V36h18v27"/>
+                                <path class="icon-ink" d="M20 34h6M20 44h6M20 54h6M42 44h5M42 53h5M8 63h48"/>
+                                <path class="icon-accent-fill" d="M68 35c0 9-10 18-10 18S48 44 48 35a10 10 0 1 1 20 0Z"/>
+                                <circle class="icon-accent" cx="58" cy="35" r="3"/>
+                            </svg>
+                        </div>
+                        <div class="customer-card__logo staffing-model-copy">
+                            <span class="customer-name">Onsite delivery</span>
+                            <span class="staffing-model-note">Embedded coordination at the worksite</span>
+                        </div>
+                    </article>
+                    <article class="customer-card staffing-model-card">
+                        <div class="staffing-model-visual" aria-hidden="true">
+                            <svg class="staffing-model-icon" viewBox="0 0 80 80" fill="none">
+                                <path class="icon-ink" d="M24 24 40 39M56 24 40 39M19 57l21-18M61 57 40 39"/>
+                                <circle class="icon-panel" cx="19" cy="19" r="9"/>
+                                <circle class="icon-panel" cx="61" cy="19" r="9"/>
+                                <circle class="icon-panel" cx="16" cy="61" r="9"/>
+                                <circle class="icon-panel" cx="64" cy="61" r="9"/>
+                                <rect class="icon-accent-fill" x="29" y="28" width="22" height="22" rx="7"/>
+                                <path class="icon-accent" d="m34 39 5 5 8-10"/>
+                            </svg>
+                        </div>
+                        <div class="customer-card__logo staffing-model-copy">
+                            <span class="customer-name">MSP / RPO</span>
+                            <span class="staffing-model-note">One program across suppliers and teams</span>
+                        </div>
+                    </article>
                 </div>
 
-                <p class="slide__tagline">In production. Reconciling shifts across the US.</p>
+                <p class="slide__tagline">From worker clock-in to client approval, every exception has an owner.</p>
             </div>
         </section>
 
@@ -233,40 +460,38 @@
                 <div class="sources-grid">
                     <div class="source-card">
                         <div class="source-card__image">
-                            <img src="card-customer-1.png" alt="" class="source-card__sprite source-card__sprite--1">
-                            <img src="card-customer-2.png" alt="" class="source-card__sprite source-card__sprite--2">
+                            <img src="images/closeout-enterprise/client-approval.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(31vw, 510px)" width="1600" height="900" loading="lazy" decoding="async" alt="Paper timecard, client system, punch receipt, and phone clock arriving as separate evidence" class="source-card__sprite source-card__photo">
                         </div>
                         <div class="source-card__title-row">
-                            <h3 class="source-card__title">Customer Systems</h3>
+                            <h3 class="source-card__title">Client Systems</h3>
                             <svg class="source-card__icon"><use href="#icon-building"/></svg>
                         </div>
-                        <p class="source-card__desc">Hardware at facilities, QR codes, paper clipboards, tab-based systems — all controlled by your customer.</p>
-                        <span class="source-card__tag">Paper sheets, photographed and uploaded</span>
+                        <p class="source-card__desc">Client clocks, VMS exports, paper forms, and vendor portals — each with its own approval path.</p>
+                        <span class="source-card__tag">Approval data arrives in different shapes</span>
                     </div>
 
                     <div class="source-card">
                         <div class="source-card__image">
-                            <img src="card-time-1.png" alt="" class="source-card__sprite source-card__sprite--1">
-                            <img src="card-time-2.png" alt="" class="source-card__sprite source-card__sprite--2">
+                            <img src="images/closeout-enterprise/unique/mobile-time-record.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(31vw, 510px)" width="1376" height="768" loading="lazy" decoding="async" alt="Phone shift timeline beside a worksite time-clock terminal and worker equipment" class="source-card__sprite source-card__photo">
                         </div>
                         <div class="source-card__title-row">
-                            <h3 class="source-card__title">Time Tracking</h3>
+                            <h3 class="source-card__title">App Clock-in/out</h3>
                             <svg class="source-card__icon"><use href="#icon-clock"/></svg>
                         </div>
-                        <p class="source-card__desc">Web-based time tracking or app-based geofence clocking from your MSP, your own system, or provider.</p>
-                        <span class="source-card__tag">Often unreliable data</span>
+                        <p class="source-card__desc">Your app, marketplace, or staffing time system captures the worker’s submitted hours.</p>
+                        <span class="source-card__tag">Worker-submitted or system-captured</span>
                     </div>
 
                     <div class="source-card">
                         <div class="source-card__image">
-                            <object data="card-location-animated.svg" type="image/svg+xml" class="source-card__animated-svg"></object>
+                            <img src="images/closeout-enterprise/location-evidence.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(31vw, 510px)" width="1600" height="900" loading="lazy" decoding="async" alt="Worksite geofence, arrival, departure, and time-at-site evidence on a tablet" class="source-card__sprite source-card__photo">
                         </div>
                         <div class="source-card__title-row">
                             <h3 class="source-card__title">Location Intelligence</h3>
                             <svg class="source-card__icon"><use href="#icon-location"/></svg>
                         </div>
-                        <p class="source-card__desc">Background location and geofencing from mobile apps — the ground truth of where workers actually were.</p>
-                        <span class="source-card__tag">Few customers have this today</span>
+                        <p class="source-card__desc">Background location and geofencing from mobile apps — optional evidence of where workers actually were.</p>
+                        <span class="source-card__tag">Optional presence evidence</span>
                     </div>
                 </div>
             </div>
@@ -280,26 +505,26 @@
                 <div class="pain-split">
                     <div class="pain-box">
                         <div class="pain-box__image">
-                            <img src="card-payout-1.png" alt="" class="pain-box__img">
+                            <img src="images/closeout-enterprise/unique/worker-pay-decision.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(48vw, 700px)" width="1376" height="768" loading="lazy" decoding="async" alt="Worker reviewing an approved-hours and payout confirmation after a shift" class="pain-box__img">
                         </div>
                         <div class="pain-box__title-row">
-                            <h3>Payout</h3>
+                            <h3>Worker pay</h3>
                         </div>
                         <p>How much do I pay the worker?</p>
                     </div>
                     <div class="pain-box">
                         <div class="pain-box__image">
-                            <img src="card-billing-1.png" alt="" class="pain-box__img">
+                            <img src="images/closeout-enterprise/reconciliation-desk.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(48vw, 700px)" width="1200" height="675" loading="lazy" decoding="async" alt="Client timesheet reconciled to a final invoice amount" class="pain-box__img">
                         </div>
                         <div class="pain-box__title-row">
-                            <h3>Billing</h3>
+                            <h3>Client billing</h3>
                         </div>
-                        <p>How much do I invoice the customer?</p>
+                        <p>How much do I invoice the client?</p>
                     </div>
                 </div>
 
                 <div class="pain-reality">
-                    <p class="pain-reality__text">Today, your back-office team manually reconciles every shift.</p>
+                    <p class="pain-reality__text">Today, staffing operations manually reconciles every shift.</p>
                     <div class="pain-reality__tags">
                         <span><svg class="tag-icon"><use href="#icon-clock"/></svg>Slow</span>
                         <span><svg class="tag-icon"><use href="#icon-alert"/></svg>Error-prone</span>
@@ -318,7 +543,7 @@
                             <p>Even if you don't know it</p>
                         </div>
                         <div class="insight-box__right">
-                            <span>Customers pay you later</span>
+                            <span>Clients pay you later</span>
                             <svg class="insight-box__icon"><use href="#icon-calendar"/></svg>
                         </div>
                     </div>
@@ -326,10 +551,63 @@
             </div>
         </section>
 
+        <!-- Slide 6: Everything Included -->
+        <section class="slide slide--included" data-slide="5">
+            <div class="slide__content">
+                <h2 class="slide__title">Closeout Agent works in three modes</h2>
+                <p class="slide__lead">Start with the exception that costs you most, then add optional presence evidence where it creates value.</p>
+
+                <div class="pricing-grid">
+                    <article class="pricing-card">
+                        <div class="pricing-card__eyebrow">Data collection mode</div>
+                        <div class="pricing-card__head">
+                            <svg class="pricing-card__icon"><use href="#icon-coffee"/></svg>
+                            <h3>Meal Breaks</h3>
+                        </div>
+                        <div class="pricing-card__price"><span>$0.35</span><small>/ shift</small></div>
+                        <ul class="pricing-card__features">
+                            <li>SMS and app collection for missing time</li>
+                            <li>Policy-aware break and attestation prompts</li>
+                            <li>Audit-ready response history</li>
+                        </ul>
+                    </article>
+
+                    <article class="pricing-card pricing-card--featured">
+                        <div class="pricing-card__eyebrow">Exception handling mode</div>
+                        <div class="pricing-card__head">
+                            <svg class="pricing-card__icon"><use href="#icon-ai"/></svg>
+                            <h3>Payment Reconciliation</h3>
+                        </div>
+                        <div class="pricing-card__price"><span>$1</span><small>/ shift</small></div>
+                        <ul class="pricing-card__features">
+                            <li>Worker + client outreach</li>
+                            <li>Exceptions resolved across every T&amp;A source</li>
+                            <li>Payroll- and invoice-ready closeout decision</li>
+                        </ul>
+                        <div class="pricing-card__included">Location Intelligence included</div>
+                    </article>
+
+                    <article class="pricing-card">
+                        <div class="pricing-card__eyebrow">Optional evidence layer</div>
+                        <div class="pricing-card__head">
+                            <svg class="pricing-card__icon"><use href="#icon-location"/></svg>
+                            <h3>Location Intelligence</h3>
+                        </div>
+                        <div class="pricing-card__price"><span>$0.35</span><small>/ shift</small></div>
+                        <ul class="pricing-card__features">
+                            <li>App clock-in/out geotags</li>
+                            <li>On-shift presence at the worksite</li>
+                            <li>Arrival and departure evidence</li>
+                        </ul>
+                    </article>
+                </div>
+            </div>
+        </section>
+
         <!-- Slide 4: The Solution -->
         <section class="slide slide--solution" data-slide="3">
             <div class="slide__content">
-                <h2 class="slide__title">Closeout Copilot Does It For You</h2>
+                <h2 class="slide__title">One shift in. One closeout decision out.</h2>
 
                 <div class="flow-layout">
                     <!-- Input Sources -->
@@ -337,15 +615,15 @@
                         <div class="flow-input-card">
                             <div class="flow-input-header">
                                 <svg class="flow-input-icon"><use href="#icon-building"/></svg>
-                                <span>Customer Systems</span>
+                                <span>Client T&amp;A</span>
                             </div>
                             <div class="flow-input-preview">
                                 <div class="source-row">
-                                    <span class="source-tag source-tag--supervisor">Supervisor</span>
+                                    <span class="source-tag source-tag--supervisor">Client approval</span>
                                     <span class="source-times">7:00 AM - 4:00 PM</span>
                                 </div>
                                 <div class="source-row">
-                                    <span class="source-tag source-tag--customer">Paper Sheet</span>
+                                    <span class="source-tag source-tag--customer">VMS / export</span>
                                     <span class="source-times">7:00 AM - 4:00 PM</span>
                                 </div>
                             </div>
@@ -353,7 +631,7 @@
                         <div class="flow-input-card">
                             <div class="flow-input-header">
                                 <svg class="flow-input-icon"><use href="#icon-clock"/></svg>
-                                <span>Time Tracking</span>
+                                <span>App Clock-in/out</span>
                             </div>
                             <div class="flow-input-preview">
                                 <div class="source-row">
@@ -361,7 +639,7 @@
                                     <span class="source-times">7:15 AM - 4:02 PM</span>
                                 </div>
                                 <div class="source-row">
-                                    <span class="source-tag source-tag--self-report">Self-Report</span>
+                                    <span class="source-tag source-tag--self-report">Worker report</span>
                                     <span class="source-times">7:00 AM - 4:00 PM</span>
                                 </div>
                             </div>
@@ -370,6 +648,7 @@
                             <div class="flow-input-header">
                                 <svg class="flow-input-icon"><use href="#icon-location"/></svg>
                                 <span>Location Intelligence</span>
+                                <span class="optional-badge">Optional</span>
                             </div>
                             <div class="location-split">
                                 <div class="location-map-side">
@@ -435,20 +714,20 @@
                         </svg>
                     </div>
 
-                    <!-- Copilot Center -->
+                    <!-- Agent Center -->
                     <div class="flow-copilot">
                         <div class="flow-copilot-container">
                             <div class="copilot-video-wrapper">
-                                <video class="copilot-video" autoplay loop muted playsinline>
-                                    <source src="agent-video.mp4" type="video/mp4">
+                            <video class="copilot-video copilot-motion" autoplay muted loop playsinline preload="auto" poster="images/closeout-enterprise/agent-poster.jpg" aria-label="Staffing operations coordinator using the Closeout Agent to reconcile a shift">
+                                    <source src="videos/closeout-agent-loop.mp4" type="video/mp4">
                                 </video>
                             </div>
                             <div class="copilot-label">
-                                <span class="copilot-label-text">Closeout Copilot</span>
+                                <span class="copilot-label-text">Closeout Agent</span>
                             </div>
                             <div class="flow-copilot-note">
                                 <div class="copilot-note-label">Reconciliation Notes</div>
-                                <div class="copilot-note-text"><span class="highlight-info">Location data</span> <span class="highlight-positive">confirms</span> 6:58 AM arrival. <span class="highlight-info">Supervisor</span> verified 4:00 PM <span class="highlight-warning">departure</span>. <span class="highlight-positive">All sources corroborate</span>.</div>
+                                <div class="copilot-note-text"><span class="highlight-info">Location data</span> <span class="highlight-positive">confirms</span> 6:58 AM arrival. <span class="highlight-info">Client approval</span> verified 4:00 PM <span class="highlight-warning">departure</span>. <span class="highlight-positive">All sources corroborate</span>.</div>
                             </div>
                         </div>
                     </div>
@@ -530,15 +809,15 @@
                                     </div>
                                     <div class="dest-logos">
                                         <div class="dest-logo-item">
-                                            <img src="logos/branch.jpg" alt="Branch" class="dest-logo">
+                                            <span class="dest-logo-badge dest-logo-badge--branch" aria-hidden="true">B</span>
                                             <span class="dest-logo-name">Branch</span>
                                         </div>
                                         <div class="dest-logo-item">
-                                            <img src="logos/dailypay.jpg" alt="DailyPay" class="dest-logo">
+                                            <span class="dest-logo-badge dest-logo-badge--dailypay" aria-hidden="true">D</span>
                                             <span class="dest-logo-name">DailyPay</span>
                                         </div>
                                         <div class="dest-logo-item">
-                                            <img src="logos/gusto.jpg" alt="Gusto" class="dest-logo">
+                                            <span class="dest-logo-badge dest-logo-badge--gusto" aria-hidden="true">G</span>
                                             <span class="dest-logo-name">Gusto</span>
                                         </div>
                                     </div>
@@ -550,15 +829,15 @@
                                     </div>
                                     <div class="dest-logos">
                                         <div class="dest-logo-item">
-                                            <img src="logos/quickbooks.jpg" alt="QuickBooks" class="dest-logo">
+                                            <span class="dest-logo-badge dest-logo-badge--quickbooks" aria-hidden="true">Q</span>
                                             <span class="dest-logo-name">QuickBooks</span>
                                         </div>
                                         <div class="dest-logo-item">
-                                            <img src="logos/bullhorn.jpg" alt="Bullhorn" class="dest-logo">
+                                            <span class="dest-logo-badge dest-logo-badge--bullhorn" aria-hidden="true">B</span>
                                             <span class="dest-logo-name">Bullhorn</span>
                                         </div>
                                         <div class="dest-logo-item">
-                                            <img src="logos/netsuite.jpg" alt="NetSuite" class="dest-logo">
+                                            <span class="dest-logo-badge dest-logo-badge--netsuite" aria-hidden="true">N</span>
                                             <span class="dest-logo-name">NetSuite</span>
                                         </div>
                                     </div>
@@ -573,36 +852,36 @@
         <!-- Slide 5: How It Works -->
         <section class="slide slide--how" data-slide="4">
             <div class="slide__content">
-                <h2 class="slide__title">How We Do It Better</h2>
+                <h2 class="slide__title">It coordinates the work your team does today</h2>
 
                 <div class="features-grid">
                     <div class="feature-card">
                         <div class="feature-card__image">
-                            <img src="card-ai-copilot-1.png" alt="" class="feature-card__img">
+                            <img src="images/closeout-enterprise/unique/agent-outreach.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(31vw, 510px)" width="1376" height="768" loading="lazy" decoding="async" alt="Staffing operations specialist coordinating a missing-time exception across two evidence screens" class="feature-card__img">
                         </div>
                         <div class="feature-card__title-row">
-                            <h3 class="feature-card__title">AI Copilot</h3>
+                            <h3 class="feature-card__title">AI Agent</h3>
                             <svg class="feature-card__icon"><use href="#icon-ai"/></svg>
                         </div>
-                        <p class="feature-card__desc">When data is missing, our copilot talks to workers, supervisors, and your systems to retrieve it. Human-like coordination, automated.</p>
+                        <p class="feature-card__desc">When data is missing, the agent talks to workers, client teams, and your systems to retrieve it. Human-like coordination, automated.</p>
                         <span class="feature-card__tag">Does what a human would do</span>
                     </div>
 
                     <div class="feature-card">
                         <div class="feature-card__image">
-                            <img src="card-location-intel-1.png" alt="" class="feature-card__img">
+                            <img src="images/closeout-enterprise/unique/location-presence-proof.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(31vw, 510px)" width="1376" height="768" loading="lazy" decoding="async" alt="Worksite-mounted tablet showing an optional geofence and presence path" class="feature-card__img">
                         </div>
                         <div class="feature-card__title-row">
-                            <h3 class="feature-card__title">Location Intelligence</h3>
+                            <h3 class="feature-card__title">Location Intelligence <span class="optional-badge">Optional</span></h3>
                             <svg class="feature-card__icon"><use href="#icon-radar"/></svg>
                         </div>
-                        <p class="feature-card__desc">Background location, geofencing, and clock-in geotags provide ground truth that paper can never match.</p>
-                        <span class="feature-card__tag">Know exactly where workers were</span>
+                        <p class="feature-card__desc">Background location, geofencing, and clock-in geotags provide optional presence evidence that paper can never match.</p>
+                        <span class="feature-card__tag">Add objective presence evidence when needed</span>
                     </div>
 
                     <div class="feature-card">
                         <div class="feature-card__image">
-                            <img src="card-exception-1.png" alt="" class="feature-card__img">
+                            <img src="images/closeout-enterprise/unique/exception-variance.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(31vw, 510px)" width="1376" height="768" loading="lazy" decoding="async" alt="Three shift timelines with one clearly isolated end-time variance" class="feature-card__img">
                         </div>
                         <div class="feature-card__title-row">
                             <h3 class="feature-card__title">Exception Handling</h3>
@@ -621,8 +900,10 @@
         <!-- Slide: Architecture -->
         <section class="slide slide--architecture" data-slide="10">
             <div class="slide__content">
-                <h2 class="slide__title">Built as a real agent. Not a wrapper.</h2>
-                <p class="slide__lead">A per-shift Claude agent that calls tools, applies versioned rulebooks, and shows its work.</p>
+                <h2 class="slide__title">Built to show its work</h2>
+                <p class="slide__lead">Every closeout follows your rulebook, cites its evidence, and leaves an audit-ready trail.</p>
+
+                <img src="images/closeout-enterprise/unique/auditable-trace.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(44vw, 700px)" width="1376" height="768" loading="lazy" decoding="async" alt="Rulebook and source evidence connected to an inspectable closeout case file" class="architecture-photo">
 
                 <div class="features-grid">
                     <div class="feature-card">
@@ -648,8 +929,8 @@
                             <h3 class="feature-card__title">Rulebook-driven</h3>
                             <svg class="feature-card__icon"><use href="#icon-fingerprint"/></svg>
                         </div>
-                        <p class="feature-card__desc">Customer escalation tiers, refund authority, source-priority logic — versioned, A/B-evaluatable, human-readable.</p>
-                        <span class="feature-card__tag">Customer rules, not hardcoded heuristics</span>
+                        <p class="feature-card__desc">Client escalation tiers, payment authority, source-priority logic — versioned, A/B-evaluatable, human-readable.</p>
+                        <span class="feature-card__tag">Your rules, not hardcoded heuristics</span>
                     </div>
 
                     <div class="feature-card">
@@ -662,117 +943,28 @@
                     </div>
                 </div>
 
-                <p class="slide__tagline">Built on Claude. Running on AWS. India + US team.</p>
+                <p class="slide__tagline">Model agnostic. Running on AWS. US headquartered. Global team.</p>
             </div>
         </section>
 
         <!-- Slide: Why Now -->
         <section class="slide slide--whynow" data-slide="11">
             <div class="slide__content">
-                <h2 class="slide__title">Agents become the system of record</h2>
+                <h2 class="slide__title">Every shift closes with one defensible record</h2>
 
                 <div class="whynow-layout">
                     <div class="whynow-visual">
-                        <img src="card-whynow-1.png" alt="" class="whynow-image">
+                        <img src="images/closeout-enterprise/unique/defensible-record.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(44vw, 700px)" width="1376" height="768" loading="lazy" decoding="async" alt="One completed closeout dossier containing verified time, worker, pay, and invoice evidence" class="whynow-image">
                     </div>
                     <div class="whynow-body">
-                        <p class="whynow-para">Manual reconciliation worked when staffing platforms processed thousands of shifts a month. Networks processing millions can't catch every discrepancy by hand — and the cost is paid in inaccurate payouts, delayed invoices, and worker churn.</p>
+                        <p class="whynow-para">High-volume staffing teams cannot catch every discrepancy by hand. The cost shows up as overpayment, delayed invoices, worker frustration, and compliance exposure.</p>
 
-                        <p class="whynow-para">Closeout Copilot is the first agent purpose-built to <strong>be</strong> the system of record for shift payroll — not a copilot beside a human, but an autonomous decision-maker that's auditable, opinionated, and right by default.</p>
+                        <p class="whynow-para">Closeout Agent turns client T&amp;A, worker reports, app clocks, and optional location evidence into <strong>one auditable closeout decision</strong> that every party can trust.</p>
                     </div>
                 </div>
 
                 <div class="tagline-box whynow-tagline">
-                    <span class="tagline">Agentic AI is finally good enough to take this seat. We're taking it.</span>
-                </div>
-            </div>
-        </section>
-
-        <!-- Slide 6: Everything Included -->
-        <section class="slide slide--included" data-slide="5">
-            <div class="slide__content">
-                <h2 class="slide__title">Everything Included</h2>
-                <p class="slide__lead">One price. All the tools you need to close out shifts.</p>
-
-                <div class="price-hero">
-                    <span class="price-hero__currency">$</span>
-                    <span class="price-hero__amount">1</span>
-                    <span class="price-hero__unit">per shift</span>
-                </div>
-
-                <div class="included-grid">
-                    <div class="included-item">
-                        <span class="included-item__icon">
-                            <svg><use href="#icon-check-circle"/></svg>
-                        </span>
-                        <div>
-                            <h4>Shift Validation</h4>
-                            <p>Automated timesheet reconciliation</p>
-                        </div>
-                    </div>
-                    <div class="included-item">
-                        <span class="included-item__icon">
-                            <svg><use href="#icon-user-x"/></svg>
-                        </span>
-                        <div>
-                            <h4>No-Show & Backfill</h4>
-                            <p>Detect and backfill before customer is impacted</p>
-                        </div>
-                    </div>
-                    <div class="included-item">
-                        <span class="included-item__icon">
-                            <svg><use href="#icon-map-pin"/></svg>
-                        </span>
-                        <div>
-                            <h4>Geofencing</h4>
-                            <p>Verify workers are at the job site</p>
-                        </div>
-                    </div>
-                    <div class="included-item">
-                        <span class="included-item__icon">
-                            <svg><use href="#icon-bot"/></svg>
-                        </span>
-                        <div>
-                            <h4>AI Copilot</h4>
-                            <p>Retrieves missing data automatically</p>
-                        </div>
-                    </div>
-                    <div class="included-item">
-                        <span class="included-item__icon">
-                            <svg><use href="#icon-coffee"/></svg>
-                        </span>
-                        <div>
-                            <h4>Meal Breaks</h4>
-                            <p>Track and validate break compliance</p>
-                        </div>
-                    </div>
-                    <div class="included-item">
-                        <span class="included-item__icon">
-                            <svg><use href="#icon-fingerprint"/></svg>
-                        </span>
-                        <div>
-                            <h4>Clock In/Out</h4>
-                            <p>Geotag-verified time capture</p>
-                        </div>
-                    </div>
-                    <div class="included-item">
-                        <span class="included-item__icon">
-                            <svg><use href="#icon-plug"/></svg>
-                        </span>
-                        <div>
-                            <h4>Payment Adapters</h4>
-                            <p>Connect to your billing and payout</p>
-                        </div>
-                    </div>
-                    <div class="included-item included-item--highlight">
-                        <span class="included-item__icon">
-                            <svg><use href="#icon-sparkles"/></svg>
-                        </span>
-                        <div>
-                            <h4>Whatever's Needed</h4>
-                            <p>To close out your shift</p>
-                        </div>
-                    </div>
+                    <span class="tagline">Not another dashboard. A completed, explainable decision for every shift.</span>
                 </div>
             </div>
         </section>
@@ -788,27 +980,27 @@
                         <h3><svg class="section-icon"><use href="#icon-invoice"/></svg>Billing Systems</h3>
                         <div class="logo-cards">
                             <div class="logo-card">
-                                <img src="logos/quickbooks.jpg" alt="QuickBooks" class="logo-card__img" style="background-color: #0077C5;">
+                                <img src="images/closeout/quickbooks.jpg" alt="QuickBooks" class="logo-card__img" style="background-color: #0077C5;">
                                 <div class="logo-card__fallback" style="background-color: #0077C5;">Q</div>
                                 <span class="logo-card__name">QuickBooks</span>
                             </div>
                             <div class="logo-card">
-                                <img src="logos/bullhorn.jpg" alt="Bullhorn" class="logo-card__img" style="background-color: #FFFFFF;">
+                                <img src="images/closeout/bullhorn.jpg" alt="Bullhorn" class="logo-card__img" style="background-color: #FFFFFF;">
                                 <div class="logo-card__fallback" style="background-color: #F37A20;">B</div>
                                 <span class="logo-card__name">Bullhorn</span>
                             </div>
                             <div class="logo-card">
-                                <img src="logos/sap.jpg" alt="SAP" class="logo-card__img" style="background-color: #FFFFFF;">
+                                <img src="images/closeout/sap.jpg" alt="SAP" class="logo-card__img" style="background-color: #FFFFFF;">
                                 <div class="logo-card__fallback" style="background-color: #0FAAFF;">S</div>
                                 <span class="logo-card__name">SAP</span>
                             </div>
                             <div class="logo-card">
-                                <img src="logos/netsuite.jpg" alt="NetSuite" class="logo-card__img" style="background-color: #1A1A2E;">
+                                <img src="images/closeout/netsuite.jpg" alt="NetSuite" class="logo-card__img" style="background-color: #1A1A2E;">
                                 <div class="logo-card__fallback" style="background-color: #1A1A2E;">N</div>
                                 <span class="logo-card__name">NetSuite</span>
                             </div>
                             <div class="logo-card">
-                                <img src="logos/workday.jpg" alt="Workday" class="logo-card__img" style="background-color: #002E5D;">
+                                <img src="images/closeout/workday.jpg" alt="Workday" class="logo-card__img" style="background-color: #002E5D;">
                                 <div class="logo-card__fallback" style="background-color: #002E5D;">W</div>
                                 <span class="logo-card__name">Workday</span>
                             </div>
@@ -823,7 +1015,7 @@
                         <div class="integrations-hub">
                             <svg class="hub-icon"><use href="#icon-sync"/></svg>
                             <span>Closeout</span>
-                            <span>Copilot</span>
+                            <span>Agent</span>
                         </div>
                         <div class="integrations-sync">Bi-directional sync</div>
                     </div>
@@ -832,27 +1024,27 @@
                         <h3><svg class="section-icon"><use href="#icon-wallet"/></svg>Payout Systems</h3>
                         <div class="logo-cards">
                             <div class="logo-card">
-                                <img src="logos/zeal.jpg" alt="Zeal" class="logo-card__img" style="background-color: #FFFFFF;">
+                                <img src="images/closeout/zeal.jpg" alt="Zeal" class="logo-card__img" style="background-color: #FFFFFF;">
                                 <div class="logo-card__fallback" style="background-color: #FFFFFF;">Z</div>
                                 <span class="logo-card__name">Zeal</span>
                             </div>
                             <div class="logo-card">
-                                <img src="logos/branch.jpg" alt="Branch" class="logo-card__img" style="background-color: #00C281;">
+                                <img src="images/closeout/branch.jpg" alt="Branch" class="logo-card__img" style="background-color: #00C281;">
                                 <div class="logo-card__fallback" style="background-color: #00C281;">B</div>
                                 <span class="logo-card__name">Branch</span>
                             </div>
                             <div class="logo-card">
-                                <img src="logos/dailypay.jpg" alt="DailyPay" class="logo-card__img" style="background-color: #FF6200;">
+                                <img src="images/closeout/dailypay.jpg" alt="DailyPay" class="logo-card__img" style="background-color: #FF6200;">
                                 <div class="logo-card__fallback" style="background-color: #FF6200;">D</div>
                                 <span class="logo-card__name">DailyPay</span>
                             </div>
                             <div class="logo-card">
-                                <img src="logos/gusto.jpg" alt="Gusto" class="logo-card__img" style="background-color: #F45D48;">
+                                <img src="images/closeout/gusto.jpg" alt="Gusto" class="logo-card__img" style="background-color: #F45D48;">
                                 <div class="logo-card__fallback" style="background-color: #F45D48;">G</div>
                                 <span class="logo-card__name">Gusto</span>
                             </div>
                             <div class="logo-card">
-                                <img src="logos/adp.jpg" alt="ADP" class="logo-card__img" style="background-color: #D0271D;">
+                                <img src="images/closeout/adp.jpg" alt="ADP" class="logo-card__img" style="background-color: #D0271D;">
                                 <div class="logo-card__fallback" style="background-color: #D0271D;">A</div>
                                 <span class="logo-card__name">ADP</span>
                             </div>
@@ -869,32 +1061,32 @@
         <!-- Slide 8: Data Confidence -->
         <section class="slide slide--confidence" data-slide="7">
             <div class="slide__content">
-                <h2 class="slide__title">Start Where You Are</h2>
+                <h2 class="slide__title">Start with the data you have</h2>
 
                 <div class="confidence-cards">
                     <div class="confidence-card">
                         <div class="confidence-card__image">
-                            <img src="card-reality-1.png" alt="" class="confidence-card__img">
+                            <img src="images/closeout-enterprise/unique/partial-data-reality.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(31vw, 510px)" width="1376" height="768" loading="lazy" decoding="async" alt="Paper and mobile shift records with visible gaps in the available evidence" class="confidence-card__img">
                         </div>
                         <div class="confidence-card__title-row">
                             <svg class="confidence-card__icon"><use href="#icon-eye"/></svg>
                             <h3>The Reality</h3>
                         </div>
-                        <p>You might not have location data yet. Your mobile clock-ins might be unreliable. Your customer still uses paper clipboards.</p>
+                        <p>You might not have location data yet. App clock-ins may be unreliable. A client may still use paper or a VMS export.</p>
                     </div>
                     <div class="confidence-card">
                         <div class="confidence-card__image">
-                            <img src="card-promise-1.png" alt="" class="confidence-card__img">
+                            <img src="images/closeout-enterprise/unique/evidence-confidence.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(31vw, 510px)" width="1376" height="768" loading="lazy" decoding="async" alt="Evidence tokens with one missing source routed honestly to human review" class="confidence-card__img">
                         </div>
                         <div class="confidence-card__title-row">
                             <svg class="confidence-card__icon"><use href="#icon-check-shield"/></svg>
                             <h3>Our Promise</h3>
                         </div>
-                        <p>We take what you have and do our best. When data is insufficient, we tell you — we don't give you garbage out. We give you an opinion that says "this needs more."</p>
+                        <p>We use the evidence available. When it is insufficient, we say so clearly and route the shift for review.</p>
                     </div>
                     <div class="confidence-card">
                         <div class="confidence-card__image">
-                            <img src="card-forward-1.png" alt="" class="confidence-card__img">
+                            <img src="images/closeout-enterprise/unique/data-quality-roadmap.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(31vw, 510px)" width="1376" height="768" loading="lazy" decoding="async" alt="Clock, mobile, and location evidence layers increasing confidence step by step" class="confidence-card__img">
                         </div>
                         <div class="confidence-card__title-row">
                             <svg class="confidence-card__icon"><use href="#icon-trending-up"/></svg>
@@ -911,50 +1103,53 @@
         <!-- Slide: Team -->
         <section class="slide slide--team" data-slide="12">
             <div class="slide__content">
-                <h2 class="slide__title">Built by a 4x serial entrepreneur</h2>
+                <h2 class="slide__title">The core team behind Closeout Agent</h2>
+                <p class="slide__lead">Product, engineering, mobile, and go-to-market leaders working as one global team.</p>
 
-                <div class="team-hero">
-                    <div class="team-hero__photo">
-                        <img src="kashyap-keynote-20260514-101758.png" alt="Kashyap Deorah" class="team-hero__img">
-                    </div>
-                    <div class="team-hero__body">
-                        <h3 class="team-hero__name">Kashyap Deorah</h3>
-                        <p class="team-hero__role">Founder &amp; CEO, HyperTrack</p>
-
-                        <div class="team-hero__exits">
-                            <div class="team-exit">
-                                <span class="team-exit__company">Chaupaati Bazaar</span>
-                                <span class="team-exit__arrow">→</span>
-                                <span class="team-exit__acquirer">Future Group, 2010</span>
-                            </div>
-                            <div class="team-exit">
-                                <span class="team-exit__company">Chalo</span>
-                                <span class="team-exit__arrow">→</span>
-                                <span class="team-exit__acquirer">OpenTable, $11M, 2013</span>
-                            </div>
-                            <div class="team-exit">
-                                <span class="team-exit__company">Righthalf</span>
-                                <span class="team-exit__arrow">→</span>
-                                <span class="team-exit__acquirer">Stratify, NYT front page</span>
-                            </div>
-                        </div>
-
-                        <p class="team-hero__bio">IIT Bombay CSE. Author, <em>The Golden Tap</em>. Keynote speaker — India Internet Day, Gig Work Summit. <a href="https://www.linkedin.com/in/kdeorah/" target="_blank" rel="noopener" class="team-hero__link">LinkedIn ↗</a></p>
-                    </div>
+                <div class="team-grid">
+                    <article class="team-member">
+                        <img src="images/closeout-enterprise/team/kashyap.jpg" sizes="132px" width="800" height="800" loading="lazy" decoding="async" alt="Kashyap Deorah" class="team-member__photo">
+                        <div class="team-member__meta"><h3>Kashyap Deorah</h3><p>CEO</p></div>
+                    </article>
+                    <article class="team-member">
+                        <img src="images/closeout-enterprise/team/vibhas.jpg" sizes="132px" width="800" height="800" loading="lazy" decoding="async" alt="Vibhas Jain" class="team-member__photo">
+                        <div class="team-member__meta"><h3>Vibhas Jain</h3><p>Product</p></div>
+                    </article>
+                    <article class="team-member">
+                        <img src="images/closeout-enterprise/team/thomas.jpg" sizes="132px" width="800" height="800" loading="lazy" decoding="async" alt="Thomas Raffetseder" class="team-member__photo">
+                        <div class="team-member__meta"><h3>Thomas Raffetseder</h3><p>CTO</p></div>
+                    </article>
+                    <article class="team-member">
+                        <img src="images/closeout-enterprise/team/alex.jpg" sizes="132px" width="800" height="800" loading="lazy" decoding="async" alt="Alexander Kishinevsky" class="team-member__photo">
+                        <div class="team-member__meta"><h3>Alex Kishinevsky</h3><p>VP Engineering</p></div>
+                    </article>
+                    <article class="team-member">
+                        <img src="images/closeout-enterprise/team/jared-crop.jpg" sizes="132px" width="800" height="800" loading="lazy" decoding="async" alt="Jared McGriff" class="team-member__photo team-member__photo--jared">
+                        <div class="team-member__meta"><h3>Jared McGriff</h3><p>Marketing</p></div>
+                    </article>
+                    <article class="team-member">
+                        <img src="images/closeout-enterprise/team/eugene.jpg" sizes="132px" width="800" height="800" loading="lazy" decoding="async" alt="Eugene Tulushev" class="team-member__photo">
+                        <div class="team-member__meta"><h3>Eugene Tulushev</h3><p>Mobile</p></div>
+                    </article>
+                    <article class="team-member">
+                        <img src="images/closeout-enterprise/team/sanchit.jpg" sizes="132px" width="800" height="800" loading="lazy" decoding="async" alt="Sanchit Sharma" class="team-member__photo">
+                        <div class="team-member__meta"><h3>Sanchit Sharma</h3><p>Engineering</p></div>
+                    </article>
                 </div>
 
-                <p class="slide__tagline">Team across Berkeley + India. Building HyperTrack since 2016.</p>
+                <p class="slide__tagline">US headquartered. Global team. Building HyperTrack since 2016.</p>
             </div>
         </section>
 
         <!-- Slide 9: CTA -->
         <section class="slide slide--cta" data-slide="8">
+                            <img src="images/closeout-enterprise/cta-shift-closed.jpg" sizes="(max-width: 768px) 100vw, min(64vw, 1200px)" width="1200" height="675" loading="lazy" decoding="async" alt="Worker leaving a completed shift with pay confirmation" class="cta-photo">
             <div class="slide__content">
-                <h2 class="slide__title">See It Work. Right Now.</h2>
-                <p class="slide__lead">Send us a timesheet. Any timesheet. Watch the reconciliation happen. See the proof.</p>
+                <h2 class="slide__title">Bring us one shift.</h2>
+                <p class="slide__lead">We’ll show you the evidence, the decision, and exactly how it gets workers paid and client invoices out the door.</p>
 
                 <div class="cta-buttons">
-                    <a href="https://closeoutcopilot.com/xray/" target="_blank" class="cta-button cta-button--primary">
+                    <a href="https://hypertrack.com/dashboard-demo" target="_blank" rel="noopener noreferrer" class="cta-button cta-button--primary">
                         <svg class="cta-icon"><use href="#icon-play"/></svg>
                         Try Demo
                     </a>
@@ -987,16 +1182,111 @@
         </button>
     </div>
 
-    <div class="slide-nav-group" id="slideNavGroup">
-        <div class="slide-dots" id="slideDots"></div>
-        <div class="slide-counter" id="slideCounter">
-            <div class="slide-counter__default">
-                <span id="currentSlide">1</span> / <span id="totalSlides">9</span>
-            </div>
-            <div class="slide-counter__pages" id="slidePages"></div>
-        </div>
-    </div>
+    <!-- Deck nav is built by js/deck.js — shared across all decks. -->
 
-    <script src="script.js"></script>
+  <footer>
+    <div class="max-w-[1200px] mx-auto px-6 py-12">
+      <div class="flex flex-col md:flex-row items-center md:justify-between gap-6 mb-8">
+        <img src="images/Green0svg.svg" class="h-5" alt="HyperTrack">
+        <nav aria-label="Social" class="flex items-center gap-5">
+          <a href="https://www.facebook.com/HyperTrackHQ" aria-label="Facebook" class="text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/></svg>
+          </a>
+          <a href="https://twitter.com/HyperTrackHQ" aria-label="Twitter" class="text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="https://github.com/hypertrack" aria-label="GitHub" class="text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.27-.01-1.17-.02-2.12-3.2.7-3.88-1.37-3.88-1.37-.53-1.34-1.3-1.7-1.3-1.7-1.06-.72.08-.71.08-.71 1.17.08 1.79 1.2 1.79 1.2 1.04 1.79 2.74 1.27 3.41.97.11-.76.41-1.27.74-1.56-2.55-.29-5.24-1.28-5.24-5.7 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a10.98 10.98 0 0 1 5.8 0c2.21-1.49 3.18-1.18 3.18-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.43-2.69 5.4-5.25 5.69.42.37.8 1.09.8 2.21 0 1.6-.01 2.89-.01 3.28 0 .31.21.68.8.56A11.51 11.51 0 0 0 23.5 12C23.5 5.73 18.27.5 12 .5z"/></svg>
+          </a>
+          <a href="https://www.linkedin.com/company/hypertrack" aria-label="LinkedIn" class="text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554V14.83c0-1.34-.026-3.063-1.867-3.063-1.868 0-2.154 1.46-2.154 2.968v5.718H9.318V9h3.414v1.561h.048c.476-.9 1.637-1.85 3.37-1.85 3.602 0 4.268 2.372 4.268 5.455v6.286zM5.337 7.433a2.063 2.063 0 0 1-2.063-2.064 2.063 2.063 0 1 1 2.063 2.064zm1.777 13.019H3.558V9h3.556v11.452zM22.225 0H1.771C.791 0 0 .775 0 1.728v20.543C0 23.226.792 24 1.771 24h20.451C23.2 24 24 23.226 24 22.271V1.728C24 .775 23.2 0 22.222 0h.003z"/></svg>
+          </a>
+          <a href="https://hypertrackcommunity.slack.com" aria-label="Slack" class="text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M6.194 14.644a2.062 2.062 0 0 1-2.058 2.057A2.062 2.062 0 0 1 2.08 14.644a2.062 2.062 0 0 1 2.057-2.058h2.058v2.058zm1.042 0a2.062 2.062 0 0 1 2.058-2.058 2.062 2.062 0 0 1 2.057 2.058v5.164A2.062 2.062 0 0 1 9.294 21.87a2.062 2.062 0 0 1-2.058-2.062v-5.164zm2.058-8.307A2.062 2.062 0 0 1 7.236 4.28a2.062 2.062 0 0 1 2.058-2.058 2.062 2.062 0 0 1 2.057 2.058v2.057H9.294zm0 1.042a2.062 2.062 0 0 1 2.057 2.058 2.062 2.062 0 0 1-2.057 2.058H4.136A2.062 2.062 0 0 1 2.08 9.437 2.062 2.062 0 0 1 4.136 7.38h5.158zm8.298 2.058a2.062 2.062 0 0 1 2.058-2.058 2.062 2.062 0 0 1 2.057 2.058 2.062 2.062 0 0 1-2.057 2.058h-2.058V9.437zm-1.042 0a2.062 2.062 0 0 1-2.057 2.058 2.062 2.062 0 0 1-2.058-2.058V4.272A2.062 2.062 0 0 1 14.493 2.21a2.062 2.062 0 0 1 2.057 2.062v5.165zm-2.057 8.301a2.062 2.062 0 0 1 2.057 2.058 2.062 2.062 0 0 1-2.057 2.058 2.062 2.062 0 0 1-2.058-2.058v-2.058h2.058zm0-1.042a2.062 2.062 0 0 1-2.058-2.058 2.062 2.062 0 0 1 2.058-2.057h5.164a2.062 2.062 0 0 1 2.058 2.057 2.062 2.062 0 0 1-2.058 2.058h-5.164z"/></svg>
+          </a>
+        </nav>
+      </div>
+      <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+        <a href="https://status.hypertrack.com" class="text-sm font-semibold text-neutral-700 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">Status</a>
+        <a href="https://hypertrack.com/press.html" class="text-sm font-semibold text-neutral-700 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">Press</a>
+        <a href="https://hypertrack.com/contact.html" class="text-sm font-semibold text-neutral-700 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">Get In Touch</a>
+        <a href="https://hypertrack.com/jobs.html" class="text-sm font-semibold text-neutral-700 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">We Are Hiring</a>
+        <a href="https://hypertrack.com/about.html" class="text-sm font-semibold text-neutral-700 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">About HyperTrack</a>
+        <a href="https://hypertrack.com/faq.html" class="text-sm font-semibold text-neutral-700 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">FAQ</a>
+        <a href="https://hypertrack.com/privacy.html" class="text-sm font-semibold text-neutral-700 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">Privacy</a>
+        <a href="https://hypertrack.com/terms.html" class="text-sm font-semibold text-neutral-700 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">Terms</a>
+      </div>
+      <p class="mt-6 text-center text-xs text-neutral-500 dark:text-neutral-500">&copy; 2026 HyperTrack Inc. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <!-- HubSpot chat -->
+  <script type="text/javascript" id="hs-script-loader" async="" defer="" src="https://js.hs-scripts.com/8405582.js"></script>
+  <!-- Warmly -->
+  <script id="warmly-script-loader" src="https://opps-widget.getwarmly.com/warmly.js?clientId=e6dadb5aa6100334bb606c707534d9d4" defer=""></script>
+  <!-- Valley -->
+  <script src="https://valley-intent.nyc3.digitaloceanspaces.com/script.js?id=1963" async=""></script>
+
+  <!-- Canonical top-nav interactivity (chrome.js, verbatim) -->
+  <script>
+// Canonical top-nav interactivity — frozen from index.html.
+// Include as an external <script src> or inline both IIFEs verbatim.
+
+// ===== Product mega-dropdown =====
+(function () {
+      var trigger = document.querySelector('[data-nav-product]');
+      var panel = document.querySelector('[data-nav-product-panel]');
+      if (!trigger || !panel) return;
+      var closeTimer = null;
+      function show() { if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; } panel.removeAttribute('hidden'); trigger.setAttribute('aria-expanded', 'true'); }
+      function hide() { panel.setAttribute('hidden', ''); trigger.setAttribute('aria-expanded', 'false'); }
+      function scheduleHide() { if (closeTimer) clearTimeout(closeTimer); closeTimer = setTimeout(hide, 160); }
+      function cancelHide() { if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; } }
+      trigger.addEventListener('mouseenter', show);
+      trigger.addEventListener('mouseleave', scheduleHide);
+      panel.addEventListener('mouseenter', cancelHide);
+      panel.addEventListener('mouseleave', scheduleHide);
+      trigger.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (trigger.getAttribute('aria-expanded') === 'true') hide();
+        else show();
+      });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') hide(); });
+      document.addEventListener('click', function (e) {
+        if (trigger.contains(e.target) || panel.contains(e.target)) return;
+        hide();
+      });
+    })();
+
+// ===== Mobile menu toggle =====
+(function () {
+      var btn = document.getElementById('mobile-menu-toggle');
+      var menu = document.getElementById('mobile-menu');
+      var openIcon = btn && btn.querySelector('.hamburger-open');
+      var closeIcon = btn && btn.querySelector('.hamburger-close');
+      var prodToggle = document.getElementById('mobile-product-toggle');
+      var prodSubmenu = document.getElementById('mobile-product-submenu');
+      if (btn && menu) {
+        btn.addEventListener('click', function () {
+          var open = menu.classList.toggle('is-open');
+          btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+          if (openIcon && closeIcon) {
+            openIcon.classList.toggle('hidden', open);
+            closeIcon.classList.toggle('hidden', !open);
+          }
+        });
+      }
+      if (prodToggle && prodSubmenu) {
+        prodToggle.addEventListener('click', function () {
+          var open = prodSubmenu.classList.toggle('is-open');
+          prodToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+      }
+    })();
+  </script>
+
+  <script src="js/theme-switcher.js" defer></script>
+  <script src="js/deck.js" defer></script>
+  <script src="/widget/solutioner-loader.js?v=20260702e" defer></script>
 </body>
 </html>

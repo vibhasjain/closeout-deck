@@ -1,0 +1,847 @@
+/* HyperTrack solutioning widget — styles (M3 PR4: capture flows + readiness).
+ * Everything is namespaced under #ht-solutioner (plus the html.ht-sol-lock
+ * scroll-lock hook). Raw token values from TOKENS.md — the page's Tailwind
+ * Play CDN config is fragile, so the widget never relies on Tailwind classes.
+ * Satoshi comes from the page's existing @font-face. */
+
+/* The universal reset must NOT reach inside the diagram viewport: the mounted
+ * DiagramCanvas bundle styles itself with class-only selectors, and this
+ * ID-prefixed reset outranks all of them (it was flattening every card/pill
+ * padding in the diagram). Excluding the viewport subtree leaves the bundle's
+ * own CSS in charge there — identical to how the dashboard renders it. */
+#ht-solutioner,
+#ht-solutioner *:not(.htw-diagram-viewport, .htw-diagram-viewport *),
+#ht-solutioner *:not(.htw-diagram-viewport, .htw-diagram-viewport *)::before,
+#ht-solutioner *:not(.htw-diagram-viewport, .htw-diagram-viewport *)::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+#ht-solutioner {
+  font-family: 'Satoshi', ui-sans-serif, system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0;
+  color: #1c1b18; /* neutral-900 */
+  text-align: left;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- Launcher --------------------------------------------------------- */
+
+@keyframes htw-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+#ht-solutioner .htw-launcher {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;          /* primary-button padding: px-5 py-2.5 */
+  background: #1c1b18;         /* neutral-900 — inverted-neutral primary */
+  color: #ffffff;
+  border: 1px solid #4d4a44;   /* neutral-700 */
+  border-radius: 9999px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0;
+  cursor: pointer;
+  animation: htw-fade-in 200ms ease-out both;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+#ht-solutioner .htw-launcher:hover {
+  background: #32302c;         /* neutral-800 */
+  border-color: #656360;       /* neutral-600 */
+}
+
+#ht-solutioner .htw-launcher:focus-visible {
+  outline: 2px solid #1c1b18;  /* neutral-900 */
+  outline-offset: 2px;
+}
+
+#ht-solutioner .htw-launcher svg {
+  display: block;
+  flex: 0 0 auto;
+}
+
+/* Launcher yields to the panel while open. */
+#ht-solutioner.htw-open .htw-launcher {
+  display: none;
+}
+
+/* Unread dot — repeat visitor with an existing conversation. Green is
+ * accent-only per COMPONENTS.md; a notification dot qualifies. */
+#ht-solutioner .htw-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background: #22c55e;          /* green-500 */
+  border: 2px solid #ffffff;
+}
+
+/* --- Panel ------------------------------------------------------------ */
+
+#ht-solutioner .htw-panel {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  width: 400px;
+  height: min(70vh, 600px);
+  background: #ffffff;         /* card surface */
+  border: 1px solid #dbdcdd;   /* neutral-200 */
+  border-radius: 16px;         /* cards: rounded-2xl */
+  overflow: hidden;
+  overscroll-behavior: contain;
+  animation: htw-fade-in 200ms ease-out both;
+}
+
+#ht-solutioner .htw-panel[hidden] {
+  display: none;
+}
+
+/* Programmatic focus target (tabindex=-1) — children keep their own
+ * focus-visible outlines. */
+#ht-solutioner .htw-panel:focus {
+  outline: none;
+}
+
+/* Pre-expand compact height (desktop/tablet): open snug to content — header +
+ * opening + chips + input, no empty gap — capped at the full panel height so a
+ * long opening never overflows the viewport. JS removes .htw-compact on
+ * engagement to grow to full height. The mobile peek block (max-width:639.98px)
+ * overrides these with the bottom-card treatment. */
+#ht-solutioner .htw-panel.htw-compact {
+  height: auto;
+  max-height: min(70vh, 600px);
+}
+
+/* Animate the compact -> full grow at desktop/tablet widths only. The mobile
+ * sheet pins its height to the visual viewport (keyboard show/hide), which must
+ * stay instant, so the transition is scoped out of the mobile range. */
+@media (min-width: 640px) {
+  #ht-solutioner .htw-panel {
+    transition: height 240ms ease;
+  }
+}
+
+#ht-solutioner .htw-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 0 0 auto;
+  padding: 14px 16px;
+  border-bottom: 1px solid #ebebec; /* neutral-100 */
+}
+
+#ht-solutioner .htw-title {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: #1c1b18;              /* neutral-900 */
+}
+
+#ht-solutioner .htw-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;          /* radius md */
+  color: #84827e;              /* neutral-500 */
+  cursor: pointer;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+#ht-solutioner .htw-close:hover {
+  color: #1c1b18;              /* neutral-900 */
+  background: #ebebec;         /* neutral-100 — elevated/hover */
+}
+
+#ht-solutioner .htw-close:focus-visible {
+  outline: 2px solid #1c1b18;
+  outline-offset: 2px;
+}
+
+#ht-solutioner .htw-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px;
+}
+
+#ht-solutioner .htw-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#ht-solutioner .htw-reset {
+  padding: 6px 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: #84827e;              /* neutral-500 */
+  cursor: pointer;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+#ht-solutioner .htw-reset:hover {
+  color: #1c1b18;
+  background: #ebebec;         /* neutral-100 */
+}
+
+#ht-solutioner .htw-reset:focus-visible {
+  outline: 2px solid #1c1b18;
+  outline-offset: 2px;
+}
+
+#ht-solutioner .htw-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 12px 16px;
+  border-top: 1px solid #ebebec; /* neutral-100 */
+}
+
+#ht-solutioner .htw-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  letter-spacing: 0;
+  color: #1c1b18;              /* neutral-900 */
+  background: #f5f5f6;         /* neutral-50 */
+  border: 1px solid #dbdcdd;   /* neutral-200 */
+  border-radius: 8px;          /* rounded-lg */
+}
+
+#ht-solutioner .htw-input::placeholder {
+  color: #84827e;              /* neutral-500 — placeholder token */
+}
+
+#ht-solutioner .htw-input:disabled {
+  cursor: not-allowed;
+}
+
+#ht-solutioner .htw-input:focus-visible {
+  outline: 2px solid #1c1b18;
+  outline-offset: 0;
+}
+
+#ht-solutioner .htw-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  background: #1c1b18;         /* neutral-900 — inverted-neutral primary */
+  color: #ffffff;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+#ht-solutioner .htw-send:hover {
+  background: #32302c;         /* neutral-800 */
+}
+
+#ht-solutioner .htw-send:disabled {
+  background: #dbdcdd;         /* neutral-200 */
+  cursor: not-allowed;
+}
+
+#ht-solutioner .htw-send:focus-visible {
+  outline: 2px solid #1c1b18;
+  outline-offset: 2px;
+}
+
+/* --- Transcript --------------------------------------------------------- */
+
+#ht-solutioner .htw-msg {
+  max-width: 85%;
+  margin: 0 0 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 1.55;
+  border-radius: 12px;
+  overflow-wrap: break-word;
+}
+
+#ht-solutioner .htw-msg-assistant {
+  margin-right: auto;
+  background: #ffffff;
+  border: 1px solid #dbdcdd;   /* neutral-200 */
+  color: #1c1b18;              /* neutral-900 */
+}
+
+#ht-solutioner .htw-msg-user {
+  margin-left: auto;
+  background: #1c1b18;         /* neutral-900 */
+  color: #ffffff;
+}
+
+#ht-solutioner .htw-msg p {
+  margin: 0 0 8px;
+}
+
+#ht-solutioner .htw-msg p:last-child {
+  margin-bottom: 0;
+}
+
+#ht-solutioner .htw-msg ul,
+#ht-solutioner .htw-msg ol {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+
+#ht-solutioner .htw-msg ul:last-child,
+#ht-solutioner .htw-msg ol:last-child {
+  margin-bottom: 0;
+}
+
+#ht-solutioner .htw-msg li {
+  margin: 2px 0;
+}
+
+#ht-solutioner .htw-msg strong {
+  font-weight: 600;
+}
+
+#ht-solutioner .htw-msg a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* --- Chips --------------------------------------------------------------- */
+
+#ht-solutioner .htw-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+#ht-solutioner .htw-chip {
+  padding: 8px 14px;
+  background: #ffffff;
+  border: 1px solid #dbdcdd;   /* neutral-200 */
+  border-radius: 9999px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: #1c1b18;              /* neutral-900 */
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+#ht-solutioner .htw-chip:hover {
+  background: #ebebec;         /* neutral-100 */
+  border-color: #b9b7b4;       /* neutral-300 */
+}
+
+#ht-solutioner .htw-chip:focus-visible {
+  outline: 2px solid #1c1b18;
+  outline-offset: 2px;
+}
+
+#ht-solutioner .htw-chip:disabled {
+  color: #84827e;              /* neutral-500 — muted siblings */
+  background: #f5f5f6;         /* neutral-50 */
+  border-color: #ebebec;       /* neutral-100 */
+  cursor: default;
+}
+
+#ht-solutioner .htw-chip-selected:disabled {
+  color: #ffffff;
+  background: #1c1b18;         /* neutral-900 — the picked one */
+  border-color: #1c1b18;
+}
+
+/* --- Status line (typing dots / mono thinking text) ---------------------- */
+
+#ht-solutioner .htw-status {
+  margin: 0 0 10px;
+  min-height: 18px;
+}
+
+#ht-solutioner .htw-status-text {
+  font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  color: #84827e;              /* neutral-500 */
+}
+
+@keyframes htw-blink {
+  0%, 80%, 100% { opacity: 0.25; }
+  40%           { opacity: 1; }
+}
+
+#ht-solutioner .htw-dots {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+#ht-solutioner .htw-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: #84827e;         /* neutral-500 */
+  animation: htw-blink 1.2s infinite both;
+}
+
+#ht-solutioner .htw-dots i:nth-child(2) { animation-delay: 0.15s; }
+#ht-solutioner .htw-dots i:nth-child(3) { animation-delay: 0.3s; }
+
+/* --- Retry / limit rows --------------------------------------------------- */
+
+#ht-solutioner .htw-retry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: #84827e;              /* neutral-500 */
+}
+
+#ht-solutioner .htw-retry-btn {
+  padding: 5px 12px;
+  background: #1c1b18;         /* neutral-900 */
+  color: #ffffff;
+  border: 0;
+  border-radius: 9999px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+#ht-solutioner .htw-retry-btn:hover {
+  background: #32302c;         /* neutral-800 */
+}
+
+#ht-solutioner .htw-retry-btn:focus-visible {
+  outline: 2px solid #1c1b18;
+  outline-offset: 2px;
+}
+
+#ht-solutioner .htw-limit-links {
+  font-size: 13px;
+}
+
+/* --- Inline capture affordances (email / phone-SMS / signup) ------------- */
+
+#ht-solutioner .htw-capture {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 12px;
+  max-width: 85%;
+}
+
+#ht-solutioner .htw-capture-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1c1b18;              /* neutral-900 */
+}
+
+#ht-solutioner .htw-capture-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#ht-solutioner .htw-capture-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 9px 12px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  letter-spacing: 0;
+  color: #1c1b18;              /* neutral-900 */
+  background: #f5f5f6;         /* neutral-50 */
+  border: 1px solid #dbdcdd;   /* neutral-200 */
+  border-radius: 8px;
+}
+
+#ht-solutioner .htw-capture-input::placeholder {
+  color: #84827e;              /* neutral-500 */
+}
+
+#ht-solutioner .htw-capture-input:focus-visible {
+  outline: 2px solid #1c1b18;
+  outline-offset: 0;
+}
+
+#ht-solutioner .htw-capture-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+#ht-solutioner .htw-capture-submit {
+  flex: 0 0 auto;
+  padding: 9px 16px;
+  background: #1c1b18;         /* neutral-900 — inverted-neutral primary */
+  color: #ffffff;
+  border: 0;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+#ht-solutioner .htw-capture-submit:hover {
+  background: #32302c;         /* neutral-800 */
+}
+
+#ht-solutioner .htw-capture-submit:disabled {
+  background: #dbdcdd;         /* neutral-200 */
+  cursor: not-allowed;
+}
+
+#ht-solutioner .htw-capture-submit:focus-visible {
+  outline: 2px solid #1c1b18;
+  outline-offset: 2px;
+}
+
+#ht-solutioner .htw-capture-err {
+  font-size: 12px;
+  color: #b42318;             /* restrained error red — text-only */
+}
+
+#ht-solutioner .htw-capture-err[hidden] {
+  display: none;
+}
+
+/* Submitted affordance: dim the spent input/button (kept in transcript). */
+#ht-solutioner .htw-cap-done {
+  opacity: 0.6;
+}
+
+/* Signup CTA — inverted-neutral button, never colored (COMPONENTS.md). */
+#ht-solutioner .htw-capture-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  padding: 9px 18px;
+  background: #1c1b18;         /* neutral-900 */
+  color: #ffffff;
+  border: 1px solid #1c1b18;
+  border-radius: 9999px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+#ht-solutioner .htw-capture-cta:hover {
+  background: #32302c;         /* neutral-800 */
+  border-color: #32302c;
+}
+
+#ht-solutioner .htw-capture-cta:focus-visible {
+  outline: 2px solid #1c1b18;
+  outline-offset: 2px;
+}
+
+/* Turnstile widget holder — invisible/managed mode renders nothing on
+ * success; keep it out of layout flow either way. */
+#ht-solutioner .htw-turnstile {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* --- "View solution diagram" trigger ------------------------------------- */
+/* A small, quiet icon button in the header (next to Start over); appears only
+ * once a blueprint exists. The diagram is a bonus peek, not a CTA — so it's a
+ * muted glyph, styled like the close/reset header controls. A tiny green dot
+ * hints "a diagram is ready". Opens the near-full-screen interactive modal. */
+
+#ht-solutioner .htw-peek {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;          /* radius md — matches .htw-close */
+  color: #84827e;              /* neutral-500 — muted */
+  cursor: pointer;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+#ht-solutioner .htw-peek:hover {
+  color: #1c1b18;              /* neutral-900 */
+  background: #ebebec;         /* neutral-100 */
+}
+
+#ht-solutioner .htw-peek:focus-visible {
+  outline: 2px solid #1c1b18;
+  outline-offset: 2px;
+}
+
+#ht-solutioner .htw-peek[hidden] {
+  display: none;
+}
+
+#ht-solutioner .htw-peek-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: #22c55e;         /* green-500 — "diagram ready" accent dot */
+  box-shadow: 0 0 0 2px #ffffff; /* ring so it reads against the glyph */
+}
+
+/* --- Diagram modal (near-full-screen interactive renderer) ---------------- */
+/* A fixed, page-level layer: dimmed backdrop (click-to-close) + a centered
+ * dialog at ~min(1180px,95vw) x 92vh that floats above the whole site. The
+ * dialog is a column: header strip + a pannable/zoomable viewport that clips
+ * the live-transformed stage, plus an on-canvas zoom control cluster. */
+
+#ht-solutioner .htw-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  /* Float above everything — the widget panel/launcher are z-60. */
+  z-index: 2147483600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(28, 27, 24, 0.55); /* neutral-900 @ 55% */
+  animation: htw-fade-in 160ms ease-out both;
+}
+
+#ht-solutioner .htw-modal-backdrop[hidden] {
+  display: none;
+}
+
+#ht-solutioner .htw-modal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(1180px, 95vw);
+  height: 92vh;
+  background: #ffffff;
+  border: 1px solid #dbdcdd;   /* neutral-200 */
+  border-radius: 16px;         /* cards: rounded-2xl */
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+}
+
+#ht-solutioner .htw-modal:focus {
+  outline: none;
+}
+
+#ht-solutioner .htw-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 0 0 auto;
+  padding: 14px 18px;
+  border-bottom: 1px solid #ebebec; /* neutral-100 */
+}
+
+#ht-solutioner .htw-modal-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1c1b18;              /* neutral-900 */
+}
+
+#ht-solutioner .htw-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: #84827e;              /* neutral-500 */
+  cursor: pointer;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+#ht-solutioner .htw-modal-close:hover {
+  color: #1c1b18;             /* neutral-900 */
+  background: #ebebec;        /* neutral-100 */
+}
+
+#ht-solutioner .htw-modal-close:focus-visible {
+  outline: 2px solid #1c1b18;
+  outline-offset: 2px;
+}
+
+/* Diagram host — the REAL dashboard DiagramCanvas (window.HTSolutionDiagram)
+ * mounts here and paints its own dotted grid, pan/zoom, +/- controls, node
+ * cards, and edges (all from the embed's bundled CSS modules). This box only
+ * has to be a sized, positioned, clipped container for that React tree.
+ * The dotted-grid fallback bg avoids a flash of plain colour before the bundle
+ * loads, and matches the dashboard's #e5e7eb dots on a 20px grid. */
+#ht-solutioner .htw-diagram-viewport {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  background-color: #f5f5f6;  /* neutral-50 — base behind the dots */
+  background-image: radial-gradient(circle, #e5e7eb 1px, transparent 1px);
+  background-size: 20px 20px;
+  touch-action: none;
+}
+
+#ht-solutioner .htw-diagram-fallback {
+  margin: 24px 12px;
+  font-size: 13px;
+  color: #84827e;            /* neutral-500 */
+  text-align: center;
+}
+
+/* --- Tablet: 640–1023px ------------------------------------------------ */
+
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  #ht-solutioner .htw-panel {
+    width: 380px;
+    height: min(70vh, 560px);
+  }
+
+  /* Keep the compact cap at the tablet full height so engaging never shrinks. */
+  #ht-solutioner .htw-panel.htw-compact {
+    max-height: min(70vh, 560px);
+  }
+}
+
+/* --- Mobile: <640px ----------------------------------------------------- */
+
+@keyframes htw-slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+@media (max-width: 639.98px) {
+  #ht-solutioner .htw-launcher {
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+
+  #ht-solutioner .htw-launcher-label {
+    display: none;
+  }
+
+  #ht-solutioner .htw-panel {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;   /* fallback */
+    height: 100dvh;  /* preferred; JS pins to visualViewport while open */
+    border: 0;
+    border-radius: 0;
+    animation: htw-slide-up 250ms ease-out both;
+  }
+
+  /* Compact pre-expand peek — a small, non-modal bottom card showing just the
+   * opening question + options. JS removes .htw-compact to promote it to the
+   * full sheet (rules above) once the user engages. */
+  #ht-solutioner .htw-panel.htw-compact {
+    top: auto;
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    height: auto;
+    max-height: min(62vh, 460px);
+    border: 1px solid #dbdcdd;   /* neutral-200 */
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(28, 27, 24, 0.18);
+  }
+
+  /* Nothing to reset before the conversation starts. */
+  #ht-solutioner .htw-panel.htw-compact .htw-reset {
+    display: none;
+  }
+
+  /* Diagram modal goes full-screen on phones — no peeking, all canvas. */
+  #ht-solutioner .htw-modal-backdrop {
+    padding: 0;
+  }
+
+  #ht-solutioner .htw-modal {
+    width: 100%;
+    height: 100vh;   /* fallback */
+    height: 100dvh;
+    max-width: none;
+    border: 0;
+    border-radius: 0;
+  }
+}
+
+/* --- Page scroll lock (mobile sheet open) ------------------------------- */
+/* position:fixed body lock — overflow:hidden alone doesn't stop iOS
+ * rubber-banding (#118 review). JS saves the scroll offset into
+ * --htw-lock-top and restores it on unlock. */
+
+html.ht-sol-lock,
+html.ht-sol-lock body {
+  overflow: hidden;
+}
+
+html.ht-sol-lock body {
+  position: fixed;
+  top: var(--htw-lock-top, 0px);
+  left: 0;
+  right: 0;
+  width: 100%;
+}

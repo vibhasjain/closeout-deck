@@ -1,0 +1,259 @@
+/* ============================================================================
+   edgework.css — the shared Edgework frame + Zone Box system
+   ----------------------------------------------------------------------------
+   Single source of truth for the edgework primitives every page uses. These
+   rules mirror EDGEWORK.md (frame + zone model) and TOKENS.md (§Spacing scale).
+   Extracted verbatim from index.html — the homepage is the canonical reference
+   (issue #148). Page-specific selectors (e.g. #customer-stories, #pricing,
+   #insights, #use-cases overrides) stay inline in their own page, NOT here.
+
+   Load order: AFTER Tailwind (CDN) + legacy Webflow CSS, BEFORE any page-scoped
+   <style> block — so a page can still override a primitive with higher
+   specificity when it genuinely needs a one-off (e.g. an #id-scoped rule).
+   ============================================================================ */
+
+/* ── Edgework line + marker colors (light + dark) ── */
+:root {
+  --line-solid: #ebebec;
+  --grid-line: #ebebec;
+  --marker-border: #dbdcdd;
+  --marker-fill: #ffffff;
+}
+.dark {
+  --line-solid: #1c1b18;
+  --grid-line: #1c1b18;
+  --marker-border: #4d4a44;
+  --marker-fill: #0e0d0b;
+}
+
+/* ── Sticky top-nav height (site-nav is h-16 = 64px, sticky top:0, 1px border-b) ── */
+:root { --nav-h: 64px; }
+
+/* ── Anchor-scroll behavior (issue #215 → batch5 A3, item #4) ──
+   1. Smooth-scroll every in-page #hash jump (global, respects reduced-motion below).
+   2. scroll-padding-top clears the sticky nav on jump. Landing the section top at
+      exactly --nav-h leaves the nav's 1px bottom-border and the section's 1px TOP
+      divider as two adjacent lines (a 2px double line). Subtracting 1px lands the
+      section 1px higher so its top divider OVERLAPS the nav's bottom border and the
+      two read as one flush edge. Token-based off --nav-h so it stays in sync. ── */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--nav-h) - 1px);
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
+/* ── Rails: solid vertical lines at container edges ── */
+.ew-section {
+  position: relative;
+  overflow: visible;
+}
+.ew-section::before,
+.ew-section::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--line-solid);
+  z-index: 2;
+  pointer-events: none;
+}
+.ew-section::before { left: 0; }
+.ew-section::after { right: 0; }
+
+/* ── Section divider: solid horizontal line at bottom ── */
+.ew-divider {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--line-solid);
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* ── Grid overlay container ── */
+.ew-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ── Grid lines: hidden on mobile, visible at md (768px) when content is in columns ── */
+.ew-grid-4,
+.ew-grid-3,
+.ew-grid-2,
+.ew-grid-split {
+  background: none;
+}
+@media (min-width: 768px) {
+  .ew-grid-4 {
+    background:
+      linear-gradient(to right, transparent calc(25% - 0.5px), var(--grid-line) calc(25% - 0.5px), var(--grid-line) calc(25% + 0.5px), transparent calc(25% + 0.5px)),
+      linear-gradient(to right, transparent calc(50% - 0.5px), var(--grid-line) calc(50% - 0.5px), var(--grid-line) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+      linear-gradient(to right, transparent calc(75% - 0.5px), var(--grid-line) calc(75% - 0.5px), var(--grid-line) calc(75% + 0.5px), transparent calc(75% + 0.5px));
+  }
+  .ew-grid-3 {
+    background:
+      linear-gradient(to right, transparent calc(33.333% - 0.5px), var(--grid-line) calc(33.333% - 0.5px), var(--grid-line) calc(33.333% + 0.5px), transparent calc(33.333% + 0.5px)),
+      linear-gradient(to right, transparent calc(66.666% - 0.5px), var(--grid-line) calc(66.666% - 0.5px), var(--grid-line) calc(66.666% + 0.5px), transparent calc(66.666% + 0.5px));
+  }
+  .ew-grid-2 {
+    background:
+      linear-gradient(to right, transparent calc(50% - 0.5px), var(--grid-line) calc(50% - 0.5px), var(--grid-line) calc(50% + 0.5px), transparent calc(50% + 0.5px));
+  }
+  .ew-grid-split {
+    background:
+      linear-gradient(to right, transparent calc(33.333% - 0.5px), var(--grid-line) calc(33.333% - 0.5px), var(--grid-line) calc(33.333% + 0.5px), transparent calc(33.333% + 0.5px));
+  }
+}
+
+/* ── Internal horizontal divider (solid, rail-to-rail) — stays at all viewports ── */
+.ew-h-divider {
+  height: 1px;
+  background: var(--line-solid);
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Intersection marker: smaller on mobile, full size at md ── */
+.ew-marker {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border: 1px solid var(--marker-border);
+  background: var(--marker-fill);
+  z-index: 10;
+  pointer-events: none;
+  box-sizing: content-box;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+@media (min-width: 768px) {
+  .ew-marker {
+    width: 7px;
+    height: 7px;
+  }
+}
+
+/* ── Hover state for interactive grid cells ── */
+.ew-cell-hover {
+  transition: background-color 0.15s ease;
+}
+.ew-cell-hover:hover {
+  background-color: rgba(0,0,0,0.02);
+}
+.dark .ew-cell-hover:hover {
+  background-color: rgba(255,255,255,0.02);
+}
+
+/* ── Full-span row: paints over grid lines with page bg ── */
+.ew-full-span {
+  background: white;
+  position: relative;
+}
+.dark .ew-full-span {
+  background: #0e0d0b;
+}
+
+/* ── Spacer section: blank breathing room between sections, no marker ── */
+.ew-spacer {
+  height: 48px;
+}
+
+/* ── Clickable grid: row borders at all viewports, top border only at md when columns active ── */
+.ew-clickable-grid > * {
+  border-bottom: 1px solid var(--line-solid);
+}
+@media (min-width: 768px) {
+  .ew-clickable-grid {
+    border-top: 1px solid var(--line-solid);
+  }
+}
+
+/* ── Spacing token scale (px on the 4px base — see TOKENS.md §Spacing) ──
+   Map to the Tailwind 4px scale: 8=p-2, 12=p-3, 16=p-4, 24=p-6, 32=p-8,
+   40=p-10, 48=p-12, 64=p-16, 96=p-24. */
+:root {
+  --space-8:  8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-40: 40px;
+  --space-48: 48px;
+  --space-64: 64px;
+  --space-96: 96px;
+}
+
+/* ── Zone Box spacing (EDGEWORK.md → Zone Box Spacing) ──
+   The section wrapper (.ew-section) has ZERO padding — it only frames. Every
+   content block is a .zone-box that owns its inset. zone-x is constant; zone-y
+   is a named scale. All values come from the spacing tokens above. */
+.zone-box { padding: var(--space-32) var(--space-16); }                 /* mobile default: y=32, x=16 */
+.zone-box.zone-y-tight    { padding-top: var(--space-24); padding-bottom: var(--space-24); }  /* headers, nested boxes */
+.zone-box.zone-y-spacious { padding-top: var(--space-40); padding-bottom: var(--space-40); }  /* emphasis (closing CTA) */
+@media (min-width: 768px) {
+  .zone-box { padding: var(--space-64) var(--space-48); }               /* desktop default: y=64, x=48 */
+  .zone-box.zone-y-tight    { padding-top: var(--space-48); padding-bottom: var(--space-48); }
+  .zone-box.zone-y-spacious { padding-top: var(--space-96); padding-bottom: var(--space-96); }
+}
+
+/* ── Divider-driven inset-collapse — block-stacked zone boxes (ALL widths) ──
+   A zone box's inset is CLEARANCE FROM A DIVIDER. Between two ADJACENT zone
+   boxes, a divider keeps each box's full inset; NO divider collapses the
+   touching edges to a tight flow gap (~12px each ≈ 24px total). Divider-driven
+   and automatic via sibling adjacency. The :not(.grid) guard excludes column
+   grids (those collapse mobile-only, below); :not(.zone-divided) keeps
+   border-divided groups at their own natural inset. Specificity (0,3,0) beats
+   base .zone-box (0,1,0). */
+:not(.zone-divided):not(.grid) > .zone-box:has(+ .zone-box) { padding-bottom: var(--space-12); }
+:not(.zone-divided):not(.grid) > .zone-box + .zone-box      { padding-top: var(--space-12); }
+
+/* ── Lists of distinct items (.zone-list) — item-gap 48px (24 each side) ──
+   Deliberately LARGER than the within-item content gap (24) so items read as
+   more separated than their internal parts. Placed after the flow-collapse to
+   win the (0,4,0) specificity tie. */
+.zone-list.zone-box:has(+ .zone-list.zone-box) { padding-bottom: var(--space-24); }
+.zone-list.zone-box + .zone-list.zone-box      { padding-top: var(--space-24); }
+
+/* ── Mobile: rails hidden, spacer collapsed, marker clamped, grid columns collapse ── */
+@media (max-width: 767px) {
+  /* Spacer wrappers: section padding handles the gaps on mobile */
+  .ew-spacer-wrap { display: none !important; }
+  /* Hide grid rails on mobile */
+  .ew-section::before,
+  .ew-section::after { display: none; }
+  /* Smaller markers on mobile */
+  .ew-marker { width: 5px !important; height: 5px !important; }
+  /* Grid columns stack on mobile only → collapse their inner touching edges here only. */
+  .grid:not(.zone-divided) > .zone-box:has(+ .zone-box) { padding-bottom: var(--space-12); }
+  .grid:not(.zone-divided) > .zone-box + .zone-box      { padding-top: var(--space-12); }
+}
+
+/* ── Product pages (pre-shift-like): horizontal divider between stacked items on mobile ──
+   Only #capabilities / #use-cases grids (product surfaces) — homepage/case studies unaffected. */
+@media (max-width: 767px) {
+  #capabilities .ew-grid + .grid > * + * {
+    border-top: 1px solid var(--line-solid);
+  }
+}
+
+/* ── Partner/integration logos: keep brand color, stay visible in dark mode via light chip ── */
+.dark .partner-logo-chip { filter:grayscale(1) brightness(0) invert(1); opacity:0.9; }  /* dark mode: single-color (like case-study logos); light mode stays natural */
+
+/* ── Case-study company logo: consistent size + monochrome that adapts to light/dark ── */
+.cs-logo { max-height: 30px !important; width: auto; object-fit: contain; filter: grayscale(1) brightness(0); opacity: 0.82; }
+.cs-logo-color { max-height: 30px !important; width: auto; object-fit: contain; filter: grayscale(1); }  /* badge logos: grayscale (monochrome, keeps shape) */
+.dark .cs-logo { filter: grayscale(1) brightness(0) invert(1); opacity: 0.9; }
+
+/* ── Interactive-page icon grids: desktop uses ew-grid rails; mobile gets edgework-colored dividers (2-col) + normalized icon size ── */
+@media (max-width:767px){
+  .ew-mobile-grid > *:nth-child(2n) { border-left:1px solid var(--line-solid); }
+  .ew-mobile-grid > *:nth-child(-n+2) { border-bottom:1px solid var(--line-solid); }
+}
+.ew-mobile-grid ._w-svg-120 { width:48px !important; height:48px !important; }
+.ew-mobile-grid ._w-svg-120 svg { width:100% !important; height:100% !important; }
