@@ -1390,13 +1390,27 @@ td:first-child{color:var(--ink);font-weight:600}tr:last-child td{border-bottom:0
     });
   };
   if (supportsObserver && !reducedMotion) {
-    const costObserver = new IntersectionObserver((entries) => {
-      const visible = entries
-        .filter((entry) => entry.isIntersecting)
-        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-      if (visible) setCostLayer(Number(visible.target.dataset.layer));
-    }, { threshold: [0.2, 0.45, 0.7], rootMargin: '-28% 0px -38% 0px' });
+    const pickActiveCostStep = () => {
+      const anchor = window.innerHeight * 0.45;
+      let idx = 0;
+      costSteps.forEach((step, index) => {
+        if (step.getBoundingClientRect().top < anchor) idx = index;
+      });
+      setCostLayer(idx);
+    };
+    const costObserver = new IntersectionObserver(() => pickActiveCostStep(), { threshold: 0 });
     costSteps.forEach((step) => costObserver.observe(step));
+    let costTicking = false;
+    window.addEventListener('scroll', () => {
+      if (!costTicking) {
+        costTicking = true;
+        requestAnimationFrame(() => {
+          pickActiveCostStep();
+          costTicking = false;
+        });
+      }
+    }, { passive: true });
+    pickActiveCostStep();
   } else {
     layers.forEach((layer) => layer.classList.add('is-built'));
     costSteps.forEach((step) => step.classList.add('is-active'));
