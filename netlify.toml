@@ -10,6 +10,11 @@
   path = "/api/linear"
 
 [[redirects]]
+  from = "/research/*"
+  to = "https://hypertrack.com/research"
+  status = 301
+
+[[redirects]]
   from = "/experiment/*"
   to = "/decks/closeout-scroll-world/:splat"
   status = 200
