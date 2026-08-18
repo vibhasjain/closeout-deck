@@ -33,6 +33,29 @@ function tokenDomain(token: string): string {
   return ''
 }
 
+function tokenEmail(token: string): string {
+  try {
+    const segment = token.split('.')[1]
+    if (!segment) return ''
+    const normalized = segment.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=')
+    const payload = JSON.parse(atob(padded)) as { email?: unknown }
+    return typeof payload.email === 'string' ? payload.email : ''
+  } catch {
+    return ''
+  }
+}
+
+function loadAgentKeyboard(): void {
+  if (document.querySelector('script[data-job-agent-keyboard]')) return
+  const script = document.createElement('script')
+  script.src = 'https://agent-keyboard.fly.dev/widget.js'
+  script.dataset.site = 'closeout-jobs'
+  script.dataset.jobAgentKeyboard = 'true'
+  script.defer = true
+  document.body.appendChild(script)
+}
+
 export function SignIn({
   onSignedIn,
   onSample,
@@ -59,6 +82,9 @@ export function SignIn({
           }
           setError('')
           setGoogleToken(response.credential)
+          if (tokenEmail(response.credential) === 'vibes@hypertrack.io') {
+            loadAgentKeyboard()
+          }
           onSignedIn(response.credential)
         },
       })
