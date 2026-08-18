@@ -19,9 +19,10 @@ export function TicketComposer({
 }: {
   candidateId: string
   busy: boolean
-  onSendChat: (text: string) => void
+  onSendChat: (text: string) => Promise<void>
 }) {
   const [agent, setAgent] = useState(() => restore(candidateId))
+  const [error, setError] = useState('')
 
   useEffect(() => {
     try {
@@ -32,11 +33,16 @@ export function TicketComposer({
     }
   }, [agent, candidateId])
 
-  const send = () => {
+  const send = async () => {
     const text = agent.trim()
     if (!text || busy) return
-    onSendChat(text)
-    setAgent('')
+    setError('')
+    try {
+      await onSendChat(text)
+      setAgent('')
+    } catch {
+      setError('Could not send. Try again.')
+    }
   }
 
   return (
@@ -53,7 +59,7 @@ export function TicketComposer({
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
               e.preventDefault()
-              send()
+              void send()
             }
           }}
           placeholder="Discuss with agent"
@@ -62,13 +68,14 @@ export function TicketComposer({
         <Button
           size="icon"
           variant="outline"
-          onClick={send}
+          onClick={() => void send()}
           disabled={busy || !agent.trim()}
           aria-label="Talk to our agent"
         >
           <Send className="size-4" />
         </Button>
       </div>
+      {error && <p className="mt-1 text-[12.5px] text-nosource">{error}</p>}
     </div>
   )
 }

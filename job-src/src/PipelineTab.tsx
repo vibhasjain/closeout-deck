@@ -286,7 +286,7 @@ export function PipelineTab({
                 key={selected.id}
                 candidateId={selected.id}
                 busy={sendingCandidateId === selected.id}
-                onSendChat={(text) => void onSend(text, selected.id).catch(() => {})}
+                onSendChat={(text) => onSend(text, selected.id)}
               />
             )}
           </>

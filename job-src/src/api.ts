@@ -185,9 +185,11 @@ export async function loadFile(path: string): Promise<string> {
   if (sampleMode) return '/job/sample-resume.pdf'
   const cached = blobUrls.get(path)
   if (cached) return cached
-  const encodedPath = path.split('/').map(encodeURIComponent).join('/')
+  // Feed paths are cloud-relative, while the files route is files-relative.
+  const routePath = path.startsWith('files/') ? path.slice('files/'.length) : path
+  const encodedPath = routePath.split('/').map(encodeURIComponent).join('/')
   const res = await fetch(`${API}${FILES_PATH}/${encodedPath}`, { headers: authHeaders() })
-  if (!res.ok) throw new HttpError(res.status, `${FILES_PATH}/${path} -> ${res.status}`)
+  if (!res.ok) throw new HttpError(res.status, `${FILES_PATH}/${routePath} -> ${res.status}`)
   const url = URL.createObjectURL(await res.blob())
   blobUrls.set(path, url)
   return url
@@ -209,13 +211,38 @@ export async function sendMessage(text: string): Promise<void> {
   if (!res.ok) throw new HttpError(res.status, `${MESSAGES_PATH} -> ${res.status}`)
   if (!res.body) return
   const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let errorMessage: string | null = null
   // ponytail: The feed poll is the source of truth, so we drain rather than parse frames.
   try {
     for (;;) {
-      const { done } = await reader.read()
+      const { done, value } = await reader.read()
+      if (value) buffer += decoder.decode(value, { stream: !done })
+      if (done) {
+        buffer += decoder.decode()
+        if (buffer) buffer += '\n\n'
+      }
+      for (;;) {
+        const boundary = buffer.indexOf('\n\n')
+        if (boundary === -1) break
+        const frame = buffer.slice(0, boundary)
+        buffer = buffer.slice(boundary + 2)
+        const lines = frame.split('\n')
+        const event = lines.find((line) => line.startsWith('event:'))?.slice('event:'.length).trim()
+        if (event !== 'error') continue
+        const rawData = lines.find((line) => line.startsWith('data:'))?.slice('data:'.length).trim()
+        try {
+          const data = object(rawData ? JSON.parse(rawData) : null)
+          errorMessage = string(data.detail) || string(data.kind) || 'Agent run failed'
+        } catch {
+          errorMessage = 'Agent run failed'
+        }
+      }
       if (done) break
     }
   } catch {
     /* A later feed poll catches up after a dropped stream. */
   }
+  if (errorMessage) throw new Error(errorMessage)
 }
