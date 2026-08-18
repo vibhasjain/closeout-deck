@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui'
-import { setGoogleToken } from '@/api'
+import { clearGoogleToken, createViewerSession, HttpError, type ViewerSession } from '@/api'
 
 interface GoogleCredentialResponse {
   credential: string
@@ -33,19 +33,6 @@ function tokenDomain(token: string): string {
   return ''
 }
 
-function tokenEmail(token: string): string {
-  try {
-    const segment = token.split('.')[1]
-    if (!segment) return ''
-    const normalized = segment.replace(/-/g, '+').replace(/_/g, '/')
-    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=')
-    const payload = JSON.parse(atob(padded)) as { email?: unknown }
-    return typeof payload.email === 'string' ? payload.email : ''
-  } catch {
-    return ''
-  }
-}
-
 function loadAgentKeyboard(): void {
   if (document.querySelector('script[data-job-agent-keyboard]')) return
   const script = document.createElement('script')
@@ -57,10 +44,12 @@ function loadAgentKeyboard(): void {
 }
 
 export function SignIn({
+  notice,
   onSignedIn,
   onSample,
 }: {
-  onSignedIn: (token: string) => void
+  notice?: string
+  onSignedIn: (session: ViewerSession) => void
   onSample: () => void
 }) {
   const buttonRef = useRef<HTMLDivElement>(null)
@@ -75,17 +64,24 @@ export function SignIn({
       buttonRef.current.replaceChildren()
       window.google.accounts.id.initialize({
         client_id: clientId,
-        callback: (response) => {
+        callback: async (response) => {
           if (tokenDomain(response.credential) !== 'hypertrack.io') {
             setError('hypertrack.io accounts only.')
             return
           }
           setError('')
-          setGoogleToken(response.credential)
-          if (tokenEmail(response.credential) === 'vibes@hypertrack.io') {
-            loadAgentKeyboard()
+          try {
+            const session = await createViewerSession(response.credential)
+            if (session.email === 'vibes@hypertrack.io') loadAgentKeyboard()
+            onSignedIn(session)
+          } catch (sessionError) {
+            clearGoogleToken()
+            setError(
+              sessionError instanceof HttpError && sessionError.status === 401
+                ? 'hypertrack.io accounts only.'
+                : 'Could not sign in. Try again.',
+            )
           }
-          onSignedIn(response.credential)
         },
       })
       window.google.accounts.id.renderButton(buttonRef.current, {
@@ -125,17 +121,16 @@ export function SignIn({
           Job<span className="text-muted-foreground">Pipeline</span>
         </div>
         <p className="text-[12px] text-muted-foreground">Internal — hypertrack.io accounts</p>
+        {notice && <p className="text-[12.5px] text-nosource">{notice}</p>}
         {clientId ? (
           <div ref={buttonRef} />
         ) : (
           <p className="text-[12px] text-nosource">Google sign-in is not configured</p>
         )}
         {error && <p className="text-[12.5px] text-nosource">{error}</p>}
-        {!clientId && (
-          <Button variant="ghost" size="sm" onClick={onSample}>
-            Continue with sample data
-          </Button>
-        )}
+        <Button variant="ghost" size="sm" onClick={onSample}>
+          Continue with sample data
+        </Button>
       </div>
     </div>
   )

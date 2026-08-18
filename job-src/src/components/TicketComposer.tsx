@@ -50,7 +50,6 @@ export function TicketComposer({
       className="shrink-0 border-t px-3 pt-2 md:px-4"
       style={{ paddingBottom: 'calc(0.625rem + env(safe-area-inset-bottom))' }}
     >
-      <p className="mb-1 text-[10px] text-internal">Goes to the agent, not the candidate.</p>
       <div className="flex items-end gap-1.5">
         <Textarea
           rows={1}

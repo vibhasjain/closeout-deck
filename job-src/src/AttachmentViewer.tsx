@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { FileText, Maximize2, Paperclip, X } from 'lucide-react'
+import { FileText, Maximize2, X } from 'lucide-react'
+import { ClaudeCrab } from '@/components/ClaudeCrab'
 import { Button, Skeleton } from '@/components/ui'
 import { FadeText } from '@/components/FadeText'
 import { loadFile, revokeFiles } from '@/api'
@@ -183,7 +184,7 @@ export function AttachmentViewer({
               </div>
             ) : (
               <div className="flex h-full flex-col items-center justify-center px-6">
-                <Paperclip className="size-7 text-muted-foreground/40" />
+                <ClaudeCrab className="size-7 text-muted-foreground/40" />
               </div>
             )}
           </>

@@ -5,8 +5,17 @@ const SITE = 'closeout-jobs'
 const FEED_PATH = `/sites/${SITE}/feed`
 const FILES_PATH = `/sites/${SITE}/files`
 const MESSAGES_PATH = `/sites/${SITE}/messages`
+const SESSION_PATH = `/sites/${SITE}/session`
 const OWNER_KEY = 'agent-keyboard-auth'
-const GOOGLE_KEY = 'job:google-id-token'
+const SESSION_KEY = 'job:viewer-session:v1'
+
+export const SESSION_EXPIRED_EVENT = 'job:session-expired'
+
+export interface ViewerSession {
+  sessionToken: string
+  exp: number
+  email: string
+}
 
 const STATUS = new Set<Status>([
   'new', 'drafted', 'sent', 'awaiting-reply', 'calendly-sent',
@@ -36,32 +45,51 @@ function ownerToken(): string | null {
   }
 }
 
-export function getGoogleToken(): string | null {
+function viewerSession(value: unknown): ViewerSession | null {
+  const item = object(value)
+  const sessionToken = string(item.sessionToken)
+  const exp = typeof item.exp === 'number' ? item.exp : Number.NaN
+  const email = string(item.email)
+  return sessionToken && Number.isFinite(exp) && exp * 1000 > Date.now() && email
+    ? { sessionToken, exp, email }
+    : null
+}
+
+export function getViewerSession(): ViewerSession | null {
   try {
-    return sessionStorage.getItem(GOOGLE_KEY)
+    const raw = localStorage.getItem(SESSION_KEY)
+    if (!raw) return null
+    const session = viewerSession(JSON.parse(raw))
+    if (!session) localStorage.removeItem(SESSION_KEY)
+    return session
   } catch {
     return null
   }
 }
 
-export function setGoogleToken(token: string): void {
+function storeViewerSession(session: ViewerSession): void {
   try {
-    sessionStorage.setItem(GOOGLE_KEY, token)
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session))
   } catch {
-    /* sessionStorage unavailable; App keeps the token in memory */
+    /* localStorage unavailable; App keeps the session in memory */
   }
 }
 
 export function clearGoogleToken(): void {
   try {
-    sessionStorage.removeItem(GOOGLE_KEY)
+    sessionStorage.clear()
   } catch {
     /* sessionStorage unavailable */
+  }
+  try {
+    localStorage.removeItem(SESSION_KEY)
+  } catch {
+    /* localStorage unavailable */
   }
 }
 
 export function getToken(): string | null {
-  return ownerToken() ?? getGoogleToken()
+  return ownerToken() ?? getViewerSession()?.sessionToken ?? null
 }
 
 export function canWrite(): boolean {
@@ -175,8 +203,28 @@ function authHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
+function handleViewerUnauthorized(status: number): void {
+  if (status !== 401 || ownerToken()) return
+  clearGoogleToken()
+  window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
+}
+
+export async function createViewerSession(idToken: string): Promise<ViewerSession> {
+  const res = await fetch(`${API}${SESSION_PATH}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken }),
+  })
+  if (!res.ok) throw new HttpError(res.status, `${SESSION_PATH} -> ${res.status}`)
+  const session = viewerSession(await res.json())
+  if (!session) throw new Error('Invalid viewer session response')
+  storeViewerSession(session)
+  return session
+}
+
 export async function fetchFeed(): Promise<Feed> {
   const res = await fetch(`${API}${FEED_PATH}`, { headers: authHeaders() })
+  handleViewerUnauthorized(res.status)
   if (!res.ok) throw new HttpError(res.status, `${FEED_PATH} -> ${res.status}`)
   return normalizeFeed(await res.json())
 }
@@ -189,6 +237,7 @@ export async function loadFile(path: string): Promise<string> {
   const routePath = path.startsWith('files/') ? path.slice('files/'.length) : path
   const encodedPath = routePath.split('/').map(encodeURIComponent).join('/')
   const res = await fetch(`${API}${FILES_PATH}/${encodedPath}`, { headers: authHeaders() })
+  handleViewerUnauthorized(res.status)
   if (!res.ok) throw new HttpError(res.status, `${FILES_PATH}/${routePath} -> ${res.status}`)
   const url = URL.createObjectURL(await res.blob())
   blobUrls.set(path, url)

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FileText, Inbox, Loader2, Paperclip } from 'lucide-react'
+import { FileText, Loader2, Paperclip } from 'lucide-react'
 import { AttachmentViewer } from '@/AttachmentViewer'
+import { ClaudeCrab } from '@/components/ClaudeCrab'
 import { DraftCard } from '@/components/DraftCard'
 import { FadeText } from '@/components/FadeText'
 import { chipLabel } from '@/components/FilterChips'
@@ -209,7 +210,7 @@ export function PipelineTab({
           )}
           {!initialLoading && filtered.length === 0 && (
             <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
-              <Inbox className="size-5 text-muted-foreground/50" />
+              <ClaudeCrab className="size-7 text-muted-foreground/40" />
               <p className="text-[12px] text-muted-foreground">No candidates match</p>
             </div>
           )}
@@ -292,7 +293,7 @@ export function PipelineTab({
           </>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
-            <Inbox className="size-5 text-muted-foreground/50" />
+            <ClaudeCrab className="size-7 text-muted-foreground/40" />
             <p className="text-[12px] text-muted-foreground">Select a candidate</p>
           </div>
         )}
