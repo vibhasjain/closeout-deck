@@ -1,0 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Strict B&W. Grayscale only; color reserved for confidence/status dots. */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 42%;
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 9%;
+    --border: 0 0% 90%;
+    --input: 0 0% 89%;
+    --ring: 0 0% 9%;
+    --radius: 0.6rem;
+
+    /* The only color in the product. */
+    --solid: 152 55% 38%;     /* green: earned, grounded */
+    --verify: 38 92% 45%;     /* amber: related, not exact */
+    --nosource: 0 72% 51%;    /* red: refuse / escalate */
+    --pending: 220 70% 52%;   /* blue: awaiting approval */
+    --internal: 24 84% 50%;   /* orange: the internal you<->agent back-channel */
+  }
+
+  /* pan-x pan-y (not `manipulation`, which still permits pinch) blocks pinch AND
+     double-tap zoom in CSS. On every element, not just the root — WebKit doesn't
+     reliably honor a root-only touch-action inside overflow scrollers. */
+  * { @apply border-border; touch-action: pan-x pan-y; }
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+  html, body, #root { @apply overflow-x-hidden; }
+  /* iOS auto-zooms when you focus an input smaller than 16px. Keep inputs at 16px on phones. */
+  @media (max-width: 767px) {
+    input, textarea, select { font-size: 16px !important; }
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+/* No-ellipsis truncation: a narrow fade on just the tail, never the whole block. */
+.fade-trunc {
+  overflow: hidden;
+  white-space: nowrap;
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 14px), transparent 100%);
+  mask-image: linear-gradient(to right, black calc(100% - 14px), transparent 100%);
+}
+.fade-clamp-2 {
+  overflow: hidden;
+  display: block;
+  max-height: 2.75em; /* two lines at leading-snug; no -webkit-line-clamp = no ellipsis */
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 18px), transparent 100%);
+  mask-image: linear-gradient(to right, black calc(100% - 18px), transparent 100%);
+}
+.clamp-2-noellipsis {
+  overflow: hidden;
+  display: block;
+  max-height: 2.75em;
+}
+
+/* No focus rings — the blue keyboard outline reads as a glitch in this UI. */
+*:focus,
+*:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
