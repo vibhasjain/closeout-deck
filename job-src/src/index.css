@@ -26,7 +26,6 @@
     --verify: 38 92% 45%;     /* amber: related, not exact */
     --nosource: 0 72% 51%;    /* red: refuse / escalate */
     --pending: 220 70% 52%;   /* blue: awaiting approval */
-    --internal: 24 84% 50%;   /* orange: the internal you<->agent back-channel */
   }
 
   /* pan-x pan-y (not `manipulation`, which still permits pinch) blocks pinch AND

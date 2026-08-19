@@ -146,14 +146,14 @@ function MessageBubble({
     <div
       className={cn(
         internal
-          ? 'max-w-[min(82%,42rem)] self-start rounded-lg border border-dashed border-internal/30 bg-internal/[0.06] px-3.5 py-2 font-mono text-[12.5px] leading-relaxed'
+          ? 'max-w-[min(82%,42rem)] self-start rounded-lg border bg-muted/50 px-3.5 py-2 font-mono text-[12.5px] leading-relaxed'
           : incoming
             ? 'max-w-[min(82%,42rem)] self-start rounded-lg border bg-muted/50 px-3.5 py-2.5 text-[13.5px] leading-relaxed'
             : 'max-w-[min(82%,42rem)] self-end rounded-lg border bg-card px-3.5 py-2.5 text-[13.5px] leading-relaxed',
       )}
     >
       <div className="mb-0.5 flex items-center justify-between gap-2">
-        <span className={cn('text-[10px] font-medium', internal ? 'text-internal' : 'text-muted-foreground')}>
+        <span className="text-[10px] font-medium text-muted-foreground">
           {label}
         </span>
         {incoming && <CopyButton text={stripMarkdown(entry.text)} />}
