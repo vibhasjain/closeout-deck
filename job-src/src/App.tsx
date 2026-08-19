@@ -35,7 +35,7 @@ export default function App() {
   const [initialLoading, setInitialLoading] = useState(true)
   const [refetching, setRefetching] = useState(false)
   const [mobileDetail, setMobileDetail] = useState(false)
-  const [filter, setFilter] = useState<PipelineFilter>('drafted')
+  const [filter, setFilter] = useState<PipelineFilter>('qualified')
   // The Agent Keyboard token survives a sign-out now, so remember the click.
   const [signedOut, setSignedOut] = useState(false)
   const loadGeneration = useRef(0)
@@ -46,9 +46,9 @@ export default function App() {
     return {
       all: candidates.length,
       new: candidates.filter((candidate) => candidate.status === 'new').length,
-      drafted: candidates.filter((candidate) => candidate.status === 'drafted').length,
-      'awaiting-reply': candidates.filter((candidate) => candidate.status === 'awaiting-reply').length,
       disqualified: candidates.filter((candidate) => candidate.status === 'disqualified').length,
+      qualified: candidates.filter((candidate) => candidate.status === 'qualified').length,
+      invited: candidates.filter((candidate) => candidate.status === 'invited').length,
     }
   }, [feed])
 

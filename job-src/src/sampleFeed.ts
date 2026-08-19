@@ -30,7 +30,7 @@ export const sampleFeed: Feed = {
       email: 'theo.example@example.com',
       appliedAt: '2026-08-17T19:20:00.000Z',
       source: 'linkedin',
-      status: 'drafted',
+      status: 'qualified',
       summary: 'Customer systems builder with early-stage recruiting experience.',
       thread: [
         {

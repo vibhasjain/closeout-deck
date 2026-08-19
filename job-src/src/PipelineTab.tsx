@@ -53,10 +53,8 @@ function persistRightPaneWidth(width: number): void {
 
 export const STATUS_CHIP: Record<Status, string> = {
   new: '',
-  drafted: 'border-transparent bg-pending/10 text-pending',
-  sent: 'border-transparent bg-muted text-muted-foreground',
-  'awaiting-reply': 'border-transparent bg-muted text-muted-foreground',
-  'calendly-sent': 'border-transparent bg-verify/10 text-verify',
+  qualified: 'border-transparent bg-pending/10 text-pending',
+  invited: 'border-transparent bg-muted text-muted-foreground',
   'meeting-scheduled': 'border-transparent bg-solid/10 text-solid',
   met: 'border-transparent bg-solid/10 text-solid',
   disqualified: 'border-transparent bg-nosource/10 text-nosource',

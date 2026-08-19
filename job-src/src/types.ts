@@ -1,6 +1,6 @@
 export type Status =
-  | 'new' | 'drafted' | 'sent' | 'awaiting-reply'
-  | 'calendly-sent' | 'meeting-scheduled' | 'met' | 'disqualified'
+  | 'new' | 'qualified' | 'invited'
+  | 'meeting-scheduled' | 'met' | 'disqualified'
 
 export interface Attachment { name: string; path: string }
 

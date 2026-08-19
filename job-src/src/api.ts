@@ -1,5 +1,6 @@
-import type { Attachment, Candidate, Draft, Feed, Meeting, Status, ThreadEntry, TrailEntry } from './types'
+import type { Attachment, Candidate, Draft, Feed, Meeting, ThreadEntry, TrailEntry } from './types'
 import { safeHttpUrl } from './lib/links'
+import { parseStatus } from './lib/status'
 
 const API = 'https://agent-keyboard.fly.dev'
 const SITE = 'closeout-jobs'
@@ -20,10 +21,6 @@ export interface ViewerSession {
   email: string
 }
 
-const STATUS = new Set<Status>([
-  'new', 'drafted', 'sent', 'awaiting-reply', 'calendly-sent',
-  'meeting-scheduled', 'met', 'disqualified',
-])
 const blobUrls = new Map<string, string>()
 
 export class HttpError extends Error {
@@ -204,8 +201,7 @@ function trailEntry(value: unknown): TrailEntry | null {
 
 function candidate(value: unknown, index: number): Candidate {
   const item = object(value)
-  const rawStatus = string(item.status)
-  const status = STATUS.has(rawStatus as Status) ? rawStatus as Status : 'new'
+  const status = parseStatus(item.status)
   const thread = Array.isArray(item.thread)
     ? item.thread.map((entry, entryIndex) => threadEntry(entry, entryIndex))
     : []
