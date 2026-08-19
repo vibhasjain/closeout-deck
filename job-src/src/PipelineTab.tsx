@@ -152,8 +152,10 @@ export function PipelineTab({
 
   useEffect(() => {
     // Key this to candidate changes so closing a single attachment does not
-    // reopen it during a background poll.
-    setAttachment(attachments.length === 1 ? attachments[0] : null)
+    // reopen it during a background poll. On mobile the viewer is a full-screen
+    // takeover, so never auto-open there — it would hide the candidate list.
+    const desktop = window.matchMedia('(min-width: 768px)').matches
+    setAttachment(desktop && attachments.length === 1 ? attachments[0] : null)
   }, [selectedId])
 
   useEffect(() => {
