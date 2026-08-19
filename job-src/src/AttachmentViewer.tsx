@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Download, FileText, Maximize2, Share2, X } from 'lucide-react'
+import { Download, ExternalLink, FileText, Maximize2, Share2, X } from 'lucide-react'
 import * as mammoth from 'mammoth'
 import { ClaudeCrab } from '@/components/ClaudeCrab'
 import { Button, Skeleton } from '@/components/ui'
 import { FadeText } from '@/components/FadeText'
 import { loadFile, revokeFiles } from '@/api'
 import { cn } from '@/lib/utils'
+import { safeHttpUrl } from '@/lib/links'
 import type { Attachment, Candidate } from '@/types'
 
 // Clipboards can't hold a PDF — the browsers only take text and images — so the
@@ -38,7 +39,17 @@ function sanitizeMammothHtml(html: string): string {
   return document.body.innerHTML
 }
 
-function Preview({ attachment, url, docxHtml }: { attachment: Attachment; url: string; docxHtml: string | null }) {
+function Preview({
+  attachment,
+  url,
+  docxHtml,
+  linkedinUrl,
+}: {
+  attachment: Attachment
+  url: string
+  docxHtml: string | null
+  linkedinUrl?: string
+}) {
   const ext = extension(attachment.name)
   if (ext === 'pdf') {
     return <iframe src={url} className="h-full w-full border-0" title={attachment.name} />
@@ -50,6 +61,26 @@ function Preview({ attachment, url, docxHtml }: { attachment: Attachment; url: s
           className="mx-auto max-w-[52rem] break-words [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-neutral-300 [&_blockquote]:pl-3 [&_h1]:mb-3 [&_h1]:mt-5 [&_h1]:text-xl [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:font-semibold [&_img]:max-w-full [&_li]:my-1 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:my-2.5 [&_table]:my-4 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-neutral-300 [&_td]:p-2 [&_th]:border [&_th]:border-neutral-300 [&_th]:bg-neutral-100 [&_th]:p-2 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6"
           dangerouslySetInnerHTML={{ __html: docxHtml }}
         />
+      </div>
+    )
+  }
+  if (attachment.name.toLowerCase() === 'linkedin-profile.png') {
+    return (
+      <div className="h-full w-full overflow-y-auto bg-white">
+        {linkedinUrl && (
+          <div className="border-b bg-background px-4 py-2.5 md:px-5">
+            <a
+              href={linkedinUrl}
+              target="_blank"
+              rel="noopener"
+              className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground underline decoration-border underline-offset-2 hover:text-foreground"
+            >
+              Open on LinkedIn
+              <ExternalLink className="size-2.5" aria-hidden="true" />
+            </a>
+          </div>
+        )}
+        <img src={url} alt={`${attachment.name} for candidate`} className="block h-auto w-full" />
       </div>
     )
   }
@@ -75,12 +106,14 @@ function ViewerBody({
   docxHtml,
   loading,
   error,
+  linkedinUrl,
 }: {
   attachment: Attachment
   url: string | null
   docxHtml: string | null
   loading: boolean
   error: string
+  linkedinUrl?: string
 }) {
   if (loading) {
     return (
@@ -92,7 +125,7 @@ function ViewerBody({
     )
   }
   if (error) return <p className="px-5 py-4 text-[12.5px] text-nosource">{error}</p>
-  return url ? <Preview attachment={attachment} url={url} docxHtml={docxHtml} /> : null
+  return url ? <Preview attachment={attachment} url={url} docxHtml={docxHtml} linkedinUrl={linkedinUrl} /> : null
 }
 
 export function AttachmentViewer({
@@ -113,6 +146,7 @@ export function AttachmentViewer({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [lightbox, setLightbox] = useState(false)
+  const linkedinUrl = safeHttpUrl(candidate?.linkedinUrl)
 
   useEffect(() => {
     setUrl(null)
@@ -236,7 +270,7 @@ export function AttachmentViewer({
           <>
             {header(onClose, true)}
             <div className="min-h-0 flex-1">
-              <ViewerBody attachment={attachment} url={url} docxHtml={docxHtml} loading={loading} error={error} />
+              <ViewerBody attachment={attachment} url={url} docxHtml={docxHtml} loading={loading} error={error} linkedinUrl={linkedinUrl} />
             </div>
           </>
         ) : (
@@ -275,7 +309,7 @@ export function AttachmentViewer({
           <div className="fixed inset-4 z-50 flex flex-col rounded-xl border bg-background shadow-xl animate-fade-in">
             {header(() => setLightbox(false), false)}
             <div className="min-h-0 flex-1">
-              <ViewerBody attachment={attachment} url={url} docxHtml={docxHtml} loading={loading} error={error} />
+              <ViewerBody attachment={attachment} url={url} docxHtml={docxHtml} loading={loading} error={error} linkedinUrl={linkedinUrl} />
             </div>
           </div>
         </>

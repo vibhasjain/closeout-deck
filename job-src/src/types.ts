@@ -31,6 +31,7 @@ export interface Candidate {
   id: string                 // "c-<slug>"
   name: string
   email: string
+  linkedinUrl?: string
   appliedAt: string
   source: 'email' | 'linkedin'
   status: Status

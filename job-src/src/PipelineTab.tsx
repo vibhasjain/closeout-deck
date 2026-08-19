@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FileText, Paperclip } from 'lucide-react'
+import { ExternalLink, FileText, Mail, Paperclip } from 'lucide-react'
 import { AttachmentViewer } from '@/AttachmentViewer'
 import { ClaudeCrab } from '@/components/ClaudeCrab'
 import { DraftCard } from '@/components/DraftCard'
@@ -8,6 +8,7 @@ import { chipLabel } from '@/components/FilterChips'
 import { ListToolbar } from '@/components/ListToolbar'
 import { Badge, CopyButton, Skeleton } from '@/components/ui'
 import { filterCandidates, type CandidateFilter } from '@/lib/filter'
+import { linkifyHttpText, safeHttpUrl } from '@/lib/links'
 import { stripMarkdown } from '@/lib/stripMarkdown'
 import { cn, shortDate, shortTime } from '@/lib/utils'
 import type { Attachment, Candidate, Feed, Meeting, Status, ThreadEntry } from '@/types'
@@ -38,6 +39,57 @@ function candidateAttachments(candidate: Candidate | undefined): Attachment[] {
     }
   }
   return [...byPath.values()]
+}
+
+function autoOpenAttachment(attachments: Attachment[]): Attachment | null {
+  const hasResume = attachments.some((item) => ['pdf', 'docx'].includes(item.name.split('.').pop()?.toLowerCase() ?? ''))
+  const linkedinProfile = attachments.find((item) => item.name.toLowerCase() === 'linkedin-profile.png')
+  if (!hasResume && linkedinProfile) return linkedinProfile
+  return attachments.length === 1 ? attachments[0] : null
+}
+
+function SourceIcon({ source }: { source: Candidate['source'] }) {
+  const label = source === 'linkedin' ? 'LinkedIn source' : 'Email source'
+  return (
+    <span className="shrink-0 text-muted-foreground/55" aria-label={label} title={label}>
+      {source === 'linkedin'
+        ? (
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="size-3"
+              aria-hidden="true"
+            >
+              <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6Z" />
+              <path d="M2 9h4v12H2z" />
+              <circle cx="4" cy="4" r="2" />
+            </svg>
+          )
+        : <Mail className="size-3" aria-hidden="true" />}
+    </span>
+  )
+}
+
+function LinkifiedMessageText({ text }: { text: string }) {
+  return (
+    <>
+      {linkifyHttpText(stripMarkdown(text)).map((part, index) => part.href ? (
+        <a
+          key={`${part.href}-${index}`}
+          href={part.href}
+          target="_blank"
+          rel="noopener"
+          className="break-all underline decoration-foreground/30 underline-offset-2 hover:decoration-foreground"
+        >
+          {part.text}
+        </a>
+      ) : part.text)}
+    </>
+  )
 }
 
 function MessageBubble({
@@ -77,7 +129,7 @@ function MessageBubble({
       {entry.subject && (
         <FadeText text={entry.subject} className="mb-1 text-[11px] font-medium" />
       )}
-      <p className="whitespace-pre-wrap">{stripMarkdown(entry.text)}</p>
+      <p className="whitespace-pre-wrap"><LinkifiedMessageText text={entry.text} /></p>
       {attachments.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {attachments.map((attachment) => (
@@ -108,7 +160,7 @@ export function PipelineTab({
   onMobileDetail: (open: boolean) => void
 }) {
   const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState<CandidateFilter>('all')
+  const [filter, setFilter] = useState<CandidateFilter>('drafted')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [attachment, setAttachment] = useState<Attachment | null>(null)
   const autoSelected = useRef(false)
@@ -119,6 +171,7 @@ export function PipelineTab({
     [candidates, filter, query],
   )
   const selected = selectedId ? candidates.find((candidate) => candidate.id === selectedId) : undefined
+  const selectedLinkedinUrl = safeHttpUrl(selected?.linkedinUrl)
   const selectedMeeting = useMemo(
     () => (feed?.meetings ?? []).reduce<Meeting | undefined>(
       (latest, meeting) => {
@@ -141,17 +194,17 @@ export function PipelineTab({
   }, [onMobileDetail])
 
   useEffect(() => {
-    if (autoSelected.current || candidates.length === 0) return
+    if (autoSelected.current || filtered.length === 0) return
     autoSelected.current = true
-    setSelectedId(candidates[0].id)
-  }, [candidates])
+    setSelectedId(filtered[0].id)
+  }, [filtered])
 
   useEffect(() => {
     // Key this to candidate changes so closing a single attachment does not
     // reopen it during a background poll. On mobile the viewer is a full-screen
     // takeover, so never auto-open there — it would hide the candidate list.
     const desktop = window.matchMedia('(min-width: 768px)').matches
-    setAttachment(desktop && attachments.length === 1 ? attachments[0] : null)
+    setAttachment(desktop ? autoOpenAttachment(attachments) : null)
   }, [selectedId])
 
   useEffect(() => {
@@ -227,6 +280,7 @@ export function PipelineTab({
               >
                 <div className="flex items-center justify-between gap-2">
                   <FadeText text={candidate.name} className="min-w-0 flex-1 text-[12.5px] font-medium" />
+                  <SourceIcon source={candidate.source} />
                   <StatusBadge status={candidate.status} />
                   {hasAttachments && <Paperclip className="size-3 shrink-0 text-muted-foreground" />}
                 </div>
@@ -244,16 +298,29 @@ export function PipelineTab({
         {selected ? (
           <>
             <div className="flex h-14 shrink-0 items-center justify-between border-b px-4 md:px-5">
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <h2 className="text-[14px] font-semibold leading-snug">
                   <FadeText text={selected.name} />
                 </h2>
-                <FadeText
-                  text={selectedMeeting && selectedMeeting.status !== 'canceled'
-                    ? `${selected.email} · Meeting ${shortDate(selectedMeeting.at)} ${shortTime(selectedMeeting.at)}`
-                    : selected.email}
-                  className="font-mono text-[11px] text-muted-foreground"
-                />
+                <div className="flex min-w-0 items-center gap-2">
+                  <FadeText
+                    text={selectedMeeting && selectedMeeting.status !== 'canceled'
+                      ? `${selected.email} · Meeting ${shortDate(selectedMeeting.at)} ${shortTime(selectedMeeting.at)}`
+                      : selected.email}
+                    className="min-w-0 font-mono text-[11px] text-muted-foreground"
+                  />
+                  {selectedLinkedinUrl && (
+                    <a
+                      href={selectedLinkedinUrl}
+                      target="_blank"
+                      rel="noopener"
+                      className="flex shrink-0 items-center gap-1 text-[11px] font-medium text-muted-foreground underline decoration-border underline-offset-2 hover:text-foreground"
+                    >
+                      LinkedIn
+                      <ExternalLink className="size-2.5" aria-hidden="true" />
+                    </a>
+                  )}
+                </div>
               </div>
               <StatusBadge status={selected.status} className="ml-3" />
             </div>

@@ -1,4 +1,5 @@
 import type { Attachment, Candidate, Draft, Feed, Meeting, Status, ThreadEntry, TrailEntry } from './types'
+import { safeHttpUrl } from './lib/links'
 
 const API = 'https://agent-keyboard.fly.dev'
 const SITE = 'closeout-jobs'
@@ -212,10 +213,12 @@ function candidate(value: unknown, index: number): Candidate {
   const trail = Array.isArray(item.trail)
     ? item.trail.map(trailEntry).filter((entry): entry is TrailEntry => entry !== null)
     : []
+  const linkedinUrl = safeHttpUrl(item.linkedinUrl)
   return {
     id: string(item.id, `c-malformed-${index}`),
     name: string(item.name, 'Unknown candidate'),
     email: string(item.email),
+    ...(linkedinUrl ? { linkedinUrl } : {}),
     appliedAt: string(item.appliedAt),
     source: item.source === 'linkedin' ? 'linkedin' : 'email',
     status,
