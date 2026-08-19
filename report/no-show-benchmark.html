@@ -1,0 +1,908 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9Ii04IC0xIDExMCAxMTAiPjxnIGZpbGw9IiNDNDQ1MzYiPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDM1LDI0KSI+PHBhdGggZD0iTTExLjI3OSwxMi44OTUgQzUuNDkyLDEyLjg5NSAwLjYwMywxMC4wNTcgMC42MDMsNi42OTcgQzAuNjAzLDMuMzM3IDUuNDkyLDAuNDk4IDExLjI3OSwwLjQ5OCBDMTcuMDY1LDAuNDk4IDIxLjk1NSwzLjMzNyAyMS45NTUsNi42OTcgQzIxLjk1NSwxMC4wNTcgMTcuMDY1LDEyLjg5NSAxMS4yNzksMTIuODk1Ii8+PC9nPjxwYXRoIGQ9Ik05MS41OTUsMjguODAyIEM5MS41NTYsMjguNzI0IDkxLjUxNiwyOC42NDggOTEuNDcyLDI4LjU3NCBDOTEuMzU0LDI4LjM3NSA5MS4yMTcsMjguMTkxIDkxLjA2OSwyOC4wMTMgQzkxLjAwNCwyNy45MzYgOTAuOTQ4LDI3Ljg1MyA5MC44NzgsMjcuNzgxIEM5MC44NiwyNy43NiA5MC44NDYsMjcuNzM3IDkwLjgyNiwyNy43MTggQzkwLjYxNiwyNy41MDggOTAuMzg3LDI3LjMyNyA5MC4xNDMsMjcuMTY4IEM5MC4xMzUsMjcuMTYzIDkwLjEzLDI3LjE1NSA5MC4xMjIsMjcuMTUgTDQ4LjUzOCwwLjcxOCBDNDcuODYxLDAuMjg4IDQ3LjA4LDAuMDYgNDYuMjc4LDAuMDYgQzQ1LjQ3NiwwLjA2IDQ0LjY5NCwwLjI4OCA0NC4wMTcsMC43MTYgTDIuNDM5LDI3LjE1IEMyLjQwMiwyNy4xNzMgMi4zNzcsMjcuMjA3IDIuMzQxLDI3LjIzMSBDMi4wODQsMjcuNDA0IDEuODQxLDI3LjYgMS42MjYsMjcuODI2IEMxLjYyNSwyNy44MjYgMS42MjUsMjcuODI3IDEuNjI0LDI3LjgyOCBDMS42MiwyNy44MzIgMS42MTcsMjcuODM3IDEuNjEzLDI3Ljg0MSBDMS4zODIsMjguMDg2IDEuMTk2LDI4LjM2IDEuMDMyLDI4LjY0NiBDMS4wMTgsMjguNjcxIDEuMDA2LDI4LjY5NyAwLjk5MiwyOC43MjMgQzAuNjU4LDI5LjMzNSAwLjQ2NSwzMC4wMTcgMC40NjUsMzAuNzMgTDAuNDY1LDc3LjAyOSBDMC40NjUsNzguNDgyIDEuMTk4LDc5LjgxMyAyLjQyOSw4MC41OTMgTDQ0LjAxMywxMDcuMDQgQzQ0LjY5LDEwNy40NzIgNDUuNDczLDEwNy42OTkgNDYuMjc4LDEwNy42OTkgQzQ3LjA4MywxMDcuNjk5IDQ3Ljg2NiwxMDcuNDcxIDQ4LjU0NSwxMDcuMDQgTDkwLjEzLDgwLjU5MSBDOTEuMzU5LDc5LjgxNCA5Mi4wOTMsNzguNDgyIDkyLjA5Myw3Ny4wMjkgTDkyLjA5MywzMC43MyBDOTIuMDkzLDMwLjA2IDkxLjkwNiwyOS40MDEgOTEuNTk1LDI4LjgwMiBaIE00Ny42NjgwNjg2LDc5LjY4NzgxNDYgQzQ3Ljg4NDg3NTUsNzkuNjA3MDk2NCA0OC4wOTQzOTg1LDc5LjUwMDQ2ODEgNDguMjkxOTk5MSw3OS4zNjc5ODc5IEw2NC4zODExNDI3LDY4LjU4MTExMiBDNjQuMzc0NTc1Miw2Ny4xMjIxMzM2IDY0LjY0Mzk0NjUsNjUuNTM5NzU5NSA2NS4yMTkwMjg0LDYzLjk1OTczNSBDNjcuMDA3ODA1OSw1OS4wNDUxMDkyIDcxLjA3Njk3NTcsNTYuMDE0Mjg0OCA3NC4zMDc3NzM3LDU3LjE5MDE5OTEgQzc3LjUzODU3MTcsNTguMzY2MTEzNCA3OC43MDc1NjAzLDYzLjMwMzQ3MTYgNzYuOTE4NzgyOCw2OC4yMTgwOTczIEM3NS4xMzAwMDUzLDczLjEzMjcyMyA3MS4wNjA4MzU0LDc2LjE2MzU0NzUgNjcuODMwMDM3NCw3NC45ODc2MzMyIEM2Ni44MjM1ODgxLDc0LjYyMTMxNTYgNjYuMDE3MjIyOSw3My44ODk5NzYxIDY1LjQzODAyNzIsNzIuOTA4MDEyNyBMNTAuNTE5NDgxNSw4Mi42OTAzODQ5IEM0OS42NDQ1MzQ5LDgzLjI3Njk4OCA0OC42Njk0MDkyLDgzLjY0NjM3MDQgNDcuNjY4MDY4Niw4My43OTc2MDEgTDQ3LjY2ODA2ODYsMTAwLjk4NTg1NSBMNDcuNjY4MDY4Niw4My43OTc2MDEgQzQ2LjAzMTM5MjIsODQuMDQ0Nzg1MiA0NC4zMjQ2ODE2LDgzLjcwOTE2NzUgNDIuODcwOTA4NSw4Mi43ODY2ODE1IEwwLjYxMjY0NDg2Miw1Ni40NDExMjU5IEwwLjYxMjY0NDg2Miw1MC44NTgyNzA1IEw0NS4wMTQwMzkzLDc5LjQwOTI1NzggQzQ1LjgxNzM5OTIsNzkuOTE5MDI2NyA0Ni44MDA5ODUsODAuMDEwNjMzNyA0Ny42NjgwNjg2LDc5LjY4NzgxNDYgTDQ3LjY2ODA2ODYsNTUuOTAwNjIwMiBMNDcuNjY4MDY4Niw3OS42ODc4MTQ2IFogTTQ2LjI3OCw5LjI2IEw4MC4wMDUsMzAuNjk2IEw0Ni4yNzgsNTIuMTY0IEwxMi41NSwzMC42OTcgTDQ2LjI3OCw5LjI2IFoiLz48L2c+PC9zdmc+">
+<title>No-Show: The 2026 Staffing Benchmark</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page:        #f7f9f8;
+    --surface:     #fdfefd;
+    --ink:         #131715;
+    --ink-2:       #4d5551;
+    --ink-3:       #86908a;
+    --grid:        #e2e7e4;
+    --baseline:    #c4ccc8;
+    --ring:        rgba(19,23,21,0.10);
+    --accent:      #0a8153;
+    --accent-ink:  #06603d;
+    --wash:        #eaf3ee;
+    --s-li:        #2a78d6;  /* Light Industrial */
+    --s-hc:        #eb6834;  /* Healthcare */
+    --s-unm:       #a8b0ab;
+    --ramp-1:      #86b6ef;
+    --ramp-2:      #5598e7;
+    --ramp-3:      #1c5cab;
+    --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+    --serif: "Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page:        #0f1211;
+      --surface:     #171b19;
+      --ink:         #edf1ee;
+      --ink-2:       #b4bdb7;
+      --ink-3:       #7d8781;
+      --grid:        #262c29;
+      --baseline:    #39413d;
+      --ring:        rgba(237,241,238,0.10);
+      --accent:      #2fc98d;
+      --accent-ink:  #2fc98d;
+      --wash:        #16241d;
+      --s-li:        #3987e5;
+      --s-hc:        #d95926;
+      --s-unm:       #5b635e;
+      --ramp-1:      #86b6ef;
+      --ramp-2:      #5598e7;
+      --ramp-3:      #6da7ec;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page:        #0f1211;
+    --surface:     #171b19;
+    --ink:         #edf1ee;
+    --ink-2:       #b4bdb7;
+    --ink-3:       #7d8781;
+    --grid:        #262c29;
+    --baseline:    #39413d;
+    --ring:        rgba(237,241,238,0.10);
+    --accent:      #2fc98d;
+    --accent-ink:  #2fc98d;
+    --wash:        #16241d;
+    --s-li:        #3987e5;
+    --s-hc:        #d95926;
+    --s-unm:       #5b635e;
+    --ramp-1:      #86b6ef;
+    --ramp-2:      #5598e7;
+    --ramp-3:      #6da7ec;
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --page:        #f7f9f8;
+    --surface:     #fdfefd;
+    --ink:         #131715;
+    --ink-2:       #4d5551;
+    --ink-3:       #86908a;
+    --grid:        #e2e7e4;
+    --baseline:    #c4ccc8;
+    --ring:        rgba(19,23,21,0.10);
+    --accent:      #0a8153;
+    --accent-ink:  #06603d;
+    --wash:        #eaf3ee;
+    --s-li:        #2a78d6;
+    --s-hc:        #eb6834;
+    --s-unm:       #a8b0ab;
+    --ramp-1:      #86b6ef;
+    --ramp-2:      #5598e7;
+    --ramp-3:      #1c5cab;
+  }
+
+  html { background: var(--page); }
+  body {
+    font-family: var(--sans);
+    color: var(--ink);
+    background: var(--page);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 24px 96px; }
+  .prose { max-width: 700px; }
+  .prose p { margin: 0 0 1em; color: var(--ink-2); font-size: 16.5px; }
+  .prose p strong { color: var(--ink); font-weight: 600; }
+  a { color: var(--accent-ink); }
+
+  /* ---------- masthead ---------- */
+  .masthead { padding: 56px 0 8px; }
+  .brandline {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+    border-bottom: 2px solid var(--ink); padding-bottom: 14px; margin-bottom: 44px;
+  }
+  .brand-logo { height: 24px; width: auto; display: block; }
+  .brand-logo-sm { height: 15px; width: auto; display: inline-block; }
+  .edition { font-size: 12.5px; color: var(--ink-3); letter-spacing: .08em; text-transform: uppercase; }
+  .eyebrow {
+    font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent-ink); margin: 0 0 18px;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 500; font-size: clamp(34px, 5.4vw, 54px);
+    line-height: 1.08; letter-spacing: -0.01em; margin: 0 0 22px; text-wrap: balance; max-width: 21ch;
+  }
+  .deck {
+    font-size: 19px; line-height: 1.5; color: var(--ink-2); max-width: 640px; margin: 0 0 12px;
+    text-wrap: pretty;
+  }
+  .deck strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- stat band ---------- */
+  .statband {
+    display: grid; grid-template-columns: 1fr 1.4fr; gap: 1px;
+    background: var(--ring); border: 1px solid var(--ring); border-radius: 10px;
+    overflow: hidden; margin: 44px 0 0;
+  }
+  .stat { background: var(--surface); padding: 20px 20px 18px; }
+  .stat .v { font-size: 32px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.1; color: var(--ink-2); }
+  .stat .k { font-size: 12.5px; color: var(--ink-3); margin-top: 6px; line-height: 1.35; }
+  .stat .mini { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink-3); margin-bottom: 9px; }
+  .stat.hero { background: var(--wash); box-shadow: inset 0 3px 0 var(--accent); }
+  .stat.hero .mini { color: var(--accent-ink); }
+  .stat.hero .v { font-size: 50px; color: var(--accent-ink); }
+  .stat.hero .k { color: var(--ink-2); }
+  @media (max-width: 720px) {
+    .statband { grid-template-columns: 1fr 1fr; }
+    .stat.hero { grid-column: 1 / -1; }
+  }
+
+  /* ---------- sections ---------- */
+  section { margin-top: 84px; }
+  .sec-eyebrow {
+    display: flex; align-items: center; gap: 12px;
+    font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--ink-3); margin-bottom: 14px;
+  }
+  .sec-eyebrow::after { content: ""; flex: 1; height: 1px; background: var(--grid); }
+  h2 {
+    font-family: var(--serif); font-weight: 500; font-size: clamp(26px, 3.6vw, 34px);
+    line-height: 1.15; margin: 0 0 18px; letter-spacing: -0.005em; text-wrap: balance; max-width: 26ch;
+  }
+  h3 { font-size: 16px; font-weight: 650; margin: 34px 0 10px; }
+  h4 { font-size: 14.5px; font-weight: 650; margin: 28px 0 8px; color: var(--ink-2); }
+
+  .defcard {
+    background: var(--wash); border-left: 3px solid var(--accent);
+    border-radius: 0 10px 10px 0; padding: 18px 22px; margin: 26px 0; max-width: 700px;
+  }
+  .defcard .t { font-size: 12px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-ink); margin-bottom: 6px; }
+  .defcard p { margin: 0; font-size: 15.5px; color: var(--ink-2); }
+  .defcard p strong { color: var(--ink); }
+
+  /* ---------- chart shells ---------- */
+  .fig {
+    background: var(--surface); border: 1px solid var(--ring); border-radius: 12px;
+    padding: 26px 28px 22px; margin: 30px 0 10px; overflow-x: auto;
+  }
+  .fig-title { font-size: 15.5px; font-weight: 650; margin: 0 0 2px; }
+  .clock-lab { font-size: 11.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); margin: 12px 0 0; }
+  .fig-sub { font-size: 13px; color: var(--ink-3); margin: 0 0 20px; }
+  .fig-note { font-size: 12.5px; color: var(--ink-3); margin: 16px 0 0; line-height: 1.5; }
+  .fig-note strong { color: var(--ink); }
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin: 0 0 18px; font-size: 13px; color: var(--ink-2); }
+  .legend .chip { display: inline-flex; align-items: center; gap: 7px; }
+  .legend .sw { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+
+  /* horizontal bar rows */
+  .brow { display: grid; grid-template-columns: 190px 1fr 52px; align-items: center; gap: 12px; margin: 7px 0; }
+  .brow .lbl { font-size: 13.5px; color: var(--ink-2); text-align: right; line-height: 1.25; }
+  .brow .lbl .tag { display: block; font-size: 11px; color: var(--ink-3); letter-spacing: .02em; }
+  #firstsignal .lbl { height: 14px; display: flex; align-items: center; justify-content: flex-end; }
+  .track .reason-in {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    font-size: 10.5px; font-weight: 650; letter-spacing: .01em; white-space: nowrap;
+    color: var(--rc); pointer-events: none;
+  }
+  .brow .val { font-size: 13.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .track { position: relative; height: 22px; background: transparent; }
+  .track.slim { height: 14px; }
+  .track .grid-l { position: absolute; top: -4px; bottom: -4px; width: 1px; background: var(--grid); }
+  .bar {
+    position: absolute; top: 0; bottom: 0; left: 0; border-radius: 0 4px 4px 0;
+    min-width: 3px; cursor: default;
+  }
+  .bar:hover { filter: brightness(1.08); }
+  .marker { position: absolute; top: -6px; bottom: -6px; width: 2px; background: var(--ink); opacity: .55; }
+  .axisrow { display: grid; grid-template-columns: 190px 1fr 52px; gap: 12px; margin-top: 10px; }
+  .axis { position: relative; height: 16px; font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .axis span { position: absolute; transform: translateX(-50%); }
+  .group-gap { height: 12px; }
+  @media (max-width: 680px) {
+    .brow { grid-template-columns: 120px 1fr 46px; }
+    .axisrow { grid-template-columns: 120px 1fr 46px; }
+    .brow .lbl { font-size: 12px; }
+  }
+
+  /* stacked strip */
+  .strip { display: flex; height: 44px; border-radius: 6px; overflow: hidden; gap: 2px; margin: 8px 0 14px; }
+  .strip .seg { position: relative; cursor: default; }
+  .strip .seg:hover { filter: brightness(1.08); }
+  .seg-lbls { display: flex; gap: 2px; margin-bottom: 8px; }
+  .seg-lbl { font-size: 12.5px; color: var(--ink-2); line-height: 1.3; padding-top: 8px; }
+  .seg-lbl b { display: block; font-size: 14px; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  /* tables */
+  .tbl-wrap { overflow-x: auto; margin: 26px 0 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th {
+    text-align: right; font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase;
+    color: var(--ink-3); font-weight: 600; padding: 8px 14px; border-bottom: 1px solid var(--baseline);
+    white-space: nowrap;
+  }
+  th:first-child, td:first-child { text-align: left; padding-left: 4px; }
+  tr.grouprow th { border-bottom: none; padding: 0; }
+  th.ag, td.ag { background: color-mix(in oklab, var(--accent) 8%, transparent); }
+  th.agtop {
+    text-align: center; text-transform: uppercase; font-size: 10.5px; letter-spacing: .09em;
+    font-weight: 700; color: var(--accent-ink); padding: 7px 14px 5px; border-bottom: none;
+    border-radius: 7px 7px 0 0;
+  }
+  td.ag, th.ag { border-bottom-color: color-mix(in oklab, var(--accent) 16%, var(--grid)); }
+  tr.agg td.ag { border-top-color: color-mix(in oklab, var(--accent) 22%, var(--baseline)); }
+  td { padding: 9px 14px; text-align: right; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; color: var(--ink-2); }
+  td.name { color: var(--ink); font-weight: 550; white-space: nowrap; }
+  td .sec-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 8px; vertical-align: baseline; }
+  tr.agg td { border-top: 2px solid var(--baseline); color: var(--ink); font-weight: 650; }
+
+  /* industry range chart */
+  .rrow { display: grid; grid-template-columns: 150px 1fr; gap: 14px; align-items: center; margin: 26px 0; }
+  .rrow .lbl { font-size: 13.5px; font-weight: 600; text-align: right; }
+  .rtrack { position: relative; height: 44px; }
+  .rtrack .rline { position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--grid); }
+  .rband { position: absolute; top: 10px; bottom: 10px; border-radius: 12px; opacity: .30; cursor: default; }
+  .rtick { position: absolute; top: 4px; bottom: 4px; width: 3px; border-radius: 2px; cursor: default; }
+  .rtick.med { width: 4px; }
+  .rlab { position: absolute; top: 100%; transform: translateX(-50%); font-size: 11px; color: var(--ink-3); white-space: nowrap; padding-top: 3px; font-variant-numeric: tabular-nums; }
+  .rlab b { color: var(--ink); font-weight: 650; }
+  .raxis { position: relative; height: 16px; font-size: 11px; color: var(--ink-3); margin-top: 28px; font-variant-numeric: tabular-nums; }
+  .raxis span { position: absolute; transform: translateX(-50%); }
+  .raxisrow { display: grid; grid-template-columns: 150px 1fr; gap: 14px; }
+  @media (max-width: 680px) {
+    .rrow, .raxisrow { grid-template-columns: 96px 1fr; }
+  }
+
+  /* playbook */
+  .plays { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 30px 0 10px; }
+  .play { background: var(--surface); border: 1px solid var(--ring); border-radius: 12px; padding: 18px 20px 16px; box-shadow: inset 0 3px 0 var(--accent); }
+  .play .pk { font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent-ink); margin-bottom: 8px; }
+  .play .pstat { float: right; font-size: 26px; font-weight: 650; letter-spacing: -0.01em; color: var(--accent-ink); margin: -4px 0 6px 12px; text-align: right; }
+  .play .pstat small { display: block; font-size: 10.5px; font-weight: 600; letter-spacing: .02em; color: var(--ink-3); margin-bottom: 1px; }
+  .play .pt { font-size: 15.5px; font-weight: 650; margin: 0 0 6px; }
+  .play p { margin: 0; font-size: 13.5px; color: var(--ink-2); line-height: 1.5; }
+  .play.wide { grid-column: 1 / -1; }
+  @media (max-width: 680px) { .plays { grid-template-columns: 1fr; } }
+
+  /* pull quote / takeaway */
+  .takeaway {
+    font-family: var(--serif); font-size: clamp(20px, 2.8vw, 25px); line-height: 1.35;
+    max-width: 620px; margin: 40px 0; padding-left: 22px; border-left: 3px solid var(--accent);
+    text-wrap: pretty;
+  }
+  .takeaway .num { color: var(--accent-ink); font-weight: 600; }
+
+  /* footer */
+  .basis { margin-top: 70px; font-size: 12.5px; color: var(--ink-3); line-height: 1.6; max-width: 720px; }
+  .basis + .basis { margin-top: 10px; }
+  footer {
+    margin-top: 28px; border-top: 2px solid var(--ink); padding-top: 18px;
+    display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    font-size: 13px; color: var(--ink-3);
+  }
+  footer .fb { color: var(--ink); font-weight: 650; display: inline-flex; align-items: center; gap: 9px; }
+
+  /* tooltip */
+  #tip {
+    position: fixed; z-index: 50; pointer-events: none; opacity: 0; transition: opacity .12s;
+    background: var(--ink); color: var(--page); font-size: 12.5px; line-height: 1.45;
+    padding: 8px 11px; border-radius: 7px; max-width: 270px;
+    font-variant-numeric: tabular-nums;
+  }
+  #tip b { display: block; font-size: 12px; }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+  /* high-volume state markers: vertical tick above the band, state code at its top (two stagger levels) */
+  .rvol { position: absolute; bottom: 12px; width: 2px; transform: translateX(-50%); border-radius: 1px; opacity: .9; cursor: default; }
+  .rvlab { position: absolute; bottom: 100%; transform: translateX(-50%); font-size: 10.5px; font-weight: 650; white-space: nowrap; font-variant-numeric: tabular-nums; cursor: default; }
+  .rvlab.lo { margin-bottom: 10px; }
+  .rvlab.hi { margin-bottom: 27px; }
+
+  /* late/absence red (theme-aware) */
+  :root { --late: #c44536; }
+  @media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) { --late: #d85c4c; } }
+  :root[data-theme="dark"] { --late: #d85c4c; }
+
+  /* headline metric cards: show rate + the no-show decomposition beneath it */
+  .hm { margin: 26px 0 18px; }
+  .hmrow1 { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  .hmrow2 { display: grid; grid-template-columns: 2fr 1.4fr; gap: 14px; margin-top: 14px; }
+  .hmb { background: var(--surface); border: 1px solid var(--ring); border-radius: 12px; padding: 15px 17px 13px; box-shadow: inset 0 3px 0 var(--c); min-width: 0; }
+  .hmb .mini { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ck); margin-bottom: 4px; }
+  .hmb .v { font-size: 30px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.15; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .hmb .k { font-size: 12px; color: var(--ink-3); margin-top: 5px; line-height: 1.4; }
+  @media (max-width: 680px) { .hmrow1, .hmrow2 { grid-template-columns: 1fr 1fr; } }
+
+  /* two-color eyebrow rule: show / no-show in proportion; the section's own segment thick + annotated */
+  .sec-eyebrow.tri::after { display: none; }
+  .triline { flex: 1; display: flex; align-items: center; gap: 2px; min-width: 0; }
+  .triline .tseg { position: relative; height: 2.5px; opacity: .55; border-radius: 2px; }
+  .triline .tseg.on { height: 8px; opacity: 1; }
+  .triline .tseg.ns.on { min-width: 72px; }
+  .triline .tlab { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 12px; font-weight: 700; letter-spacing: .04em; white-space: nowrap; background: var(--page); padding: 0 7px; font-variant-numeric: tabular-nums; }
+  .triline .tseg.sh { background: var(--accent); }
+  .triline .tseg.ns { background: var(--late); }
+  .triline .tseg.sh .tlab { color: var(--accent-ink); }
+  .triline .tseg.ns .tlab { color: var(--late); }
+
+  /* ---- print: force the light palette, keep chart colors, break cleanly ---- */
+  @media print {
+    :root, :root[data-theme="dark"], :root:where(:not([data-theme="light"])) {
+      color-scheme: light;
+      --page:        #ffffff;
+      --surface:     #ffffff;
+      --ink:         #131715;
+      --ink-2:       #4d5551;
+      --ink-3:       #86908a;
+      --grid:        #e2e7e4;
+      --baseline:    #c4ccc8;
+      --ring:        rgba(19,23,21,0.14);
+      --accent:      #0a8153;
+      --accent-ink:  #06603d;
+      --wash:        #eaf3ee;
+      --s-li:        #2a78d6;
+      --s-hc:        #eb6834;
+      --s-unm:       #a8b0ab;
+      --late:        #c44536;
+      --ramp-1:      #86b6ef;
+      --ramp-2:      #5598e7;
+      --ramp-3:      #1c5cab;
+    }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    @page { margin: 13mm 11mm; }
+    html, body { background: #fff; }
+    .wrap { max-width: none; padding: 0 2mm 8mm; }
+    .fig, .play, .hmb, .stat, .statband, .takeaway, .defcard, table, footer { break-inside: avoid; page-break-inside: avoid; }
+    h1, h2, h3, .sec-eyebrow, .fig-title { break-after: avoid; page-break-after: avoid; break-inside: avoid; page-break-inside: avoid; }
+    section { margin-top: 8mm; }
+    .noprint, #tip { display: none !important; }
+    a { text-decoration: none; color: inherit; }
+  }
+</style>
+<meta name="robots" content="noindex">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="brandline">
+      <img class="brand-logo" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iNTY5cHgiIGhlaWdodD0iMTA4cHgiIHZpZXdCb3g9IjAgMCA1NjkgMTA4IiB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiPgogICAgPCEtLSBHZW5lcmF0b3I6IFNrZXRjaCA0OC4yICg0NzMyNykgLSBodHRwOi8vd3d3LmJvaGVtaWFuY29kaW5nLmNvbS9za2V0Y2ggLS0+CiAgICA8dGl0bGU+TG9nby9Hcm91cC9HcmVlbkAwc3ZnPC90aXRsZT4KICAgIDxkZXNjPkNyZWF0ZWQgd2l0aCBTa2V0Y2guPC9kZXNjPgogICAgPGRlZnM+PC9kZWZzPgogICAgPGcgaWQ9IkFydGJvYXJkIiBzdHJva2U9Im5vbmUiIHN0cm9rZS13aWR0aD0iMSIgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMTIwLjAwMDAwMCwgLTgyOS4wMDAwMDApIj4KICAgICAgICA8ZyBpZD0iTG9nby9Hcm91cC9HcmVlbiIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTAxLjAwMDAwMCwgODE4LjAwMDAwMCkiIGZpbGw9IiMwMENFNUIiPgogICAgICAgICAgICA8ZyBpZD0iTG9nby90ZXh0L2dyZWVuIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSg5MS4wMDAwMDAsIDAuMDAwMDAwKSI+CiAgICAgICAgICAgICAgICA8cGF0aCBkPSJNMzQuMDgwMDgsMjYuODk3NjUxMyBMNDcuODYwNjA5NywyNi44OTc2NTEzIEw0Ny44NjA2MDk3LDQ1Ljc5MTcxMDkgQzUxLjI0MDczOTYsNDEuNjMxNTUxIDU2LjYxNDI3OTUsNDAuNDE4MTcxIDYxLjY0MTEzOTQsNDAuNDE4MTcxIEM3NC45ODgzMTkxLDQwLjU5MTUxMSA3OC43MTUxMjksNTAuNDcxODkwOCA3OC41NDE3ODksNjIuMTcyMzQwNSBMNzguNTQxNzg5LDg4IEw2NC43NjEyNTkzLDg4IEw2NC43NjEyNTkzLDYyLjI1OTAxMDUgQzY0Ljc2MTI1OTMsNTYuMTA1NDQwNyA2MS4zODExMjk0LDUzLjQxODY3MDcgNTcuNzQwOTg5NSw1My4zMzIwMDA3IEM1My41ODA4Mjk1LDUzLjI0NTMzMDcgNDguNTUzOTY5Nyw1Ni43OTg4MDA3IDQ4LjU1Mzk2OTcsNjIuNTE5MDIwNSBMNDguNTUzOTY5Nyw4OCBMMzQuMDgwMDgsODggTDM0LjA4MDA4LDI2Ljg5NzY1MTMgWiBNMTA2LjEwMjg0OSw2Ny45NzkyMzA0IEwxMDkuNTY5NjQ4LDU2LjEwNTQ0MDcgTDExNS4zNzY1MzgsNDEuMTExNTMxIEwxMjkuNTAzNzQ4LDQxLjExMTUzMSBMMTI5LjUwMzc0OCw0My4yNzgyODA5IEMxMjEuNzkwMTE4LDYyLjc3OTAzMDUgMTE0LjA3NjQ4OCw4Mi4xOTMxMTAxIDEwNi40NDk1MjgsMTAxLjY5Mzg2IEw5Mi4zMjIzMTg4LDEwMS42OTM4NiBMOTIuMzIyMzE4OCw5OS42MTM3Nzk4IEw5OC4zODkyMTg3LDg0LjE4NjUyMDEgTDgyLjc4ODYxOSw0My4yNzgyODA5IEw4Mi43ODg2MTksNDEuMTExNTMxIEw5Ny4wMDI0OTg3LDQxLjExMTUzMSBMMTAyLjgwOTM4OSw1Ni4xMDU0NDA3IEwxMDYuMTAyODQ5LDY3Ljk3OTIzMDQgWiBNMTYwLjA5ODI1Nyw4OC43ODAwMyBDMTU1LjUwNDc0OCw4OC43ODAwMyAxNTEuMDg0NTc4LDg3LjIxOTk3IDE0Ny45NjQ0NTgsODMuNjY2NTAwMSBMMTQ3Ljk2NDQ1OCwxMDEuNjkzODYgTDEzNC40NDM5MzgsMTAxLjY5Mzg2IEwxMzQuNDQzOTM4LDQxLjExMTUzMSBMMTQ3Ljk2NDQ1OCw0MS4xMTE1MzEgTDE0Ny45NjQ0NTgsNDUuNzkxNzEwOSBDMTUxLjE3MTI0OCw0MS44MDQ4OTEgMTU1Ljc2NDc1OCw0MC41MDQ4NDEgMTYwLjI3MTU5Nyw0MC41MDQ4NDEgQzE3NS4xNzg4MzcsNDAuNTA0ODQxIDE4Mi44OTI0NjcsNTIuNDY1MzAwOCAxODIuODA1Nzk3LDY1LjM3OTEzMDUgQzE4Mi42MzI0NTcsNzguMjA2MjkwMiAxNzUuMjY1NTA3LDg4Ljc4MDAzIDE2MC4wOTgyNTcsODguNzgwMDMgWiBNMTU4LjYyNDg2Nyw1My41OTIwMTA3IEMxNTIuNzMxMzA4LDUzLjU5MjAxMDcgMTQ3Ljk2NDQ1OCw1OC42MTg4NzA2IDE0Ny45NjQ0NTgsNjQuODU5MTEwNSBDMTQ3Ljk2NDQ1OCw3MS4wOTkzNTA0IDE1Mi43MzEzMDgsNzYuMjEyODgwMiAxNTguNjI0ODY3LDc2LjIxMjg4MDIgQzE2NS41NTg0NjcsNzYuMjEyODgwMiAxNjkuMDI1MjY3LDcwLjY2NjAwMDQgMTY5LjExMTkzNyw2NS4wMzI0NTA1IEMxNjkuMTk4NjA3LDU5LjM5ODkwMDYgMTY1LjY0NTEzNyw1My41OTIwMTA3IDE1OC42MjQ4NjcsNTMuNTkyMDEwNyBaIE0yMzYuNDU0NTI2LDY0LjQyNTc2MDUgQzIzNi40NTQ1MjYsNjYuMzMyNTAwNSAyMzYuMjgxMTg2LDY4LjA2NTkwMDQgMjM1LjkzNDUwNiw2OS43OTkzMDA0IEwyMDIuMzA2NTQ3LDY5Ljc5OTMwMDQgQzIwMy45NTMyNzcsNzQuMTMyODAwMyAyMDguMjAwMTA2LDc2LjI5OTU1MDIgMjEyLjM2MDI2Niw3Ni4zODYyMjAyIEMyMTUuMzkzNzE2LDc2LjM4NjIyMDIgMjE4LjI1MzgyNiw3NS4zNDYxODAzIDIyMC4yNDcyMzYsNzMuMTc5NDMwMyBMMjM1LjA2NzgwNiw3My4xNzk0MzAzIEMyMzEuNDI3NjY2LDgzLjU3OTgzMDEgMjIxLjU0NzI4Niw4OC42OTMzNiAyMTEuNjY2OTA2LDg4LjUyMDAyIEMxOTkuNzkzMTE3LDg4LjI2MDAxIDE4OC4wMDU5OTcsODAuMjg2MzcwMiAxODguMDA1OTk3LDY0LjQyNTc2MDUgQzE4OC4wMDU5OTcsNDguMzA1MTQwOCAyMDAuMjI2NDY3LDQwLjMzMTUwMSAyMTIuNDQ2OTM2LDQwLjQxODE3MSBDMjI0LjQ5NDA2Niw0MC41MDQ4NDEgMjM2LjQ1NDUyNiw0OC40Nzg0ODA4IDIzNi40NTQ1MjYsNjQuNDI1NzYwNSBaIE0yMDIuODI2NTY3LDU5LjEzODg5MDYgTDIyMS41NDcyODYsNTkuMTM4ODkwNiBDMjIwLjI0NzIzNiw1NC40NTg3MTA3IDIxNi40MzM3NTYsNTIuMjkxOTYwOCAyMTIuMDEzNTg2LDUyLjI5MTk2MDggQzIwNy45NDAwOTYsNTIuMjkxOTYwOCAyMDQuMjEzMjg3LDU0LjU0NTM4MDcgMjAyLjgyNjU2Nyw1OS4xMzg4OTA2IFogTTI1Ni41NjE5NjYsNjEuOTk5MDAwNSBMMjU2LjU2MTk2Niw4OCBMMjQyLjk1NDc3Niw4OCBMMjQyLjk1NDc3Niw0MS4xMTE1MzEgTDI1NS4yNjE5MTYsNDEuMTExNTMxIEwyNTUuNzgxOTM2LDQ0LjIzMTY1MDkgQzI1OC44MTUzODUsNDEuMzcxNTQxIDI2Mi4xOTU1MTUsNDAuMTU4MTYxIDI2Ni4wMDg5OTUsNDAuMTU4MTYxIEMyNjcuNjU1NzI1LDQwLjE1ODE2MSAyNjkuNDc1Nzk1LDQwLjQxODE3MSAyNzEuMjk1ODY1LDQwLjg1MTUyMSBMMjcxLjEyMjUyNSw1My42Nzg2ODA3IEMyNjkuNzM1ODA1LDUzLjI0NTMzMDcgMjY4LjA4OTA3NSw1Mi45ODUzMjA3IDI2Ni41MjkwMTUsNTIuOTg1MzIwNyBDMjYxLjU4ODgyNSw1My4wNzE5OTA3IDI1Ni41NjE5NjYsNTUuNjcyMDkwNyAyNTYuNTYxOTY2LDYxLjk5OTAwMDUgWiBNMzA1Ljc5MDUyNSw4OC4wODY2NyBDMzAzLjEwMzc1NSw4OC41MjAwMiAzMDAuNTkwMzI1LDg4Ljc4MDAzIDI5OC4zMzY5MDUsODguNzgwMDMgQzI4Ny44NDk4MzUsODguODY2NyAyODEuNTIyOTI1LDg0LjAxMzE4MDEgMjgxLjUyMjkyNSw3MS43OTI3MTAzIEwyODEuNTIyOTI1LDUzLjMzMjAwMDcgTDI3NS4zNjkzNTUsNTMuMzMyMDAwNyBMMjc1LjM2OTM1NSw0MS42MzE1NTEgTDI4MS41MjI5MjUsNDEuNjMxNTUxIEwyODEuNTIyOTI1LDMyLjcwNDU0MTIgTDI5NS4xMzAxMTUsMzEuNDkxMTYxMiBMMjk1LjEzMDExNSw0MS42MzE1NTEgTDMwNC45MjM4MjUsNDEuNjMxNTUxIEwzMDQuOTIzODI1LDUzLjMzMjAwMDcgTDI5NS4xMzAxMTUsNTMuMzMyMDAwNyBMMjk1LjEzMDExNSw3MS43OTI3MTAzIEMyOTUuMTMwMTE1LDc1Ljk1Mjg3MDMgMjk4LjE2MzU2NSw3Ny4yNTI5MjAyIDMwMS40NTcwMjUsNzcuMjUyOTIwMiBDMzAyLjc1NzA3NSw3Ny4yNTI5MjAyIDMwNC4xNDM3OTUsNzcuMDc5NTgwMiAzMDUuMzU3MTc1LDc2LjgxOTU3MDIgTDMwNS43OTA1MjUsODguMDg2NjcgWiBNMzI1LjQ2NDYxNCw2MS45OTkwMDA1IEwzMjUuNDY0NjE0LDg4IEwzMTEuODU3NDI1LDg4IEwzMTEuODU3NDI1LDQxLjExMTUzMSBMMzI0LjE2NDU2NCw0MS4xMTE1MzEgTDMyNC42ODQ1ODQsNDQuMjMxNjUwOSBDMzI3LjcxODAzNCw0MS4zNzE1NDEgMzMxLjA5ODE2NCw0MC4xNTgxNjEgMzM0LjkxMTY0NCw0MC4xNTgxNjEgQzMzNi41NTgzNzQsNDAuMTU4MTYxIDMzOC4zNzg0NDQsNDAuNDE4MTcxIDM0MC4xOTg1MTQsNDAuODUxNTIxIEwzNDAuMDI1MTc0LDUzLjY3ODY4MDcgQzMzOC42Mzg0NTQsNTMuMjQ1MzMwNyAzMzYuOTkxNzI0LDUyLjk4NTMyMDcgMzM1LjQzMTY2NCw1Mi45ODUzMjA3IEMzMzAuNDkxNDc0LDUzLjA3MTk5MDcgMzI1LjQ2NDYxNCw1NS42NzIwOTA3IDMyNS40NjQ2MTQsNjEuOTk5MDAwNSBaIE0zNjcuNDEyODkzLDQwLjMzMTUwMSBDMzcyLjAwNjQwMyw0MC4zMzE1MDEgMzc2LjUxMzI0Myw0Mi4wNjQ5MDEgMzc5LjU0NjY5Myw0NS45NjUwNTA5IEwzNzkuNTQ2NjkzLDQxLjExMTUzMSBMMzkzLjE1Mzg4Myw0MS4xMTE1MzEgTDM5My4xNTM4ODMsODggTDM3OS41NDY2OTMsODggTDM3OS41NDY2OTMsODMuMzE5ODIwMSBDMzc2LjMzOTkwMyw4Ny4zMDY2NCAzNzEuNzQ2MzkzLDg4LjYwNjY5IDM2Ny4yMzk1NTMsODguNjA2NjkgQzM1Mi4zMzIzMTQsODguNjA2NjkgMzQ0LjYxODY4NCw3Ni42NDYyMzAyIDM0NC43MDUzNTQsNjMuNzMyNDAwNSBDMzQ0Ljg3ODY5NCw1MC45MDUyNDA4IDM1Mi4yNDU2NDQsNDAuMzMxNTAxIDM2Ny40MTI4OTMsNDAuMzMxNTAxIFogTTM2OC44ODYyODMsNzUuNTE5NTIwMyBDMzc0Ljc3OTg0Myw3NS41MTk1MjAzIDM3OS41NDY2OTMsNzAuNDkyNjYwNCAzNzkuNTQ2NjkzLDY0LjI1MjQyMDUgQzM3OS41NDY2OTMsNTguMDEyMTgwNiAzNzQuNzc5ODQzLDUyLjg5ODY1MDcgMzY4Ljg4NjI4Myw1Mi44OTg2NTA3IEMzNjEuOTUyNjg0LDUyLjg5ODY1MDcgMzU4LjQ4NTg4NCw1OC4zNTg4NjA2IDM1OC4zOTkyMTQsNjQuMDc5MDgwNSBDMzU4LjMxMjU0NCw2OS43MTI2MzA0IDM2MS44NjYwMTQsNzUuNTE5NTIwMyAzNjguODg2MjgzLDc1LjUxOTUyMDMgWiBNNDMyLjc2MjA3Miw2OC4wNjU5MDA0IEM0MjkuMjA4NjAyLDc5LjY3OTY4MDIgNDEyLjM5NDYyMyw3Ny43NzI5NDAyIDQxMi4zOTQ2MjMsNjQuNTEyNDMwNSBDNDEyLjM5NDYyMyw1MS4yNTE5MjA4IDQyOS4yOTUyNzIsNDkuNDMxODUwOCA0MzIuNzYyMDcyLDYxLjA0NTYzMDYgTDQ0Ni4yODI1OTIsNjEuMDQ1NjMwNiBDNDQyLjQ2OTExMiwzMi4xODQ1MjEyIDM5OS4wNDc0NDMsMzQuMTc3OTMxMSAzOTkuMDQ3NDQzLDY0LjUxMjQzMDUgQzM5OS4wNDc0NDMsOTQuODQ2OTI5OSA0NDIuMzgyNDQyLDk2Ljg0MDMzOTggNDQ2LjI4MjU5Miw2OC4wNjU5MDA0IEw0MzIuNzYyMDcyLDY4LjA2NTkwMDQgWiBNNDY2Ljk5NjcyMSw1OS41NzIyNDA2IEw0NzkuOTEwNTUxLDQxLjExMTUzMSBMNDk0LjgxNzc5MSw0MS4xMTE1MzEgTDQ5NC44MTc3OTEsNDEuODA0ODkxIEw0NzguOTU3MTgxLDY0LjQyNTc2MDUgTDQ5Ni4zNzc4NTEsODcuMzkzMzEgTDQ5Ni4zNzc4NTEsODggTDQ4MC40MzA1NzEsODggTDQ2Ni45OTY3MjEsNjkuNzEyNjMwNCBMNDY2Ljk5NjcyMSw4OCBMNDUzLjM4OTUzMiw4OCBMNDUzLjM4OTUzMiwyNy4zMzEwMDEzIEw0NjYuOTk2NzIxLDI3LjMzMTAwMTMgTDQ2Ni45OTY3MjEsNTkuNTcyMjQwNiBaIiBpZD0iaHlwZXJ0cmFjayI+PC9wYXRoPgogICAgICAgICAgICA8L2c+CiAgICAgICAgICAgIDxnIGlkPSJMb2dvL2JveC9ncmVlbiI+CiAgICAgICAgICAgICAgICA8ZyBpZD0iT3VyLWxvZ28iIHRyYW5zZm9ybT0idHJhbnNsYXRlKDE5LjAwMDAwMCwgMTEuMDAwMDAwKSI+CiAgICAgICAgICAgICAgICAgICAgPGcgaWQ9Ikdyb3VwLTIiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDM1LjAwMDAwMCwgMjQuMDAwMDAwKSIgZmlsbC1ydWxlPSJub256ZXJvIj4KICAgICAgICAgICAgICAgICAgICAgICAgPHBhdGggZD0iTTExLjI3OSwxMi44OTUgQzUuNDkyLDEyLjg5NSAwLjYwMywxMC4wNTcgMC42MDMsNi42OTcgQzAuNjAzLDMuMzM3IDUuNDkyLDAuNDk4IDExLjI3OSwwLjQ5OCBDMTcuMDY1LDAuNDk4IDIxLjk1NSwzLjMzNyAyMS45NTUsNi42OTcgQzIxLjk1NSwxMC4wNTcgMTcuMDY1LDEyLjg5NSAxMS4yNzksMTIuODk1IiBpZD0iU2hhcGUiPjwvcGF0aD4KICAgICAgICAgICAgICAgICAgICA8L2c+CiAgICAgICAgICAgICAgICAgICAgPHBhdGggZD0iTTkxLjU5NSwyOC44MDIgQzkxLjU1NiwyOC43MjQgOTEuNTE2LDI4LjY0OCA5MS40NzIsMjguNTc0IEM5MS4zNTQsMjguMzc1IDkxLjIxNywyOC4xOTEgOTEuMDY5LDI4LjAxMyBDOTEuMDA0LDI3LjkzNiA5MC45NDgsMjcuODUzIDkwLjg3OCwyNy43ODEgQzkwLjg2LDI3Ljc2IDkwLjg0NiwyNy43MzcgOTAuODI2LDI3LjcxOCBDOTAuNjE2LDI3LjUwOCA5MC4zODcsMjcuMzI3IDkwLjE0MywyNy4xNjggQzkwLjEzNSwyNy4xNjMgOTAuMTMsMjcuMTU1IDkwLjEyMiwyNy4xNSBMNDguNTM4LDAuNzE4IEM0Ny44NjEsMC4yODggNDcuMDgsMC4wNiA0Ni4yNzgsMC4wNiBDNDUuNDc2LDAuMDYgNDQuNjk0LDAuMjg4IDQ0LjAxNywwLjcxNiBMMi40MzksMjcuMTUgQzIuNDAyLDI3LjE3MyAyLjM3NywyNy4yMDcgMi4zNDEsMjcuMjMxIEMyLjA4NCwyNy40MDQgMS44NDEsMjcuNiAxLjYyNiwyNy44MjYgQzEuNjI1LDI3LjgyNiAxLjYyNSwyNy44MjcgMS42MjQsMjcuODI4IEMxLjYyLDI3LjgzMiAxLjYxNywyNy44MzcgMS42MTMsMjcuODQxIEMxLjM4MiwyOC4wODYgMS4xOTYsMjguMzYgMS4wMzIsMjguNjQ2IEMxLjAxOCwyOC42NzEgMS4wMDYsMjguNjk3IDAuOTkyLDI4LjcyMyBDMC42NTgsMjkuMzM1IDAuNDY1LDMwLjAxNyAwLjQ2NSwzMC43MyBMMC40NjUsNzcuMDI5IEMwLjQ2NSw3OC40ODIgMS4xOTgsNzkuODEzIDIuNDI5LDgwLjU5MyBMNDQuMDEzLDEwNy4wNCBDNDQuNjksMTA3LjQ3MiA0NS40NzMsMTA3LjY5OSA0Ni4yNzgsMTA3LjY5OSBDNDcuMDgzLDEwNy42OTkgNDcuODY2LDEwNy40NzEgNDguNTQ1LDEwNy4wNCBMOTAuMTMsODAuNTkxIEM5MS4zNTksNzkuODE0IDkyLjA5Myw3OC40ODIgOTIuMDkzLDc3LjAyOSBMOTIuMDkzLDMwLjczIEM5Mi4wOTMsMzAuMDYgOTEuOTA2LDI5LjQwMSA5MS41OTUsMjguODAyIFogTTQ3LjY2ODA2ODYsNzkuNjg3ODE0NiBDNDcuODg0ODc1NSw3OS42MDcwOTY0IDQ4LjA5NDM5ODUsNzkuNTAwNDY4MSA0OC4yOTE5OTkxLDc5LjM2Nzk4NzkgTDY0LjM4MTE0MjcsNjguNTgxMTEyIEM2NC4zNzQ1NzUyLDY3LjEyMjEzMzYgNjQuNjQzOTQ2NSw2NS41Mzk3NTk1IDY1LjIxOTAyODQsNjMuOTU5NzM1IEM2Ny4wMDc4MDU5LDU5LjA0NTEwOTIgNzEuMDc2OTc1Nyw1Ni4wMTQyODQ4IDc0LjMwNzc3MzcsNTcuMTkwMTk5MSBDNzcuNTM4NTcxNyw1OC4zNjYxMTM0IDc4LjcwNzU2MDMsNjMuMzAzNDcxNiA3Ni45MTg3ODI4LDY4LjIxODA5NzMgQzc1LjEzMDAwNTMsNzMuMTMyNzIzIDcxLjA2MDgzNTQsNzYuMTYzNTQ3NSA2Ny44MzAwMzc0LDc0Ljk4NzYzMzIgQzY2LjgyMzU4ODEsNzQuNjIxMzE1NiA2Ni4wMTcyMjI5LDczLjg4OTk3NjEgNjUuNDM4MDI3Miw3Mi45MDgwMTI3IEw1MC41MTk0ODE1LDgyLjY5MDM4NDkgQzQ5LjY0NDUzNDksODMuMjc2OTg4IDQ4LjY2OTQwOTIsODMuNjQ2MzcwNCA0Ny42NjgwNjg2LDgzLjc5NzYwMSBMNDcuNjY4MDY4NiwxMDAuOTg1ODU1IEw0Ny42NjgwNjg2LDgzLjc5NzYwMSBDNDYuMDMxMzkyMiw4NC4wNDQ3ODUyIDQ0LjMyNDY4MTYsODMuNzA5MTY3NSA0Mi44NzA5MDg1LDgyLjc4NjY4MTUgTDAuNjEyNjQ0ODYyLDU2LjQ0MTEyNTkgTDAuNjEyNjQ0ODYyLDUwLjg1ODI3MDUgTDQ1LjAxNDAzOTMsNzkuNDA5MjU3OCBDNDUuODE3Mzk5Miw3OS45MTkwMjY3IDQ2LjgwMDk4NSw4MC4wMTA2MzM3IDQ3LjY2ODA2ODYsNzkuNjg3ODE0NiBMNDcuNjY4MDY4Niw1NS45MDA2MjAyIEw0Ny42NjgwNjg2LDc5LjY4NzgxNDYgWiBNNDYuMjc4LDkuMjYgTDgwLjAwNSwzMC42OTYgTDQ2LjI3OCw1Mi4xNjQgTDEyLjU1LDMwLjY5NyBMNDYuMjc4LDkuMjYgWiIgaWQ9IlNoYXBlIiBmaWxsLXJ1bGU9Im5vbnplcm8iPjwvcGF0aD4KICAgICAgICAgICAgICAgIDwvZz4KICAgICAgICAgICAgPC9nPgogICAgICAgIDwvZz4KICAgIDwvZz4KPC9zdmc+" alt="HyperTrack">
+      <div class="edition">Staffing Benchmark Report · Q2 2026</div>
+    </div>
+    <p class="eyebrow">Show Rate &amp; No-Shows</p>
+    <h1>One in nine shifts doesn't show up: the benchmark for shift attendance.</h1>
+    <p class="deck">
+      HyperTrack validates attendance for roughly a million shifts a month across Healthcare and Light
+      Industrial staffing. Three months of ground-truth data set the benchmark:
+      <strong>88.5% of workers show up</strong>. This report highlights
+      <strong>how early each no-show<sup><a href="#fn-noshow" style="color:var(--accent-ink);font-weight:700;text-decoration:underline">1</a></sup> can be seen coming</strong>.
+    </p>
+
+    <div class="hm">
+      <div class="hmrow1">
+        <div class="hmb" style="--c:var(--accent);--ck:var(--accent-ink);background:var(--wash)">
+          <span class="mini">Show rate</span>
+          <div class="v">88.5%</div>
+          <div class="k">workers who showed up at the shift</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== BENCHMARK ===== -->
+  <section>
+    <p class="sec-eyebrow tri">The benchmark<span class="triline"><span class="tseg sh on" style="flex:88.5"><span class="tlab">88.5%</span></span><span class="tseg ns" style="flex:11.5"></span></span></p>
+    <h2>Where does your operation sit against the market?</h2>
+    <div class="prose">
+      <p>The two industries fail differently. Healthcare holds an <strong>89.7%</strong>
+      show rate. Light industrial sits lower at <strong>86.8%</strong>.</p>
+    </div>
+
+    <div class="fig">
+      <p class="fig-title">Show rate: the market range, by industry</p>
+      <p class="fig-sub">Band spans worst (lowest) → best (highest) operator in each industry · three operators per industry · scale 60–100%</p>
+      <div class="rrow"><div class="lbl">Healthcare</div><div class="rtrack" id="range-hc"></div></div>
+      <div class="rrow"><div class="lbl">Light Industrial</div><div class="rtrack" id="range-li"></div></div>
+      <div class="raxisrow"><div></div><div class="raxis" id="rangeaxis"></div></div>
+      <p class="fig-note">The best operator, a healthcare marketplace, has a <strong>93.1%</strong>
+      show rate; the worst, in light industrial, <strong>71.2%</strong>.</p>
+    </div>
+
+    <p class="takeaway">
+      The best operators have a <span class="num">93%</span> show rate; the worst sit at <span class="num">71%</span>.
+      That gap is worth roughly <span class="num">one extra worker showing up in every five</span>, every single day.
+    </p>
+    <div class="prose" style="margin-top:10px"><p style="font-size:13px;color:var(--ink-2)">Drill into a single
+    industry: filter the show rate by state, shift window and day of week:
+    <a target="_blank" rel="noopener" href="no-show-light.html" style="color:var(--s-li);font-weight:600">Light Industrial (interactive) ↗</a> ·
+    <a target="_blank" rel="noopener" href="no-show-healthcare.html" style="color:var(--s-hc);font-weight:600">Healthcare (interactive) ↗</a>.
+    Punctuality (on-time arrival) is covered in the companion
+    <a target="_blank" rel="noopener" href="index.html" style="font-weight:600">On-Time Arrival benchmark ↗</a>.</p></div>
+  </section>
+
+  <!-- ===== DRIVERS ===== -->
+  <section>
+    <p class="sec-eyebrow">Where the show rate moves</p>
+    <h2>Same metric, different cuts</h2>
+    <div class="prose">
+      <p>The market rate is not one number. The same quarter, cut by geography and by the clock, moves
+      the show rate by double digits. The cuts below show where it runs high and where it sags.</p>
+    </div>
+
+    <h3>The map: a 28-point spread between states</h3>
+    <div class="fig">
+      <p class="fig-title">Show rate across states: at a glance</p>
+      <p class="fig-sub">Every state with substantial volume · each band spans that group's worst → best state · grey tick = the median state · <b>state codes = the five highest-volume states</b></p>
+      <div class="rrow" style="margin-top:52px;margin-bottom:68px"><div class="lbl"><a target="_blank" rel="noopener" href="no-show-healthcare.html" style="color:var(--s-hc)">Healthcare ↗</a></div><div class="rtrack" id="nsstaterange-hc"></div></div>
+      <div class="rrow" style="margin-top:0;margin-bottom:18px"><div class="lbl"><a target="_blank" rel="noopener" href="no-show-light.html" style="color:var(--s-li)">Light Industrial ↗</a></div><div class="rtrack" id="nsstaterange-li"></div></div>
+      <div class="raxisrow"><div></div><div class="raxis" id="nsstaterangeaxis"></div></div>
+      <p class="fig-note">Healthcare states run from <strong>81.7%</strong> (LA) to <strong>96.4%</strong> (MA);
+      light industrial from <strong>63.8%</strong> (KY) to <strong>92.1%</strong> (CA), a 28-point spread.
+      The median state: 89.0% in healthcare, 85.7% in light industrial.</p>
+      <p class="fig-note noprint" style="margin-top:8px">→ Drill in: <b>Healthcare</b>: <a target="_blank" rel="noopener" href="no-show-healthcare.html#s=Massachusetts" style="color:var(--s-hc);font-weight:650">MA, best ↗</a> · <a target="_blank" rel="noopener" href="no-show-healthcare.html#s=Louisiana" style="color:var(--s-hc);font-weight:650">LA, worst ↗</a> &nbsp; <b>Light Industrial</b>: <a target="_blank" rel="noopener" href="no-show-light.html#s=California" style="color:var(--s-li);font-weight:650">CA, best ↗</a> · <a target="_blank" rel="noopener" href="no-show-light.html#s=Kentucky" style="color:var(--s-li);font-weight:650">KY, worst ↗</a>, or open either report and pick any state.</p>
+    </div>
+
+    <h3>The clock: the two industries split</h3>
+    <div class="prose">
+      <p>The two industries move opposite ways with the clock.
+      Healthcare's show rate <strong>improves</strong> on later shifts: 88% in the morning to 91% overnight. Light
+      industrial's <strong>drops</strong>: 87% down to 85%, and drops further in several big markets
+      (<a target="_blank" rel="noopener" href="no-show-light.html#s=Georgia" style="color:var(--s-li);font-weight:600">GA</a> 87%→77%, <a target="_blank" rel="noopener" href="no-show-light.html#s=Pennsylvania" style="color:var(--s-li);font-weight:600">PA</a> 88%→79%, <a target="_blank" rel="noopener" href="no-show-light.html#s=Texas" style="color:var(--s-li);font-weight:600">TX</a> 86%→79%, <a target="_blank" rel="noopener" href="no-show-light.html#s=Ohio" style="color:var(--s-li);font-weight:600">OH</a> 85%→79%).</p>
+    </div>
+    <div class="fig">
+      <p class="fig-title">Show rate by shift window: healthcare vs light industrial</p>
+      <p class="fig-sub">Grouped by industry · % of scheduled workers who arrive · shift windows by start time <sup><a href="#fn-windows" style="color:var(--accent-ink);font-weight:700;text-decoration:underline">2</a></sup></p>
+      <div class="legend"><span class="chip"><span class="sw" style="background:var(--s-hc)"></span>Healthcare</span><span class="chip"><span class="sw" style="background:var(--s-li)"></span>Light Industrial</span><span class="chip"><span style="display:inline-block;width:2px;height:12px;background:var(--ink);opacity:.55"></span>All-industry rate 88.5%</span></div>
+      <div id="timingchart"></div>
+      <div class="axisrow"><div></div><div class="axis" id="timingaxis"></div><div></div></div>
+    </div>
+  </section>
+
+  <!-- ===== VISIBILITY ===== -->
+  <section>
+    <p class="sec-eyebrow">The visibility behind the signals</p>
+    <h2>How soon the signals arrive</h2>
+    <div class="prose">
+      <p>Predicting a no-show takes one capability: the workforce becoming visible to the operation before the shift starts.
+      From the moment a shift is assigned, telemetry helps
+      improve visibility. On HyperTrack that happens early and almost universally,
+      <a target="_blank" rel="noopener" href="no-show-signals.html#case-study" style="font-weight:600">a case study ↗</a>
+      showing its impact.</p>
+    </div>
+    <div class="fig">
+      <p class="fig-title">How early workers become visible</p>
+      <p class="fig-sub">% of shifts with any event</p>
+      <div class="legend"><span class="chip"><span class="sw" style="background:var(--s-hc)"></span>Healthcare</span><span class="chip"><span class="sw" style="background:var(--s-li)"></span>Light Industrial</span><span class="chip"><span class="sw" style="background:#2f9e44"></span>Pre-integration baseline (dashed)</span></div>
+      <div id="ttfeind"></div>
+      <p class="fig-note"><strong>82–89%</strong> of shifts are visible an hour
+      before start, <strong>93–96%</strong> by the start itself, far above the pre-integration
+      baseline at every point. How reliably shifts are tracked:
+      <a target="_blank" rel="noopener" href="index.html#data-behind-benchmark" style="font-weight:600">Data behind the benchmark ↗</a>.</p>
+    </div>
+
+    <h4>Show vs no-show: no-show visibility flattens at the leave-by</h4>
+    <div class="prose">
+      <p>By the leave-by<sup><a href="#fn-leaveby" style="color:var(--accent-ink);font-weight:700;text-decoration:underline">3</a></sup>, whoever is going to be heard from mostly has been: after it, visibility rises
+      only <strong>+1.5%</strong> among no-shows, versus <strong>+3.5%</strong> among workers who
+      show.</p>
+    </div>
+    <div class="fig">
+      <p class="fig-title">The first signal comes early for workers who show, and stalls for no-shows</p>
+      <p class="fig-sub">% of shifts visible</p>
+      <div class="legend"><span class="chip"><span class="sw" style="background:var(--s-hc)"></span>Healthcare</span><span class="chip"><span class="sw" style="background:var(--s-li)"></span>Light Industrial</span><span class="chip"><span style="display:inline-block;width:16px;height:0;border-top:2px solid var(--ink-3);vertical-align:middle"></span>solid = no-show</span><span class="chip"><span style="display:inline-block;width:16px;height:0;border-top:2px dashed var(--ink-3);vertical-align:middle"></span>dashed = show</span></div>
+      <div id="ttfesplit"></div>
+      <p class="fig-note">By the start, <strong>~96%</strong> of workers who show have been heard from, but
+      only <strong>86%</strong> of healthcare no-shows and <strong>72%</strong> of light industrial
+      no-shows ever sent a signal at all. The gap <em>is</em> the earliest warning: a shift with no
+      signal as the start approaches is already telling its story.</p>
+    </div>
+
+  </section>
+
+  <!-- ===== NO-SHOW INDICATORS ===== -->
+  <section>
+    <p class="sec-eyebrow tri">No-show risk indicators<span class="triline"><span class="tseg sh" style="flex:88.5"></span><span class="tseg ns on" style="flex:11.5"><span class="tlab">11.5%</span></span></span></p>
+    <h2>Most no-shows can be seen coming</h2>
+    <div class="prose">
+      <p>The baseline no-show rate is <strong>11.5%</strong>: 10.3% in healthcare, 13.2% in light
+      industrial. Most no-shows announce themselves in the data first, and each one below is credited to
+      the earliest signal on record: <strong>late departure</strong> (not moving by the time the commute
+      requires), <strong>no location/message</strong><sup><a href="#fn-signal" style="color:var(--accent-ink);font-weight:700;text-decoration:underline">4</a></sup> from the worker, <strong>worker switched off
+      visibility</strong>, a <strong>long stop</strong> on the way, or a
+      move away from the destination. Before any signal can fire, <strong>30% of no-shows are cancelled
+      before the expected departure</strong><sup><a href="#fn-leaveby" style="color:var(--accent-ink);font-weight:700;text-decoration:underline">3</a></sup>
+      (37% healthcare · 21% light industrial).</p>
+    </div>
+
+    <div class="fig">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+        <div>
+          <p class="fig-title">The earliest signal for every no-show</p>
+          <p class="fig-sub">% share of each signal in that industry's no-shows</p>
+        </div>
+        <div style="text-align:right">
+          <p class="fig-title" style="margin:0"><a target="_blank" rel="noopener" href="no-show-signals.html">How early can a no-show be detected? ↗</a></p>
+          <p class="fig-sub" style="margin:2px 0 0">every signal's detection timing, in the companion deep-dive</p>
+        </div>
+      </div>
+      <div class="legend"><span class="chip"><span class="sw" style="background:var(--s-hc)"></span>Healthcare</span><span class="chip"><span class="sw" style="background:var(--s-li)"></span>Light Industrial</span></div>
+      <div id="firstsignal"></div>
+      <div class="axisrow"><div></div><div class="axis" id="firstsignalax"></div><div></div></div>
+    </div>
+
+    <p class="takeaway">
+      <span class="num">43%</span> of no-shows are preceded by a late departure;<br>
+      <span class="num">13%</span> by silence — no signal, or a visibility switch-off by the worker.
+    </p>
+
+  </section>
+
+
+
+  <!-- ===== PLAYBOOK ===== -->
+  <section>
+    <p class="sec-eyebrow">The playbook</p>
+    <h2>Act at the leave-by, not the shift start</h2>
+    <div class="prose"><p>Every signal in this report is visible while there is still time to act.</p></div>
+
+    <div class="fig">
+      <p class="fig-title"><a target="_blank" rel="noopener" href="no-show-signals.html">The detection timeline: three checks, minutes apart ↗</a></p>
+      <p class="fig-sub">Apart from the shifts cancelled before the expected departure (<strong>30%</strong> of no-shows), the <strong>three checks</strong> flag another <strong>57–67%</strong>; together, <strong>88–94%</strong> of all no-shows are known within minutes of the expected departure</p>
+      <div id="pbtimeline"></div>
+    </div>
+  </section>
+
+  <p class="basis" id="fn-noshow"><sup>1</sup> No-show = a scheduled shift where the worker never arrived. Figures reflect
+  April–June 2026 across Healthcare and Light Industrial staffing (signals by state reflect
+  May–June; trend figures are weekly), observed by HyperTrack telemetry.</p>
+  <p class="basis" id="fn-windows"><sup>2</sup> Shift windows by start time, local to the site: Morning 5:00–11:59am ·
+  Afternoon 12:00–4:59pm · Evening 5:00–9:59pm · Overnight 10:00pm–4:59am.</p>
+  <p class="basis" id="fn-leaveby"><sup>3</sup> <b>Expected departure / leave-by</b> — the leave-by =
+  scheduled start − the normal drive time for that worker's home-to-site commute, set when the shift is
+  scheduled, typically about 25 minutes before start. The expected departure = the leave-by plus a
+  five-minute grace (a range, not an instant); a shift cancelled or closed inside it counts as cancelled
+  before departure. Covers 95% of scheduled shifts (those with a commute estimate).</p>
+
+  <p class="basis" id="fn-signal"><sup>4</sup> <b>"No location/message"</b> = not even a first tracking
+  event has been received from the worker's device. "Heard from" / "visible" = at least one tracking
+  event, a first location fix or message.</p>
+
+
+
+  <footer>
+    <div class="fb"><img class="brand-logo-sm" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB3aWR0aD0iNTY5cHgiIGhlaWdodD0iMTA4cHgiIHZpZXdCb3g9IjAgMCA1NjkgMTA4IiB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiPgogICAgPCEtLSBHZW5lcmF0b3I6IFNrZXRjaCA0OC4yICg0NzMyNykgLSBodHRwOi8vd3d3LmJvaGVtaWFuY29kaW5nLmNvbS9za2V0Y2ggLS0+CiAgICA8dGl0bGU+TG9nby9Hcm91cC9HcmVlbkAwc3ZnPC90aXRsZT4KICAgIDxkZXNjPkNyZWF0ZWQgd2l0aCBTa2V0Y2guPC9kZXNjPgogICAgPGRlZnM+PC9kZWZzPgogICAgPGcgaWQ9IkFydGJvYXJkIiBzdHJva2U9Im5vbmUiIHN0cm9rZS13aWR0aD0iMSIgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMTIwLjAwMDAwMCwgLTgyOS4wMDAwMDApIj4KICAgICAgICA8ZyBpZD0iTG9nby9Hcm91cC9HcmVlbiIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTAxLjAwMDAwMCwgODE4LjAwMDAwMCkiIGZpbGw9IiMwMENFNUIiPgogICAgICAgICAgICA8ZyBpZD0iTG9nby90ZXh0L2dyZWVuIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSg5MS4wMDAwMDAsIDAuMDAwMDAwKSI+CiAgICAgICAgICAgICAgICA8cGF0aCBkPSJNMzQuMDgwMDgsMjYuODk3NjUxMyBMNDcuODYwNjA5NywyNi44OTc2NTEzIEw0Ny44NjA2MDk3LDQ1Ljc5MTcxMDkgQzUxLjI0MDczOTYsNDEuNjMxNTUxIDU2LjYxNDI3OTUsNDAuNDE4MTcxIDYxLjY0MTEzOTQsNDAuNDE4MTcxIEM3NC45ODgzMTkxLDQwLjU5MTUxMSA3OC43MTUxMjksNTAuNDcxODkwOCA3OC41NDE3ODksNjIuMTcyMzQwNSBMNzguNTQxNzg5LDg4IEw2NC43NjEyNTkzLDg4IEw2NC43NjEyNTkzLDYyLjI1OTAxMDUgQzY0Ljc2MTI1OTMsNTYuMTA1NDQwNyA2MS4zODExMjk0LDUzLjQxODY3MDcgNTcuNzQwOTg5NSw1My4zMzIwMDA3IEM1My41ODA4Mjk1LDUzLjI0NTMzMDcgNDguNTUzOTY5Nyw1Ni43OTg4MDA3IDQ4LjU1Mzk2OTcsNjIuNTE5MDIwNSBMNDguNTUzOTY5Nyw4OCBMMzQuMDgwMDgsODggTDM0LjA4MDA4LDI2Ljg5NzY1MTMgWiBNMTA2LjEwMjg0OSw2Ny45NzkyMzA0IEwxMDkuNTY5NjQ4LDU2LjEwNTQ0MDcgTDExNS4zNzY1MzgsNDEuMTExNTMxIEwxMjkuNTAzNzQ4LDQxLjExMTUzMSBMMTI5LjUwMzc0OCw0My4yNzgyODA5IEMxMjEuNzkwMTE4LDYyLjc3OTAzMDUgMTE0LjA3NjQ4OCw4Mi4xOTMxMTAxIDEwNi40NDk1MjgsMTAxLjY5Mzg2IEw5Mi4zMjIzMTg4LDEwMS42OTM4NiBMOTIuMzIyMzE4OCw5OS42MTM3Nzk4IEw5OC4zODkyMTg3LDg0LjE4NjUyMDEgTDgyLjc4ODYxOSw0My4yNzgyODA5IEw4Mi43ODg2MTksNDEuMTExNTMxIEw5Ny4wMDI0OTg3LDQxLjExMTUzMSBMMTAyLjgwOTM4OSw1Ni4xMDU0NDA3IEwxMDYuMTAyODQ5LDY3Ljk3OTIzMDQgWiBNMTYwLjA5ODI1Nyw4OC43ODAwMyBDMTU1LjUwNDc0OCw4OC43ODAwMyAxNTEuMDg0NTc4LDg3LjIxOTk3IDE0Ny45NjQ0NTgsODMuNjY2NTAwMSBMMTQ3Ljk2NDQ1OCwxMDEuNjkzODYgTDEzNC40NDM5MzgsMTAxLjY5Mzg2IEwxMzQuNDQzOTM4LDQxLjExMTUzMSBMMTQ3Ljk2NDQ1OCw0MS4xMTE1MzEgTDE0Ny45NjQ0NTgsNDUuNzkxNzEwOSBDMTUxLjE3MTI0OCw0MS44MDQ4OTEgMTU1Ljc2NDc1OCw0MC41MDQ4NDEgMTYwLjI3MTU5Nyw0MC41MDQ4NDEgQzE3NS4xNzg4MzcsNDAuNTA0ODQxIDE4Mi44OTI0NjcsNTIuNDY1MzAwOCAxODIuODA1Nzk3LDY1LjM3OTEzMDUgQzE4Mi42MzI0NTcsNzguMjA2MjkwMiAxNzUuMjY1NTA3LDg4Ljc4MDAzIDE2MC4wOTgyNTcsODguNzgwMDMgWiBNMTU4LjYyNDg2Nyw1My41OTIwMTA3IEMxNTIuNzMxMzA4LDUzLjU5MjAxMDcgMTQ3Ljk2NDQ1OCw1OC42MTg4NzA2IDE0Ny45NjQ0NTgsNjQuODU5MTEwNSBDMTQ3Ljk2NDQ1OCw3MS4wOTkzNTA0IDE1Mi43MzEzMDgsNzYuMjEyODgwMiAxNTguNjI0ODY3LDc2LjIxMjg4MDIgQzE2NS41NTg0NjcsNzYuMjEyODgwMiAxNjkuMDI1MjY3LDcwLjY2NjAwMDQgMTY5LjExMTkzNyw2NS4wMzI0NTA1IEMxNjkuMTk4NjA3LDU5LjM5ODkwMDYgMTY1LjY0NTEzNyw1My41OTIwMTA3IDE1OC42MjQ4NjcsNTMuNTkyMDEwNyBaIE0yMzYuNDU0NTI2LDY0LjQyNTc2MDUgQzIzNi40NTQ1MjYsNjYuMzMyNTAwNSAyMzYuMjgxMTg2LDY4LjA2NTkwMDQgMjM1LjkzNDUwNiw2OS43OTkzMDA0IEwyMDIuMzA2NTQ3LDY5Ljc5OTMwMDQgQzIwMy45NTMyNzcsNzQuMTMyODAwMyAyMDguMjAwMTA2LDc2LjI5OTU1MDIgMjEyLjM2MDI2Niw3Ni4zODYyMjAyIEMyMTUuMzkzNzE2LDc2LjM4NjIyMDIgMjE4LjI1MzgyNiw3NS4zNDYxODAzIDIyMC4yNDcyMzYsNzMuMTc5NDMwMyBMMjM1LjA2NzgwNiw3My4xNzk0MzAzIEMyMzEuNDI3NjY2LDgzLjU3OTgzMDEgMjIxLjU0NzI4Niw4OC42OTMzNiAyMTEuNjY2OTA2LDg4LjUyMDAyIEMxOTkuNzkzMTE3LDg4LjI2MDAxIDE4OC4wMDU5OTcsODAuMjg2MzcwMiAxODguMDA1OTk3LDY0LjQyNTc2MDUgQzE4OC4wMDU5OTcsNDguMzA1MTQwOCAyMDAuMjI2NDY3LDQwLjMzMTUwMSAyMTIuNDQ2OTM2LDQwLjQxODE3MSBDMjI0LjQ5NDA2Niw0MC41MDQ4NDEgMjM2LjQ1NDUyNiw0OC40Nzg0ODA4IDIzNi40NTQ1MjYsNjQuNDI1NzYwNSBaIE0yMDIuODI2NTY3LDU5LjEzODg5MDYgTDIyMS41NDcyODYsNTkuMTM4ODkwNiBDMjIwLjI0NzIzNiw1NC40NTg3MTA3IDIxNi40MzM3NTYsNTIuMjkxOTYwOCAyMTIuMDEzNTg2LDUyLjI5MTk2MDggQzIwNy45NDAwOTYsNTIuMjkxOTYwOCAyMDQuMjEzMjg3LDU0LjU0NTM4MDcgMjAyLjgyNjU2Nyw1OS4xMzg4OTA2IFogTTI1Ni41NjE5NjYsNjEuOTk5MDAwNSBMMjU2LjU2MTk2Niw4OCBMMjQyLjk1NDc3Niw4OCBMMjQyLjk1NDc3Niw0MS4xMTE1MzEgTDI1NS4yNjE5MTYsNDEuMTExNTMxIEwyNTUuNzgxOTM2LDQ0LjIzMTY1MDkgQzI1OC44MTUzODUsNDEuMzcxNTQxIDI2Mi4xOTU1MTUsNDAuMTU4MTYxIDI2Ni4wMDg5OTUsNDAuMTU4MTYxIEMyNjcuNjU1NzI1LDQwLjE1ODE2MSAyNjkuNDc1Nzk1LDQwLjQxODE3MSAyNzEuMjk1ODY1LDQwLjg1MTUyMSBMMjcxLjEyMjUyNSw1My42Nzg2ODA3IEMyNjkuNzM1ODA1LDUzLjI0NTMzMDcgMjY4LjA4OTA3NSw1Mi45ODUzMjA3IDI2Ni41MjkwMTUsNTIuOTg1MzIwNyBDMjYxLjU4ODgyNSw1My4wNzE5OTA3IDI1Ni41NjE5NjYsNTUuNjcyMDkwNyAyNTYuNTYxOTY2LDYxLjk5OTAwMDUgWiBNMzA1Ljc5MDUyNSw4OC4wODY2NyBDMzAzLjEwMzc1NSw4OC41MjAwMiAzMDAuNTkwMzI1LDg4Ljc4MDAzIDI5OC4zMzY5MDUsODguNzgwMDMgQzI4Ny44NDk4MzUsODguODY2NyAyODEuNTIyOTI1LDg0LjAxMzE4MDEgMjgxLjUyMjkyNSw3MS43OTI3MTAzIEwyODEuNTIyOTI1LDUzLjMzMjAwMDcgTDI3NS4zNjkzNTUsNTMuMzMyMDAwNyBMMjc1LjM2OTM1NSw0MS42MzE1NTEgTDI4MS41MjI5MjUsNDEuNjMxNTUxIEwyODEuNTIyOTI1LDMyLjcwNDU0MTIgTDI5NS4xMzAxMTUsMzEuNDkxMTYxMiBMMjk1LjEzMDExNSw0MS42MzE1NTEgTDMwNC45MjM4MjUsNDEuNjMxNTUxIEwzMDQuOTIzODI1LDUzLjMzMjAwMDcgTDI5NS4xMzAxMTUsNTMuMzMyMDAwNyBMMjk1LjEzMDExNSw3MS43OTI3MTAzIEMyOTUuMTMwMTE1LDc1Ljk1Mjg3MDMgMjk4LjE2MzU2NSw3Ny4yNTI5MjAyIDMwMS40NTcwMjUsNzcuMjUyOTIwMiBDMzAyLjc1NzA3NSw3Ny4yNTI5MjAyIDMwNC4xNDM3OTUsNzcuMDc5NTgwMiAzMDUuMzU3MTc1LDc2LjgxOTU3MDIgTDMwNS43OTA1MjUsODguMDg2NjcgWiBNMzI1LjQ2NDYxNCw2MS45OTkwMDA1IEwzMjUuNDY0NjE0LDg4IEwzMTEuODU3NDI1LDg4IEwzMTEuODU3NDI1LDQxLjExMTUzMSBMMzI0LjE2NDU2NCw0MS4xMTE1MzEgTDMyNC42ODQ1ODQsNDQuMjMxNjUwOSBDMzI3LjcxODAzNCw0MS4zNzE1NDEgMzMxLjA5ODE2NCw0MC4xNTgxNjEgMzM0LjkxMTY0NCw0MC4xNTgxNjEgQzMzNi41NTgzNzQsNDAuMTU4MTYxIDMzOC4zNzg0NDQsNDAuNDE4MTcxIDM0MC4xOTg1MTQsNDAuODUxNTIxIEwzNDAuMDI1MTc0LDUzLjY3ODY4MDcgQzMzOC42Mzg0NTQsNTMuMjQ1MzMwNyAzMzYuOTkxNzI0LDUyLjk4NTMyMDcgMzM1LjQzMTY2NCw1Mi45ODUzMjA3IEMzMzAuNDkxNDc0LDUzLjA3MTk5MDcgMzI1LjQ2NDYxNCw1NS42NzIwOTA3IDMyNS40NjQ2MTQsNjEuOTk5MDAwNSBaIE0zNjcuNDEyODkzLDQwLjMzMTUwMSBDMzcyLjAwNjQwMyw0MC4zMzE1MDEgMzc2LjUxMzI0Myw0Mi4wNjQ5MDEgMzc5LjU0NjY5Myw0NS45NjUwNTA5IEwzNzkuNTQ2NjkzLDQxLjExMTUzMSBMMzkzLjE1Mzg4Myw0MS4xMTE1MzEgTDM5My4xNTM4ODMsODggTDM3OS41NDY2OTMsODggTDM3OS41NDY2OTMsODMuMzE5ODIwMSBDMzc2LjMzOTkwMyw4Ny4zMDY2NCAzNzEuNzQ2MzkzLDg4LjYwNjY5IDM2Ny4yMzk1NTMsODguNjA2NjkgQzM1Mi4zMzIzMTQsODguNjA2NjkgMzQ0LjYxODY4NCw3Ni42NDYyMzAyIDM0NC43MDUzNTQsNjMuNzMyNDAwNSBDMzQ0Ljg3ODY5NCw1MC45MDUyNDA4IDM1Mi4yNDU2NDQsNDAuMzMxNTAxIDM2Ny40MTI4OTMsNDAuMzMxNTAxIFogTTM2OC44ODYyODMsNzUuNTE5NTIwMyBDMzc0Ljc3OTg0Myw3NS41MTk1MjAzIDM3OS41NDY2OTMsNzAuNDkyNjYwNCAzNzkuNTQ2NjkzLDY0LjI1MjQyMDUgQzM3OS41NDY2OTMsNTguMDEyMTgwNiAzNzQuNzc5ODQzLDUyLjg5ODY1MDcgMzY4Ljg4NjI4Myw1Mi44OTg2NTA3IEMzNjEuOTUyNjg0LDUyLjg5ODY1MDcgMzU4LjQ4NTg4NCw1OC4zNTg4NjA2IDM1OC4zOTkyMTQsNjQuMDc5MDgwNSBDMzU4LjMxMjU0NCw2OS43MTI2MzA0IDM2MS44NjYwMTQsNzUuNTE5NTIwMyAzNjguODg2MjgzLDc1LjUxOTUyMDMgWiBNNDMyLjc2MjA3Miw2OC4wNjU5MDA0IEM0MjkuMjA4NjAyLDc5LjY3OTY4MDIgNDEyLjM5NDYyMyw3Ny43NzI5NDAyIDQxMi4zOTQ2MjMsNjQuNTEyNDMwNSBDNDEyLjM5NDYyMyw1MS4yNTE5MjA4IDQyOS4yOTUyNzIsNDkuNDMxODUwOCA0MzIuNzYyMDcyLDYxLjA0NTYzMDYgTDQ0Ni4yODI1OTIsNjEuMDQ1NjMwNiBDNDQyLjQ2OTExMiwzMi4xODQ1MjEyIDM5OS4wNDc0NDMsMzQuMTc3OTMxMSAzOTkuMDQ3NDQzLDY0LjUxMjQzMDUgQzM5OS4wNDc0NDMsOTQuODQ2OTI5OSA0NDIuMzgyNDQyLDk2Ljg0MDMzOTggNDQ2LjI4MjU5Miw2OC4wNjU5MDA0IEw0MzIuNzYyMDcyLDY4LjA2NTkwMDQgWiBNNDY2Ljk5NjcyMSw1OS41NzIyNDA2IEw0NzkuOTEwNTUxLDQxLjExMTUzMSBMNDk0LjgxNzc5MSw0MS4xMTE1MzEgTDQ5NC44MTc3OTEsNDEuODA0ODkxIEw0NzguOTU3MTgxLDY0LjQyNTc2MDUgTDQ5Ni4zNzc4NTEsODcuMzkzMzEgTDQ5Ni4zNzc4NTEsODggTDQ4MC40MzA1NzEsODggTDQ2Ni45OTY3MjEsNjkuNzEyNjMwNCBMNDY2Ljk5NjcyMSw4OCBMNDUzLjM4OTUzMiw4OCBMNDUzLjM4OTUzMiwyNy4zMzEwMDEzIEw0NjYuOTk2NzIxLDI3LjMzMTAwMTMgTDQ2Ni45OTY3MjEsNTkuNTcyMjQwNiBaIiBpZD0iaHlwZXJ0cmFjayI+PC9wYXRoPgogICAgICAgICAgICA8L2c+CiAgICAgICAgICAgIDxnIGlkPSJMb2dvL2JveC9ncmVlbiI+CiAgICAgICAgICAgICAgICA8ZyBpZD0iT3VyLWxvZ28iIHRyYW5zZm9ybT0idHJhbnNsYXRlKDE5LjAwMDAwMCwgMTEuMDAwMDAwKSI+CiAgICAgICAgICAgICAgICAgICAgPGcgaWQ9Ikdyb3VwLTIiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDM1LjAwMDAwMCwgMjQuMDAwMDAwKSIgZmlsbC1ydWxlPSJub256ZXJvIj4KICAgICAgICAgICAgICAgICAgICAgICAgPHBhdGggZD0iTTExLjI3OSwxMi44OTUgQzUuNDkyLDEyLjg5NSAwLjYwMywxMC4wNTcgMC42MDMsNi42OTcgQzAuNjAzLDMuMzM3IDUuNDkyLDAuNDk4IDExLjI3OSwwLjQ5OCBDMTcuMDY1LDAuNDk4IDIxLjk1NSwzLjMzNyAyMS45NTUsNi42OTcgQzIxLjk1NSwxMC4wNTcgMTcuMDY1LDEyLjg5NSAxMS4yNzksMTIuODk1IiBpZD0iU2hhcGUiPjwvcGF0aD4KICAgICAgICAgICAgICAgICAgICA8L2c+CiAgICAgICAgICAgICAgICAgICAgPHBhdGggZD0iTTkxLjU5NSwyOC44MDIgQzkxLjU1NiwyOC43MjQgOTEuNTE2LDI4LjY0OCA5MS40NzIsMjguNTc0IEM5MS4zNTQsMjguMzc1IDkxLjIxNywyOC4xOTEgOTEuMDY5LDI4LjAxMyBDOTEuMDA0LDI3LjkzNiA5MC45NDgsMjcuODUzIDkwLjg3OCwyNy43ODEgQzkwLjg2LDI3Ljc2IDkwLjg0NiwyNy43MzcgOTAuODI2LDI3LjcxOCBDOTAuNjE2LDI3LjUwOCA5MC4zODcsMjcuMzI3IDkwLjE0MywyNy4xNjggQzkwLjEzNSwyNy4xNjMgOTAuMTMsMjcuMTU1IDkwLjEyMiwyNy4xNSBMNDguNTM4LDAuNzE4IEM0Ny44NjEsMC4yODggNDcuMDgsMC4wNiA0Ni4yNzgsMC4wNiBDNDUuNDc2LDAuMDYgNDQuNjk0LDAuMjg4IDQ0LjAxNywwLjcxNiBMMi40MzksMjcuMTUgQzIuNDAyLDI3LjE3MyAyLjM3NywyNy4yMDcgMi4zNDEsMjcuMjMxIEMyLjA4NCwyNy40MDQgMS44NDEsMjcuNiAxLjYyNiwyNy44MjYgQzEuNjI1LDI3LjgyNiAxLjYyNSwyNy44MjcgMS42MjQsMjcuODI4IEMxLjYyLDI3LjgzMiAxLjYxNywyNy44MzcgMS42MTMsMjcuODQxIEMxLjM4MiwyOC4wODYgMS4xOTYsMjguMzYgMS4wMzIsMjguNjQ2IEMxLjAxOCwyOC42NzEgMS4wMDYsMjguNjk3IDAuOTkyLDI4LjcyMyBDMC42NTgsMjkuMzM1IDAuNDY1LDMwLjAxNyAwLjQ2NSwzMC43MyBMMC40NjUsNzcuMDI5IEMwLjQ2NSw3OC40ODIgMS4xOTgsNzkuODEzIDIuNDI5LDgwLjU5MyBMNDQuMDEzLDEwNy4wNCBDNDQuNjksMTA3LjQ3MiA0NS40NzMsMTA3LjY5OSA0Ni4yNzgsMTA3LjY5OSBDNDcuMDgzLDEwNy42OTkgNDcuODY2LDEwNy40NzEgNDguNTQ1LDEwNy4wNCBMOTAuMTMsODAuNTkxIEM5MS4zNTksNzkuODE0IDkyLjA5Myw3OC40ODIgOTIuMDkzLDc3LjAyOSBMOTIuMDkzLDMwLjczIEM5Mi4wOTMsMzAuMDYgOTEuOTA2LDI5LjQwMSA5MS41OTUsMjguODAyIFogTTQ3LjY2ODA2ODYsNzkuNjg3ODE0NiBDNDcuODg0ODc1NSw3OS42MDcwOTY0IDQ4LjA5NDM5ODUsNzkuNTAwNDY4MSA0OC4yOTE5OTkxLDc5LjM2Nzk4NzkgTDY0LjM4MTE0MjcsNjguNTgxMTEyIEM2NC4zNzQ1NzUyLDY3LjEyMjEzMzYgNjQuNjQzOTQ2NSw2NS41Mzk3NTk1IDY1LjIxOTAyODQsNjMuOTU5NzM1IEM2Ny4wMDc4MDU5LDU5LjA0NTEwOTIgNzEuMDc2OTc1Nyw1Ni4wMTQyODQ4IDc0LjMwNzc3MzcsNTcuMTkwMTk5MSBDNzcuNTM4NTcxNyw1OC4zNjYxMTM0IDc4LjcwNzU2MDMsNjMuMzAzNDcxNiA3Ni45MTg3ODI4LDY4LjIxODA5NzMgQzc1LjEzMDAwNTMsNzMuMTMyNzIzIDcxLjA2MDgzNTQsNzYuMTYzNTQ3NSA2Ny44MzAwMzc0LDc0Ljk4NzYzMzIgQzY2LjgyMzU4ODEsNzQuNjIxMzE1NiA2Ni4wMTcyMjI5LDczLjg4OTk3NjEgNjUuNDM4MDI3Miw3Mi45MDgwMTI3IEw1MC41MTk0ODE1LDgyLjY5MDM4NDkgQzQ5LjY0NDUzNDksODMuMjc2OTg4IDQ4LjY2OTQwOTIsODMuNjQ2MzcwNCA0Ny42NjgwNjg2LDgzLjc5NzYwMSBMNDcuNjY4MDY4NiwxMDAuOTg1ODU1IEw0Ny42NjgwNjg2LDgzLjc5NzYwMSBDNDYuMDMxMzkyMiw4NC4wNDQ3ODUyIDQ0LjMyNDY4MTYsODMuNzA5MTY3NSA0Mi44NzA5MDg1LDgyLjc4NjY4MTUgTDAuNjEyNjQ0ODYyLDU2LjQ0MTEyNTkgTDAuNjEyNjQ0ODYyLDUwLjg1ODI3MDUgTDQ1LjAxNDAzOTMsNzkuNDA5MjU3OCBDNDUuODE3Mzk5Miw3OS45MTkwMjY3IDQ2LjgwMDk4NSw4MC4wMTA2MzM3IDQ3LjY2ODA2ODYsNzkuNjg3ODE0NiBMNDcuNjY4MDY4Niw1NS45MDA2MjAyIEw0Ny42NjgwNjg2LDc5LjY4NzgxNDYgWiBNNDYuMjc4LDkuMjYgTDgwLjAwNSwzMC42OTYgTDQ2LjI3OCw1Mi4xNjQgTDEyLjU1LDMwLjY5NyBMNDYuMjc4LDkuMjYgWiIgaWQ9IlNoYXBlIiBmaWxsLXJ1bGU9Im5vbnplcm8iPjwvcGF0aD4KICAgICAgICAgICAgICAgIDwvZz4KICAgICAgICAgICAgPC9nPgogICAgICAgIDwvZz4KICAgIDwvZz4KPC9zdmc+" alt="HyperTrack"><span>— ground truth for the shift economy</span></div>
+    <div>Staffing Benchmark Report · No-Show · Q2 2026</div>
+  </footer>
+</div>
+<div id="tip" role="tooltip"></div>
+<script>
+var D={"tl":[{"label":"60m before","show":81.52221067605605,"ns":18.477789323943945,"cover":29.443325817769686},{"label":"45m before","show":79.51184892619106,"ns":20.488151073808936,"cover":26.685475670874578},{"label":"30m before","show":76.51116312707535,"ns":23.488836872924654,"cover":24.278887696580217},{"label":"15m before","show":72.17255386085779,"ns":27.827446139142207,"cover":22.467114385271103}],"tl_nm":[{"label":"60m before","show":94.2879373656556,"ns":5.7120626343444,"cover":24.60683956482073},{"label":"45m before","show":93.86933901195239,"ns":6.130660988047608,"cover":21.486473994944074},{"label":"30m before","show":92.47727788747996,"ns":7.5227221125200385,"cover":17.57717519301334},{"label":"15m before","show":87.9482372436262,"ns":12.0517627563738,"cover":13.796484966863197}],"dark_start":40.9,"odur":[{"label":"no outage","show":90.1213011929137,"ns":9.878698807086302,"cover":37.92827660489436},{"label":"up to 15 min","show":89.81474352064309,"ns":10.185256479356916,"cover":18.607249504656032},{"label":"up to 30 min","show":89.41617581358612,"ns":10.583824186413878,"cover":27.896807694008046},{"label":"up to 60 min","show":89.27773410378089,"ns":10.722265896219106,"cover":37.54928320814092},{"label":"over 60 min","show":87.18025338184161,"ns":12.819746618158396,"cover":62.07172339510564}],"otype":[{"label":"location permission off / restricted","show":69.92092381071922,"ns":30.079076189280784,"cover":4.815587359384608},{"label":"every other blackout type","show":87.77045054201706,"ns":12.229549457982948,"cover":57.256136035721035}],"perm_dark":[{"label":"still dark 60m before start","ns":43.24969524583503,"show":56.75030475416497,"cover":3.4221938211617373},{"label":"still dark 45m before start","ns":44.38044831880448,"show":55.61955168119552,"cover":3.437466089535683},{"label":"still dark 30m before start","ns":48.5379438384776,"show":51.4620561615224,"cover":3.3623104530638983},{"label":"still dark 15m before start","ns":54.047478135069376,"show":45.952521864930624,"cover":3.303230888564688}],"dep_dark":[{"label":"15m past leave time","ns":29.686803614116123,"show":70.31319638588388,"cover":2.944734483576283},{"label":"30m past leave time","ns":42.121575684863025,"show":57.878424315136975,"cover":1.6932122805113798},{"label":"45m past leave time","ns":51.74300770166194,"show":48.25699229833806,"cover":1.0260552936495497},{"label":"60m past leave time","ns":55.8113627924248,"show":44.1886372075752,"cover":0.6040584043694763}],"dep_nomove":[{"label":"15m past leave time","ns":19.92410200549909,"show":80.0758979945009,"cover":9.115534710248898},{"label":"30m past leave time","ns":33.2739977151359,"show":66.72600228486411,"cover":5.0334181346129885},{"label":"45m past leave time","ns":46.24530663329161,"show":53.75469336670839,"cover":2.970054296933087},{"label":"60m past leave time","ns":55.566662501561915,"show":44.433337498438085,"cover":1.787257301550939}],"perm_dur":[{"label":"any duration","ns":30.079076189280784,"show":69.92092381071922,"cover":4.815587359384608},{"label":"longer than 15 min","ns":34.42968724252711,"show":65.57031275747289,"cover":4.198668097437072},{"label":"longer than 30 min","ns":36.85446009389671,"show":63.14553990610329,"cover":3.9752106970182903},{"label":"longer than 60 min","ns":44.260020554984585,"show":55.739979445015415,"cover":3.4615801974945444}],"perm_dur_hc":[2.13,2.38,2.48,2.81],"perm_dur_li":[2.73,3.16,3.41,4.14],"dep_nomove_hc":[1.7,3.16,4.62,5.53],"dep_nomove_li":[1.88,2.68,3.2,3.86],"lb_nm":{"ns":20.1,"show":20.6,"prec":8.7},"dow_show":[88.3,88.3,88.1,88.3,88.8,88.8,88.7],"sites":[{"name":"Office","v":90.5,"ns":9.5},{"name":"Senior care","v":90.2,"ns":9.8},{"name":"Residential","v":89.2,"ns":10.8},{"name":"Hospital","v":88.8,"ns":11.2},{"name":"Hotel","v":88.6,"ns":11.4},{"name":"Retail","v":87.9,"ns":12.1},{"name":"School","v":87.9,"ns":12.1},{"name":"Airport","v":87.4,"ns":12.6},{"name":"Grocery","v":87.0,"ns":13.0},{"name":"Venue","v":86.8,"ns":13.2},{"name":"Factory","v":85.0,"ns":15.0},{"name":"Warehouse","v":84.5,"ns":15.5}],"states":[{"name":"KY","v":76.1,"grp":"Lowest show rate"},{"name":"IN","v":82.2,"grp":"Lowest show rate"},{"name":"FL","v":83.3,"grp":"Lowest show rate"},{"name":"AR","v":83.3,"grp":"Lowest show rate"},{"name":"LA","v":83.4,"grp":"Lowest show rate"},{"name":"NH","v":95.2,"grp":"Highest show rate"},{"name":"MA","v":94.5,"grp":"Highest show rate"},{"name":"OR","v":93.8,"grp":"Highest show rate"},{"name":"WA","v":93.3,"grp":"Highest show rate"},{"name":"CA","v":92.7,"grp":"Highest show rate"}],"timing":[{"name":"Afternoon","v":89.6},{"name":"Overnight","v":89.3},{"name":"Evening","v":88.0},{"name":"Morning","v":87.8}],"wk_show":[88.4,88.3,88.3,88.0,87.8,88.0,88.2,88.1,87.5,88.8,89.5,89.5,89.7,89.4],"ns_rate":11.5,"show_rate":88.5,"cancelled_pct":7.9,"light_show":86.8,"hc_show":89.7,"light_lo":71.2,"light_hi":91.2,"hc_lo":84.0,"hc_hi":93.1,"kinds":{"cust":37.5,"auto":10.4,"ghost":29.8,"undet":9.2,"untr":13.0},"cancelled_side":48.0,"completed_side":52.0,"confirmed":37.7,
+"offvs":{"off_hc":13.1,"off_li":26.0,"unr_hc":14.1,"unr_li":15.9,"base_hc":8.9,"base_li":11.6},"lbkind_app_hc":[1.77,1.86,1.94,2.06,2.25,2.52,3.03],"lbkind_beh_hc":[0.85,0.88,0.92,0.96,1.03,1.14,1.36],"lbkind_app_li":[2.25,2.36,2.47,2.59,2.77,2.99,3.46],"lbkind_beh_li":[1.86,1.97,2.07,2.19,2.35,2.57,3.12],"dep2_hc":[0.90,1.65,2.14,2.63,3.06,3.45,3.82],"dep2_li":[1.38,2.32,2.87,3.28,3.60,3.81,4.00],
+"stopstart_lb_hc":[1.0,1.4,1.8,2.2,2.6,3.0,3.3],"stopstart_lb_li":[1.0,1.1,1.3,1.3,1.3,1.2,1.3],"firstsig":{"tot":{"hc":10.3,"li":13.2},"early":{"hc":36.6,"li":21.3},"rows":[{"name":"Late departure","hc":62.5,"li":58.3},{"name":"No location/message","hc":12.2,"li":6.9},{"name":"Long stop (on the way)","hc":8.8,"li":9.4},{"name":"Worker switched off visibility","hc":6.3,"li":10.7},{"name":"Moved away from destination","hc":7.6,"li":9.1},{"name":"Destination different than expected","hc":0.5,"li":2.3},{"name":"Others","hc":2.0,"li":3.3}]}};
+
+/* range chart 60-100 (show rate: higher = better) */
+var R0=60,R1=100,rx=function(v){return (v-R0)/(R1-R0)*100;};
+var ranges=[
+ {id:"range-hc",color:"var(--s-hc)",name:"Healthcare",lo:D.hc_lo,hi:D.hc_hi,med:D.hc_show},
+ {id:"range-li",color:"var(--s-li)",name:"Light Industrial",lo:D.light_lo,hi:D.light_hi,med:D.light_show}];
+ranges.forEach(function(r){
+  document.getElementById(r.id).innerHTML=
+   '<div class="rline"></div>'+
+   '<div class="rband" style="left:'+rx(r.lo)+'%;width:'+(rx(r.hi)-rx(r.lo))+'%;background:'+r.color+'" data-tip="<b>'+r.name+'</b>Operators range '+r.lo+'% (worst) to '+r.hi+'% (best) show rate"></div>'+
+   '<div class="rtick" style="left:'+rx(r.lo)+'%;background:'+r.color+'" data-tip="<b>'+r.name+' · worst</b>'+r.lo+'% show rate"></div>'+
+   '<div class="rtick med" style="left:'+rx(r.med)+'%;background:var(--ink-3)" data-tip="<b>'+r.name+' · industry rate</b>'+r.med+'% show rate"></div>'+
+   '<div class="rtick" style="left:'+rx(r.hi)+'%;background:'+r.color+'" data-tip="<b>'+r.name+' · best</b>'+r.hi+'% show rate"></div>'+
+   '<div class="rlab" style="left:'+rx(r.lo)+'%">'+r.lo+'</div>'+
+   '<div class="rlab" style="left:'+rx(r.med)+'%"><b>'+r.med+'</b></div>'+
+   '<div class="rlab" style="left:'+rx(r.hi)+'%">'+r.hi+'</div>';
+});
+document.getElementById("rangeaxis").innerHTML=[60,70,80,90,100].map(function(g){return '<span style="left:'+rx(g)+'%">'+g+'%</span>';}).join("");
+
+/* category strip — two groups: CANCELLED (side c) | COMPLETED, no arrival (side p) */
+/* dark / no-movement timelines — each bar = 100% of that reading's dark (or un-moved) shifts,
+   stacked no-show | show, with a coverage tag (share of ALL no-shows still dark/un-moved there) */
+function signalChart(elid,axid,rows,sigName){
+  var el=document.getElementById(elid); if(!el)return;
+  rows.forEach(function(t){
+    var row=document.createElement("div");row.className="brow";
+    var cv=t.cover>=0.95?('covers '+t.cover.toFixed(0)+'% of no-shows'):'rare';
+    row.innerHTML='<div class="lbl">'+t.label+'<span class="tag">'+cv+'</span></div>'+
+      '<div class="track slim">'+[0.25,0.5,0.75,1].map(function(g){return '<div class="grid-l" style="left:'+(g*100)+'%"></div>';}).join("")+
+        '<div class="bar" style="width:'+t.ns+'%;background:var(--s-hc)" data-tip="<b>'+t.label+' · '+sigName+'</b>'+t.ns.toFixed(0)+'% of flagged workers end up no-shows ('+(t.ns/D.ns_rate).toFixed(1)+'× the baseline rate) · '+cv+'"></div>'+
+        '<div class="marker" style="left:'+D.ns_rate+'%" data-tip="<b>Baseline</b>the baseline no-show rate — '+D.ns_rate+'%. A flag near this line is noise."></div>'+
+      '</div>'+
+      '<div class="val">'+(t.ns/D.ns_rate).toFixed(1)+'×</div>';
+    el.appendChild(row);
+  });
+  if(document.getElementById(axid)) document.getElementById(axid).innerHTML=[0,25,50,75,100].map(function(g){return '<span style="left:'+g+'%">'+g+'%</span>';}).join("");
+}
+/* multiplier curves: x = time before start -> shift start (right), y = no-show multiplier vs baseline rate */
+function multLine(elid,labels,pcts,base,vline){
+  var el=document.getElementById(elid); if(!el)return;
+  var W=660,H=210,PL=48,PR=34,PT=22,PB=30,iw=W-PL-PR,ih=H-PT-PB;
+  var pv=null;
+  if(labels.length>pcts.length){pv=pcts[pcts.length-1];}
+  var vals=pcts.concat(pv!=null?[pv]:[]);
+  var ymax=Math.max(Math.ceil(base/10)*10,Math.ceil(Math.max.apply(null,vals)/10)*10);
+  var xs=labels.map(function(_,i){return PL+iw*i/(labels.length-1);});
+  var yy=function(v){return PT+ih*(1-v/ymax);};
+  var g='';
+  for(var t=0;t<=ymax+0.001;t+=10){
+    g+='<line x1="'+PL+'" y1="'+yy(t)+'" x2="'+(W-PR)+'" y2="'+yy(t)+'" stroke="var(--grid)" stroke-width="1"/>';
+    g+='<text x="'+(PL-8)+'" y="'+(yy(t)+3.5)+'" text-anchor="end" font-size="10" fill="var(--ink-3)">'+t+'%</text>';
+  }
+  g+='<line x1="'+PL+'" y1="'+yy(base)+'" x2="'+(W-PR)+'" y2="'+yy(base)+'" stroke="var(--ink-3)" stroke-width="1" stroke-dasharray="4 3"/>';
+  if(vline){var vx=PL+iw*vline.t/(labels.length-1);
+    var vleft=vx<(PL+iw/2);
+    g+='<line x1="'+vx+'" y1="'+PT+'" x2="'+vx+'" y2="'+(PT+ih)+'" stroke="var(--ink)" stroke-width="1.2" stroke-dasharray="5 4" opacity=".55"/>';
+    g+='<text x="'+(vleft?vx+5:vx-5)+'" y="'+(PT+9)+'" text-anchor="'+(vleft?"start":"end")+'" font-size="9.5" font-weight="650" fill="var(--ink-2)">'+vline.lab+'</text>';}
+  g+='<text x="'+(PL+4)+'" y="'+(yy(base)-5)+'" font-size="9.5" fill="var(--ink-3)">baseline rate ('+base.toFixed(1)+'%)</text>';
+  if(labels.length>pcts.length){var dx=xs[labels.length-1];g+='<line x1="'+dx+'" y1="'+PT+'" x2="'+dx+'" y2="'+(PT+ih)+'" stroke="var(--ink-3)" stroke-width="1" stroke-dasharray="3 3"/>';}
+  labels.forEach(function(l,i){var last=(i===labels.length-1);g+='<text x="'+xs[i]+'" y="'+(H-8)+'" text-anchor="'+(last?"end":"middle")+'" font-size="10" fill="var(--ink-3)"'+(last?' font-weight="700"':'')+'>'+l+'</text>';});
+  g+='<polyline points="'+pcts.map(function(v,i){return xs[i]+','+yy(v);}).join(' ')+'" fill="none" stroke="var(--s-hc)" stroke-width="2.4" stroke-linejoin="round"/>';
+  if(pv!=null){var li=pcts.length-1,ex=xs[labels.length-1];g+='<polyline points="'+xs[li]+','+yy(pcts[li])+' '+ex+','+yy(pv)+'" fill="none" stroke="var(--s-hc)" stroke-width="2.4" stroke-linejoin="round"></polyline>';g+='<circle cx="'+ex+'" cy="'+yy(pv)+'" r="3" fill="var(--s-hc)"><title>shift start — carried from the last reading ('+(pv/base).toFixed(1)+'× · '+pv.toFixed(0)+'% no-show rate)</title></circle>';}
+  pcts.forEach(function(v,i){var anc=(i===0)?"start":(xs[i]>W-PR-24?"end":"middle");g+='<circle cx="'+xs[i]+'" cy="'+yy(v)+'" r="3" fill="var(--s-hc)"><title>'+labels[i]+': '+v.toFixed(0)+'% no-show rate = '+(v/base).toFixed(1)+'× the baseline no-show rate</title></circle>';g+='<text x="'+xs[i]+'" y="'+(yy(v)-9)+'" text-anchor="'+anc+'" font-size="10.5" font-weight="700" fill="var(--s-hc)">'+(v/base).toFixed(1)+'×</text>';});
+  el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto">'+g+'</svg>';
+}
+function dualLine(elid,labels,hc,li,hc2,li2,vline){
+  var el=document.getElementById(elid); if(!el)return;
+  var BH=10.3,BL=13.2;  // baseline no-show rate: healthcare, light industrial
+  var W=660,H=334,PL=44,PR=44,PT=30,PB=48,iw=W-PL-PR,ih=H-PT-PB;
+  function pc(arr,b){return arr?arr.map(function(v){return v*b;}):null;}
+  var HC=pc(hc,BH),LI=pc(li,BL),HC2=pc(hc2,BH),LI2=pc(li2,BL);
+  var all=HC.concat(LI).concat(HC2||[]).concat(LI2||[]);
+  var ymax=Math.max(20,Math.ceil(Math.max.apply(null,all)/10)*10);
+  var xs=labels.map(function(_,i){return PL+iw*i/(labels.length-1);});
+  var yy=function(v){return PT+ih*(1-v/ymax);};
+  var g='';
+  if(vline&&vline.shade){var svx=PL+iw*vline.t/(labels.length-1);
+    var sx=(vline.shade==="right")?svx:PL, sw=(vline.shade==="right")?(W-PR-svx):(svx-PL);
+    g+='<rect x="'+sx+'" y="'+PT+'" width="'+sw+'" height="'+ih+'" fill="var(--ink-3)" opacity=".08"/>';
+    if(vline.slab)g+='<text x="'+(sx+sw/2)+'" y="'+(PT+ih-8)+'" text-anchor="middle" font-size="9" fill="var(--ink-3)" opacity=".9">'+vline.slab+'</text>';}
+  for(var t=0;t<=ymax+0.001;t+=10){
+    g+='<line x1="'+PL+'" y1="'+yy(t)+'" x2="'+(W-PR)+'" y2="'+yy(t)+'" stroke="var(--grid)" stroke-width="1"/>';
+    g+='<text x="'+(PL-8)+'" y="'+(yy(t)+3.5)+'" text-anchor="end" font-size="10" fill="var(--ink-3)">'+t+'%</text>';
+  }
+  // separate everyday baselines per industry
+  g+='<line x1="'+PL+'" y1="'+yy(BH)+'" x2="'+(W-PR)+'" y2="'+yy(BH)+'" stroke="var(--s-hc)" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>';
+  g+='<line x1="'+PL+'" y1="'+yy(BL)+'" x2="'+(W-PR)+'" y2="'+yy(BL)+'" stroke="var(--s-li)" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>';
+  if(vline){var vx=PL+iw*vline.t/(labels.length-1);
+    g+='<line x1="'+vx+'" y1="'+PT+'" x2="'+vx+'" y2="'+(PT+ih)+'" stroke="var(--ink)" stroke-width="1.2" stroke-dasharray="5 4" opacity=".55"/>';
+    g+='<text x="'+vx+'" y="'+(PT+ih+38)+'" text-anchor="middle" font-size="9.5" font-weight="650" fill="var(--ink-2)">'+vline.lab+'</text>';}
+  labels.forEach(function(l,i){var anc=(i===0)?"start":(i===labels.length-1)?"end":"middle";var lx=(i===0)?PL-30:(i===labels.length-1)?W-PR+30:xs[i];
+    g+='<text x="'+lx+'" y="'+(PT+ih+24)+'" text-anchor="'+anc+'" font-size="10.5" fill="var(--ink-3)"'+(i===labels.length-1?' font-weight="700"':'')+'>'+l+'</text>';});
+  function line(arr,mult,base,color,dash){
+    g+='<polyline points="'+arr.map(function(v,i){return xs[i]+','+yy(v);}).join(' ')+'" fill="none" stroke="'+color+'" stroke-width="'+(dash?1.6:2.4)+'"'+(dash?' stroke-dasharray="5 4" opacity=".65"':'')+' stroke-linejoin="round"/>';
+    arr.forEach(function(v,i){g+='<circle cx="'+xs[i]+'" cy="'+yy(v)+'" r="'+(dash?2.2:3)+'" fill="'+color+'"'+(dash?' opacity=".65"':'')+'><title>'+labels[i]+': '+v.toFixed(1)+'% no-show rate = '+mult[i].toFixed(1)+'\u00d7 that industry\u2019s baseline no-show rate ('+base.toFixed(1)+'%)'+(dash?' (comparison line)':'')+'</title></circle>';});
+  }
+  if(HC2)line(HC2,hc2,BH,"var(--s-hc)",true); if(LI2)line(LI2,li2,BL,"var(--s-li)",true);
+  line(HC,hc,BH,"var(--s-hc)"); line(LI,li,BL,"var(--s-li)");
+  g+=ytitle('no-show rate',H);
+  // per-point multiplier labels on the solid lines, nudged apart when the lines run close
+  hc.forEach(function(m,i){
+    var yH=yy(HC[i]),yL=yy(LI[i]);
+    var anc=(i===0)?"start":(xs[i]>W-PR-24?"end":"middle");
+    var close=Math.abs(yH-yL)<24, hAbove=yH<=yL;
+    var yhl=close?(hAbove?yH-8:yH+16):yH-8;
+    var yll=close?(hAbove?yL+16:yL-8):yL-8;
+    g+='<text x="'+xs[i]+'" y="'+yhl+'" text-anchor="'+anc+'" font-size="10" font-weight="700" fill="var(--s-hc)">'+m.toFixed(1)+'\u00d7</text>';
+    g+='<text x="'+xs[i]+'" y="'+yll+'" text-anchor="'+anc+'" font-size="10" font-weight="700" fill="var(--s-li)">'+li[i].toFixed(1)+'\u00d7</text>';
+  });
+  el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto">'+g+'</svg>';
+}
+/* still invisible past their own leave-by: solid = no first location yet (ttfl), dashed = no first
+   event yet (ttfe); multiples of each industry's baseline no-show rate */
+/* TTFE coverage lines (0–100%) */
+function ytitle(txt,H2){return '<text transform="rotate(-90)" x="'+(-H2/2)+'" y="11" text-anchor="middle" font-size="9" fill="var(--ink-3)" letter-spacing=".04em">'+txt+'</text>';}
+function ttfeChart(elid, SER, vline, hlines, ymin, note, opts){
+  var el=document.getElementById(elid); if(!el)return;
+  ymin=ymin||0; opts=opts||{};
+  var L=["2h before","90m before","60m before","45m before","30m before","15m before","5m before","shift start"];
+  var W=660,H=274,PL=44,PR=opts.pr||14,PT=16,PB=44,iw=W-PL-PR,ih=H-PT-PB;
+  var xs=L.map(function(_,i){return PL+iw*i/(L.length-1);});
+  var yy=function(v){return PT+ih*(1-(v-ymin)/(100-ymin));};
+  var g='<defs><clipPath id="clip_'+elid+'"><rect x="'+PL+'" y="'+PT+'" width="'+iw+'" height="'+ih+'"/></clipPath></defs>';
+  for(var t=ymin;t<=100.01;t+=(ymin?10:25)){
+    g+='<line x1="'+PL+'" y1="'+yy(t)+'" x2="'+(W-PR)+'" y2="'+yy(t)+'" stroke="var(--grid)" stroke-width="1"/>';
+    g+='<text x="'+(PL-8)+'" y="'+(yy(t)+3.5)+'" text-anchor="end" font-size="10" fill="var(--ink-3)">'+t+'%</text>';
+  }
+  L.forEach(function(l,i){var anc=(i===0)?"start":(i===L.length-1)?"end":"middle";
+    g+='<text x="'+xs[i]+'" y="'+(PT+ih+22)+'" text-anchor="'+anc+'" font-size="10" fill="var(--ink-3)"'+(i===L.length-1?' font-weight="700"':'')+'>'+l+'</text>';});
+  if(vline){var vx=PL+iw*vline.t/(L.length-1);
+    g+='<line x1="'+vx+'" y1="'+PT+'" x2="'+vx+'" y2="'+(PT+ih)+'" stroke="var(--ink)" stroke-width="1.2" stroke-dasharray="5 4" opacity=".55"/>';
+    g+='<text x="'+vx+'" y="'+(PT+ih+36)+'" text-anchor="middle" font-size="9.5" font-weight="650" fill="var(--ink-2)">'+vline.lab+'</text>';}
+  if(hlines)hlines.forEach(function(h){
+    g+='<line x1="'+PL+'" y1="'+yy(h.v)+'" x2="'+(W-PR)+'" y2="'+yy(h.v)+'" stroke="'+h.color+'" stroke-width="1" stroke-dasharray="2 3" opacity=".8"/>';
+    g+='<text x="'+(PL+4)+'" y="'+(yy(h.v)-4)+'" font-size="9" font-weight="650" fill="'+h.color+'">'+h.lab+'</text>';});
+  if(note){var nx=note.right?(W-PR-4):(PL+iw*note.t/(L.length-1)+10);
+    note.rows.forEach(function(r,i){
+      g+='<text x="'+nx+'" y="'+(yy(note.v)+i*13)+'"'+(note.right?' text-anchor="end"':'')+' font-size="9.5" font-weight="650" fill="'+(r.color||'var(--ink-2)')+'">'+r.txt+'</text>';});}
+  g+='<g clip-path="url(#clip_'+elid+')">';
+  SER.forEach(function(sr){
+    var dash=sr[3]?' stroke-dasharray="6 4" opacity=".85"':'';
+    g+='<polyline points="'+sr[2].map(function(v,i){return xs[i]+','+yy(v);}).join(' ')+'" fill="none" stroke="'+sr[1]+'" stroke-width="'+(sr[3]?1.6:2.2)+'"'+dash+' stroke-linejoin="round"/>';
+    if(!sr[4])sr[2].forEach(function(v,i){g+='<circle cx="'+xs[i]+'" cy="'+yy(v)+'" r="2.6" fill="'+sr[1]+'"'+(sr[3]?' opacity=".85"':'')+'><title>'+sr[0]+' \u00b7 '+L[i]+': '+v.toFixed(1)+'% of open-window shifts already visible</title></circle>';});
+  });
+  g+='</g>';
+  if(opts.lbdelta&&vline){
+    var dvx=PL+iw*vline.t/(L.length-1), di=Math.floor(vline.t), dfr=vline.t-di, dlabs=[];
+    SER.forEach(function(sr){
+      var v0=sr[2][di]+(sr[2][Math.min(di+1,sr[2].length-1)]-sr[2][di])*dfr, v1=sr[2][sr[2].length-1];
+      g+='<line x1="'+dvx+'" y1="'+yy(v0)+'" x2="'+(W-PR)+'" y2="'+yy(v0)+'" stroke="'+sr[1]+'" stroke-width="1" stroke-dasharray="2 3" opacity=".45"/>';
+      dlabs.push({y:(yy(v0)+yy(v1))/2,txt:(v1-v0>=0?'+':'')+(v1-v0).toFixed(1)+'%',c:sr[1]});
+    });
+    dlabs.sort(function(a,b){return a.y-b.y;});
+    for(var dj=1;dj<dlabs.length;dj++){if(dlabs[dj].y-dlabs[dj-1].y<11)dlabs[dj].y=dlabs[dj-1].y+11;}
+    dlabs.forEach(function(lb){g+='<text x="'+(W-PR+4)+'" y="'+(lb.y+3.5)+'" font-size="9.5" font-weight="700" fill="'+lb.c+'">'+lb.txt+'</text>';});
+  }
+  if(opts.outcomelab){
+    SER.forEach(function(sr){
+      g+='<text x="'+(PL+3)+'" y="'+(yy(sr[2][0])-5)+'" font-size="9" font-weight="650" fill="'+sr[1]+'"'+(sr[3]?' opacity=".85"':'')+' stroke="var(--surface)" stroke-width="3" paint-order="stroke" stroke-linejoin="round">'+(sr[3]?'show':'no-show')+'</text>';
+    });
+  }
+  g+=ytitle('% of shifts visible',H);
+  el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto">'+g+'</svg>';
+}
+ttfeChart("ttfeind",[["Healthcare","var(--s-hc)",[77.4,84.6,89.0,89.9,91.9,93.5,94.9,95.9]],
+                     ["Light Industrial","var(--s-li)",[58.4,74.2,82.2,85.9,88.5,90.6,92.1,92.8]],
+                     ["Pre-integration baseline","#2f9e44",[0,11.5,23,34.5,46,60.3,68,70],1,1]]);
+ttfeChart("ttfesplit",[["Healthcare — showed","var(--s-hc)",[77.7,85.0,89.4,90.4,92.4,94.1,95.6,96.6],1],
+                      ["Healthcare — no-show","var(--s-hc)",[73.9,80.4,83.7,83.7,85.0,85.8,86.2,86.5]],
+                      ["Light Industrial — showed","var(--s-li)",[62.6,83.7,84.4,88.3,91.0,93.2,94.7,95.6],1],
+                      ["Light Industrial — no-show","var(--s-li)",[48.6,48.5,63.9,66.9,69.0,70.7,71.6,71.6]]],
+          {t:4.5,lab:"leave-by"}, null, 40, null, {outcomelab:1});
+
+
+
+/* playbook detection timeline */
+(function(){
+  var el=document.getElementById("pbtimeline"); if(!el)return;
+  var W=660,H=170,PL=26,PR=14,Y=92,iw=W-PL-PR;
+  var P=[
+    {x:.15,t:"At the leave-by",n1:"No location/message + worker",n2:"switched off visibility",cov:"~1 in 8",sub:"(12\u201314%)",c:"#c44536"},
+    {x:.46,t:"5 min after leave-by",n1:"Late departure",n2:"",cov:"2 in 5",sub:"(40\u201346%)",c:"#d98e32"},
+    {x:.72,t:"15 min after leave-by",n1:"Long stop on the way",n2:"",cov:"6\u20137%",sub:"(of all no-shows)",c:"#3e7cb1"}
+  ];
+  var g='';
+  g+='<line x1="'+PL+'" y1="'+Y+'" x2="'+(PL+iw-8)+'" y2="'+Y+'" stroke="var(--ink-3)" stroke-width="1.6"/>';
+  g+='<polygon points="'+(PL+iw)+','+Y+' '+(PL+iw-9)+','+(Y-4.5)+' '+(PL+iw-9)+','+(Y+4.5)+'" fill="var(--ink-3)"/>';
+  P.forEach(function(pt){
+    var x=PL+iw*pt.x;
+    g+='<circle cx="'+x+'" cy="'+Y+'" r="6" fill="'+pt.c+'"/>';
+    g+='<text x="'+x+'" y="'+(Y-46)+'" text-anchor="middle" font-size="11.5" font-weight="750" fill="var(--ink)">'+pt.t+'</text>';
+    g+='<text x="'+x+'" y="'+(Y-31)+'" text-anchor="middle" font-size="10.5" fill="var(--ink-2)">'+pt.n1+'</text>';
+    if(pt.n2)g+='<text x="'+x+'" y="'+(Y-18)+'" text-anchor="middle" font-size="10.5" fill="var(--ink-2)">'+pt.n2+'</text>';
+    g+='<text x="'+x+'" y="'+(Y+26)+'" text-anchor="middle" font-size="12.5" font-weight="750" fill="'+pt.c+'">'+pt.cov+'</text>';
+    g+='<text x="'+x+'" y="'+(Y+41)+'" text-anchor="middle" font-size="10" fill="var(--ink-3)">'+pt.sub+'</text>';
+  });
+  el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto">'+g+'</svg>';
+})();
+
+
+/* earliest-signal grouped bars — % of each industry's NO-SHOWS; grey track = all of them */
+(function(){
+  var el=document.getElementById("firstsignal"); if(!el)return;
+  var F=D.firstsig, FMAX=50;
+  var firstRow=true;
+  function addRow(label, shOf, tipOf){
+    if(!firstRow){var gp=document.createElement("div");gp.className="group-gap";el.appendChild(gp);}
+    firstRow=false;
+    [["hc","Healthcare"],["li","Light Industrial"]].forEach(function(pair,i){
+      var key=pair[0], nm=pair[1], sh=shOf(key);
+      var row=document.createElement("div");
+      row.className="brow";
+      row.innerHTML='<div class="lbl">'+(i===0?label:"")+'</div>'+
+        '<div class="track slim">'+[10,20,30,40].map(function(g){return '<div class="grid-l" style="left:'+(g/FMAX)*100+'%"></div>';}).join("")+
+        '<div class="bar" style="width:'+(sh/FMAX)*100+'%;background:var(--s-'+key+')" data-tip="<b>'+nm+' \u00b7 '+label+'</b>'+tipOf(key,sh)+'"></div>'+
+        '</div><div class="val">'+sh.toFixed(1)+'%</div>';
+      el.appendChild(row);
+    });
+  }
+  addRow("Cancelled before expected departure",
+    function(k){return F.early[k];},
+    function(k,sh){return sh.toFixed(1)+'% of no-shows — cancelled or closed before the expected departure';});
+  F.rows.forEach(function(c){
+    addRow(c.name,
+      function(k){return (100-F.early[k])*c[k]/100;},
+      function(k,sh){return sh.toFixed(1)+'% of all no-shows announced themselves this way first';});
+  });
+  document.getElementById("firstsignalax").innerHTML=[0,10,20,30,40,50].map(function(g){return '<span style="left:'+(g/FMAX)*100+'%">'+g+'%</span>';}).join("");
+})();
+
+
+/* single-series bar helper (scale max) */
+function barChart(elid,axid,rows,max,color){
+  var el=document.getElementById(elid);
+  rows.forEach(function(r){
+    var row=document.createElement("div");row.className="brow";
+    row.innerHTML='<div class="lbl">'+r.name+(r.tag?'<span class="tag">'+r.tag+'</span>':"")+'</div>'+
+      '<div class="track">'+[0.25,0.5,0.75,1].map(function(g){return '<div class="grid-l" style="left:'+(g*100)+'%"></div>';}).join("")+
+        '<div class="bar" style="width:'+(r.v/max*100)+'%;background:'+color+'" data-tip="<b>'+r.name+'</b>'+r.v+'% show rate'+(r.ns!==undefined?" · "+r.ns+"% no-show":"")+'"></div>'+
+        '<div class="marker" style="left:'+(D.show_rate/max*100)+'%"></div>'+
+      '</div><div class="val">'+r.v.toFixed(1)+'%</div>';
+    el.appendChild(row);
+  });
+  document.getElementById(axid).innerHTML=[0,0.25,0.5,0.75,1].map(function(g){return '<span style="left:'+(g*100)+'%">'+(g*max).toFixed(0)+'%</span>';}).join("");
+}
+
+/* state show-rate strips (min 8k scheduled): all + per industry.
+   Labelled ticks above each band = the industry's five highest-volume states (May–Jun). */
+(function(){
+  var sx=function(v){return (v-60)/(100-60)*100;};
+  function markTicks(vols,color){
+    var vs=vols.slice().sort(function(a,b){return a.r-b.r;}),last=[-99,-99],out="";
+    vs.forEach(function(s){
+      var x=sx(s.r);
+      var lvl=(x-last[0]>=4)?0:((x-last[1]>=4)?1:(x-last[0]>=x-last[1]?0:1));
+      last[lvl]=x;
+      var tip='data-tip="<b>'+s.name+'</b>'+s.r+'% show rate · '+s.k+' scheduled · one of the five highest-volume states"';
+      out+='<div class="rvol" style="left:'+x+'%;top:'+(lvl?-25:-8)+'px;background:'+color+'" '+tip+'></div>'+
+           '<div class="rvlab '+(lvl?'hi':'lo')+'" style="left:'+x+'%;color:'+color+'" '+tip+'>'+s.ab+'</div>';
+    });
+    return out;
+  }
+  function strip(id,name,lo,med,hi,color,href,loName,hiName,vols){
+    var el=document.getElementById(id); if(!el)return;
+    el.innerHTML='<div class="rline"></div>'+
+      '<div class="rband" style="left:'+sx(lo)+'%;width:'+(sx(hi)-sx(lo))+'%;background:'+color+(href?';cursor:pointer':'')+'"'+(href?' onclick="window.location.href=\''+href+'\'"':'')+' data-tip="<b>'+name+'</b>state show rate runs '+lo+'% to '+hi+'% · median '+med+'%'+(href?' · click to drill in':'')+'"></div>'+
+      '<div class="rtick" style="left:'+sx(lo)+'%;background:'+color+'"></div>'+
+      '<div class="rtick med" style="left:'+sx(med)+'%;background:var(--ink-3)"></div>'+
+      '<div class="rtick" style="left:'+sx(hi)+'%;background:'+color+'"></div>'+
+      (vols?markTicks(vols,color):'')+
+      '<div class="rlab" style="left:'+sx(lo)+'%"><span style="color:'+color+';font-weight:600">'+loName+'</span> '+lo+'</div>'+
+      '<div class="rlab" style="left:'+sx(med)+'%"><b>'+med+'</b></div>'+
+      '<div class="rlab" style="left:'+sx(hi)+'%"><span style="color:'+color+';font-weight:600">'+hiName+'</span> '+hi+'</div>';
+  }
+  var VHC=[{ab:"PA",name:"Pennsylvania",r:90.4,k:"97k"},{ab:"IL",name:"Illinois",r:88.7,k:"75k"},{ab:"NJ",name:"New Jersey",r:92.5,k:"67k"},{ab:"OH",name:"Ohio",r:87.8,k:"66k"},{ab:"CA",name:"California",r:93.8,k:"57k"}];
+  var VLI=[{ab:"CA",name:"California",r:92.1,k:"114k"},{ab:"TX",name:"Texas",r:84.5,k:"62k"},{ab:"IL",name:"Illinois",r:87.7,k:"37k"},{ab:"NY",name:"New York",r:87.0,k:"36k"},{ab:"FL",name:"Florida",r:83.7,k:"33k"}];
+  strip("nsstaterange-hc","Healthcare",81.7,89.0,96.4,"var(--s-hc)",null,"LA","MA",VHC);
+  strip("nsstaterange-li","Light Industrial",63.8,85.7,92.1,"var(--s-li)",null,"KY","CA",VLI);
+  document.getElementById("nsstaterangeaxis").innerHTML=[60,70,80,90,100].map(function(g){return '<span style="left:'+sx(g)+'%">'+g+'%</span>';}).join("");})();
+
+/* timing x industry — grouped bars (show rate) */
+(function(){
+  var tc=document.getElementById("timingchart"); if(!tc)return;
+  var WIN=[{name:"Morning",hc:88.4,li:87.2,t:"morning"},{name:"Afternoon",hc:90.9,li:87.5,t:"afternoon"},{name:"Evening",hc:89.4,li:84.8,t:"evening"},{name:"Overnight",hc:91.3,li:84.6,t:"late_night"}];
+  WIN.forEach(function(w,wi){
+    [["hc","Healthcare"],["li","Light Industrial"]].forEach(function(pair,i){
+      var key=pair[0],nm=pair[1],v=w[key];
+      var url=(key==="hc"?"no-show-healthcare.html":"no-show-light.html")+"#t="+w.t;
+      var row=document.createElement("div");row.className="brow";
+      row.innerHTML='<div class="lbl">'+(i===0?w.name:"")+'<span class="tag"><a target="_blank" rel="noopener" href="'+url+'" style="color:var(--s-'+key+');font-weight:600;text-decoration:none">'+nm+' ↗</a></span></div>'+
+        '<div class="track slim">'+[25,50,75,100].map(function(gl){return '<div class="grid-l" style="left:'+gl+'%"></div>';}).join("")+
+          '<div class="bar" style="width:'+v+'%;background:var(--s-'+key+')" data-tip="<b>'+nm+' · '+w.name.toLowerCase()+' shifts</b>'+v.toFixed(1)+'% show rate"></div>'+
+          '<div class="marker" style="left:88.5%"></div>'+
+        '</div>'+
+        '<div class="val">'+v.toFixed(1)+'%</div>';
+      tc.appendChild(row);
+    });
+    if(wi<WIN.length-1){var gp=document.createElement("div");gp.className="group-gap";tc.appendChild(gp);}
+  });
+  document.getElementById("timingaxis").innerHTML=[0,25,50,75,100].map(function(gl){return '<span style="left:'+gl+'%">'+gl+'%</span>';}).join("");
+})();
+
+/* tooltip */
+var tip=document.getElementById("tip");
+document.addEventListener("mousemove",function(e){
+  var t=e.target.closest("[data-tip]");
+  if(!t){tip.style.opacity=0;return;}
+  tip.innerHTML=t.getAttribute("data-tip");tip.style.opacity=1;
+  var x=Math.min(e.clientX+14,window.innerWidth-tip.offsetWidth-12),y=e.clientY+16;
+  if(y+tip.offsetHeight>window.innerHeight-8)y=e.clientY-tip.offsetHeight-12;
+  tip.style.left=x+"px";tip.style.top=y+"px";
+});
+</script>
+<script src="https://agent-keyboard.fly.dev/widget.js" data-site="closeout" defer></script>
+</body>
+</html>

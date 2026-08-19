@@ -9,6 +9,14 @@
   function = "linear"
   path = "/api/linear"
 
+[[edge_functions]]
+  function = "report-gate"
+  path = "/report"
+
+[[edge_functions]]
+  function = "report-gate"
+  path = "/report/*"
+
 [[redirects]]
   from = "/research/*"
   to = "https://hypertrack.com/research"
