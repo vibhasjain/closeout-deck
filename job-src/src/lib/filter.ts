@@ -24,3 +24,13 @@ export function filterCandidates(
     )
   })
 }
+
+export function selectionForCandidates(
+  candidates: Candidate[],
+  selectedId: string | null,
+): string | null {
+  if (selectedId && candidates.some((candidate) => candidate.id === selectedId)) {
+    return selectedId
+  }
+  return candidates[0]?.id ?? null
+}

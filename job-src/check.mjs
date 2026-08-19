@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { filterCandidates } from './src/lib/filter.ts'
+import { filterCandidates, selectionForCandidates } from './src/lib/filter.ts'
 import { parseStatus } from './src/lib/status.ts'
 import {
   attachmentExtension,
@@ -49,6 +49,12 @@ assert.ok(filterCandidates(candidates, 'qualified', '').every((candidate) => can
 assert.equal(filterCandidates(candidates, 'all', 'maya').length, 1)
 assert.equal(filterCandidates(candidates, 'all', 'THEO.EXAMPLE@EXAMPLE.COM').length, 1)
 assert.equal(filterCandidates(candidates, 'all', 'introductory conversation').length, 1)
+
+const qualifiedCandidates = filterCandidates(candidates, 'qualified', '')
+const meetingCandidates = filterCandidates(candidates, 'meetings', '')
+assert.equal(selectionForCandidates(qualifiedCandidates, 'c-maya'), 'c-maya')
+assert.equal(selectionForCandidates(meetingCandidates, 'c-maya'), 'c-theo')
+assert.equal(selectionForCandidates([], 'c-maya'), null)
 
 assert.equal(parseStatus('drafted'), 'qualified')
 assert.equal(parseStatus('awaiting-reply'), 'invited')

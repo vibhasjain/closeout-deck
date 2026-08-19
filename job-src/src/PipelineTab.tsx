@@ -8,7 +8,12 @@ import { FadeText } from '@/components/FadeText'
 import { chipLabel } from '@/components/FilterChips'
 import { ListToolbar } from '@/components/ListToolbar'
 import { Badge, CopyButton, Skeleton } from '@/components/ui'
-import { filterCandidates, PIPELINE_FILTERS, type PipelineFilter } from '@/lib/filter'
+import {
+  filterCandidates,
+  PIPELINE_FILTERS,
+  selectionForCandidates,
+  type PipelineFilter,
+} from '@/lib/filter'
 import { autoOpenAttachment } from '@/lib/attachmentPreview'
 import { linkifyHttpText, safeHttpUrl } from '@/lib/links'
 import { stripMarkdown } from '@/lib/stripMarkdown'
@@ -205,6 +210,7 @@ export function PipelineTab({
   const [resizingRightPane, setResizingRightPane] = useState(false)
   const hasPersistedRightPaneWidth = useRef(false)
   const autoSelected = useRef(false)
+  const previousFilter = useRef(filter)
   const scrollRef = useRef<HTMLDivElement>(null)
   const rightPaneRef = useRef<HTMLElement>(null)
   const resizeFrame = useRef<number | null>(null)
@@ -266,6 +272,12 @@ export function PipelineTab({
     autoSelected.current = true
     setSelectedId(filtered[0].id)
   }, [filtered])
+
+  useEffect(() => {
+    if (previousFilter.current === filter) return
+    previousFilter.current = filter
+    setSelectedId((current) => selectionForCandidates(filtered, current))
+  }, [filter, filtered])
 
   useEffect(() => {
     // Key this to candidate changes so closing a single attachment does not
