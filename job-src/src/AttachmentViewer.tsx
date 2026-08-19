@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { CSSProperties, Ref } from 'react'
 import { Download, ExternalLink, FileText, Maximize2, Share2, X } from 'lucide-react'
 import * as mammoth from 'mammoth'
 import { ClaudeCrab } from '@/components/ClaudeCrab'
@@ -129,12 +130,16 @@ function ViewerBody({
 }
 
 export function AttachmentViewer({
+  paneRef,
+  desktopWidth,
   candidate,
   attachment,
   attachments,
   onSelect,
   onClose,
 }: {
+  paneRef: Ref<HTMLElement>
+  desktopWidth: number
   candidate: Candidate | undefined
   attachment: Attachment | null
   attachments: Attachment[]
@@ -261,8 +266,10 @@ export function AttachmentViewer({
   return (
     <>
       <aside
+        ref={paneRef}
+        style={{ '--right-pane-width': `${desktopWidth}px` } as CSSProperties}
         className={cn(
-          'flex-col bg-background md:flex md:h-full md:w-[400px] md:shrink-0 md:border-l xl:w-[460px]',
+          'flex-col bg-background md:flex md:h-full md:w-[var(--right-pane-width)] md:min-w-[320px] md:max-w-[60vw] md:shrink-0',
           attachment ? 'fixed inset-0 z-50 flex h-full w-full animate-fade-in md:static md:z-auto' : 'hidden md:flex',
         )}
       >
