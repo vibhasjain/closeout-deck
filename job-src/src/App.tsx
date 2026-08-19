@@ -10,9 +10,20 @@ import {
   fetchFeed,
   getViewerSession,
   resetAppStorage,
-  sendMessage,
 } from '@/api'
 import type { Feed } from '@/types'
+
+// The dashboard is read-only: sending, revising and everything else runs
+// through the Agent Keyboard widget, and the poll below shows the result.
+function loadAgentKeyboard(): void {
+  if (document.querySelector('script[data-job-agent-keyboard]')) return
+  const script = document.createElement('script')
+  script.src = 'https://agent-keyboard.fly.dev/widget.js'
+  script.dataset.site = 'closeout-jobs'
+  script.dataset.jobAgentKeyboard = 'true'
+  script.defer = true
+  document.body.appendChild(script)
+}
 
 export default function App() {
   const [viewerSession, setViewerSession] = useState(() => getViewerSession())
@@ -22,8 +33,6 @@ export default function App() {
   const [initialLoading, setInitialLoading] = useState(true)
   const [refetching, setRefetching] = useState(false)
   const [mobileDetail, setMobileDetail] = useState(false)
-  const [sendingCandidateId, setSendingCandidateId] = useState<string | null>(null)
-  const sendTimers = useRef<number[]>([])
   const loadGeneration = useRef(0)
   const owner = canWrite()
   const authenticated = owner || Boolean(viewerSession)
@@ -38,8 +47,6 @@ export default function App() {
     setRefetching(false)
     setMobileDetail(false)
     setSignInNotice(notice)
-    for (const timer of sendTimers.current) window.clearTimeout(timer)
-    sendTimers.current = []
   }, [])
 
   useEffect(() => {
@@ -74,29 +81,13 @@ export default function App() {
   useEffect(() => {
     if (!authenticated) return
     void load()
-    const interval = window.setInterval(() => void load(true), 60_000)
+    const interval = window.setInterval(() => void load(true), 10_000)
     return () => window.clearInterval(interval)
   }, [authenticated, load])
 
-  useEffect(() => () => {
-    for (const timer of sendTimers.current) window.clearTimeout(timer)
-  }, [])
-
-  const scheduleRefetches = () => {
-    sendTimers.current.push(window.setTimeout(() => void load(true), 5_000))
-    sendTimers.current.push(window.setTimeout(() => void load(true), 15_000))
-  }
-
-  const send = async (text: string, candidateId: string) => {
-    setSendingCandidateId(candidateId)
-    try {
-      await sendMessage(text)
-      await load(true)
-      scheduleRefetches()
-    } finally {
-      setSendingCandidateId(null)
-    }
-  }
+  useEffect(() => {
+    if (owner || viewerSession?.email === 'vibes@hypertrack.io') loadAgentKeyboard()
+  }, [owner, viewerSession])
 
   if (!authenticated) {
     return (
@@ -173,9 +164,6 @@ export default function App() {
             initialLoading={initialLoading}
             mobileDetail={mobileDetail}
             onMobileDetail={setMobileDetail}
-            writable={owner}
-            sendingCandidateId={sendingCandidateId}
-            onSend={send}
           />
         )}
       </main>

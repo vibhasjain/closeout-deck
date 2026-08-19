@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BrainCircuit, Check, Copy, Loader2, Send } from 'lucide-react'
+import { BrainCircuit, Check, Copy } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { shortTime } from '@/lib/utils'
 import { stripMarkdown } from '@/lib/stripMarkdown'
@@ -8,32 +8,16 @@ import type { Candidate, Draft } from '@/types'
 export function DraftCard({
   candidate,
   draft,
-  writable,
-  sending,
-  onSend,
 }: {
   candidate: Candidate
   draft: Draft
-  writable: boolean
-  sending: boolean
-  onSend: () => Promise<void>
 }) {
   const [copied, setCopied] = useState(false)
-  const [error, setError] = useState('')
 
   const copy = async () => {
     await navigator.clipboard.writeText(draft.text)
     setCopied(true)
     window.setTimeout(() => setCopied(false), 1400)
-  }
-
-  const send = async () => {
-    setError('')
-    try {
-      await onSend()
-    } catch {
-      setError('Could not send. Try again.')
-    }
   }
 
   return (
@@ -55,20 +39,13 @@ export function DraftCard({
               <span>{draft.rationale}</span>
             </div>
           )}
-          {error && <p className="mt-3 px-2 text-[12.5px] text-nosource">{error}</p>}
         </div>
 
-        <div className="flex items-center justify-between border-t px-3 py-1.5">
+        <div className="flex items-center border-t px-3 py-1.5">
           <Button variant="ghost" size="xs" onClick={() => void copy()}>
             {copied ? <Check className="size-3 text-solid" /> : <Copy className="size-3" />}{' '}
             {copied ? 'Copied' : 'Copy'}
           </Button>
-          {writable && (
-            <Button size="sm" disabled={sending} onClick={() => void send()}>
-              {sending ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
-              {sending ? 'Sending' : 'Send'}
-            </Button>
-          )}
         </div>
       </div>
     </div>

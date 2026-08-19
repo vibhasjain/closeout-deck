@@ -32,16 +32,6 @@ function tokenDomain(token: string): string {
   return ''
 }
 
-function loadAgentKeyboard(): void {
-  if (document.querySelector('script[data-job-agent-keyboard]')) return
-  const script = document.createElement('script')
-  script.src = 'https://agent-keyboard.fly.dev/widget.js'
-  script.dataset.site = 'closeout-jobs'
-  script.dataset.jobAgentKeyboard = 'true'
-  script.defer = true
-  document.body.appendChild(script)
-}
-
 export function SignIn({
   notice,
   onSignedIn,
@@ -69,7 +59,6 @@ export function SignIn({
           setError('')
           try {
             const session = await createViewerSession(response.credential)
-            if (session.email === 'vibes@hypertrack.io') loadAgentKeyboard()
             onSignedIn(session)
           } catch (sessionError) {
             resetAppStorage()

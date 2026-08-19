@@ -4,7 +4,6 @@ const API = 'https://agent-keyboard.fly.dev'
 const SITE = 'closeout-jobs'
 const FEED_PATH = `/sites/${SITE}/feed`
 const FILES_PATH = `/sites/${SITE}/files`
-const MESSAGES_PATH = `/sites/${SITE}/messages`
 const SESSION_PATH = `/sites/${SITE}/session`
 const OWNER_KEY = 'agent-keyboard-auth'
 const SESSION_KEY = 'job:viewer-session:v1'
@@ -290,51 +289,4 @@ export async function loadFile(path: string): Promise<string> {
 export function revokeFiles(): void {
   for (const url of blobUrls.values()) URL.revokeObjectURL(url)
   blobUrls.clear()
-}
-
-export async function sendMessage(text: string): Promise<void> {
-  const token = ownerToken()
-  if (!token) throw new HttpError(401, 'Owner access required')
-  const res = await fetch(`${API}${MESSAGES_PATH}`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, page: '/job', idemKey: crypto.randomUUID() }),
-  })
-  if (!res.ok) throw new HttpError(res.status, `${MESSAGES_PATH} -> ${res.status}`)
-  if (!res.body) return
-  const reader = res.body.getReader()
-  const decoder = new TextDecoder()
-  let buffer = ''
-  let errorMessage: string | null = null
-  // ponytail: The feed poll is the source of truth, so we drain rather than parse frames.
-  try {
-    for (;;) {
-      const { done, value } = await reader.read()
-      if (value) buffer += decoder.decode(value, { stream: !done })
-      if (done) {
-        buffer += decoder.decode()
-        if (buffer) buffer += '\n\n'
-      }
-      for (;;) {
-        const boundary = buffer.indexOf('\n\n')
-        if (boundary === -1) break
-        const frame = buffer.slice(0, boundary)
-        buffer = buffer.slice(boundary + 2)
-        const lines = frame.split('\n')
-        const event = lines.find((line) => line.startsWith('event:'))?.slice('event:'.length).trim()
-        if (event !== 'error') continue
-        const rawData = lines.find((line) => line.startsWith('data:'))?.slice('data:'.length).trim()
-        try {
-          const data = object(rawData ? JSON.parse(rawData) : null)
-          errorMessage = string(data.detail) || string(data.kind) || 'Agent run failed'
-        } catch {
-          errorMessage = 'Agent run failed'
-        }
-      }
-      if (done) break
-    }
-  } catch {
-    /* A later feed poll catches up after a dropped stream. */
-  }
-  if (errorMessage) throw new Error(errorMessage)
 }

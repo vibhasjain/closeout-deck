@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FileText, Loader2, Paperclip } from 'lucide-react'
+import { FileText, Paperclip } from 'lucide-react'
 import { AttachmentViewer } from '@/AttachmentViewer'
 import { ClaudeCrab } from '@/components/ClaudeCrab'
 import { DraftCard } from '@/components/DraftCard'
 import { FadeText } from '@/components/FadeText'
 import { chipLabel } from '@/components/FilterChips'
 import { ListToolbar } from '@/components/ListToolbar'
-import { TicketComposer } from '@/components/TicketComposer'
 import { Badge, Skeleton } from '@/components/ui'
 import { filterCandidates, type CandidateFilter } from '@/lib/filter'
 import { stripMarkdown } from '@/lib/stripMarkdown'
@@ -99,17 +98,11 @@ export function PipelineTab({
   initialLoading,
   mobileDetail,
   onMobileDetail,
-  writable,
-  sendingCandidateId,
-  onSend,
 }: {
   feed: Feed | null
   initialLoading: boolean
   mobileDetail: boolean
   onMobileDetail: (open: boolean) => void
-  writable: boolean
-  sendingCandidateId: string | null
-  onSend: (text: string, candidateId: string) => Promise<void>
 }) {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<CandidateFilter>('all')
@@ -220,7 +213,6 @@ export function PipelineTab({
           )}
           {filtered.map((candidate) => {
             const hasAttachments = (candidate.thread ?? []).some((entry) => (entry.attachments ?? []).length > 0)
-            const sending = sendingCandidateId === candidate.id
             return (
               <button
                 key={candidate.id}
@@ -232,7 +224,6 @@ export function PipelineTab({
               >
                 <div className="flex items-center justify-between gap-2">
                   <FadeText text={candidate.name} className="min-w-0 flex-1 text-[12.5px] font-medium" />
-                  {sending && <Loader2 className="size-3 shrink-0 animate-spin text-muted-foreground" />}
                   <StatusBadge status={candidate.status} />
                   {hasAttachments && <Paperclip className="size-3 shrink-0 text-muted-foreground" />}
                 </div>
@@ -264,7 +255,12 @@ export function PipelineTab({
               <StatusBadge status={selected.status} className="ml-3" />
             </div>
 
-            <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-4 no-scrollbar md:px-5">
+            {/* Extra bottom space on phones so the floating Agent Keyboard pill
+                never sits on top of the last message. */}
+            <div
+              ref={scrollRef}
+              className="min-h-0 flex-1 overflow-y-auto px-4 py-4 no-scrollbar max-md:[body:has(#agent-keyboard-host)_&]:pb-[calc(4rem+env(safe-area-inset-bottom))] md:px-5"
+            >
               <div className="flex flex-col gap-4">
                 {(selected.thread ?? []).map((entry) => (
                   <MessageBubble
@@ -275,25 +271,10 @@ export function PipelineTab({
                   />
                 ))}
                 {selected.draft && (
-                  <DraftCard
-                    candidate={selected}
-                    draft={selected.draft}
-                    writable={writable}
-                    sending={sendingCandidateId === selected.id}
-                    onSend={() => onSend(`SEND draft ${selected.draft?.id ?? ''} for candidate ${selected.id}`, selected.id)}
-                  />
+                  <DraftCard candidate={selected} draft={selected.draft} />
                 )}
               </div>
             </div>
-
-            {writable && (
-              <TicketComposer
-                key={selected.id}
-                candidateId={selected.id}
-                busy={sendingCandidateId === selected.id}
-                onSendChat={(text) => onSend(text, selected.id)}
-              />
-            )}
           </>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
