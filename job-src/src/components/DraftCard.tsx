@@ -1,6 +1,5 @@
-import { useState } from 'react'
-import { BrainCircuit, Check, Copy } from 'lucide-react'
-import { Button } from '@/components/ui'
+import { BrainCircuit } from 'lucide-react'
+import { CopyButton } from '@/components/ui'
 import { shortTime } from '@/lib/utils'
 import { stripMarkdown } from '@/lib/stripMarkdown'
 import type { Candidate, Draft } from '@/types'
@@ -12,14 +11,6 @@ export function DraftCard({
   candidate: Candidate
   draft: Draft
 }) {
-  const [copied, setCopied] = useState(false)
-
-  const copy = async () => {
-    await navigator.clipboard.writeText(draft.text)
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 1400)
-  }
-
   return (
     <div className="ml-auto w-full max-w-[min(85%,46rem)]">
       <div className="rounded-lg border bg-card animate-fade-in">
@@ -42,10 +33,7 @@ export function DraftCard({
         </div>
 
         <div className="flex items-center border-t px-3 py-1.5">
-          <Button variant="ghost" size="xs" onClick={() => void copy()}>
-            {copied ? <Check className="size-3 text-solid" /> : <Copy className="size-3" />}{' '}
-            {copied ? 'Copied' : 'Copy'}
-          </Button>
+          <CopyButton text={draft.text} label />
         </div>
       </div>
     </div>

@@ -1,11 +1,16 @@
 import { useEffect, useState } from 'react'
-import { FileText, Maximize2, X } from 'lucide-react'
+import { Download, FileText, Maximize2, Share2, X } from 'lucide-react'
 import { ClaudeCrab } from '@/components/ClaudeCrab'
 import { Button, Skeleton } from '@/components/ui'
 import { FadeText } from '@/components/FadeText'
 import { loadFile, revokeFiles } from '@/api'
 import { cn } from '@/lib/utils'
 import type { Attachment, Candidate } from '@/types'
+
+// Clipboards can't hold a PDF — the browsers only take text and images — so the
+// share sheet (phones, Slack in two taps) is the real thing, download the rest.
+const canShareFiles = typeof navigator.canShare === 'function'
+  && navigator.canShare({ files: [new File([], 'resume.pdf', { type: 'application/pdf' })] })
 
 function extension(name: string): string {
   return name.split('.').pop()?.toLowerCase() ?? ''
@@ -113,6 +118,23 @@ export function AttachmentViewer({
 
   useEffect(() => setLightbox(false), [attachment])
 
+  const shareFile = async (name: string, href: string) => {
+    if (canShareFiles) {
+      try {
+        const blob = await fetch(href).then((res) => res.blob())
+        await navigator.share({ files: [new File([blob], name, { type: blob.type })] })
+        return
+      } catch (shareError) {
+        // Cancelled share sheets throw too, so only fall through on real failures.
+        if ((shareError as DOMException)?.name === 'AbortError') return
+      }
+    }
+    const link = document.createElement('a')
+    link.href = href
+    link.download = name
+    link.click()
+  }
+
   const header = (onDismiss: () => void, showMaximize: boolean) => attachment ? (
     <header className="flex h-14 shrink-0 items-center justify-between border-b px-4 md:px-5">
       <div className="min-w-0 flex-1">
@@ -122,6 +144,17 @@ export function AttachmentViewer({
         <p className="font-mono text-[11px] text-muted-foreground">{candidate?.name ?? ''}</p>
       </div>
       <div className="ml-3 flex shrink-0 items-center">
+        {url && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground/60 hover:text-foreground"
+            onClick={() => void shareFile(attachment.name, url)}
+            aria-label={canShareFiles ? 'Share file' : 'Download file'}
+          >
+            {canShareFiles ? <Share2 className="size-4" /> : <Download className="size-4" />}
+          </Button>
+        )}
         {showMaximize && (
           <Button
             variant="ghost"

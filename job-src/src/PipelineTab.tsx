@@ -6,7 +6,7 @@ import { DraftCard } from '@/components/DraftCard'
 import { FadeText } from '@/components/FadeText'
 import { chipLabel } from '@/components/FilterChips'
 import { ListToolbar } from '@/components/ListToolbar'
-import { Badge, Skeleton } from '@/components/ui'
+import { Badge, CopyButton, Skeleton } from '@/components/ui'
 import { filterCandidates, type CandidateFilter } from '@/lib/filter'
 import { stripMarkdown } from '@/lib/stripMarkdown'
 import { cn, shortDate, shortTime } from '@/lib/utils'
@@ -68,9 +68,12 @@ function MessageBubble({
             : 'max-w-[min(82%,42rem)] self-end rounded-lg border bg-card px-3.5 py-2.5 text-[13.5px] leading-relaxed',
       )}
     >
-      <span className={cn('mb-0.5 block text-[10px] font-medium', internal ? 'text-internal' : 'text-muted-foreground')}>
-        {label}
-      </span>
+      <div className="mb-0.5 flex items-center justify-between gap-2">
+        <span className={cn('text-[10px] font-medium', internal ? 'text-internal' : 'text-muted-foreground')}>
+          {label}
+        </span>
+        {incoming && <CopyButton text={stripMarkdown(entry.text)} />}
+      </div>
       {entry.subject && (
         <FadeText text={entry.subject} className="mb-1 text-[11px] font-medium" />
       )}

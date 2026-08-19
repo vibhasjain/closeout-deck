@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { Check, Copy } from 'lucide-react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
@@ -34,6 +35,28 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ),
 )
 Button.displayName = 'Button'
+
+// -- CopyButton -------------------------------------------------------------
+export function CopyButton({ text, label = false }: { text: string; label?: boolean }) {
+  const [copied, setCopied] = React.useState(false)
+  const copy = async () => {
+    await navigator.clipboard.writeText(text)
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1400)
+  }
+  return (
+    <Button
+      variant="ghost"
+      size="xs"
+      className={cn('text-muted-foreground hover:text-foreground', !label && 'h-6 px-1.5')}
+      aria-label={copied ? 'Copied' : 'Copy text'}
+      onClick={() => void copy()}
+    >
+      {copied ? <Check className="size-3 text-solid" /> : <Copy className="size-3" />}
+      {label && (copied ? 'Copied' : 'Copy')}
+    </Button>
+  )
+}
 
 // -- Card -------------------------------------------------------------------
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
