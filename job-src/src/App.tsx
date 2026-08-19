@@ -33,13 +33,16 @@ export default function App() {
   const [initialLoading, setInitialLoading] = useState(true)
   const [refetching, setRefetching] = useState(false)
   const [mobileDetail, setMobileDetail] = useState(false)
+  // The Agent Keyboard token survives a sign-out now, so remember the click.
+  const [signedOut, setSignedOut] = useState(false)
   const loadGeneration = useRef(0)
   const owner = canWrite()
-  const authenticated = owner || Boolean(viewerSession)
+  const authenticated = !signedOut && (owner || Boolean(viewerSession))
 
   const returnToSignIn = useCallback((notice = '') => {
     loadGeneration.current += 1
     resetAppStorage()
+    setSignedOut(true)
     setViewerSession(null)
     setFeed(null)
     setFeedError(false)
@@ -65,7 +68,7 @@ export default function App() {
       setFeedError(false)
     } catch (error) {
       if (generation !== loadGeneration.current) return
-      if (error instanceof HttpError && (error.status === 401 || error.status === 403) && !owner) {
+      if (error instanceof HttpError && (error.status === 401 || error.status === 403)) {
         returnToSignIn('Session expired — sign in again.')
         return
       }
@@ -76,7 +79,7 @@ export default function App() {
         setRefetching(false)
       }
     }
-  }, [owner, returnToSignIn])
+  }, [returnToSignIn])
 
   useEffect(() => {
     if (!authenticated) return
@@ -93,8 +96,10 @@ export default function App() {
     return (
       <SignIn
         notice={signInNotice}
+        autoSignIn={Boolean(signInNotice)}
         onSignedIn={(session) => {
           loadGeneration.current += 1
+          setSignedOut(false)
           setSignInNotice('')
           setFeed(null)
           setFeedError(false)

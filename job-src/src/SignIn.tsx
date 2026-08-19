@@ -6,8 +6,13 @@ interface GoogleCredentialResponse {
 }
 
 interface GoogleIdApi {
-  initialize(options: { client_id: string; callback: (response: GoogleCredentialResponse) => void }): void
+  initialize(options: {
+    client_id: string
+    auto_select: boolean
+    callback: (response: GoogleCredentialResponse) => void
+  }): void
   renderButton(element: HTMLElement, options: { theme: 'outline'; size: 'large'; text: 'signin_with' }): void
+  prompt(): void
 }
 
 declare global {
@@ -34,9 +39,11 @@ function tokenDomain(token: string): string {
 
 export function SignIn({
   notice,
+  autoSignIn,
   onSignedIn,
 }: {
   notice?: string
+  autoSignIn: boolean
   onSignedIn: (session: ViewerSession) => void
 }) {
   const buttonRef = useRef<HTMLDivElement>(null)
@@ -51,6 +58,9 @@ export function SignIn({
       buttonRef.current.replaceChildren()
       window.google.accounts.id.initialize({
         client_id: clientId,
+        // Re-sign in silently when a session runs out instead of parking the
+        // owner on a sign-in screen — but not after a deliberate sign-out.
+        auto_select: autoSignIn,
         callback: async (response) => {
           if (tokenDomain(response.credential) !== 'hypertrack.io') {
             setError('hypertrack.io accounts only.')
@@ -75,6 +85,7 @@ export function SignIn({
         size: 'large',
         text: 'signin_with',
       })
+      if (autoSignIn) window.google.accounts.id.prompt()
     }
 
     if (window.google) {
@@ -98,7 +109,7 @@ export function SignIn({
       cancelled = true
       script?.removeEventListener('load', render)
     }
-  }, [clientId, onSignedIn])
+  }, [autoSignIn, clientId, onSignedIn])
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-6 text-center">

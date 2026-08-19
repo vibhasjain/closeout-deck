@@ -35,15 +35,29 @@ export class HttpError extends Error {
   }
 }
 
-function ownerToken(): string | null {
+function ownerSession(): { token: string; expiresAt: number } | null {
   try {
     const raw = localStorage.getItem(OWNER_KEY)
     if (!raw) return null
-    const parsed = JSON.parse(raw) as { access_token?: unknown }
-    return typeof parsed.access_token === 'string' && parsed.access_token ? parsed.access_token : null
+    const parsed = JSON.parse(raw) as { access_token?: unknown; expires_at?: unknown }
+    const token = typeof parsed.access_token === 'string' ? parsed.access_token : ''
+    if (!token) return null
+    return { token, expiresAt: typeof parsed.expires_at === 'number' ? parsed.expires_at : Infinity }
   } catch {
     return null
   }
+}
+
+function ownerToken(): string | null {
+  return ownerSession()?.token ?? null
+}
+
+// Agent Keyboard only refreshes its token when it runs something, so a stale
+// copy is normal. Spending a 401 on it used to strand the page, so prefer the
+// viewer session and keep the stale token as a last resort.
+function freshOwnerToken(): string | null {
+  const session = ownerSession()
+  return session && session.expiresAt - 60 > Date.now() / 1000 ? session.token : null
 }
 
 function viewerSession(value: unknown): ViewerSession | null {
@@ -107,17 +121,19 @@ export function purgeLegacyStorage(): void {
   }
 }
 
+// OWNER_KEY is the Agent Keyboard login. Signing out of this dashboard — or
+// losing its session — must never sign the owner out of the widget too.
 export function resetAppStorage(): void {
   try {
-    sessionStorage.clear()
+    for (const key of storageKeys(sessionStorage)) {
+      if (isGoogleTokenKey(key)) sessionStorage.removeItem(key)
+    }
   } catch {
     /* sessionStorage unavailable */
   }
   try {
     for (const key of storageKeys(localStorage)) {
-      if (key === OWNER_KEY || key.startsWith(JOB_KEY_PREFIX) || isGoogleTokenKey(key)) {
-        localStorage.removeItem(key)
-      }
+      if (key.startsWith(JOB_KEY_PREFIX) || isGoogleTokenKey(key)) localStorage.removeItem(key)
     }
   } catch {
     /* localStorage unavailable */
@@ -125,7 +141,7 @@ export function resetAppStorage(): void {
 }
 
 export function getToken(): string | null {
-  return ownerToken() ?? getViewerSession()?.sessionToken ?? null
+  return freshOwnerToken() ?? getViewerSession()?.sessionToken ?? ownerToken()
 }
 
 export function canWrite(): boolean {
@@ -236,7 +252,7 @@ function authHeaders(): Record<string, string> {
 }
 
 function handleViewerUnauthorized(status: number): void {
-  if (status !== 401 || ownerToken()) return
+  if (status !== 401) return
   resetAppStorage()
   window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
 }
