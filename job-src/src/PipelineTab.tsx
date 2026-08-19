@@ -156,17 +156,8 @@ function MessageBubble({
         <span className={cn('text-[10px] font-medium', internal ? 'text-internal' : 'text-muted-foreground')}>
           {label}
         </span>
-        {internal && entry.subject && (
-          <FadeText
-            text={entry.subject}
-            className="ml-auto min-w-0 text-right font-mono text-[10px] uppercase tracking-wide text-muted-foreground"
-          />
-        )}
         {incoming && <CopyButton text={stripMarkdown(entry.text)} />}
       </div>
-      {!internal && entry.subject && (
-        <FadeText text={entry.subject} className="mb-1 text-[11px] font-medium" />
-      )}
       <p className="whitespace-pre-wrap"><LinkifiedMessageText text={entry.text} /></p>
       {attachments.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
