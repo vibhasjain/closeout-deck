@@ -3,7 +3,6 @@ import { ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { PipelineTab } from '@/PipelineTab'
 import { SignIn } from '@/SignIn'
-import { sampleFeed } from '@/sampleFeed'
 import {
   HttpError,
   SESSION_EXPIRED_EVENT,
@@ -12,13 +11,11 @@ import {
   getViewerSession,
   resetAppStorage,
   sendMessage,
-  setSampleMode,
 } from '@/api'
 import type { Feed } from '@/types'
 
 export default function App() {
   const [viewerSession, setViewerSession] = useState(() => getViewerSession())
-  const [sampleOnly, setSampleOnly] = useState(false)
   const [feed, setFeed] = useState<Feed | null>(null)
   const [feedError, setFeedError] = useState(false)
   const [signInNotice, setSignInNotice] = useState('')
@@ -35,8 +32,6 @@ export default function App() {
     loadGeneration.current += 1
     resetAppStorage()
     setViewerSession(null)
-    setSampleMode(false)
-    setSampleOnly(false)
     setFeed(null)
     setFeedError(false)
     setInitialLoading(true)
@@ -54,19 +49,11 @@ export default function App() {
   }, [returnToSignIn])
 
   const load = useCallback(async (background = false) => {
-    if (sampleOnly) {
-      setSampleMode(true)
-      setFeed(sampleFeed)
-      setFeedError(false)
-      setInitialLoading(false)
-      return
-    }
     const generation = loadGeneration.current
     if (background) setRefetching(true)
     try {
       const next = await fetchFeed()
       if (generation !== loadGeneration.current) return
-      setSampleMode(false)
       setFeed(next)
       setFeedError(false)
     } catch (error) {
@@ -82,14 +69,14 @@ export default function App() {
         setRefetching(false)
       }
     }
-  }, [owner, returnToSignIn, sampleOnly])
+  }, [owner, returnToSignIn])
 
   useEffect(() => {
-    if (!authenticated && !sampleOnly) return
+    if (!authenticated) return
     void load()
     const interval = window.setInterval(() => void load(true), 60_000)
     return () => window.clearInterval(interval)
-  }, [authenticated, load, sampleOnly])
+  }, [authenticated, load])
 
   useEffect(() => () => {
     for (const timer of sendTimers.current) window.clearTimeout(timer)
@@ -111,7 +98,7 @@ export default function App() {
     }
   }
 
-  if (!authenticated && !sampleOnly) {
+  if (!authenticated) {
     return (
       <SignIn
         notice={signInNotice}
@@ -121,18 +108,7 @@ export default function App() {
           setFeed(null)
           setFeedError(false)
           setInitialLoading(true)
-          setSampleMode(false)
-          setSampleOnly(false)
           setViewerSession(session)
-        }}
-        onSample={() => {
-          loadGeneration.current += 1
-          setSignInNotice('')
-          setSampleOnly(true)
-          setSampleMode(true)
-          setFeed(sampleFeed)
-          setFeedError(false)
-          setInitialLoading(false)
         }}
       />
     )
@@ -140,27 +116,6 @@ export default function App() {
 
   return (
     <div className="flex flex-col" style={{ height: '100dvh' }}>
-      {sampleOnly && (
-        <div className="flex min-h-8 shrink-0 items-center justify-center gap-3 bg-nosource px-3 text-background">
-          <span className="text-[11px] font-bold tracking-wide">SAMPLE DATA — not the live pipeline</span>
-          <Button
-            size="xs"
-            variant="ghost"
-            className="h-6 border border-background/50 px-2 text-[11px] hover:bg-background/15"
-            onClick={() => {
-              loadGeneration.current += 1
-              setSampleMode(false)
-              setSampleOnly(false)
-              setFeed(null)
-              setFeedError(false)
-              setInitialLoading(true)
-              setMobileDetail(false)
-            }}
-          >
-            Exit
-          </Button>
-        </div>
-      )}
       <header className="flex h-12 shrink-0 items-center gap-3 border-b px-3 md:px-4">
         <div className="flex min-w-0 shrink-0 items-center gap-3">
           {mobileDetail && (
@@ -177,7 +132,7 @@ export default function App() {
         </div>
 
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-          {!sampleOnly && authenticated && (
+          {authenticated && (
             <Button
               size="xs"
               variant="ghost"
@@ -189,7 +144,7 @@ export default function App() {
         </div>
       </header>
 
-      {feedError && feed && !sampleOnly && (
+      {feedError && feed && (
         <div
           role="status"
           className="flex min-h-7 shrink-0 items-center justify-center gap-2 bg-nosource/10 px-3 text-[11.5px] font-medium text-nosource"
@@ -202,7 +157,7 @@ export default function App() {
       )}
 
       <main className="flex min-h-0 flex-1">
-        {feedError && !feed && !sampleOnly ? (
+        {feedError && !feed ? (
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center" role="alert">
             <p className="text-[13px] text-muted-foreground">Can't reach the feed.</p>
             <Button size="sm" variant="outline" disabled={refetching} onClick={() => void load(true)}>

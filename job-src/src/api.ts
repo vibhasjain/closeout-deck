@@ -25,7 +25,6 @@ const STATUS = new Set<Status>([
   'meeting-scheduled', 'met', 'disqualified',
 ])
 const blobUrls = new Map<string, string>()
-let sampleMode = false
 
 export class HttpError extends Error {
   status: number
@@ -132,10 +131,6 @@ export function getToken(): string | null {
 
 export function canWrite(): boolean {
   return ownerToken() !== null
-}
-
-export function setSampleMode(value: boolean): void {
-  sampleMode = value
 }
 
 function object(value: unknown): Record<string, unknown> {
@@ -279,7 +274,6 @@ export async function fetchFeed(): Promise<Feed> {
 }
 
 export async function loadFile(path: string): Promise<string> {
-  if (sampleMode) return '/job/sample-resume.pdf'
   const cached = blobUrls.get(path)
   if (cached) return cached
   // Feed paths are cloud-relative, while the files route is files-relative.

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button } from '@/components/ui'
 import { createViewerSession, HttpError, resetAppStorage, type ViewerSession } from '@/api'
 
 interface GoogleCredentialResponse {
@@ -46,11 +45,9 @@ function loadAgentKeyboard(): void {
 export function SignIn({
   notice,
   onSignedIn,
-  onSample,
 }: {
   notice?: string
   onSignedIn: (session: ViewerSession) => void
-  onSample: () => void
 }) {
   const buttonRef = useRef<HTMLDivElement>(null)
   const [error, setError] = useState('')
@@ -117,9 +114,6 @@ export function SignIn({
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-6 text-center">
       <div className="flex flex-col items-center gap-3">
-        <div className="text-[15px] font-semibold tracking-tight">
-          Job<span className="text-muted-foreground">Pipeline</span>
-        </div>
         <p className="text-[12px] text-muted-foreground">Internal — hypertrack.io accounts</p>
         {notice && <p className="text-[12.5px] text-nosource">{notice}</p>}
         {clientId ? (
@@ -128,9 +122,6 @@ export function SignIn({
           <p className="text-[12px] text-nosource">Google sign-in is not configured</p>
         )}
         {error && <p className="text-[12.5px] text-nosource">{error}</p>}
-        <Button variant="ghost" size="sm" onClick={onSample}>
-          Continue with sample data
-        </Button>
       </div>
     </div>
   )
