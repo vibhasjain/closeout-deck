@@ -77,10 +77,9 @@ function candidateAttachments(candidate: Candidate | undefined): Attachment[] {
 }
 
 function autoOpenAttachment(attachments: Attachment[]): Attachment | null {
-  const hasResume = attachments.some((item) => ['pdf', 'docx'].includes(item.name.split('.').pop()?.toLowerCase() ?? ''))
+  const resume = attachments.find((item) => ['pdf', 'docx'].includes(item.name.split('.').pop()?.toLowerCase() ?? ''))
   const linkedinProfile = attachments.find((item) => item.name.toLowerCase() === 'linkedin-profile.png')
-  if (!hasResume && linkedinProfile) return linkedinProfile
-  return attachments.length === 1 ? attachments[0] : null
+  return resume ?? linkedinProfile ?? attachments[0] ?? null
 }
 
 function SourceIcon({ source }: { source: Candidate['source'] }) {
@@ -468,7 +467,20 @@ export function PipelineTab({
                   )}
                 </div>
               </div>
-              <StatusBadge status={selected.status} className="ml-3" />
+              <div className="ml-3 flex shrink-0 items-center gap-1">
+                <StatusBadge status={selected.status} />
+                {attachments.length > 0 && (
+                  <button
+                    type="button"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:hidden"
+                    onClick={() => setAttachment(autoOpenAttachment(attachments))}
+                    aria-label="View attachment"
+                    title="View attachment"
+                  >
+                    <FileText className="size-4" aria-hidden="true" />
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Extra bottom space on phones so the floating Agent Keyboard pill

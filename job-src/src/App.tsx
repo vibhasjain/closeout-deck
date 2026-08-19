@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, LogOut } from 'lucide-react'
 import { FilterChips } from '@/components/FilterChips'
 import { Button } from '@/components/ui'
 import { PipelineTab } from '@/PipelineTab'
@@ -149,14 +149,17 @@ export default function App() {
           />
         </div>
 
-        <div className="flex shrink-0 items-center justify-end gap-2">
+        <div className="ml-auto flex shrink-0 items-center justify-end gap-2">
           {authenticated && (
             <Button
-              size="xs"
+              size="icon"
               variant="ghost"
+              className="text-muted-foreground/60 hover:text-foreground"
               onClick={() => returnToSignIn()}
+              aria-label="Sign out"
+              title="Sign out"
             >
-              Sign out
+              <LogOut aria-hidden="true" />
             </Button>
           )}
         </div>
@@ -168,8 +171,15 @@ export default function App() {
           className="flex min-h-7 shrink-0 items-center justify-center gap-2 bg-nosource/10 px-3 text-[11.5px] font-medium text-nosource"
         >
           <span>Can't reach the feed — retrying</span>
-          <Button size="xs" variant="ghost" className="h-6 px-2" onClick={() => returnToSignIn()}>
-            Sign out &amp; reset
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-6 w-6 text-muted-foreground/60 hover:text-foreground"
+            onClick={() => returnToSignIn()}
+            aria-label="Sign out"
+            title="Sign out"
+          >
+            <LogOut aria-hidden="true" />
           </Button>
         </div>
       )}
@@ -181,8 +191,15 @@ export default function App() {
             <Button size="sm" variant="outline" disabled={refetching} onClick={() => void load(true)}>
               {refetching ? 'Retrying…' : 'Retry'}
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => returnToSignIn()}>
-              Sign out &amp; reset
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-muted-foreground/60 hover:text-foreground"
+              onClick={() => returnToSignIn()}
+              aria-label="Sign out"
+              title="Sign out"
+            >
+              <LogOut aria-hidden="true" />
             </Button>
           </div>
         ) : (
