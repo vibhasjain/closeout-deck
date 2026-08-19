@@ -45,6 +45,7 @@ export default function App() {
     const candidates = feed?.candidates ?? []
     return {
       all: candidates.length,
+      new: candidates.filter((candidate) => candidate.status === 'new').length,
       drafted: candidates.filter((candidate) => candidate.status === 'drafted').length,
       'awaiting-reply': candidates.filter((candidate) => candidate.status === 'awaiting-reply').length,
       disqualified: candidates.filter((candidate) => candidate.status === 'disqualified').length,
