@@ -46,9 +46,10 @@ export function TicketComposer({
   }
 
   return (
+    // On phones the Agent Keyboard pill (44px tall, 10px off the bottom) floats
+    // over this row, so lift it clear whenever that widget is on the page.
     <div
-      className="shrink-0 border-t px-3 pt-2 md:px-4"
-      style={{ paddingBottom: 'calc(0.625rem + env(safe-area-inset-bottom))' }}
+      className="shrink-0 border-t px-3 pb-[calc(0.625rem+env(safe-area-inset-bottom))] pt-2 max-md:[body:has(#agent-keyboard-host)_&]:pb-[calc(3.875rem+env(safe-area-inset-bottom))] md:px-4"
     >
       <div className="flex items-end gap-1.5">
         <Textarea
