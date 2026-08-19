@@ -291,8 +291,9 @@ export async function fetchFeed(): Promise<Feed> {
   return normalizeFeed(await res.json())
 }
 
-export async function loadFile(path: string): Promise<string> {
-  const cached = blobUrls.get(path)
+export async function loadFile(path: string, mimeType?: string): Promise<string> {
+  const cacheKey = `${path}\u0000${mimeType ?? ''}`
+  const cached = blobUrls.get(cacheKey)
   if (cached) return cached
   // Feed paths are cloud-relative, while the files route is files-relative.
   const routePath = path.startsWith('files/') ? path.slice('files/'.length) : path
@@ -300,8 +301,12 @@ export async function loadFile(path: string): Promise<string> {
   const res = await fetch(`${API}${FILES_PATH}/${encodedPath}`, { headers: authHeaders() })
   handleViewerUnauthorized(res.status)
   if (!res.ok) throw new HttpError(res.status, `${FILES_PATH}/${routePath} -> ${res.status}`)
-  const url = URL.createObjectURL(await res.blob())
-  blobUrls.set(path, url)
+  const responseBlob = await res.blob()
+  const blob = mimeType && responseBlob.type !== mimeType
+    ? new Blob([responseBlob], { type: mimeType })
+    : responseBlob
+  const url = URL.createObjectURL(blob)
+  blobUrls.set(cacheKey, url)
   return url
 }
 

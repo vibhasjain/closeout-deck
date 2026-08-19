@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict'
 import { filterCandidates } from './src/lib/filter.ts'
+import {
+  attachmentExtension,
+  autoOpenAttachment,
+  getAttachmentRenderDispatch,
+} from './src/lib/attachmentPreview.ts'
 
 const candidates = [
   {
@@ -43,6 +48,19 @@ assert.ok(filterCandidates(candidates, 'drafted', '').every((candidate) => candi
 assert.equal(filterCandidates(candidates, 'all', 'maya').length, 1)
 assert.equal(filterCandidates(candidates, 'all', 'THEO.EXAMPLE@EXAMPLE.COM').length, 1)
 assert.equal(filterCandidates(candidates, 'all', 'introductory conversation').length, 1)
+
+assert.equal(attachmentExtension('Resume.DOCX?download=1#page=2'), 'docx')
+assert.equal(getAttachmentRenderDispatch({ name: 'Resume.DOCX?download=1' }).kind, 'docx')
+assert.equal(getAttachmentRenderDispatch({ name: 'photo.JPEG?raw=1' }).kind, 'image')
+assert.equal(getAttachmentRenderDispatch({ name: 'notes.MD#top' }).kind, 'text')
+assert.equal(getAttachmentRenderDispatch({ name: 'archive.ZIP?download=1' }).kind, 'fallback')
+
+const autoOpenedAttachment = autoOpenAttachment([
+  { name: 'portfolio.zip', path: 'files/c-maya/portfolio.zip' },
+  { name: 'Resume.DOCX?download=1', path: 'files/c-maya/resume.docx' },
+])
+assert.equal(autoOpenedAttachment?.name, 'Resume.DOCX?download=1')
+assert.equal(autoOpenedAttachment && getAttachmentRenderDispatch(autoOpenedAttachment).kind, 'docx')
 
 for (const candidate of candidates) {
   for (const field of ['id', 'name', 'email', 'appliedAt', 'status', 'summary', 'thread']) {

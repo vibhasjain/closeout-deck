@@ -9,6 +9,7 @@ import { chipLabel } from '@/components/FilterChips'
 import { ListToolbar } from '@/components/ListToolbar'
 import { Badge, CopyButton, Skeleton } from '@/components/ui'
 import { filterCandidates, PIPELINE_FILTERS, type PipelineFilter } from '@/lib/filter'
+import { autoOpenAttachment } from '@/lib/attachmentPreview'
 import { linkifyHttpText, safeHttpUrl } from '@/lib/links'
 import { stripMarkdown } from '@/lib/stripMarkdown'
 import { cn, shortDate, shortTime } from '@/lib/utils'
@@ -74,12 +75,6 @@ function candidateAttachments(candidate: Candidate | undefined): Attachment[] {
     }
   }
   return [...byPath.values()]
-}
-
-function autoOpenAttachment(attachments: Attachment[]): Attachment | null {
-  const resume = attachments.find((item) => ['pdf', 'docx'].includes(item.name.split('.').pop()?.toLowerCase() ?? ''))
-  const linkedinProfile = attachments.find((item) => item.name.toLowerCase() === 'linkedin-profile.png')
-  return resume ?? linkedinProfile ?? attachments[0] ?? null
 }
 
 function SourceIcon({ source }: { source: Candidate['source'] }) {

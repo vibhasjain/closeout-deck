@@ -8,16 +8,17 @@ import { FadeText } from '@/components/FadeText'
 import { loadFile, revokeFiles } from '@/api'
 import { cn } from '@/lib/utils'
 import { safeHttpUrl } from '@/lib/links'
+import {
+  attachmentBaseName,
+  getAttachmentRenderDispatch,
+  type AttachmentRenderDispatch,
+} from '@/lib/attachmentPreview'
 import type { Attachment, Candidate } from '@/types'
 
 // Clipboards can't hold a PDF — the browsers only take text and images — so the
 // share sheet (phones, Slack in two taps) is the real thing, download the rest.
 const canShareFiles = typeof navigator.canShare === 'function'
   && navigator.canShare({ files: [new File([], 'resume.pdf', { type: 'application/pdf' })] })
-
-function extension(name: string): string {
-  return name.split('.').pop()?.toLowerCase() ?? ''
-}
 
 function sanitizeMammothHtml(html: string): string {
   const document = new DOMParser().parseFromString(html, 'text/html')
@@ -42,17 +43,20 @@ function sanitizeMammothHtml(html: string): string {
 
 function Preview({
   attachment,
+  dispatch,
   url,
   docxHtml,
+  text,
   linkedinUrl,
 }: {
   attachment: Attachment
+  dispatch: AttachmentRenderDispatch
   url: string
   docxHtml: string | null
+  text: string | null
   linkedinUrl?: string
 }) {
-  const ext = extension(attachment.name)
-  if (ext === 'pdf') {
+  if (dispatch.kind === 'pdf') {
     return (
       <iframe
         src={`${url}#view=FitH&zoom=page-width`}
@@ -61,7 +65,7 @@ function Preview({
       />
     )
   }
-  if (ext === 'docx' && docxHtml !== null) {
+  if (dispatch.kind === 'docx' && docxHtml !== null) {
     return (
       <div className="h-full w-full overflow-y-auto bg-white px-5 py-6 text-[13.5px] leading-[1.65] text-black md:px-8">
         <article
@@ -71,7 +75,7 @@ function Preview({
       </div>
     )
   }
-  if (attachment.name.toLowerCase() === 'linkedin-profile.png') {
+  if (dispatch.kind === 'image' && attachmentBaseName(attachment.name) === 'linkedin-profile.png') {
     return (
       <div className="h-full w-full overflow-y-auto bg-white">
         {linkedinUrl && (
@@ -91,33 +95,52 @@ function Preview({
       </div>
     )
   }
-  if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) {
+  if (dispatch.kind === 'image') {
     return (
       <div className="flex h-full items-center justify-center p-5">
         <img src={url} alt={attachment.name} className="max-h-full max-w-full object-contain" />
       </div>
     )
   }
+  if (dispatch.kind === 'text' && text !== null) {
+    return (
+      <pre className="h-full w-full overflow-auto whitespace-pre-wrap break-words px-5 py-5 font-mono text-[12.5px] leading-relaxed text-foreground md:px-8">
+        {text}
+      </pre>
+    )
+  }
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
+    <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
       <FileText className="size-7 text-muted-foreground/40" />
       <p className="text-[12px] font-medium">{attachment.name}</p>
       <p className="text-[12px] text-muted-foreground">This file can’t be previewed inline.</p>
+      <a
+        href={url}
+        download={attachment.name}
+        className="mt-1 inline-flex h-8 items-center justify-center gap-2 rounded-md bg-foreground px-3 text-[13px] font-medium text-background transition-colors hover:bg-foreground/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      >
+        <Download className="size-3.5" aria-hidden="true" />
+        Download
+      </a>
     </div>
   )
 }
 
 function ViewerBody({
   attachment,
+  dispatch,
   url,
   docxHtml,
+  text,
   loading,
   error,
   linkedinUrl,
 }: {
   attachment: Attachment
+  dispatch: AttachmentRenderDispatch
   url: string | null
   docxHtml: string | null
+  text: string | null
   loading: boolean
   error: string
   linkedinUrl?: string
@@ -132,7 +155,16 @@ function ViewerBody({
     )
   }
   if (error) return <p className="px-5 py-4 text-[12.5px] text-nosource">{error}</p>
-  return url ? <Preview attachment={attachment} url={url} docxHtml={docxHtml} linkedinUrl={linkedinUrl} /> : null
+  return url ? (
+    <Preview
+      attachment={attachment}
+      dispatch={dispatch}
+      url={url}
+      docxHtml={docxHtml}
+      text={text}
+      linkedinUrl={linkedinUrl}
+    />
+  ) : null
 }
 
 export function AttachmentViewer({
@@ -154,29 +186,37 @@ export function AttachmentViewer({
 }) {
   const [url, setUrl] = useState<string | null>(null)
   const [docxHtml, setDocxHtml] = useState<string | null>(null)
+  const [text, setText] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [lightbox, setLightbox] = useState(false)
   const linkedinUrl = safeHttpUrl(candidate?.linkedinUrl)
+  const dispatch = attachment ? getAttachmentRenderDispatch(attachment) : null
 
   useEffect(() => {
     setUrl(null)
     setDocxHtml(null)
+    setText(null)
     setError('')
     if (!attachment) return
     let cancelled = false
     setLoading(true)
-    loadFile(attachment.path)
+    const nextDispatch = getAttachmentRenderDispatch(attachment)
+    loadFile(attachment.path, nextDispatch.mimeType)
       .then(async (next) => {
         let nextDocxHtml: string | null = null
-        if (extension(attachment.name) === 'docx') {
+        let nextText: string | null = null
+        if (nextDispatch.kind === 'docx') {
           const arrayBuffer = await fetch(next).then((response) => response.arrayBuffer())
           const result = await mammoth.convertToHtml({ arrayBuffer })
           nextDocxHtml = sanitizeMammothHtml(result.value)
+        } else if (nextDispatch.kind === 'text') {
+          nextText = await fetch(next).then((response) => response.text())
         }
         if (!cancelled) {
           setUrl(next)
           setDocxHtml(nextDocxHtml)
+          setText(nextText)
         }
       })
       .catch(() => {
@@ -209,20 +249,12 @@ export function AttachmentViewer({
   useEffect(() => setLightbox(false), [attachment])
 
   const shareFile = async (name: string, href: string) => {
-    if (canShareFiles) {
-      try {
-        const blob = await fetch(href).then((res) => res.blob())
-        await navigator.share({ files: [new File([blob], name, { type: blob.type })] })
-        return
-      } catch (shareError) {
-        // Cancelled share sheets throw too, so only fall through on real failures.
-        if ((shareError as DOMException)?.name === 'AbortError') return
-      }
+    try {
+      const blob = await fetch(href).then((res) => res.blob())
+      await navigator.share({ files: [new File([blob], name, { type: blob.type })] })
+    } catch {
+      // Cancelling or rejecting a share must never turn into an automatic download.
     }
-    const link = document.createElement('a')
-    link.href = href
-    link.download = name
-    link.click()
   }
 
   const header = (onDismiss: () => void, showMaximize: boolean) => attachment ? (
@@ -234,7 +266,7 @@ export function AttachmentViewer({
         <p className="font-mono text-[11px] text-muted-foreground">{candidate?.name ?? ''}</p>
       </div>
       <div className="ml-3 flex shrink-0 items-center">
-        {url && (
+        {url && dispatch?.kind !== 'fallback' && (canShareFiles ? (
           <Button
             variant="ghost"
             size="icon"
@@ -244,7 +276,16 @@ export function AttachmentViewer({
           >
             {canShareFiles ? <Share2 className="size-4" /> : <Download className="size-4" />}
           </Button>
-        )}
+        ) : (
+          <a
+            href={url}
+            download={attachment.name}
+            className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            aria-label="Download file"
+          >
+            <Download className="size-4" aria-hidden="true" />
+          </a>
+        ))}
         {showMaximize && (
           <Button
             variant="ghost"
@@ -283,7 +324,7 @@ export function AttachmentViewer({
           <>
             {header(onClose, true)}
             <div className="min-h-0 flex-1">
-              <ViewerBody attachment={attachment} url={url} docxHtml={docxHtml} loading={loading} error={error} linkedinUrl={linkedinUrl} />
+              <ViewerBody attachment={attachment} dispatch={dispatch!} url={url} docxHtml={docxHtml} text={text} loading={loading} error={error} linkedinUrl={linkedinUrl} />
             </div>
           </>
         ) : (
@@ -322,7 +363,7 @@ export function AttachmentViewer({
           <div className="fixed inset-4 z-50 flex flex-col rounded-xl border bg-background shadow-xl animate-fade-in">
             {header(() => setLightbox(false), false)}
             <div className="min-h-0 flex-1">
-              <ViewerBody attachment={attachment} url={url} docxHtml={docxHtml} loading={loading} error={error} linkedinUrl={linkedinUrl} />
+              <ViewerBody attachment={attachment} dispatch={dispatch!} url={url} docxHtml={docxHtml} text={text} loading={loading} error={error} linkedinUrl={linkedinUrl} />
             </div>
           </div>
         </>
