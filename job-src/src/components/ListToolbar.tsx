@@ -3,8 +3,6 @@ import { Search, X } from 'lucide-react'
 import { Button, Input } from '@/components/ui'
 import { FilterChips } from '@/components/FilterChips'
 
-const SHOW_FILTERS = false
-
 /** The one list toolbar (Memories + Sources): a collapsed search icon that expands
  * on demand, optional filter chips, and one action icon on the right. Same height
  * and border as the queue header and the ticket info bar, so the top lines of all
@@ -65,9 +63,7 @@ export function ListToolbar<T extends string>({
             <Search className="size-4" />
           </Button>
           <div className="min-w-0 flex-1">
-            {SHOW_FILTERS && (
-              <FilterChips options={options} value={filter} onChange={onFilter} chipStyles={chipStyles} />
-            )}
+            <FilterChips options={options} value={filter} onChange={onFilter} chipStyles={chipStyles} />
           </div>
         </>
       )}

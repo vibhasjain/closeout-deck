@@ -247,6 +247,8 @@
 
     // Handle keyboard navigation
     function handleKeydown(e) {
+        const p = (e.composedPath && e.composedPath()[0]) || e.target;
+        if (p && (p.tagName === 'INPUT' || p.tagName === 'TEXTAREA' || p.isContentEditable)) return;
         if (isMobile) return;
 
         switch (e.key) {

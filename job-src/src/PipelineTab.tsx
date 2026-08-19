@@ -12,7 +12,7 @@ import { stripMarkdown } from '@/lib/stripMarkdown'
 import { cn, shortDate, shortTime } from '@/lib/utils'
 import type { Attachment, Candidate, Feed, Meeting, Status, ThreadEntry } from '@/types'
 
-const FILTERS = ['all', 'new', 'drafted', 'sent', 'awaiting-reply', 'meetings', 'disqualified'] as const
+const FILTERS = ['all', 'drafted', 'awaiting-reply', 'disqualified'] as const
 
 export const STATUS_CHIP: Record<Status, string> = {
   new: '',

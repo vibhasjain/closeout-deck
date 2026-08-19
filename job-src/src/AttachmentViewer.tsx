@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Download, FileText, Maximize2, Share2, X } from 'lucide-react'
+import * as mammoth from 'mammoth'
 import { ClaudeCrab } from '@/components/ClaudeCrab'
 import { Button, Skeleton } from '@/components/ui'
 import { FadeText } from '@/components/FadeText'
@@ -16,10 +17,41 @@ function extension(name: string): string {
   return name.split('.').pop()?.toLowerCase() ?? ''
 }
 
-function Preview({ attachment, url }: { attachment: Attachment; url: string }) {
+function sanitizeMammothHtml(html: string): string {
+  const document = new DOMParser().parseFromString(html, 'text/html')
+  document.querySelectorAll('script, iframe, object, embed, style, link, meta, base, form').forEach((node) => node.remove())
+  document.body.querySelectorAll('*').forEach((element) => {
+    for (const attribute of [...element.attributes]) {
+      const name = attribute.name.toLowerCase()
+      const value = attribute.value.trim().replace(/[\u0000-\u0020]+/g, '').toLowerCase()
+      if (
+        name.startsWith('on') ||
+        name === 'style' ||
+        name === 'srcdoc' ||
+        ((name === 'href' || name === 'src' || name === 'xlink:href') &&
+          (value.startsWith('javascript:') || value.startsWith('vbscript:') || value.startsWith('data:text/html')))
+      ) {
+        element.removeAttribute(attribute.name)
+      }
+    }
+  })
+  return document.body.innerHTML
+}
+
+function Preview({ attachment, url, docxHtml }: { attachment: Attachment; url: string; docxHtml: string | null }) {
   const ext = extension(attachment.name)
   if (ext === 'pdf') {
     return <iframe src={url} className="h-full w-full border-0" title={attachment.name} />
+  }
+  if (ext === 'docx' && docxHtml !== null) {
+    return (
+      <div className="h-full w-full overflow-y-auto bg-white px-5 py-6 text-[13.5px] leading-[1.65] text-black md:px-8">
+        <article
+          className="mx-auto max-w-[52rem] break-words [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-neutral-300 [&_blockquote]:pl-3 [&_h1]:mb-3 [&_h1]:mt-5 [&_h1]:text-xl [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:font-semibold [&_img]:max-w-full [&_li]:my-1 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:my-2.5 [&_table]:my-4 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-neutral-300 [&_td]:p-2 [&_th]:border [&_th]:border-neutral-300 [&_th]:bg-neutral-100 [&_th]:p-2 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6"
+          dangerouslySetInnerHTML={{ __html: docxHtml }}
+        />
+      </div>
+    )
   }
   if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) {
     return (
@@ -40,11 +72,13 @@ function Preview({ attachment, url }: { attachment: Attachment; url: string }) {
 function ViewerBody({
   attachment,
   url,
+  docxHtml,
   loading,
   error,
 }: {
   attachment: Attachment
   url: string | null
+  docxHtml: string | null
   loading: boolean
   error: string
 }) {
@@ -58,7 +92,7 @@ function ViewerBody({
     )
   }
   if (error) return <p className="px-5 py-4 text-[12.5px] text-nosource">{error}</p>
-  return url ? <Preview attachment={attachment} url={url} /> : null
+  return url ? <Preview attachment={attachment} url={url} docxHtml={docxHtml} /> : null
 }
 
 export function AttachmentViewer({
@@ -75,19 +109,30 @@ export function AttachmentViewer({
   onClose: () => void
 }) {
   const [url, setUrl] = useState<string | null>(null)
+  const [docxHtml, setDocxHtml] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [lightbox, setLightbox] = useState(false)
 
   useEffect(() => {
     setUrl(null)
+    setDocxHtml(null)
     setError('')
     if (!attachment) return
     let cancelled = false
     setLoading(true)
     loadFile(attachment.path)
-      .then((next) => {
-        if (!cancelled) setUrl(next)
+      .then(async (next) => {
+        let nextDocxHtml: string | null = null
+        if (extension(attachment.name) === 'docx') {
+          const arrayBuffer = await fetch(next).then((response) => response.arrayBuffer())
+          const result = await mammoth.convertToHtml({ arrayBuffer })
+          nextDocxHtml = sanitizeMammothHtml(result.value)
+        }
+        if (!cancelled) {
+          setUrl(next)
+          setDocxHtml(nextDocxHtml)
+        }
       })
       .catch(() => {
         if (!cancelled) setError('Could not load this attachment.')
@@ -191,7 +236,7 @@ export function AttachmentViewer({
           <>
             {header(onClose, true)}
             <div className="min-h-0 flex-1">
-              <ViewerBody attachment={attachment} url={url} loading={loading} error={error} />
+              <ViewerBody attachment={attachment} url={url} docxHtml={docxHtml} loading={loading} error={error} />
             </div>
           </>
         ) : (
@@ -230,7 +275,7 @@ export function AttachmentViewer({
           <div className="fixed inset-4 z-50 flex flex-col rounded-xl border bg-background shadow-xl animate-fade-in">
             {header(() => setLightbox(false), false)}
             <div className="min-h-0 flex-1">
-              <ViewerBody attachment={attachment} url={url} loading={loading} error={error} />
+              <ViewerBody attachment={attachment} url={url} docxHtml={docxHtml} loading={loading} error={error} />
             </div>
           </div>
         </>
