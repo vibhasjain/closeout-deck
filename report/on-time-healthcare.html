@@ -671,6 +671,8 @@ document.addEventListener("mousemove",function(e){var t=e.target.closest("[data-
       document.body.appendChild(s);
       return;
     }
+    var ak = window.__agentKeyboard;
+    if (ak && ak.toggle) { ak.toggle(); return; }
     var host = document.getElementById('agent-keyboard-host');
     if (host) host.style.display = host.style.display === 'none' ? '' : 'none';
   });
