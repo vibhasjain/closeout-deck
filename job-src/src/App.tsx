@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronLeft, Loader2, RefreshCw } from 'lucide-react'
+import { ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { PipelineTab } from '@/PipelineTab'
 import { SignIn } from '@/SignIn'
@@ -14,7 +14,6 @@ import {
   sendMessage,
   setSampleMode,
 } from '@/api'
-import { shortTime } from '@/lib/utils'
 import type { Feed } from '@/types'
 
 export default function App() {
@@ -178,21 +177,6 @@ export default function App() {
         </div>
 
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-          {!owner && <span className="text-[11px] text-muted-foreground">Read-only</span>}
-          {feed?.updatedAt && (
-            <span className="text-[12px] text-muted-foreground">
-              Updated {shortTime(feed.updatedAt)}
-            </span>
-          )}
-          {refetching && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
-          <Button
-            size="icon"
-            variant="ghost"
-            aria-label="Refresh pipeline"
-            onClick={() => void load(true)}
-          >
-            <RefreshCw className="size-4" />
-          </Button>
           {viewerSession && !owner && (
             <Button
               size="xs"

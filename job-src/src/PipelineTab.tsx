@@ -151,7 +151,9 @@ export function PipelineTab({
   }, [candidates])
 
   useEffect(() => {
-    setAttachment(null)
+    // Key this to candidate changes so closing a single attachment does not
+    // reopen it during a background poll.
+    setAttachment(attachments.length === 1 ? attachments[0] : null)
   }, [selectedId])
 
   useEffect(() => {
