@@ -8,9 +8,9 @@ import {
   HttpError,
   SESSION_EXPIRED_EVENT,
   canWrite,
-  clearGoogleToken,
   fetchFeed,
   getViewerSession,
+  resetAppStorage,
   sendMessage,
   setSampleMode,
 } from '@/api'
@@ -33,7 +33,7 @@ export default function App() {
 
   const returnToSignIn = useCallback((notice = '') => {
     loadGeneration.current += 1
-    clearGoogleToken()
+    resetAppStorage()
     setViewerSession(null)
     setSampleMode(false)
     setSampleOnly(false)
@@ -177,7 +177,7 @@ export default function App() {
         </div>
 
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-          {viewerSession && !owner && (
+          {!sampleOnly && authenticated && (
             <Button
               size="xs"
               variant="ghost"
@@ -192,9 +192,12 @@ export default function App() {
       {feedError && feed && !sampleOnly && (
         <div
           role="status"
-          className="flex min-h-7 shrink-0 items-center justify-center bg-nosource/10 px-3 text-[11.5px] font-medium text-nosource"
+          className="flex min-h-7 shrink-0 items-center justify-center gap-2 bg-nosource/10 px-3 text-[11.5px] font-medium text-nosource"
         >
-          Can't reach the feed — retrying
+          <span>Can't reach the feed — retrying</span>
+          <Button size="xs" variant="ghost" className="h-6 px-2" onClick={() => returnToSignIn()}>
+            Sign out &amp; reset
+          </Button>
         </div>
       )}
 
@@ -204,6 +207,9 @@ export default function App() {
             <p className="text-[13px] text-muted-foreground">Can't reach the feed.</p>
             <Button size="sm" variant="outline" disabled={refetching} onClick={() => void load(true)}>
               {refetching ? 'Retrying…' : 'Retry'}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => returnToSignIn()}>
+              Sign out &amp; reset
             </Button>
           </div>
         ) : (

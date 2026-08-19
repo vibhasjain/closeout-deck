@@ -8,6 +8,9 @@ const MESSAGES_PATH = `/sites/${SITE}/messages`
 const SESSION_PATH = `/sites/${SITE}/session`
 const OWNER_KEY = 'agent-keyboard-auth'
 const SESSION_KEY = 'job:viewer-session:v1'
+const COMPOSER_KEY_PREFIX = 'job:composer:v1:'
+const JOB_KEY_PREFIX = 'job:'
+const NETWORK_RETRY_DELAY_MS = 3_000
 
 export const SESSION_EXPIRED_EVENT = 'job:session-expired'
 
@@ -75,14 +78,49 @@ function storeViewerSession(session: ViewerSession): void {
   }
 }
 
-export function clearGoogleToken(): void {
+function storageKeys(storage: Storage): string[] {
+  return Array.from({ length: storage.length }, (_, index) => storage.key(index))
+    .filter((key): key is string => key !== null)
+}
+
+function isGoogleTokenKey(key: string): boolean {
+  const normalized = key.toLowerCase()
+  return normalized.includes('google') && normalized.includes('token')
+}
+
+function isCurrentLocalStorageKey(key: string): boolean {
+  return key === OWNER_KEY || key === SESSION_KEY || key.startsWith(COMPOSER_KEY_PREFIX)
+}
+
+export function purgeLegacyStorage(): void {
+  try {
+    for (const key of storageKeys(sessionStorage)) {
+      if (isGoogleTokenKey(key)) sessionStorage.removeItem(key)
+    }
+  } catch {
+    /* sessionStorage unavailable */
+  }
+  try {
+    for (const key of storageKeys(localStorage)) {
+      if (!isCurrentLocalStorageKey(key)) localStorage.removeItem(key)
+    }
+  } catch {
+    /* localStorage unavailable */
+  }
+}
+
+export function resetAppStorage(): void {
   try {
     sessionStorage.clear()
   } catch {
     /* sessionStorage unavailable */
   }
   try {
-    localStorage.removeItem(SESSION_KEY)
+    for (const key of storageKeys(localStorage)) {
+      if (key === OWNER_KEY || key.startsWith(JOB_KEY_PREFIX) || isGoogleTokenKey(key)) {
+        localStorage.removeItem(key)
+      }
+    }
   } catch {
     /* localStorage unavailable */
   }
@@ -205,8 +243,19 @@ function authHeaders(): Record<string, string> {
 
 function handleViewerUnauthorized(status: number): void {
   if (status !== 401 || ownerToken()) return
-  clearGoogleToken()
+  resetAppStorage()
   window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
+}
+
+async function fetchFeedResponse(): Promise<Response> {
+  try {
+    return await fetch(`${API}${FEED_PATH}`, { headers: authHeaders() })
+  } catch (error) {
+    if (!getToken()) throw error
+    await new Promise((resolve) => window.setTimeout(resolve, NETWORK_RETRY_DELAY_MS))
+    if (!getToken()) throw error
+    return fetch(`${API}${FEED_PATH}`, { headers: authHeaders() })
+  }
 }
 
 export async function createViewerSession(idToken: string): Promise<ViewerSession> {
@@ -223,7 +272,7 @@ export async function createViewerSession(idToken: string): Promise<ViewerSessio
 }
 
 export async function fetchFeed(): Promise<Feed> {
-  const res = await fetch(`${API}${FEED_PATH}`, { headers: authHeaders() })
+  const res = await fetchFeedResponse()
   handleViewerUnauthorized(res.status)
   if (!res.ok) throw new HttpError(res.status, `${FEED_PATH} -> ${res.status}`)
   return normalizeFeed(await res.json())

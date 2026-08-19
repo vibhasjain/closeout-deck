@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui'
-import { clearGoogleToken, createViewerSession, HttpError, type ViewerSession } from '@/api'
+import { createViewerSession, HttpError, resetAppStorage, type ViewerSession } from '@/api'
 
 interface GoogleCredentialResponse {
   credential: string
@@ -75,7 +75,7 @@ export function SignIn({
             if (session.email === 'vibes@hypertrack.io') loadAgentKeyboard()
             onSignedIn(session)
           } catch (sessionError) {
-            clearGoogleToken()
+            resetAppStorage()
             setError(
               sessionError instanceof HttpError && sessionError.status === 401
                 ? 'hypertrack.io accounts only.'
