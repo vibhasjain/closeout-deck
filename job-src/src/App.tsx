@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft } from 'lucide-react'
+import { FilterChips } from '@/components/FilterChips'
 import { Button } from '@/components/ui'
 import { PipelineTab } from '@/PipelineTab'
 import { SignIn } from '@/SignIn'
+import { PIPELINE_FILTERS, type PipelineFilter } from '@/lib/filter'
 import {
   HttpError,
   SESSION_EXPIRED_EVENT,
@@ -33,11 +35,21 @@ export default function App() {
   const [initialLoading, setInitialLoading] = useState(true)
   const [refetching, setRefetching] = useState(false)
   const [mobileDetail, setMobileDetail] = useState(false)
+  const [filter, setFilter] = useState<PipelineFilter>('drafted')
   // The Agent Keyboard token survives a sign-out now, so remember the click.
   const [signedOut, setSignedOut] = useState(false)
   const loadGeneration = useRef(0)
   const owner = canWrite()
   const authenticated = !signedOut && (owner || Boolean(viewerSession))
+  const filterCounts = useMemo<Record<PipelineFilter, number>>(() => {
+    const candidates = feed?.candidates ?? []
+    return {
+      all: candidates.length,
+      drafted: candidates.filter((candidate) => candidate.status === 'drafted').length,
+      'awaiting-reply': candidates.filter((candidate) => candidate.status === 'awaiting-reply').length,
+      disqualified: candidates.filter((candidate) => candidate.status === 'disqualified').length,
+    }
+  }, [feed])
 
   const returnToSignIn = useCallback((notice = '') => {
     loadGeneration.current += 1
@@ -127,7 +139,16 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+        <div className="hidden min-w-0 flex-1 items-center md:flex">
+          <FilterChips
+            options={PIPELINE_FILTERS}
+            value={filter}
+            onChange={setFilter}
+            counts={filterCounts}
+          />
+        </div>
+
+        <div className="flex shrink-0 items-center justify-end gap-2">
           {authenticated && (
             <Button
               size="xs"
@@ -169,6 +190,9 @@ export default function App() {
             initialLoading={initialLoading}
             mobileDetail={mobileDetail}
             onMobileDetail={setMobileDetail}
+            filter={filter}
+            onFilter={setFilter}
+            filterCounts={filterCounts}
           />
         )}
       </main>

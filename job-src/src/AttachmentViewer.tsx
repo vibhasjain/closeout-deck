@@ -53,7 +53,13 @@ function Preview({
 }) {
   const ext = extension(attachment.name)
   if (ext === 'pdf') {
-    return <iframe src={url} className="h-full w-full border-0" title={attachment.name} />
+    return (
+      <iframe
+        src={`${url}#view=FitH&zoom=page-width`}
+        className="h-full w-full border-0"
+        title={attachment.name}
+      />
+    )
   }
   if (ext === 'docx' && docxHtml !== null) {
     return (

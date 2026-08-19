@@ -15,6 +15,7 @@ export function ListToolbar<T extends string>({
   filter,
   onFilter,
   chipStyles,
+  counts,
   right,
 }: {
   searchPlaceholder: string
@@ -24,6 +25,7 @@ export function ListToolbar<T extends string>({
   filter: T
   onFilter: (v: T) => void
   chipStyles?: Partial<Record<string, string>>
+  counts?: Partial<Record<T, number>>
   right?: ReactNode
 }) {
   const [open, setOpen] = useState(false)
@@ -62,8 +64,14 @@ export function ListToolbar<T extends string>({
           <Button size="icon" variant="ghost" className="size-9 shrink-0" aria-label="Search" onClick={() => setOpen(true)}>
             <Search className="size-4" />
           </Button>
-          <div className="min-w-0 flex-1">
-            <FilterChips options={options} value={filter} onChange={onFilter} chipStyles={chipStyles} />
+          <div className="min-w-0 flex-1 md:hidden">
+            <FilterChips
+              options={options}
+              value={filter}
+              onChange={onFilter}
+              chipStyles={chipStyles}
+              counts={counts}
+            />
           </div>
         </>
       )}

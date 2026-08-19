@@ -102,7 +102,7 @@ function isGoogleTokenKey(key: string): boolean {
 }
 
 function isCurrentLocalStorageKey(key: string): boolean {
-  return key === OWNER_KEY || key === SESSION_KEY || key.startsWith(COMPOSER_KEY_PREFIX)
+  return key === OWNER_KEY || key === SESSION_KEY || key === 'job:right-pane-w' || key.startsWith(COMPOSER_KEY_PREFIX)
 }
 
 export function purgeLegacyStorage(): void {

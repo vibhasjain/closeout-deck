@@ -2,6 +2,9 @@ import type { Candidate, Status } from '../types.ts'
 
 export type CandidateFilter = 'all' | Status | 'meetings'
 
+export const PIPELINE_FILTERS = ['all', 'drafted', 'awaiting-reply', 'disqualified'] as const
+export type PipelineFilter = (typeof PIPELINE_FILTERS)[number]
+
 export function filterCandidates(
   candidates: Candidate[],
   status: CandidateFilter,

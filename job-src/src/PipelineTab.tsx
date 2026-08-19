@@ -8,19 +8,18 @@ import { FadeText } from '@/components/FadeText'
 import { chipLabel } from '@/components/FilterChips'
 import { ListToolbar } from '@/components/ListToolbar'
 import { Badge, CopyButton, Skeleton } from '@/components/ui'
-import { filterCandidates, type CandidateFilter } from '@/lib/filter'
+import { filterCandidates, PIPELINE_FILTERS, type PipelineFilter } from '@/lib/filter'
 import { linkifyHttpText, safeHttpUrl } from '@/lib/links'
 import { stripMarkdown } from '@/lib/stripMarkdown'
 import { cn, shortDate, shortTime } from '@/lib/utils'
 import type { Attachment, Candidate, Feed, Meeting, Status, ThreadEntry } from '@/types'
 
-const FILTERS = ['all', 'drafted', 'awaiting-reply', 'disqualified'] as const
 const RIGHT_PANE_STORAGE_KEY = 'job:right-pane-w'
 const RIGHT_PANE_MIN_WIDTH = 320
 
 function defaultRightPaneWidth(): number {
-  if (typeof window === 'undefined') return 400
-  return window.matchMedia('(min-width: 1280px)').matches ? 460 : 400
+  if (typeof window === 'undefined') return 420
+  return Math.min(860, Math.max(420, window.innerWidth * 0.42))
 }
 
 function clampRightPaneWidth(width: number): number {
@@ -186,14 +185,19 @@ export function PipelineTab({
   initialLoading,
   mobileDetail,
   onMobileDetail,
+  filter,
+  onFilter,
+  filterCounts,
 }: {
   feed: Feed | null
   initialLoading: boolean
   mobileDetail: boolean
   onMobileDetail: (open: boolean) => void
+  filter: PipelineFilter
+  onFilter: (filter: PipelineFilter) => void
+  filterCounts: Record<PipelineFilter, number>
 }) {
   const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState<CandidateFilter>('drafted')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [attachment, setAttachment] = useState<Attachment | null>(null)
   const [rightPaneWidth, setRightPaneWidth] = useState(initialRightPaneWidth)
@@ -363,9 +367,10 @@ export function PipelineTab({
           searchPlaceholder="Search candidates"
           q={query}
           onQ={setQuery}
-          options={FILTERS}
+          options={PIPELINE_FILTERS}
           filter={filter}
-          onFilter={setFilter}
+          onFilter={onFilter}
+          counts={filterCounts}
         />
         <div className="min-h-0 flex-1 overflow-y-auto no-scrollbar">
           {initialLoading && candidates.length === 0 && (

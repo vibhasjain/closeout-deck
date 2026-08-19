@@ -21,12 +21,14 @@ export function FilterChips<T extends string>({
   value,
   onChange,
   chipStyles,
+  counts,
 }: {
   options: readonly T[]
   value: T
   onChange: (v: T) => void
   /** Per-value styling (e.g. the memory type tags) so the chips carry the taxonomy. */
   chipStyles?: Partial<Record<string, string>>
+  counts?: Partial<Record<T, number>>
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [overflowing, setOverflowing] = useState(false)
@@ -80,7 +82,7 @@ export function FilterChips<T extends string>({
           key={f}
           onClick={() => onChange(f)}
           className={cn(
-            'whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium',
+            'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium',
             // Type design colors the resting chip; hover and selected states are the
             // SAME for every filter, so interaction always reads identically.
             value === f
@@ -91,7 +93,10 @@ export function FilterChips<T extends string>({
                 ),
           )}
         >
-          {chipLabel(f)}
+          <span>{chipLabel(f)}</span>
+          {counts?.[f] !== undefined && (
+            <span className="text-[10px] tabular-nums text-muted-foreground">{counts[f]}</span>
+          )}
         </button>
       ))}
     </div>
