@@ -19,7 +19,10 @@ const RIGHT_PANE_MIN_WIDTH = 320
 
 function defaultRightPaneWidth(): number {
   if (typeof window === 'undefined') return 420
-  return Math.min(860, Math.max(420, window.innerWidth * 0.42))
+  return Math.min(
+    window.innerWidth * 0.6,
+    Math.max(420, (window.innerWidth - RIGHT_PANE_MIN_WIDTH) / 2),
+  )
 }
 
 function clampRightPaneWidth(width: number): number {
@@ -202,6 +205,7 @@ export function PipelineTab({
   const [attachment, setAttachment] = useState<Attachment | null>(null)
   const [rightPaneWidth, setRightPaneWidth] = useState(initialRightPaneWidth)
   const [resizingRightPane, setResizingRightPane] = useState(false)
+  const hasPersistedRightPaneWidth = useRef(false)
   const autoSelected = useRef(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const rightPaneRef = useRef<HTMLElement>(null)
@@ -234,6 +238,24 @@ export function PipelineTab({
   )
   const attachments = useMemo(() => candidateAttachments(selected), [selected])
   const threadLength = selected?.thread?.length ?? 0
+
+  useEffect(() => {
+    try {
+      hasPersistedRightPaneWidth.current = Number.isFinite(
+        Number.parseFloat(window.localStorage.getItem(RIGHT_PANE_STORAGE_KEY) ?? ''),
+      )
+    } catch {
+      // Treat unavailable storage like an unpersisted width.
+    }
+
+    const updateAdaptiveWidth = () => {
+      if (hasPersistedRightPaneWidth.current) return
+      setRightPaneWidth(clampRightPaneWidth(defaultRightPaneWidth()))
+    }
+
+    window.addEventListener('resize', updateAdaptiveWidth)
+    return () => window.removeEventListener('resize', updateAdaptiveWidth)
+  }, [])
 
   const selectCandidate = useCallback((id: string, mobile = true) => {
     autoSelected.current = true
@@ -283,6 +305,7 @@ export function PipelineTab({
     const nextWidth = clampRightPaneWidth(width)
     rightPaneRef.current?.style.setProperty('--right-pane-width', `${nextWidth}px`)
     if (persist) {
+      hasPersistedRightPaneWidth.current = true
       setRightPaneWidth(nextWidth)
       persistRightPaneWidth(nextWidth)
     }
