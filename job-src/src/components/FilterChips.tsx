@@ -75,7 +75,7 @@ export function FilterChips<T extends string>({
       className="flex min-w-0 flex-nowrap gap-1 overflow-x-auto no-scrollbar"
       style={mask ? { WebkitMaskImage: mask, maskImage: mask } : undefined}
     >
-      {options.map((f) => (
+      {options.filter((f) => f !== 'new').map((f) => (
         <button
           key={f}
           onClick={() => onChange(f)}
