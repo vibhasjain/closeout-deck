@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 
 export function chipLabel(value: string): string {
   if (value === 'all') return 'All'
-  if (value === 'new') return 'New'
+  if (value === 'new') return 'Processing'
   if (value === 'qualified') return 'Qualified'
   if (value === 'invited') return 'Invited'
   if (value === 'meeting-scheduled') return 'Meeting scheduled'
