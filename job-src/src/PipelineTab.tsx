@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
-import { ExternalLink, FileText, Mail, Paperclip } from 'lucide-react'
+import { ExternalLink, FileText, Mail } from 'lucide-react'
 import { AttachmentViewer } from '@/AttachmentViewer'
 import { ClaudeCrab } from '@/components/ClaudeCrab'
 import { DraftCard } from '@/components/DraftCard'
@@ -393,7 +393,6 @@ export function PipelineTab({
             </div>
           )}
           {filtered.map((candidate) => {
-            const hasAttachments = (candidate.thread ?? []).some((entry) => (entry.attachments ?? []).length > 0)
             return (
               <button
                 key={candidate.id}
@@ -407,7 +406,6 @@ export function PipelineTab({
                   <FadeText text={candidate.name} className="min-w-0 flex-1 text-[12.5px] font-medium" />
                   <SourceIcon source={candidate.source} />
                   <StatusBadge status={candidate.status} />
-                  {hasAttachments && <Paperclip className="size-3 shrink-0 text-muted-foreground" />}
                 </div>
                 <FadeText text={candidate.summary} lines={2} className="mt-0.5 text-[12px] leading-snug text-muted-foreground" />
                 <p className="mt-1 font-mono text-[10.5px] text-muted-foreground/70">
