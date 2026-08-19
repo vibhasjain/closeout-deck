@@ -653,5 +653,26 @@ document.addEventListener("mousemove",function(e){var t=e.target.closest("[data-
   if(!t){tip.style.opacity=0;return;}tip.innerHTML=t.getAttribute("data-tip");tip.style.opacity=1;
   var x=Math.min(e.clientX+14,window.innerWidth-tip.offsetWidth-12),y=e.clientY+16;
   if(y+tip.offsetHeight>window.innerHeight-8)y=e.clientY-tip.offsetHeight-12;tip.style.left=x+"px";tip.style.top=y+"px";});
-</script><script src="https://agent-keyboard.fly.dev/widget.js" data-site="closeout" defer></script>
+</script><script>
+/* Agent Keyboard is invisible to visitors on this page — press ` or ~ to summon/hide it.
+   The widget script isn't even fetched until the first press. */
+(function () {
+  var loaded = false;
+  addEventListener('keydown', function (e) {
+    if (e.key !== '`' && e.key !== '~') return;
+    var a = document.activeElement;
+    if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable || a.id === 'agent-keyboard-host')) return;
+    if (!loaded) {
+      loaded = true;
+      var s = document.createElement('script');
+      s.src = 'https://agent-keyboard.fly.dev/widget.js';
+      s.setAttribute('data-site', 'closeout');
+      document.body.appendChild(s);
+      return;
+    }
+    var host = document.getElementById('agent-keyboard-host');
+    if (host) host.style.display = host.style.display === 'none' ? '' : 'none';
+  });
+})();
+</script>
 </body></html>
