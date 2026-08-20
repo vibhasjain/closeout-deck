@@ -5,6 +5,7 @@ import {
   attachmentExtension,
   autoOpenAttachment,
   getAttachmentRenderDispatch,
+  meetingResumeAttachment,
 } from './src/lib/attachmentPreview.ts'
 
 const candidates = [
@@ -79,6 +80,16 @@ const autoOpenedAttachment = autoOpenAttachment([
 ])
 assert.equal(autoOpenedAttachment?.name, 'Resume.DOCX?download=1')
 assert.equal(autoOpenedAttachment && getAttachmentRenderDispatch(autoOpenedAttachment).kind, 'docx')
+
+assert.equal(meetingResumeAttachment([
+  { name: 'portfolio.pdf', path: 'files/c-maya/portfolio.pdf' },
+  { name: 'Maya-CV.docx', path: 'files/c-maya/cv.docx' },
+])?.name, 'Maya-CV.docx')
+assert.equal(meetingResumeAttachment([
+  { name: 'application.pdf', path: 'files/c-maya/application.pdf' },
+  { name: 'portfolio.pdf', path: 'files/c-maya/portfolio.pdf' },
+])?.name, 'application.pdf')
+assert.equal(meetingResumeAttachment([]), null)
 
 for (const candidate of candidates) {
   for (const field of ['id', 'name', 'email', 'appliedAt', 'status', 'summary', 'thread']) {

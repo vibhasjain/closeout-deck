@@ -11,6 +11,7 @@ import { safeHttpUrl } from '@/lib/links'
 import {
   attachmentBaseName,
   getAttachmentRenderDispatch,
+  meetingResumeAttachment,
   type AttachmentRenderDispatch,
 } from '@/lib/attachmentPreview'
 import type { Attachment, Candidate, MeetingPaneTab, MeetingRecording } from '@/types'
@@ -288,11 +289,7 @@ function MeetingDocument({ meeting, tab }: { meeting: MeetingRecording; tab: Mee
   }
   if (error) return <p className="px-5 py-4 text-[12.5px] text-nosource">{error}</p>
   if (!text?.trim()) {
-    return (
-      <div className="flex h-full items-center justify-center px-6 text-center">
-        <p className="text-[12px] text-muted-foreground">No {label} available.</p>
-      </div>
-    )
+    return <EmptyMeetingDocument label={label} />
   }
   return tab === 'summary' ? (
     <div className="h-full overflow-y-auto px-5 py-5 md:px-6">
@@ -301,6 +298,14 @@ function MeetingDocument({ meeting, tab }: { meeting: MeetingRecording; tab: Mee
   ) : (
     <div className="h-full overflow-y-auto whitespace-pre-wrap break-words px-5 py-5 text-[13px] leading-relaxed text-foreground md:px-6">
       {text}
+    </div>
+  )
+}
+
+function EmptyMeetingDocument({ label }: { label: string }) {
+  return (
+    <div className="flex h-full items-center justify-center px-6 text-center">
+      <p className="text-[12px] text-muted-foreground">No {label} available.</p>
     </div>
   )
 }
@@ -335,18 +340,20 @@ export function AttachmentViewer({
   const [error, setError] = useState('')
   const [lightbox, setLightbox] = useState(false)
   const linkedinUrl = safeHttpUrl(candidate?.linkedinUrl)
-  const dispatch = attachment ? getAttachmentRenderDispatch(attachment) : null
+  const resumeAttachment = meetingResumeAttachment(attachments)
+  const previewAttachment = meeting && meetingTab === 'resume' ? resumeAttachment : attachment
+  const dispatch = previewAttachment ? getAttachmentRenderDispatch(previewAttachment) : null
 
   useEffect(() => {
     setUrl(null)
     setDocxHtml(null)
     setText(null)
     setError('')
-    if (!attachment) return
+    if (!previewAttachment) return
     let cancelled = false
     setLoading(true)
-    const nextDispatch = getAttachmentRenderDispatch(attachment)
-    loadFile(attachment.path, nextDispatch.mimeType)
+    const nextDispatch = getAttachmentRenderDispatch(previewAttachment)
+    loadFile(previewAttachment.path, nextDispatch.mimeType)
       .then(async (next) => {
         let nextDocxHtml: string | null = null
         let nextText: string | null = null
@@ -372,7 +379,7 @@ export function AttachmentViewer({
     return () => {
       cancelled = true
     }
-  }, [attachment])
+  }, [previewAttachment])
 
   useEffect(() => () => revokeFiles(), [])
 
@@ -475,7 +482,7 @@ export function AttachmentViewer({
       </header>
       <div className="shrink-0 border-b px-4 md:px-5">
         <div className="flex h-9 items-end gap-4" role="tablist" aria-label="Meeting notes">
-          {(['summary', 'transcript'] as const).map((tab) => (
+          {(['summary', 'transcript', 'resume'] as const).map((tab) => (
             <button
               key={tab}
               type="button"
@@ -487,7 +494,7 @@ export function AttachmentViewer({
                 meetingTab === tab && 'text-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-foreground',
               )}
             >
-              {tab === 'summary' ? 'Summary' : 'Transcript'}
+              {tab === 'summary' ? 'Summary' : tab === 'transcript' ? 'Transcript' : 'Resume'}
             </button>
           ))}
         </div>
@@ -511,7 +518,11 @@ export function AttachmentViewer({
           <>
             {meetingHeader}
             <div className="min-h-0 flex-1" role="tabpanel">
-              <MeetingDocument meeting={meeting} tab={meetingTab} />
+              {meetingTab === 'resume'
+                ? resumeAttachment
+                  ? <ViewerBody attachment={resumeAttachment} dispatch={dispatch!} url={url} docxHtml={docxHtml} text={text} loading={loading} error={error} linkedinUrl={linkedinUrl} />
+                  : <EmptyMeetingDocument label="resume" />
+                : <MeetingDocument meeting={meeting} tab={meetingTab} />}
             </div>
           </>
         ) : attachment ? (

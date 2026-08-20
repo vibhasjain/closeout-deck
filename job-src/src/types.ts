@@ -26,7 +26,7 @@ export interface MeetingRecording {
   transcriptPath?: string
 }
 
-export type MeetingPaneTab = 'summary' | 'transcript'
+export type MeetingPaneTab = 'summary' | 'transcript' | 'resume'
 
 export interface Draft {
   id: string

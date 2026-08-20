@@ -198,6 +198,14 @@ function MeetingCard({
         >
           Transcript
         </button>
+        <span aria-hidden="true">·</span>
+        <button
+          type="button"
+          onClick={() => onMeeting(meeting, 'resume')}
+          className="underline-offset-2 hover:text-foreground hover:underline"
+        >
+          Resume
+        </button>
       </div>
     </div>
   )
@@ -339,7 +347,13 @@ export function PipelineTab({
     autoSelected.current = true
     setSelectedId(id)
     if (mobile) onMobileDetail(true)
-  }, [onMobileDetail])
+    const nextCandidate = candidates.find((candidate) => candidate.id === id)
+    const desktop = window.matchMedia('(min-width: 768px)').matches
+    if (desktop && nextCandidate?.status === 'met' && nextCandidate.meeting) {
+      setAttachment(null)
+      setMeetingPane({ meeting: nextCandidate.meeting, tab: 'summary' })
+    }
+  }, [candidates, onMobileDetail])
 
   const openAttachment = useCallback((nextAttachment: Attachment | null) => {
     setMeetingPane(null)
@@ -368,6 +382,11 @@ export function PipelineTab({
     // reopen it during a background poll. On mobile the viewer is a full-screen
     // takeover, so never auto-open there — it would hide the candidate list.
     const desktop = window.matchMedia('(min-width: 768px)').matches
+    if (desktop && selected?.status === 'met' && selected.meeting) {
+      setAttachment(null)
+      setMeetingPane({ meeting: selected.meeting, tab: 'summary' })
+      return
+    }
     setMeetingPane(null)
     setAttachment(desktop ? autoOpenAttachment(attachments) : null)
   }, [selectedId])

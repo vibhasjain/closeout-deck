@@ -56,3 +56,9 @@ export function autoOpenAttachment(attachments: Attachment[]): Attachment | null
   )
   return resume ?? linkedinProfile ?? attachments[0] ?? null
 }
+
+export function meetingResumeAttachment(attachments: Attachment[]): Attachment | null {
+  return attachments.find((item) => /resume|cv/i.test(attachmentBaseName(item.name)))
+    ?? attachments[0]
+    ?? null
+}
