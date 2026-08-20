@@ -152,7 +152,12 @@
   /* the four cards sit in a 2x2 grid at every width */
   .hm { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .hmrow1, .hmrow2 { display: contents; }
-  .hmb { background: var(--surface); border: 1px solid var(--ring); border-radius: 12px; padding: 15px 17px 13px; box-shadow: inset 0 3px 0 var(--c); min-width: 0; }
+  .hmb { position: relative; background: var(--surface); border: 1px solid var(--ring); border-radius: 12px; padding: 15px 17px 13px; box-shadow: inset 0 3px 0 var(--c); min-width: 0; }
+  /* the mini label's link stretches over the whole card; inner links (footnotes) stay on top */
+  .hmb .mini a { color: inherit; text-decoration: none; }
+  .hmb .mini a::after { content: ""; position: absolute; inset: 0; }
+  .hmb:hover { border-color: var(--ck); }
+  .hmb .k a { position: relative; }
   .hmb .mini { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ck); margin-bottom: 4px; }
   .hmb .v { font-size: 30px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.15; color: var(--ink); font-variant-numeric: tabular-nums; }
   .hmb .k { font-size: 12px; color: var(--ink-3); margin-top: 5px; line-height: 1.4; }
@@ -410,17 +415,17 @@
       </div>
       <div class="hmrow2">
         <div class="hmb" style="--c:var(--accent);--ck:var(--accent-ink);background:var(--wash)">
-          <span class="mini">On time</span>
+          <span class="mini"><a href="#benchmark">On time ↓</a></span>
           <div class="v">74.2%</div>
           <div class="k">arriving workers who reach the worksite on time <sup><a href="#fn-ontime" style="color:var(--accent-ink);font-weight:700;text-decoration:underline">1</a></sup></div>
         </div>
         <div class="hmb" style="--c:var(--late);--ck:var(--late)">
-          <span class="mini">Late</span>
+          <span class="mini"><a href="#why-late">Late ↓</a></span>
           <div class="v">21.9%</div>
           <div class="k">arriving workers who verifiably reach the worksite late</div>
         </div>
         <div class="hmb" style="--c:var(--ink);--ck:var(--ink)">
-          <span class="mini">Unverifiable</span>
+          <span class="mini"><a href="#unverifiable">Unverifiable ↓</a></span>
           <div class="v">3.9%</div>
           <div class="k">went invisible on the way in</div>
         </div>
@@ -447,7 +452,7 @@
   </header>
 
   <!-- ================= SECTION: THE BENCHMARK ================= -->
-  <section>
+  <section id="benchmark">
     <p class="sec-eyebrow tri">The benchmark<span class="triline"><span class="tseg ot on" style="flex:74.2"><span class="tlab">74.2%</span></span><span class="tseg lt" style="flex:21.9"></span><span class="tseg uv" style="flex:3.9"></span></span></p>
     <h2>Where does your operation sit against the market?</h2>
     <div class="prose">
@@ -525,7 +530,7 @@
   </section>
 
   <!-- ================= SECTION: WHY ================= -->
-  <section>
+  <section id="why-late">
     <p class="sec-eyebrow tri">Why shifts start late<span class="triline"><span class="tseg ot" style="flex:74.2"></span><span class="tseg lt on" style="flex:21.9"><span class="tlab">21.9%</span></span><span class="tseg uv" style="flex:3.9"></span></span></p>
     <h2>Lateness begins at home</h2>
     <div class="prose">
@@ -678,7 +683,7 @@
   </script>
 
   <!-- ================= SECTION: UNMEASURABLE ================= -->
-  <section>
+  <section id="unverifiable">
     <p class="sec-eyebrow tri">What we can't verify<span class="triline"><span class="tseg ot" style="flex:74.2"></span><span class="tseg lt" style="flex:21.9"></span><span class="tseg uv on" style="flex:3.9"><span class="tlab">3.9%</span></span></span></p>
     <h2>Workers switching off visibility</h2>
     <div class="prose">
