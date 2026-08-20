@@ -8,10 +8,25 @@ export interface ThreadEntry {
   id: string
   dir: 'in' | 'out' | 'internal'
   at: string                 // ISO
+  kind?: 'meeting'
+  loomUrl?: string
+  loomId?: string
   subject?: string
   text: string
   attachments?: Attachment[]
 }
+
+export interface MeetingRecording {
+  loomUrl: string
+  loomId: string
+  title?: string
+  recordedAt?: string
+  durationSec?: number
+  summaryPath?: string
+  transcriptPath?: string
+}
+
+export type MeetingPaneTab = 'summary' | 'transcript'
 
 export interface Draft {
   id: string
@@ -38,6 +53,7 @@ export interface Candidate {
   summary: string            // one-line, for the left list
   flags?: string[]
   thread: ThreadEntry[]      // chronological
+  meeting?: MeetingRecording
   draft?: Draft | null       // null when nothing pending
   trail?: TrailEntry[]
 }

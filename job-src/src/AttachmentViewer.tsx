@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { CSSProperties, Ref } from 'react'
+import type { CSSProperties, ReactNode, Ref } from 'react'
 import { Download, ExternalLink, FileText, Maximize2, Share2, X } from 'lucide-react'
 import * as mammoth from 'mammoth'
 import { ClaudeCrab } from '@/components/ClaudeCrab'
@@ -13,7 +13,7 @@ import {
   getAttachmentRenderDispatch,
   type AttachmentRenderDispatch,
 } from '@/lib/attachmentPreview'
-import type { Attachment, Candidate } from '@/types'
+import type { Attachment, Candidate, MeetingPaneTab, MeetingRecording } from '@/types'
 
 // Clipboards can't hold a PDF — the browsers only take text and images — so the
 // share sheet (phones, Slack in two taps) is the real thing, download the rest.
@@ -167,21 +167,165 @@ function ViewerBody({
   ) : null
 }
 
+function inlineMarkdown(text: string): ReactNode[] {
+  return text.split(/(\*\*[^*\n]+\*\*|__[^_\n]+__)/g).filter(Boolean).map((part, index) => {
+    const bold = (part.startsWith('**') && part.endsWith('**'))
+      || (part.startsWith('__') && part.endsWith('__'))
+    return bold
+      ? <strong key={index} className="font-semibold">{part.slice(2, -2)}</strong>
+      : part
+  })
+}
+
+function MarkdownText({ text }: { text: string }) {
+  const lines = text.replace(/\r\n?/g, '\n').split('\n')
+  const blocks: ReactNode[] = []
+  let index = 0
+
+  while (index < lines.length) {
+    const line = lines[index].trim()
+    if (!line) {
+      index += 1
+      continue
+    }
+
+    const heading = line.match(/^(#{1,3})\s+(.+)$/)
+    if (heading) {
+      const level = heading[1].length
+      const className = level === 1
+        ? 'mt-1 text-lg font-semibold tracking-tight'
+        : level === 2
+          ? 'mt-4 text-[15px] font-semibold'
+          : 'mt-3 text-[13px] font-semibold'
+      blocks.push(<h3 key={`heading-${index}`} className={className}>{inlineMarkdown(heading[2])}</h3>)
+      index += 1
+      continue
+    }
+
+    const unordered = line.match(/^[-*+]\s+(.+)$/)
+    const ordered = line.match(/^\d+\.\s+(.+)$/)
+    if (unordered || ordered) {
+      const orderedList = Boolean(ordered)
+      const items: ReactNode[] = []
+      while (index < lines.length) {
+        const itemLine = lines[index].trim()
+        const match = orderedList
+          ? itemLine.match(/^\d+\.\s+(.+)$/)
+          : itemLine.match(/^[-*+]\s+(.+)$/)
+        if (!match) break
+        items.push(<li key={index}>{inlineMarkdown(match[1])}</li>)
+        index += 1
+      }
+      const listClass = 'space-y-1 pl-5 marker:text-muted-foreground'
+      blocks.push(orderedList
+        ? <ol key={`list-${index}`} className={cn(listClass, 'list-decimal')}>{items}</ol>
+        : <ul key={`list-${index}`} className={cn(listClass, 'list-disc')}>{items}</ul>)
+      continue
+    }
+
+    const paragraph: string[] = []
+    const paragraphStart = index
+    while (index < lines.length) {
+      const next = lines[index].trim()
+      if (!next || /^(#{1,3})\s+/.test(next) || /^([-*+]\s+|\d+\.\s+)/.test(next)) break
+      paragraph.push(next)
+      index += 1
+    }
+    blocks.push(
+      <p key={`paragraph-${paragraphStart}`} className="whitespace-pre-wrap">
+        {inlineMarkdown(paragraph.join(' '))}
+      </p>,
+    )
+  }
+
+  return <article className="space-y-3 text-[13px] leading-relaxed text-foreground">{blocks}</article>
+}
+
+function MeetingDocument({ meeting, tab }: { meeting: MeetingRecording; tab: MeetingPaneTab }) {
+  const [text, setText] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const path = tab === 'summary' ? meeting.summaryPath : meeting.transcriptPath
+  const label = tab === 'summary' ? 'summary' : 'transcript'
+
+  useEffect(() => {
+    setText(null)
+    setError('')
+    if (!path) {
+      setLoading(false)
+      return
+    }
+    let cancelled = false
+    setLoading(true)
+    const mimeType = tab === 'summary'
+      ? 'text/markdown;charset=utf-8'
+      : 'text/plain;charset=utf-8'
+    loadFile(path, mimeType)
+      .then((url) => fetch(url))
+      .then((response) => response.text())
+      .then((nextText) => {
+        if (!cancelled) setText(nextText)
+      })
+      .catch(() => {
+        if (!cancelled) setError(`Could not load this ${label}.`)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [label, path, tab])
+
+  if (loading) {
+    return (
+      <div className="space-y-2 px-5 py-4 md:px-6">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <Skeleton key={i} className="h-3.5" style={{ width: `${[92, 85, 96, 70, 88, 60, 94, 78][i]}%` }} />
+        ))}
+      </div>
+    )
+  }
+  if (error) return <p className="px-5 py-4 text-[12.5px] text-nosource">{error}</p>
+  if (!text?.trim()) {
+    return (
+      <div className="flex h-full items-center justify-center px-6 text-center">
+        <p className="text-[12px] text-muted-foreground">No {label} available.</p>
+      </div>
+    )
+  }
+  return tab === 'summary' ? (
+    <div className="h-full overflow-y-auto px-5 py-5 md:px-6">
+      <MarkdownText text={text} />
+    </div>
+  ) : (
+    <div className="h-full overflow-y-auto whitespace-pre-wrap break-words px-5 py-5 text-[13px] leading-relaxed text-foreground md:px-6">
+      {text}
+    </div>
+  )
+}
+
 export function AttachmentViewer({
   paneRef,
   desktopWidth,
   candidate,
   attachment,
+  meeting,
+  meetingTab,
   attachments,
   onSelect,
+  onMeetingTab,
   onClose,
 }: {
   paneRef: Ref<HTMLElement>
   desktopWidth: number
   candidate: Candidate | undefined
   attachment: Attachment | null
+  meeting: MeetingRecording | null
+  meetingTab: MeetingPaneTab
   attachments: Attachment[]
   onSelect: (attachment: Attachment) => void
+  onMeetingTab: (tab: MeetingPaneTab) => void
   onClose: () => void
 }) {
   const [url, setUrl] = useState<string | null>(null)
@@ -246,7 +390,7 @@ export function AttachmentViewer({
     }
   }, [lightbox])
 
-  useEffect(() => setLightbox(false), [attachment])
+  useEffect(() => setLightbox(false), [attachment, meeting])
 
   const shareFile = async (name: string, href: string) => {
     try {
@@ -257,7 +401,7 @@ export function AttachmentViewer({
     }
   }
 
-  const header = (onDismiss: () => void, showMaximize: boolean) => attachment ? (
+  const attachmentHeader = (onDismiss: () => void, showMaximize: boolean) => attachment ? (
     <header className="flex h-14 shrink-0 items-center justify-between border-b px-4 md:px-5">
       <div className="min-w-0 flex-1">
         <h3 className="text-[14px] font-semibold leading-snug">
@@ -310,6 +454,49 @@ export function AttachmentViewer({
     </header>
   ) : null
 
+  const meetingHeader = meeting ? (
+    <>
+      <header className="flex h-14 shrink-0 items-center justify-between border-b px-4 md:px-5">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-[14px] font-semibold leading-snug">
+            <FadeText text={meeting.title || 'Meeting'} />
+          </h3>
+          <p className="font-mono text-[11px] text-muted-foreground">{candidate?.name ?? ''}</p>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="-mr-2 ml-3 shrink-0 text-muted-foreground/60 hover:text-foreground"
+          onClick={onClose}
+          aria-label="Close"
+        >
+          <X className="size-4" />
+        </Button>
+      </header>
+      <div className="shrink-0 border-b px-4 md:px-5">
+        <div className="flex h-9 items-end gap-4" role="tablist" aria-label="Meeting notes">
+          {(['summary', 'transcript'] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={meetingTab === tab}
+              onClick={() => onMeetingTab(tab)}
+              className={cn(
+                'relative h-9 px-0.5 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground',
+                meetingTab === tab && 'text-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-foreground',
+              )}
+            >
+              {tab === 'summary' ? 'Summary' : 'Transcript'}
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
+  ) : null
+
+  const active = Boolean(attachment || meeting)
+
   return (
     <>
       <aside
@@ -317,12 +504,19 @@ export function AttachmentViewer({
         style={{ '--right-pane-width': `${desktopWidth}px` } as CSSProperties}
         className={cn(
           'flex-col bg-background md:flex md:h-full md:w-[var(--right-pane-width)] md:min-w-[320px] md:max-w-[60vw] md:shrink-0',
-          attachment ? 'fixed inset-0 z-50 flex h-full w-full animate-fade-in md:static md:z-auto' : 'hidden md:flex',
+          active ? 'fixed inset-0 z-50 flex h-full w-full animate-fade-in md:static md:z-auto' : 'hidden md:flex',
         )}
       >
-        {attachment ? (
+        {meeting ? (
           <>
-            {header(onClose, true)}
+            {meetingHeader}
+            <div className="min-h-0 flex-1" role="tabpanel">
+              <MeetingDocument meeting={meeting} tab={meetingTab} />
+            </div>
+          </>
+        ) : attachment ? (
+          <>
+            {attachmentHeader(onClose, true)}
             <div className="min-h-0 flex-1">
               <ViewerBody attachment={attachment} dispatch={dispatch!} url={url} docxHtml={docxHtml} text={text} loading={loading} error={error} linkedinUrl={linkedinUrl} />
             </div>
@@ -361,7 +555,7 @@ export function AttachmentViewer({
         <>
           <div className="fixed inset-0 z-40 bg-black/30 animate-fade-in" onClick={() => setLightbox(false)} />
           <div className="fixed inset-4 z-50 flex flex-col rounded-xl border bg-background shadow-xl animate-fade-in">
-            {header(() => setLightbox(false), false)}
+            {attachmentHeader(() => setLightbox(false), false)}
             <div className="min-h-0 flex-1">
               <ViewerBody attachment={attachment} dispatch={dispatch!} url={url} docxHtml={docxHtml} text={text} loading={loading} error={error} linkedinUrl={linkedinUrl} />
             </div>

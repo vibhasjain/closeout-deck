@@ -1,4 +1,4 @@
-import type { Attachment, Candidate, Draft, Feed, Meeting, ThreadEntry, TrailEntry } from './types'
+import type { Attachment, Candidate, Draft, Feed, Meeting, MeetingRecording, ThreadEntry, TrailEntry } from './types'
 import { safeHttpUrl } from './lib/links'
 import { parseStatus } from './lib/status'
 
@@ -165,16 +165,41 @@ function threadEntry(value: unknown, index: number): ThreadEntry {
   const item = object(value)
   const rawDir = string(item.dir)
   const dir: ThreadEntry['dir'] = rawDir === 'out' || rawDir === 'internal' ? rawDir : 'in'
+  const meetingEntry = item.kind === 'meeting'
   const attachments = Array.isArray(item.attachments)
     ? item.attachments.map(attachment).filter((item): item is Attachment => item !== null)
     : []
   return {
     id: string(item.id, `thread-${index}`),
-    dir,
+    dir: meetingEntry ? 'internal' : dir,
     at: string(item.at),
+    ...(meetingEntry ? {
+      kind: 'meeting' as const,
+      loomUrl: safeHttpUrl(item.loomUrl) ?? '',
+      loomId: string(item.loomId),
+    } : {}),
     ...(typeof item.subject === 'string' ? { subject: item.subject } : {}),
     text: string(item.text),
     attachments,
+  }
+}
+
+function meetingRecording(value: unknown): MeetingRecording | null {
+  const item = object(value)
+  const loomUrl = safeHttpUrl(item.loomUrl)
+  const loomId = string(item.loomId)
+  if (!loomUrl || !loomId) return null
+  const durationSec = typeof item.durationSec === 'number' && Number.isFinite(item.durationSec)
+    ? item.durationSec
+    : undefined
+  return {
+    loomUrl,
+    loomId,
+    ...(string(item.title) ? { title: string(item.title) } : {}),
+    ...(string(item.recordedAt) ? { recordedAt: string(item.recordedAt) } : {}),
+    ...(durationSec !== undefined ? { durationSec } : {}),
+    ...(string(item.summaryPath) ? { summaryPath: string(item.summaryPath) } : {}),
+    ...(string(item.transcriptPath) ? { transcriptPath: string(item.transcriptPath) } : {}),
   }
 }
 
@@ -210,6 +235,7 @@ function candidate(value: unknown, index: number): Candidate {
     ? item.trail.map(trailEntry).filter((entry): entry is TrailEntry => entry !== null)
     : []
   const linkedinUrl = safeHttpUrl(item.linkedinUrl)
+  const recordedMeeting = meetingRecording(item.meeting)
   return {
     id: string(item.id, `c-malformed-${index}`),
     name: string(item.name, 'Unknown candidate'),
@@ -221,6 +247,7 @@ function candidate(value: unknown, index: number): Candidate {
     summary: string(item.summary),
     flags,
     thread,
+    ...(recordedMeeting ? { meeting: recordedMeeting } : {}),
     draft: draft(item.draft),
     trail,
   }

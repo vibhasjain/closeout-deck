@@ -52,6 +52,7 @@ export default function App() {
       qualified: candidates.filter((candidate) => candidate.status === 'qualified').length,
       invited: candidates.filter((candidate) => candidate.status === 'invited').length,
       'meeting-scheduled': candidates.filter((candidate) => candidate.status === 'meeting-scheduled').length,
+      met: candidates.filter((candidate) => candidate.status === 'met').length,
     }
   }, [feed])
 

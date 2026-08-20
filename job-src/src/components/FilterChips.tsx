@@ -7,7 +7,7 @@ export function chipLabel(value: string): string {
   if (value === 'qualified') return 'Qualified'
   if (value === 'invited') return 'Invited'
   if (value === 'meeting-scheduled') return 'Scheduled'
-  if (value === 'met') return 'Met'
+  if (value === 'met') return 'Done'
   if (value === 'disqualified') return 'Disqualified'
   if (value === 'meetings') return 'Meetings'
   return value

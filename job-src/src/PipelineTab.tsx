@@ -18,7 +18,16 @@ import { autoOpenAttachment } from '@/lib/attachmentPreview'
 import { linkifyHttpText, safeHttpUrl } from '@/lib/links'
 import { stripMarkdown } from '@/lib/stripMarkdown'
 import { cn, shortDate, shortTime } from '@/lib/utils'
-import type { Attachment, Candidate, Feed, Meeting, Status, ThreadEntry } from '@/types'
+import type {
+  Attachment,
+  Candidate,
+  Feed,
+  Meeting,
+  MeetingPaneTab,
+  MeetingRecording,
+  Status,
+  ThreadEntry,
+} from '@/types'
 
 const RIGHT_PANE_STORAGE_KEY = 'job:right-pane-w'
 const RIGHT_PANE_MIN_WIDTH = 320
@@ -124,6 +133,62 @@ function LinkifiedMessageText({ text }: { text: string }) {
   )
 }
 
+function MeetingCard({
+  entry,
+  candidateMeeting,
+  onMeeting,
+}: {
+  entry: ThreadEntry
+  candidateMeeting?: MeetingRecording
+  onMeeting: (meeting: MeetingRecording, tab: MeetingPaneTab) => void
+}) {
+  const loomId = entry.loomId || candidateMeeting?.loomId || ''
+  const loomUrl = entry.loomUrl || candidateMeeting?.loomUrl || `https://www.loom.com/share/${loomId}`
+  const meeting: MeetingRecording = {
+    ...candidateMeeting,
+    loomId,
+    loomUrl,
+    recordedAt: candidateMeeting?.recordedAt || entry.at,
+  }
+
+  return (
+    <div className="w-full max-w-[min(82%,42rem)] self-start overflow-hidden rounded-lg border bg-card">
+      <div className="px-3.5 py-2">
+        <span className="text-[10px] font-medium text-muted-foreground">
+          Meeting · {shortTime(entry.at)}
+        </span>
+      </div>
+      <div className="aspect-video w-full border-y bg-muted/40">
+        <iframe
+          src={`https://www.loom.com/embed/${encodeURIComponent(loomId)}`}
+          title={candidateMeeting?.title || 'Recorded meeting'}
+          className="h-full w-full border-0"
+          loading="lazy"
+          allow="fullscreen; picture-in-picture"
+          allowFullScreen
+        />
+      </div>
+      <div className="flex items-center gap-1.5 px-3.5 py-2 text-[11px] text-muted-foreground">
+        <button
+          type="button"
+          onClick={() => onMeeting(meeting, 'summary')}
+          className="underline-offset-2 hover:text-foreground hover:underline"
+        >
+          Summary
+        </button>
+        <span aria-hidden="true">·</span>
+        <button
+          type="button"
+          onClick={() => onMeeting(meeting, 'transcript')}
+          className="underline-offset-2 hover:text-foreground hover:underline"
+        >
+          Transcript
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function MessageBubble({
   entry,
   candidate,
@@ -197,6 +262,10 @@ export function PipelineTab({
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [attachment, setAttachment] = useState<Attachment | null>(null)
+  const [meetingPane, setMeetingPane] = useState<{
+    meeting: MeetingRecording
+    tab: MeetingPaneTab
+  } | null>(null)
   const [rightPaneWidth, setRightPaneWidth] = useState(initialRightPaneWidth)
   const [resizingRightPane, setResizingRightPane] = useState(false)
   const hasPersistedRightPaneWidth = useRef(false)
@@ -258,6 +327,16 @@ export function PipelineTab({
     if (mobile) onMobileDetail(true)
   }, [onMobileDetail])
 
+  const openAttachment = useCallback((nextAttachment: Attachment | null) => {
+    setMeetingPane(null)
+    setAttachment(nextAttachment)
+  }, [])
+
+  const openMeeting = useCallback((meeting: MeetingRecording, tab: MeetingPaneTab) => {
+    setAttachment(null)
+    setMeetingPane({ meeting, tab })
+  }, [])
+
   useEffect(() => {
     if (autoSelected.current || filtered.length === 0) return
     autoSelected.current = true
@@ -275,6 +354,7 @@ export function PipelineTab({
     // reopen it during a background poll. On mobile the viewer is a full-screen
     // takeover, so never auto-open there — it would hide the candidate list.
     const desktop = window.matchMedia('(min-width: 768px)').matches
+    setMeetingPane(null)
     setAttachment(desktop ? autoOpenAttachment(attachments) : null)
   }, [selectedId])
 
@@ -475,7 +555,7 @@ export function PipelineTab({
                   <button
                     type="button"
                     className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:hidden"
-                    onClick={() => setAttachment(autoOpenAttachment(attachments))}
+                    onClick={() => openAttachment(autoOpenAttachment(attachments))}
                     aria-label="View attachment"
                     title="View attachment"
                   >
@@ -492,12 +572,19 @@ export function PipelineTab({
               className="min-h-0 flex-1 overflow-y-auto px-4 py-4 no-scrollbar max-md:[body:has(#agent-keyboard-host)_&]:pb-[calc(4rem+env(safe-area-inset-bottom))] md:px-5"
             >
               <div className="flex flex-col gap-4">
-                {(selected.thread ?? []).map((entry) => (
+                {(selected.thread ?? []).map((entry) => entry.kind === 'meeting' ? (
+                  <MeetingCard
+                    key={entry.id}
+                    entry={entry}
+                    candidateMeeting={selected.meeting}
+                    onMeeting={openMeeting}
+                  />
+                ) : (
                   <MessageBubble
                     key={entry.id}
                     entry={entry}
                     candidate={selected}
-                    onAttachment={setAttachment}
+                    onAttachment={openAttachment}
                   />
                 ))}
                 {selected.draft && (
@@ -544,9 +631,15 @@ export function PipelineTab({
         desktopWidth={rightPaneWidth}
         candidate={selected}
         attachment={attachment}
+        meeting={meetingPane?.meeting ?? null}
+        meetingTab={meetingPane?.tab ?? 'summary'}
         attachments={attachments}
-        onSelect={setAttachment}
-        onClose={() => setAttachment(null)}
+        onSelect={openAttachment}
+        onMeetingTab={(tab) => setMeetingPane((current) => current ? { ...current, tab } : current)}
+        onClose={() => {
+          setAttachment(null)
+          setMeetingPane(null)
+        }}
       />
     </div>
   )
