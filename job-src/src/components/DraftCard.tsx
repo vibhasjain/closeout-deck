@@ -23,7 +23,7 @@ export function DraftCard({
 
         <div className="px-4 py-3.5 text-[13.5px] leading-relaxed">
           <p className="mb-2 text-[12px] font-medium">{draft.subject}</p>
-          <p className="whitespace-pre-wrap">{stripMarkdown(draft.text)}</p>
+          <p className="whitespace-pre-wrap break-words">{stripMarkdown(draft.text)}</p>
           {draft.rationale && (
             <div className="mt-3 flex items-start gap-2 px-2 text-[12.5px] text-muted-foreground">
               <BrainCircuit className="mt-0.5 size-3.5 shrink-0" />

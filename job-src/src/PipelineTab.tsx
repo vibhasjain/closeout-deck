@@ -158,7 +158,7 @@ function MessageBubble({
         </span>
         {incoming && <CopyButton text={stripMarkdown(entry.text)} />}
       </div>
-      <p className="whitespace-pre-wrap"><LinkifiedMessageText text={entry.text} /></p>
+      <p className="whitespace-pre-wrap break-words"><LinkifiedMessageText text={entry.text} /></p>
       {attachments.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {attachments.map((attachment) => (
