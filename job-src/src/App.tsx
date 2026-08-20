@@ -15,6 +15,8 @@ import {
 } from '@/api'
 import type { Feed } from '@/types'
 
+const AGENT_BAR_USERS = new Set(['vibes@hypertrack.io', 'aashish@hypertrack.io'])
+
 // The dashboard is read-only: sending, revising and everything else runs
 // through the Agent Keyboard widget, and the poll below shows the result.
 function loadAgentKeyboard(): void {
@@ -103,7 +105,7 @@ export default function App() {
   }, [authenticated, load])
 
   useEffect(() => {
-    if (owner || viewerSession?.email === 'vibes@hypertrack.io') loadAgentKeyboard()
+    if (owner || AGENT_BAR_USERS.has(viewerSession?.email ?? '')) loadAgentKeyboard()
   }, [owner, viewerSession])
 
   if (!authenticated) {
