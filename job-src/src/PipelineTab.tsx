@@ -31,6 +31,20 @@ import type {
 
 const RIGHT_PANE_STORAGE_KEY = 'job:right-pane-w'
 const RIGHT_PANE_MIN_WIDTH = 320
+const MEETING_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  weekday: 'short',
+  month: 'short',
+  day: 'numeric',
+})
+const MEETING_TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  hour: 'numeric',
+  minute: '2-digit',
+})
+
+function meetingDateTime(iso: string): string {
+  const date = new Date(iso)
+  return `${MEETING_DATE_FORMATTER.format(date)} · ${MEETING_TIME_FORMATTER.format(date)}`
+}
 
 function defaultRightPaneWidth(): number {
   if (typeof window === 'undefined') return 420
@@ -513,7 +527,9 @@ export function PipelineTab({
                 </div>
                 <FadeText text={candidate.summary} lines={2} className="mt-0.5 text-[12px] leading-snug text-muted-foreground" />
                 <p className="mt-1 font-mono text-[10.5px] text-muted-foreground/70">
-                  {shortDate(candidate.appliedAt)}
+                  {candidate.status === 'meeting-scheduled' && candidate.meetingAt
+                    ? meetingDateTime(candidate.meetingAt)
+                    : shortDate(candidate.appliedAt)}
                 </p>
               </button>
             )

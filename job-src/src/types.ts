@@ -50,6 +50,9 @@ export interface Candidate {
   appliedAt: string
   source: 'email' | 'linkedin'
   status: Status
+  meetingAt?: string
+  meetingEnd?: string
+  meetLink?: string
   summary: string            // one-line, for the left list
   flags?: string[]
   thread: ThreadEntry[]      // chronological

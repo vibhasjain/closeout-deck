@@ -11,7 +11,7 @@ export function filterCandidates(
   query: string,
 ): Candidate[] {
   const q = query.trim().toLowerCase()
-  return candidates.filter((candidate) => {
+  const filtered = candidates.filter((candidate) => {
     const matchesStatus =
       status === 'all' ||
       (status === 'meetings'
@@ -22,6 +22,14 @@ export function filterCandidates(
     return [candidate.name, candidate.email, candidate.summary].some((value) =>
       value.toLowerCase().includes(q),
     )
+  })
+
+  if (status !== 'meeting-scheduled') return filtered
+
+  return filtered.sort((a, b) => {
+    if (!a.meetingAt) return b.meetingAt ? 1 : 0
+    if (!b.meetingAt) return -1
+    return new Date(a.meetingAt).getTime() - new Date(b.meetingAt).getTime()
   })
 }
 
