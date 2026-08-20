@@ -149,19 +149,13 @@
      Each card carries its own denominator in the description line; --c colors the top rule + label. */
   .hm { margin: 26px 0 18px; }
   .hm .hmcap { font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
-  /* row 1: the arrived card, full width; row 2: on-time / late / unverifiable, full width,
-     widths ∝ share of arrivals (min-widths keep small cards legible) */
-  .hmrow1 { display: grid; grid-template-columns: 1fr; gap: 14px; }
-  .hmrow2 { display: grid; grid-template-columns: 74.2fr minmax(170px, 21.9fr) minmax(150px, 3.9fr); gap: 14px; margin-top: 14px; }
+  /* the four cards sit in a 2x2 grid at every width */
+  .hm { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .hmrow1, .hmrow2 { display: contents; }
   .hmb { background: var(--surface); border: 1px solid var(--ring); border-radius: 12px; padding: 15px 17px 13px; box-shadow: inset 0 3px 0 var(--c); min-width: 0; }
   .hmb .mini { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ck); margin-bottom: 4px; }
   .hmb .v { font-size: 30px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.15; color: var(--ink); font-variant-numeric: tabular-nums; }
   .hmb .k { font-size: 12px; color: var(--ink-3); margin-top: 5px; line-height: 1.4; }
-  @media (max-width: 680px) {
-    /* collapse the two rows into one 2x2 grid of cards */
-    .hm { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .hmrow1, .hmrow2 { display: contents; }
-  }
 
   /* split of arriving workers (inside the show-rate card): on-time / late / unverifiable */
   .split100 { margin-top: 12px; }
@@ -411,7 +405,7 @@
         <div class="hmb" style="--c:transparent;--ck:var(--late)">
           <span class="mini"><a target="_blank" rel="noopener" href="no-show-benchmark.html" style="color:inherit">No-show rate ↗</a></span>
           <div class="v">11.5%</div>
-          <div class="k">scheduled workers who never arrived at the shift: the three cards below break down the other 88.5% who did</div>
+          <div class="k">scheduled workers who never arrived at the shift: the other three cards break down the 88.5% who did</div>
         </div>
       </div>
       <div class="hmrow2">
