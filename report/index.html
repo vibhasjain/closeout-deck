@@ -158,7 +158,9 @@
   .hmb .v { font-size: 30px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.15; color: var(--ink); font-variant-numeric: tabular-nums; }
   .hmb .k { font-size: 12px; color: var(--ink-3); margin-top: 5px; line-height: 1.4; }
   @media (max-width: 680px) {
-    .hmrow1, .hmrow2 { grid-template-columns: 1fr 1fr; width: auto; }
+    /* collapse the two rows into one 2x2 grid of cards */
+    .hm { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .hmrow1, .hmrow2 { display: contents; }
   }
 
   /* split of arriving workers (inside the show-rate card): on-time / late / unverifiable */
