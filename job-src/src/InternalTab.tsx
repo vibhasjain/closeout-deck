@@ -200,7 +200,7 @@ export function InternalTab({
               {meta && <p className="font-mono text-[11px] text-muted-foreground">{meta}</p>}
             </div>
             <div className="ml-3 flex shrink-0 items-center gap-1">
-              {summary.text && <CopyButton text={stripMarkdown(summary.text)} label />}
+              {summary.text && <CopyButton text={stripMarkdown(summary.text)} />}
               <Button
                 variant="ghost"
                 size="xs"
