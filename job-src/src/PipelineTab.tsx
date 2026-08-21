@@ -333,7 +333,10 @@ export function PipelineTab({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement)?.tagName?.match(/INPUT|TEXTAREA/)) return
+      // composedPath: the Agent Keyboard widget's textarea lives in a shadow root,
+      // so e.target at window level is its host, not the textarea.
+      const target = e.composedPath()[0] as HTMLElement | undefined
+      if (target?.tagName?.match(/INPUT|TEXTAREA/) || target?.isContentEditable) return
       if (!filtered.length) return
       const index = filtered.findIndex((candidate) => candidate.id === selectedId)
       if (e.key === 'j' || e.key === 'ArrowDown') {
