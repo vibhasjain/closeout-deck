@@ -140,7 +140,7 @@ export default function App() {
             </button>
           )}
           <div className={`text-[15px] font-semibold tracking-tight ${mobileDetail ? 'hidden md:block' : ''}`}>
-            Job<span className="text-muted-foreground">Pipeline</span>
+            Chats
           </div>
         </div>
 
