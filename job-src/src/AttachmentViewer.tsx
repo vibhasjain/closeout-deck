@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode, Ref } from 'react'
 import { Download, ExternalLink, FileText, Maximize2, Share2, X } from 'lucide-react'
 import * as mammoth from 'mammoth'
@@ -342,6 +342,9 @@ export function AttachmentViewer({
   const linkedinUrl = safeHttpUrl(candidate?.linkedinUrl)
   const resumeAttachment = meetingResumeAttachment(attachments)
   const previewAttachment = meeting && meetingTab === 'resume' ? resumeAttachment : attachment
+  const previewPath = previewAttachment?.path ?? null
+  const previewAttachmentRef = useRef(previewAttachment)
+  previewAttachmentRef.current = previewAttachment
   const dispatch = previewAttachment ? getAttachmentRenderDispatch(previewAttachment) : null
 
   useEffect(() => {
@@ -349,11 +352,12 @@ export function AttachmentViewer({
     setDocxHtml(null)
     setText(null)
     setError('')
-    if (!previewAttachment) return
+    const nextAttachment = previewAttachmentRef.current
+    if (!nextAttachment) return
     let cancelled = false
     setLoading(true)
-    const nextDispatch = getAttachmentRenderDispatch(previewAttachment)
-    loadFile(previewAttachment.path, nextDispatch.mimeType)
+    const nextDispatch = getAttachmentRenderDispatch(nextAttachment)
+    loadFile(nextAttachment.path, nextDispatch.mimeType)
       .then(async (next) => {
         let nextDocxHtml: string | null = null
         let nextText: string | null = null
@@ -379,7 +383,7 @@ export function AttachmentViewer({
     return () => {
       cancelled = true
     }
-  }, [previewAttachment])
+  }, [previewPath])
 
   useEffect(() => () => revokeFiles(), [])
 
@@ -397,7 +401,7 @@ export function AttachmentViewer({
     }
   }, [lightbox])
 
-  useEffect(() => setLightbox(false), [attachment, meeting])
+  useEffect(() => setLightbox(false), [attachment?.path, meeting?.loomId])
 
   const shareFile = async (name: string, href: string) => {
     try {
