@@ -1,4 +1,5 @@
-import type { Attachment, Candidate, Draft, Feed, Meeting, MeetingRecording, ThreadEntry, TrailEntry } from './types'
+import type { Attachment, Candidate, Discussion, Draft, Feed, Meeting, MeetingRecording, ThreadEntry, TrailEntry } from './types'
+import { parseDiscussion } from './lib/discussion'
 import { safeHttpUrl } from './lib/links'
 import { parseStatus } from './lib/status'
 
@@ -272,7 +273,15 @@ function normalizeFeed(value: unknown): Feed {
   const meetings = Array.isArray(item.meetings)
     ? item.meetings.map(meeting).filter((entry): entry is Meeting => entry !== null)
     : []
-  return { updatedAt: string(item.updatedAt), candidates, meetings }
+  const discussions = Array.isArray(item.discussions)
+    ? item.discussions.map(parseDiscussion).filter((entry): entry is Discussion => entry !== null)
+    : undefined
+  return {
+    updatedAt: string(item.updatedAt),
+    candidates,
+    meetings,
+    ...(discussions ? { discussions } : {}),
+  }
 }
 
 function authHeaders(): Record<string, string> {

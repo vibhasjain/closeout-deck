@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { PointerEvent as ReactPointerEvent } from 'react'
 import { ExternalLink, FileText, Mail } from 'lucide-react'
 import { AttachmentViewer } from '@/AttachmentViewer'
 import { ClaudeCrab } from '@/components/ClaudeCrab'
@@ -7,6 +6,7 @@ import { DraftCard } from '@/components/DraftCard'
 import { FadeText } from '@/components/FadeText'
 import { chipLabel } from '@/components/FilterChips'
 import { ListToolbar } from '@/components/ListToolbar'
+import { ThreePaneLayout } from '@/components/ThreePaneLayout'
 import { Badge, CopyButton, Skeleton } from '@/components/ui'
 import {
   filterCandidates,
@@ -29,8 +29,6 @@ import type {
   ThreadEntry,
 } from '@/types'
 
-const RIGHT_PANE_STORAGE_KEY = 'job:right-pane-w'
-const RIGHT_PANE_MIN_WIDTH = 320
 const MEETING_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
   weekday: 'short',
   month: 'short',
@@ -44,39 +42,6 @@ const MEETING_TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
 function meetingDateTime(iso: string): string {
   const date = new Date(iso)
   return `${MEETING_DATE_FORMATTER.format(date)} · ${MEETING_TIME_FORMATTER.format(date)}`
-}
-
-function defaultRightPaneWidth(): number {
-  if (typeof window === 'undefined') return 420
-  return Math.min(
-    window.innerWidth * 0.6,
-    Math.max(420, (window.innerWidth - RIGHT_PANE_MIN_WIDTH) / 2),
-  )
-}
-
-function clampRightPaneWidth(width: number): number {
-  if (typeof window === 'undefined') return Math.max(RIGHT_PANE_MIN_WIDTH, Math.round(width))
-  const maxWidth = Math.max(RIGHT_PANE_MIN_WIDTH, window.innerWidth * 0.6)
-  return Math.round(Math.min(Math.max(width, RIGHT_PANE_MIN_WIDTH), maxWidth))
-}
-
-function initialRightPaneWidth(): number {
-  if (typeof window === 'undefined') return defaultRightPaneWidth()
-  try {
-    const storedWidth = Number.parseFloat(window.localStorage.getItem(RIGHT_PANE_STORAGE_KEY) ?? '')
-    if (Number.isFinite(storedWidth)) return clampRightPaneWidth(storedWidth)
-  } catch {
-    // Storage can be unavailable in privacy-restricted browser contexts.
-  }
-  return clampRightPaneWidth(defaultRightPaneWidth())
-}
-
-function persistRightPaneWidth(width: number): void {
-  try {
-    window.localStorage.setItem(RIGHT_PANE_STORAGE_KEY, String(width))
-  } catch {
-    // Resizing should keep working even when storage is unavailable.
-  }
 }
 
 export const STATUS_CHIP: Record<Status, string> = {
@@ -288,21 +253,9 @@ export function PipelineTab({
     meeting: MeetingRecording
     tab: MeetingPaneTab
   } | null>(null)
-  const [rightPaneWidth, setRightPaneWidth] = useState(initialRightPaneWidth)
-  const [resizingRightPane, setResizingRightPane] = useState(false)
-  const hasPersistedRightPaneWidth = useRef(false)
   const autoSelected = useRef(false)
   const previousFilter = useRef(filter)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const rightPaneRef = useRef<HTMLElement>(null)
-  const resizeFrame = useRef<number | null>(null)
-  const resizeState = useRef<{
-    pointerId: number
-    startX: number
-    startWidth: number
-    latestWidth: number
-  } | null>(null)
-  const previousDocumentStyles = useRef<{ userSelect: string; cursor: string } | null>(null)
   const candidates = feed?.candidates ?? []
   const filtered = useMemo(
     () => filterCandidates(candidates, filter, query),
@@ -324,24 +277,6 @@ export function PipelineTab({
   )
   const attachments = useMemo(() => candidateAttachments(selected), [selected])
   const threadLength = selected?.thread?.length ?? 0
-
-  useEffect(() => {
-    try {
-      hasPersistedRightPaneWidth.current = Number.isFinite(
-        Number.parseFloat(window.localStorage.getItem(RIGHT_PANE_STORAGE_KEY) ?? ''),
-      )
-    } catch {
-      // Treat unavailable storage like an unpersisted width.
-    }
-
-    const updateAdaptiveWidth = () => {
-      if (hasPersistedRightPaneWidth.current) return
-      setRightPaneWidth(clampRightPaneWidth(defaultRightPaneWidth()))
-    }
-
-    window.addEventListener('resize', updateAdaptiveWidth)
-    return () => window.removeEventListener('resize', updateAdaptiveWidth)
-  }, [])
 
   const selectCandidate = useCallback((id: string, mobile = true) => {
     autoSelected.current = true
@@ -415,91 +350,12 @@ export function PipelineTab({
     return () => window.removeEventListener('keydown', onKey)
   }, [filtered, selectedId, selectCandidate])
 
-  const setPaneWidth = useCallback((width: number, persist = false) => {
-    const nextWidth = clampRightPaneWidth(width)
-    rightPaneRef.current?.style.setProperty('--right-pane-width', `${nextWidth}px`)
-    if (persist) {
-      hasPersistedRightPaneWidth.current = true
-      setRightPaneWidth(nextWidth)
-      persistRightPaneWidth(nextWidth)
-    }
-    return nextWidth
-  }, [])
-
-  const finishResize = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    const drag = resizeState.current
-    if (!drag || event.pointerId !== drag.pointerId) return
-    if (resizeFrame.current !== null) {
-      window.cancelAnimationFrame(resizeFrame.current)
-      resizeFrame.current = null
-    }
-    setPaneWidth(drag.latestWidth, true)
-    resizeState.current = null
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId)
-    }
-    const previous = previousDocumentStyles.current
-    if (previous) {
-      document.documentElement.style.userSelect = previous.userSelect
-      document.documentElement.style.cursor = previous.cursor
-      previousDocumentStyles.current = null
-    }
-    setResizingRightPane(false)
-  }, [setPaneWidth])
-
-  const startResize = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0 || !rightPaneRef.current) return
-    event.preventDefault()
-    event.currentTarget.setPointerCapture(event.pointerId)
-    const startWidth = rightPaneRef.current.getBoundingClientRect().width
-    resizeState.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startWidth,
-      latestWidth: startWidth,
-    }
-    previousDocumentStyles.current = {
-      userSelect: document.documentElement.style.userSelect,
-      cursor: document.documentElement.style.cursor,
-    }
-    document.documentElement.style.userSelect = 'none'
-    document.documentElement.style.cursor = 'col-resize'
-    setResizingRightPane(true)
-  }, [])
-
-  const resizePane = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    const drag = resizeState.current
-    if (!drag || event.pointerId !== drag.pointerId) return
-    drag.latestWidth = clampRightPaneWidth(drag.startWidth + drag.startX - event.clientX)
-    if (resizeFrame.current !== null) return
-    resizeFrame.current = window.requestAnimationFrame(() => {
-      resizeFrame.current = null
-      const activeDrag = resizeState.current
-      if (activeDrag) setPaneWidth(activeDrag.latestWidth)
-    })
-  }, [setPaneWidth])
-
-  const resetPaneWidth = useCallback(() => {
-    setPaneWidth(defaultRightPaneWidth(), true)
-  }, [setPaneWidth])
-
-  useEffect(() => () => {
-    if (resizeFrame.current !== null) window.cancelAnimationFrame(resizeFrame.current)
-    const previous = previousDocumentStyles.current
-    if (previous) {
-      document.documentElement.style.userSelect = previous.userSelect
-      document.documentElement.style.cursor = previous.cursor
-    }
-  }, [])
-
   return (
-    <div className="flex h-full min-h-0 w-full">
-      <div
-        className={cn(
-          'w-full shrink-0 flex-col border-r md:flex md:w-[320px]',
-          mobileDetail ? 'hidden md:flex' : 'flex',
-        )}
-      >
+    <ThreePaneLayout
+      mobileDetail={mobileDetail}
+      separatorLabel="Resize attachments pane"
+      left={(
+        <>
         <ListToolbar
           searchPlaceholder="Search candidates"
           q={query}
@@ -554,10 +410,9 @@ export function PipelineTab({
             )
           })}
         </div>
-      </div>
-
-      <div className={cn('min-w-0 flex-1 flex-col md:flex', mobileDetail ? 'flex' : 'hidden')}>
-        {selected ? (
+        </>
+      )}
+      middle={selected ? (
           <>
             <div className="flex h-14 shrink-0 items-center justify-between border-b px-4 md:px-5">
               <div className="min-w-0 flex-1">
@@ -634,48 +489,23 @@ export function PipelineTab({
             <p className="text-[12px] text-muted-foreground">Select a candidate</p>
           </div>
         )}
-      </div>
-
-      <div
-        role="separator"
-        aria-label="Resize attachments pane"
-        aria-orientation="vertical"
-        title="Drag to resize · Double-click to reset"
-        className={cn(
-          'group relative hidden w-[7px] shrink-0 cursor-col-resize touch-none md:block',
-          resizingRightPane && 'bg-muted/60',
-        )}
-        onPointerDown={startResize}
-        onPointerMove={resizePane}
-        onPointerUp={finishResize}
-        onPointerCancel={finishResize}
-        onLostPointerCapture={finishResize}
-        onDoubleClick={resetPaneWidth}
-      >
-        <span
-          aria-hidden="true"
-          className={cn(
-            'absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border transition-colors group-hover:bg-muted-foreground/50',
-            resizingRightPane && 'bg-muted-foreground/60',
-          )}
+      right={({ paneRef, desktopWidth }) => (
+        <AttachmentViewer
+          paneRef={paneRef}
+          desktopWidth={desktopWidth}
+          candidate={selected}
+          attachment={attachment}
+          meeting={meetingPane?.meeting ?? null}
+          meetingTab={meetingPane?.tab ?? 'summary'}
+          attachments={attachments}
+          onSelect={openAttachment}
+          onMeetingTab={(tab) => setMeetingPane((current) => current ? { ...current, tab } : current)}
+          onClose={() => {
+            setAttachment(null)
+            setMeetingPane(null)
+          }}
         />
-      </div>
-
-      <AttachmentViewer
-        paneRef={rightPaneRef}
-        desktopWidth={rightPaneWidth}
-        candidate={selected}
-        attachment={attachment}
-        meeting={meetingPane?.meeting ?? null}
-        meetingTab={meetingPane?.tab ?? 'summary'}
-        attachments={attachments}
-        onSelect={openAttachment}
-        onMeetingTab={(tab) => setMeetingPane((current) => current ? { ...current, tab } : current)}
-        onClose={() => {
-          setAttachment(null)
-          setMeetingPane(null)
-        }}
-      />
-    </div>
+      )}
+    />
   )
 }

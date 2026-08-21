@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, LogOut } from 'lucide-react'
-import { FilterChips } from '@/components/FilterChips'
+import { FilterChip, FilterChips } from '@/components/FilterChips'
 import { Button } from '@/components/ui'
+import { InternalTab } from '@/InternalTab'
 import { PipelineTab } from '@/PipelineTab'
 import { SignIn } from '@/SignIn'
 import { PIPELINE_FILTERS, type PipelineFilter } from '@/lib/filter'
@@ -38,6 +39,7 @@ export default function App() {
   const [refetching, setRefetching] = useState(false)
   const [mobileDetail, setMobileDetail] = useState(false)
   const [filter, setFilter] = useState<PipelineFilter>('qualified')
+  const [view, setView] = useState<'pipeline' | 'internal'>('pipeline')
   // The Agent Keyboard token survives a sign-out now, so remember the click.
   const [signedOut, setSignedOut] = useState(false)
   const loadGeneration = useRef(0)
@@ -109,6 +111,17 @@ export default function App() {
     if (owner || AGENT_BAR_USERS.has(viewerSession?.email ?? '')) loadAgentKeyboard()
   }, [owner, viewerSession])
 
+  const selectPipelineFilter = useCallback((nextFilter: PipelineFilter) => {
+    setFilter(nextFilter)
+    setView('pipeline')
+    setMobileDetail(false)
+  }, [])
+
+  const toggleInternal = useCallback(() => {
+    setView((current) => current === 'internal' ? 'pipeline' : 'internal')
+    setMobileDetail(false)
+  }, [])
+
   if (!authenticated) {
     return (
       <SignIn
@@ -136,7 +149,7 @@ export default function App() {
               onClick={() => setMobileDetail(false)}
               className="flex items-center gap-1 text-[13px] text-muted-foreground md:hidden"
             >
-              <ChevronLeft className="size-4" /> Pipeline
+              <ChevronLeft className="size-4" /> {view === 'internal' ? 'Internal' : 'Pipeline'}
             </button>
           )}
           <div className={`text-[15px] font-semibold tracking-tight ${mobileDetail ? 'hidden md:block' : ''}`}>
@@ -147,13 +160,18 @@ export default function App() {
         <div className="hidden min-w-0 flex-1 items-center md:flex">
           <FilterChips
             options={PIPELINE_FILTERS}
-            value={filter}
-            onChange={setFilter}
+            value={view === 'pipeline' ? filter : undefined}
+            onChange={selectPipelineFilter}
             counts={filterCounts}
           />
         </div>
 
         <div className="ml-auto flex shrink-0 items-center justify-end gap-2">
+          <FilterChip
+            value="internal"
+            selected={view === 'internal'}
+            onClick={toggleInternal}
+          />
           {authenticated && (
             <Button
               size="icon"
@@ -207,15 +225,24 @@ export default function App() {
             </Button>
           </div>
         ) : (
-          <PipelineTab
-            feed={feed}
-            initialLoading={initialLoading}
-            mobileDetail={mobileDetail}
-            onMobileDetail={setMobileDetail}
-            filter={filter}
-            onFilter={setFilter}
-            filterCounts={filterCounts}
-          />
+          view === 'internal' ? (
+            <InternalTab
+              feed={feed}
+              initialLoading={initialLoading}
+              mobileDetail={mobileDetail}
+              onMobileDetail={setMobileDetail}
+            />
+          ) : (
+            <PipelineTab
+              feed={feed}
+              initialLoading={initialLoading}
+              mobileDetail={mobileDetail}
+              onMobileDetail={setMobileDetail}
+              filter={filter}
+              onFilter={selectPipelineFilter}
+              filterCounts={filterCounts}
+            />
+          )
         )}
       </main>
     </div>

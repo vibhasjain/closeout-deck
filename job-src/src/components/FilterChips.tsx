@@ -10,7 +10,42 @@ export function chipLabel(value: string): string {
   if (value === 'met') return 'Done'
   if (value === 'disqualified') return 'Disqualified'
   if (value === 'meetings') return 'Meetings'
+  if (value === 'internal') return 'Internal'
   return value
+}
+
+export function FilterChip({
+  value,
+  selected,
+  onClick,
+  className,
+  count,
+}: {
+  value: string
+  selected: boolean
+  onClick: () => void
+  className?: string
+  count?: number
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium',
+        selected
+          ? 'border border-border bg-muted text-foreground'
+          : cn(
+              className ?? 'border border-border/60 bg-transparent text-muted-foreground',
+              'hover:bg-muted/50',
+            ),
+      )}
+    >
+      <span>{chipLabel(value)}</span>
+      {count !== undefined && (
+        <span className="text-[10px] tabular-nums text-muted-foreground">{count}</span>
+      )}
+    </button>
+  )
 }
 
 /** The shared filter-chip row (Memories + Sources). Search/filter go to the server. */
@@ -22,7 +57,7 @@ export function FilterChips<T extends string>({
   counts,
 }: {
   options: readonly T[]
-  value: T
+  value?: T
   onChange: (v: T) => void
   /** Per-value styling (e.g. the memory type tags) so the chips carry the taxonomy. */
   chipStyles?: Partial<Record<string, string>>
@@ -76,26 +111,14 @@ export function FilterChips<T extends string>({
       style={mask ? { WebkitMaskImage: mask, maskImage: mask } : undefined}
     >
       {options.filter((f) => f !== 'new').map((f) => (
-        <button
+        <FilterChip
           key={f}
+          value={f}
+          selected={value === f}
           onClick={() => onChange(f)}
-          className={cn(
-            'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium',
-            // Type design colors the resting chip; hover and selected states are the
-            // SAME for every filter, so interaction always reads identically.
-            value === f
-              ? 'border border-border bg-muted text-foreground'
-              : cn(
-                  chipStyles?.[f] ?? 'border border-border/60 bg-transparent text-muted-foreground',
-                  'hover:bg-muted/50',
-                ),
-          )}
-        >
-          <span>{chipLabel(f)}</span>
-          {counts?.[f] !== undefined && (
-            <span className="text-[10px] tabular-nums text-muted-foreground">{counts[f]}</span>
-          )}
-        </button>
+          className={chipStyles?.[f]}
+          count={counts?.[f]}
+        />
       ))}
     </div>
   )

@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import { filterCandidates, PIPELINE_FILTERS, selectionForCandidates } from './src/lib/filter.ts'
 import { parseStatus } from './src/lib/status.ts'
+import { parseDiscussion } from './src/lib/discussion.ts'
+import { stripMarkdown } from './src/lib/stripMarkdown.ts'
 import {
   attachmentExtension,
   autoOpenAttachment,
@@ -90,6 +92,28 @@ assert.equal(meetingResumeAttachment([
   { name: 'portfolio.pdf', path: 'files/c-maya/portfolio.pdf' },
 ])?.name, 'application.pdf')
 assert.equal(meetingResumeAttachment([]), null)
+
+assert.deepEqual(parseDiscussion({
+  id: 'discussion-1',
+  title: 'Hiring plan',
+  recordedAt: '2026-08-20T22:48:00.000Z',
+  durationSec: 2520,
+  source: 'voicenote',
+  tags: ['hiring', 42],
+  summaryPath: 'files/discussions/discussion-1-summary.md',
+  transcriptPath: 'files/discussions/discussion-1-transcript.txt',
+}), {
+  id: 'discussion-1',
+  title: 'Hiring plan',
+  recordedAt: '2026-08-20T22:48:00.000Z',
+  durationSec: 2520,
+  source: 'voicenote',
+  tags: ['hiring'],
+  summaryPath: 'files/discussions/discussion-1-summary.md',
+  transcriptPath: 'files/discussions/discussion-1-transcript.txt',
+})
+assert.equal(parseDiscussion({ id: 'malformed-discussion', title: 'Missing paths' }), null)
+assert.equal(stripMarkdown('# Heading\n\n**Decision:** Hire two people.'), 'Heading\n\nDecision: Hire two people.')
 
 for (const candidate of candidates) {
   for (const field of ['id', 'name', 'email', 'appliedAt', 'status', 'summary', 'thread']) {

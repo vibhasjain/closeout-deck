@@ -68,8 +68,20 @@ export interface Meeting {
   status: 'scheduled' | 'done' | 'canceled'
 }
 
+export interface Discussion {
+  id: string
+  title: string
+  recordedAt?: string
+  durationSec?: number
+  source?: string
+  tags?: string[]
+  summaryPath: string
+  transcriptPath: string
+}
+
 export interface Feed {
   updatedAt: string
   candidates: Candidate[]
   meetings?: Meeting[]
+  discussions?: Discussion[]
 }
