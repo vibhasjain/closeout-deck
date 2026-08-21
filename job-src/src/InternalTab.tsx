@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { FileText, X } from 'lucide-react'
-import { MarkdownText } from '@/AttachmentViewer'
+import { MarkdownText, TranscriptText } from '@/AttachmentViewer'
 import { loadFile } from '@/api'
 import { ClaudeCrab } from '@/components/ClaudeCrab'
 import { FadeText } from '@/components/FadeText'
@@ -257,7 +257,9 @@ export function InternalTab({
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap break-words px-5 py-5 text-[13px] leading-relaxed text-foreground md:px-6">
             <TextLoader loading={transcript.loading} error={transcript.error} />
-            {!transcript.loading && !transcript.error && transcript.text?.trim() && transcript.text}
+            {!transcript.loading && !transcript.error && transcript.text?.trim() && (
+              <TranscriptText text={transcript.text} />
+            )}
             {!transcript.loading && !transcript.error && selected && !transcript.text?.trim() && (
               <p className="text-[12px] text-muted-foreground">No transcript available.</p>
             )}

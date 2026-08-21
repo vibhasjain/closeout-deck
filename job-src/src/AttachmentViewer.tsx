@@ -21,6 +21,50 @@ import type { Attachment, Candidate, MeetingPaneTab, MeetingRecording } from '@/
 const canShareFiles = typeof navigator.canShare === 'function'
   && navigator.canShare({ files: [new File([], 'resume.pdf', { type: 'application/pdf' })] })
 
+const TRANSCRIPT_LINE_PATTERN = /^\[(\d{2}:\d{2}:\d{2})\]\s+([^:]{1,40}):\s?(.*)$/
+const SPEAKER_COLORS = [
+  'text-sky-700 dark:text-sky-300',
+  'text-emerald-700 dark:text-emerald-300',
+  'text-amber-700 dark:text-amber-300',
+  'text-violet-700 dark:text-violet-300',
+  'text-rose-700 dark:text-rose-300',
+  'text-teal-700 dark:text-teal-300',
+] as const
+
+export function TranscriptText({ text }: { text: string }) {
+  const speakerColors = new Map<string, string>()
+  const lines = text.replace(/\r\n?/g, '\n').split('\n')
+
+  return lines.map((line, index) => {
+    const match = line.match(TRANSCRIPT_LINE_PATTERN)
+    let content: ReactNode = line
+
+    if (match) {
+      const [, timestamp, speaker, spokenText] = match
+      let speakerColor = speakerColors.get(speaker)
+      if (!speakerColor) {
+        speakerColor = SPEAKER_COLORS[speakerColors.size % SPEAKER_COLORS.length]
+        speakerColors.set(speaker, speakerColor)
+      }
+      content = (
+        <>
+          <span className="font-mono text-[11px] text-muted-foreground/70">[{timestamp}]</span>
+          {' '}
+          <span className={cn('font-medium', speakerColor)}>{speaker}</span>
+          <span className="text-foreground">: {spokenText}</span>
+        </>
+      )
+    }
+
+    return (
+      <span key={index}>
+        {content}
+        {index < lines.length - 1 && '\n'}
+      </span>
+    )
+  })
+}
+
 function sanitizeMammothHtml(html: string): string {
   const document = new DOMParser().parseFromString(html, 'text/html')
   document.querySelectorAll('script, iframe, object, embed, style, link, meta, base, form').forEach((node) => node.remove())
@@ -297,7 +341,7 @@ function MeetingDocument({ meeting, tab }: { meeting: MeetingRecording; tab: Mee
     </div>
   ) : (
     <div className="h-full overflow-y-auto whitespace-pre-wrap break-words px-5 py-5 text-[13px] leading-relaxed text-foreground md:px-6">
-      {text}
+      <TranscriptText text={text} />
     </div>
   )
 }

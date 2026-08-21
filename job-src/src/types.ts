@@ -75,6 +75,7 @@ export interface Discussion {
   durationSec?: number
   source?: string
   tags?: string[]
+  speakers?: Record<string, string>
   summaryPath: string
   transcriptPath: string
 }
