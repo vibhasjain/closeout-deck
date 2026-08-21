@@ -171,6 +171,7 @@ export default function App() {
             value="internal"
             selected={view === 'internal'}
             onClick={toggleInternal}
+            count={feed?.discussions?.length ?? 0}
           />
           {authenticated && (
             <Button
