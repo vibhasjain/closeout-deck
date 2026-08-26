@@ -12,7 +12,7 @@ export function Hero() {
             id="top-heading"
             className="max-w-[13ch] font-heading text-5xl leading-[0.98] font-bold tracking-[-0.03em] text-balance lg:text-6xl"
           >
-            Spots every single payroll discrepancy. In real time.
+            Spots every single payroll discrepancy.
           </h1>
           <p className="max-w-[70ch] text-lg leading-8 text-muted-foreground">
             A payroll operations agent for staffing and gig work. It ingests
