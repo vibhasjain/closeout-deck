@@ -2,7 +2,7 @@ import type { Status } from '../types.ts'
 
 const STATUS = new Set<Status>([
   'new', 'qualified', 'invited',
-  'meeting-scheduled', 'met', 'disqualified',
+  'meeting-scheduled', 'met', 'disqualified', 'no-show',
 ])
 
 const LEGACY_STATUS: Record<string, Status> = {

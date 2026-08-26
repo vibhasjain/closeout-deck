@@ -51,6 +51,7 @@ export const STATUS_CHIP: Record<Status, string> = {
   'meeting-scheduled': 'border-transparent bg-solid/10 text-solid',
   met: 'border-transparent bg-solid/10 text-solid',
   disqualified: 'border-transparent bg-nosource/10 text-nosource',
+  'no-show': 'border-transparent bg-verify/10 text-verify',
 }
 
 function StatusBadge({ status, className }: { status: Status; className?: string }) {

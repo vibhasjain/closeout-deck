@@ -46,7 +46,7 @@ const candidates = [
 assert.equal(filterCandidates(candidates, 'all', '').length, candidates.length)
 assert.deepEqual(
   PIPELINE_FILTERS.filter((filter) => filter !== 'new'),
-  ['all', 'disqualified', 'qualified', 'invited', 'meeting-scheduled', 'met'],
+  ['all', 'disqualified', 'no-show', 'qualified', 'invited', 'meeting-scheduled', 'met'],
 )
 assert.deepEqual(
   filterCandidates(candidates, 'meetings', '').map((candidate) => candidate.status).sort(),
@@ -69,6 +69,8 @@ assert.equal(parseStatus('sent'), 'invited')
 assert.equal(parseStatus('calendly-sent'), 'invited')
 assert.equal(parseStatus('meeting-scheduled'), 'meeting-scheduled')
 assert.equal(parseStatus('met'), 'met')
+assert.equal(parseStatus('no-show'), 'no-show')
+assert.equal(parseStatus('ghosted'), 'new')
 
 assert.equal(attachmentExtension('Resume.DOCX?download=1#page=2'), 'docx')
 assert.equal(getAttachmentRenderDispatch({ name: 'Resume.DOCX?download=1' }).kind, 'docx')

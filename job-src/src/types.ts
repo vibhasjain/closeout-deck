@@ -1,6 +1,6 @@
 export type Status =
   | 'new' | 'qualified' | 'invited'
-  | 'meeting-scheduled' | 'met' | 'disqualified'
+  | 'meeting-scheduled' | 'met' | 'disqualified' | 'no-show'
 
 export interface Attachment { name: string; path: string }
 
