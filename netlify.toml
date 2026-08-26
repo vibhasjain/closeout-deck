@@ -1,5 +1,5 @@
 [build]
-  command = "cd shift-xray && npm install && npm run build && cd ../tasks && npm install && npm run build && cp -r dist/* . && cd ../job-src && npm install && npm run build"
+  command = "cd shift-xray && npm install && npm run build && cd ../tasks && npm install && npm run build && cp -r dist/* . && cd ../job-src && npm install && npm run build && cd ../payroll-src && npm install && npm run build"
   publish = "."
 
 [build.environment]

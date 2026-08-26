@@ -1,0 +1,282 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-26T00:00:00Z",
+  "title": "Design System: HyperTrack Payroll Ops",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Agent Green",
+        "canonical": "#22c55e",
+        "tonalRamp": ["#052e16", "#14532d", "#166534", "#15803d", "#16a34a", "#22c55e", "#86efac", "#dcfce7"]
+      },
+      "primary-foreground": {
+        "role": "primary",
+        "displayName": "Deep Forest",
+        "canonical": "#052e16",
+        "tonalRamp": ["#052e16", "#14532d", "#166534", "#15803d", "#16a34a", "#22c55e", "#86efac", "#dcfce7"]
+      },
+      "secondary": {
+        "role": "secondary",
+        "displayName": "Zinc Wash",
+        "canonical": "#f4f4f5",
+        "tonalRamp": ["#09090b", "#18181b", "#27272a", "#3f3f46", "#71717a", "#a1a1aa", "#e4e4e7", "#fafafa"]
+      },
+      "warning": {
+        "role": "tertiary",
+        "displayName": "Amber Flag",
+        "canonical": "#d97706",
+        "tonalRamp": ["#78350f", "#92400e", "#b45309", "#d97706", "#f59e0b", "#fbbf24", "#fde68a", "#fef3c7"]
+      },
+      "warning-foreground": {
+        "role": "tertiary",
+        "displayName": "Amber Ink",
+        "canonical": "#78350f",
+        "tonalRamp": ["#78350f", "#92400e", "#b45309", "#d97706", "#f59e0b", "#fbbf24", "#fde68a", "#fef3c7"]
+      },
+      "success": {
+        "role": "tertiary",
+        "displayName": "Ledger Green",
+        "canonical": "#15803d",
+        "tonalRamp": ["#052e16", "#14532d", "#166534", "#15803d", "#16a34a", "#22c55e", "#86efac", "#dcfce7"]
+      },
+      "info": {
+        "role": "tertiary",
+        "displayName": "Signal Blue",
+        "canonical": "#2563eb",
+        "tonalRamp": ["#1e3a8a", "#1e40af", "#1d4ed8", "#2563eb", "#3b82f6", "#60a5fa", "#93c5fd", "#dbeafe"]
+      },
+      "destructive": {
+        "role": "tertiary",
+        "displayName": "Refusal Red",
+        "canonical": "#dc2626",
+        "tonalRamp": ["#7f1d1d", "#991b1b", "#b91c1c", "#dc2626", "#ef4444", "#f87171", "#fca5a5", "#fee2e2"]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "#ffffff",
+        "tonalRamp": ["#09090b", "#18181b", "#27272a", "#3f3f46", "#71717a", "#a1a1aa", "#e4e4e7", "#ffffff"]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Near-Black",
+        "canonical": "#09090b",
+        "tonalRamp": ["#09090b", "#18181b", "#27272a", "#3f3f46", "#71717a", "#a1a1aa", "#e4e4e7", "#fafafa"]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Hairline Zinc",
+        "canonical": "#e4e4e7",
+        "tonalRamp": ["#09090b", "#18181b", "#27272a", "#3f3f46", "#71717a", "#a1a1aa", "#e4e4e7", "#fafafa"]
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "Muted Slate",
+        "canonical": "#71717a",
+        "tonalRamp": ["#09090b", "#18181b", "#27272a", "#3f3f46", "#71717a", "#a1a1aa", "#e4e4e7", "#fafafa"]
+      },
+      "ring": {
+        "role": "neutral",
+        "displayName": "Focus Zinc",
+        "canonical": "#a1a1aa",
+        "tonalRamp": ["#09090b", "#18181b", "#27272a", "#3f3f46", "#71717a", "#a1a1aa", "#e4e4e7", "#fafafa"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Hero H1 only. 3rem, stepping to 3.75rem at lg. Capped at max-w-[13ch] with text-balance."
+      },
+      "headline": {
+        "displayName": "Section heading",
+        "purpose": "Every Section H2. 1.875rem → 2.25rem at sm → 3rem at lg, balanced, in a max-w-[75ch] header block. Never overridden per section."
+      },
+      "title": {
+        "displayName": "Sub-chapter heading",
+        "purpose": "H3 blocks nested inside a section (rulebook, rule change). 1.5rem → 1.875rem at sm."
+      },
+      "subtitle": {
+        "displayName": "Column heading",
+        "purpose": "H3 in the hairline-divided three-column groups (three jobs, three audiences)."
+      },
+      "lede": {
+        "displayName": "Lede",
+        "purpose": "The single muted paragraph under a section heading. 1rem → 1.125rem at sm, max-w-[72ch]; the hero lede is 1.125rem/2 at max-w-[70ch]."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Column copy at max-w-[42ch]; thesis prose at 1.125rem/2 and max-w-[65ch]."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels, table headers, badge text. Sentence case always; counter captions drop to 0.625rem."
+      },
+      "mono-field": {
+        "displayName": "Mono field",
+        "purpose": "Shift IDs, rule IDs, clock times, rates, hours, confidence, mock frame titles, filenames. Always tabular-nums."
+      },
+      "mono-log": {
+        "displayName": "Mono log",
+        "purpose": "The agent's live event stream. 0.6875rem → 0.8125rem at sm, in a fixed 4.7rem timestamp gutter."
+      },
+      "counter": {
+        "displayName": "Dollar counter",
+        "purpose": "The two corrected-dollar totals. Space Grotesk digits with a smaller mono dollar sign — headline, not data. 1.25rem → 1.5rem in the hero log footer, 1.875rem in the audit stream."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "ease-standard", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "The surface's only easing curve — every keyframe, progress fill and connector transition." },
+      { "name": "row-in", "value": "row-in 400ms cubic-bezier(0.16, 1, 0.3, 1) both", "purpose": "6px rise + fade for any newly arriving row, panel, message or ledger entry. The workhorse." },
+      { "name": "flip-in", "value": "flip-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both", "purpose": "scaleY(0.6) → 1 when a status badge changes state in place." },
+      { "name": "delta-fly", "value": "delta-fly 700ms cubic-bezier(0.16, 1, 0.3, 1) both", "purpose": "The corrected-dollar badge rises 48px and fades as it leaves the log toward the counters." },
+      { "name": "caret-blink", "value": "caret-blink 1s steps(1, end) infinite", "purpose": "The 1px typing caret in a spreadsheet cell or message composer." },
+      { "name": "pulse-dot", "value": "pulse-dot 1.8s ease-in-out infinite", "purpose": "The green live dot in a mock frame header; the only always-on animation." },
+      { "name": "shimmer", "value": "shimmer 1.6s cubic-bezier(0.16, 1, 0.3, 1) both", "purpose": "A green sweep across the source rail when the agent ingests from many places at once." },
+      { "name": "count-up", "value": "650–700ms, 1 - (1-p)^3", "purpose": "useCountUp easing for the two dollar counters and the memory stat." },
+      { "name": "typewriter", "value": "22–58 characters per second", "purpose": "useTypewriter for spreadsheet cells (22 cps), the rule sentence (34 cps) and the chaser message (58 cps)." },
+      { "name": "sequence-pause", "value": "IntersectionObserver threshold 0.25", "purpose": "useSequence banks the remaining phase time when the mock leaves the viewport and resumes on return — no jump cuts." },
+      { "name": "reduced-motion", "value": "final phase + animation:none / transition:none", "purpose": "Two layers: the hook renders each mock fully populated in its end state; index.css then stills everything and disables smooth scrolling." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "40rem" },
+      { "name": "md", "value": "48rem" },
+      { "name": "lg", "value": "64rem" },
+      { "name": "xl", "value": "80rem" },
+      { "name": "container-max", "value": "80rem" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The page CTA. Agent Green with Deep Forest text — used three times on the whole surface.",
+      "html": "<a class=\"ds-btn-primary\" href=\"#detective\">See it catch one<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 5v14\"/><path d=\"m19 12-7 7-7-7\"/></svg></a>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; height: 2.25rem; padding: 0 0.5rem 0 0.625rem; border: 1px solid transparent; border-radius: var(--radius-lg, 0.625rem); background: var(--primary, #22c55e); color: var(--primary-foreground, #052e16); font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; text-decoration: none; white-space: nowrap; transition: all 0.15s; } .ds-btn-primary svg { width: 1rem; height: 1rem; } .ds-btn-primary:hover { background: color-mix(in oklab, var(--primary, #22c55e) 80%, transparent); } .ds-btn-primary:focus-visible { outline: none; border-color: var(--ring, #a1a1aa); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring, #a1a1aa) 50%, transparent); } .ds-btn-primary:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "The second CTA in every pair. White ground, hairline edge.",
+      "html": "<a class=\"ds-btn-outline\" href=\"#thesis\">Read the thesis</a>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; height: 2.25rem; padding: 0 0.625rem; border: 1px solid var(--border, #e4e4e7); border-radius: var(--radius-lg, 0.625rem); background: var(--background, #ffffff); color: var(--foreground, #09090b); font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; text-decoration: none; transition: all 0.15s; } .ds-btn-outline:hover { background: var(--muted, #f4f4f5); } .ds-btn-outline:focus-visible { outline: none; border-color: var(--ring, #a1a1aa); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring, #a1a1aa) 50%, transparent); } .ds-btn-outline:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Chapter Link",
+      "kind": "button",
+      "refersTo": "button-link-chapter",
+      "description": "The only coloured text link on the page — Ledger Green, closes each column of the three-jobs block.",
+      "html": "<a class=\"ds-link-chapter\" href=\"#detective\">Watch the agent do it<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></a>",
+      "css": ".ds-link-chapter { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0; color: var(--success, #15803d); font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; text-decoration: none; text-underline-offset: 4px; } .ds-link-chapter svg { width: 0.875rem; height: 0.875rem; } .ds-link-chapter:hover { color: var(--success, #15803d); text-decoration: underline; } .ds-link-chapter:focus-visible { outline: none; border-radius: 0.375rem; box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring, #a1a1aa) 50%, transparent); }"
+    },
+    {
+      "name": "Synthetic Badge",
+      "kind": "chip",
+      "refersTo": "badge-synthetic",
+      "description": "The mandatory provenance label on every mock frame; the same outline chip carries source names, rule IDs and geofence windows inside mocks.",
+      "html": "<span class=\"ds-badge-outline\">synthetic</span>",
+      "css": ".ds-badge-outline { display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; height: 1.25rem; padding: 0.125rem 0.5rem; border: 1px solid var(--border, #e4e4e7); border-radius: var(--radius-4xl, 1.625rem); background: transparent; color: var(--muted-foreground, #71717a); font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 0.75rem; font-weight: 400; white-space: nowrap; }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "badge-status-warning",
+      "description": "The closed status vocabulary — processing (info), flagged/awaiting/held (warning), resolved/paid/corrected (success), refused/escalated (destructive). Always a 10% tint with the matching -foreground ink.",
+      "html": "<span class=\"ds-status ds-status-warning\">Awaiting manager</span><span class=\"ds-status ds-status-success\">Paid</span><span class=\"ds-status ds-status-info\">Processing</span><span class=\"ds-status ds-status-destructive\">Escalated</span>",
+      "css": ".ds-status { display: inline-flex; align-items: center; height: 1.25rem; margin-right: 0.375rem; padding: 0.125rem 0.5rem; border: 1px solid transparent; border-radius: var(--radius-4xl, 1.625rem); font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; white-space: nowrap; } .ds-status-warning { background: color-mix(in oklab, var(--warning, #d97706) 10%, transparent); color: var(--warning-foreground, #78350f); } .ds-status-success { background: color-mix(in oklab, var(--success, #15803d) 10%, transparent); color: var(--success-foreground, #052e16); } .ds-status-info { background: color-mix(in oklab, var(--info, #2563eb) 10%, transparent); color: var(--info-foreground, #1e3a8a); } .ds-status-destructive { background: color-mix(in oklab, var(--destructive, #dc2626) 10%, transparent); color: var(--destructive-foreground, #7f1d1d); }"
+    },
+    {
+      "name": "Mock Frame",
+      "kind": "custom",
+      "refersTo": "mock-frame",
+      "description": "The signature component. Every product mock is a white 14px card with a 1px zinc ring, a lowercase mono title, an optional green live dot, the synthetic badge, and role=\"img\" with a full-sentence aria-label.",
+      "html": "<div class=\"ds-mock-frame\" role=\"img\" aria-label=\"A live payroll agent log catches discrepancies, checks evidence and rules, resolves each shift, and updates corrected-dollar totals.\" aria-live=\"off\"><div class=\"ds-mock-frame-header\"><div class=\"ds-mock-frame-title\"><span class=\"ds-live-dot\" aria-hidden=\"true\"></span>agent · live</div><div class=\"ds-mock-frame-meta\"><span class=\"ds-mono\">17:49:12</span><span class=\"ds-badge-outline\">synthetic</span></div></div><div class=\"ds-mock-frame-body\"><div class=\"ds-mock-panel\"><div class=\"ds-mock-panel-title\">Timesheet</div><dl class=\"ds-fields\"><div><dt>source</dt><dd>ADP</dd></div><div><dt>in</dt><dd>08:58</dd></div><div><dt>out</dt><dd class=\"ds-flag\">—</dd></div></dl></div></div><div class=\"ds-mock-frame-caption\">15–30 min per disputed shift</div></div>",
+      "css": ".ds-mock-frame { display: flex; flex-direction: column; gap: 1rem; width: 100%; padding: 1rem 0; overflow: hidden; border-radius: var(--radius-xl, 0.875rem); background: var(--card, #ffffff); color: var(--card-foreground, #09090b); box-shadow: none; outline: 1px solid var(--border, #e4e4e7); outline-offset: -1px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; } .ds-mock-frame-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0.75rem; padding: 0 1rem 1rem; border-bottom: 1px solid var(--border, #e4e4e7); } .ds-mock-frame-title { display: flex; align-items: center; gap: 0.5rem; font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 0.75rem; font-weight: 500; color: var(--muted-foreground, #71717a); } .ds-live-dot { width: 0.5rem; height: 0.5rem; border-radius: 9999px; background: var(--primary, #22c55e); box-shadow: 0 0 0 1px color-mix(in oklab, var(--primary, #22c55e) 30%, transparent); animation: ds-pulse-dot 1.8s ease-in-out infinite; } @keyframes ds-pulse-dot { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.72); opacity: 0.5; } } .ds-mock-frame-meta { display: flex; align-items: center; gap: 0.5rem; } .ds-mono { font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 0.75rem; font-variant-numeric: tabular-nums; color: var(--muted-foreground, #71717a); } .ds-mock-frame-body { padding: 0 1rem; } .ds-mock-frame-caption { padding: 0.75rem 1rem 0; border-top: 1px solid var(--border, #e4e4e7); font-size: 0.75rem; color: var(--muted-foreground, #71717a); } .ds-mock-panel { padding: 0.75rem; border: 1px solid var(--border, #e4e4e7); border-radius: var(--radius-lg, 0.625rem); background: var(--background, #ffffff); } .ds-mock-panel-title { margin-bottom: 0.75rem; font-size: 0.75rem; font-weight: 500; } .ds-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; margin: 0; font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 0.75rem; font-variant-numeric: tabular-nums; } .ds-fields dt { color: var(--muted-foreground, #71717a); } .ds-fields dd { margin: 0; } .ds-flag { color: var(--warning-foreground, #78350f); }"
+    },
+    {
+      "name": "Ledger Table",
+      "kind": "custom",
+      "refersTo": "section-container",
+      "description": "The page's table treatment: hairline rules, label-sized muted headers, every identifier and figure in mono tabular numerals, the row under investigation tinted amber at 5%.",
+      "html": "<table class=\"ds-table\"><thead><tr><th>Shift</th><th>Discrepancy</th><th class=\"ds-num\">↓ Under</th><th class=\"ds-num\">↑ Over</th></tr></thead><tbody><tr class=\"ds-row-flagged\"><td class=\"ds-mono-cell\">4821</td><td>Clock-out missing</td><td class=\"ds-num ds-mono-cell\">$13.48</td><td class=\"ds-num ds-mono-cell\">$0.00</td></tr><tr><td class=\"ds-mono-cell\">4822</td><td>Duplicate clock-in</td><td class=\"ds-num ds-mono-cell\">$0.00</td><td class=\"ds-num ds-mono-cell\">$61.25</td></tr></tbody></table>",
+      "css": ".ds-table { width: 100%; border-collapse: collapse; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; } .ds-table th { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border, #e4e4e7); font-size: 0.75rem; font-weight: 500; color: var(--muted-foreground, #71717a); } .ds-table td { padding: 0.625rem 0.75rem; border-bottom: 1px solid var(--border, #e4e4e7); } .ds-table tbody tr:last-child td { border-bottom: 0; } .ds-table tbody tr:hover { background: color-mix(in oklab, var(--muted, #f4f4f5) 30%, transparent); } .ds-row-flagged, .ds-row-flagged:hover { background: color-mix(in oklab, var(--warning, #d97706) 5%, transparent); } .ds-num { text-align: right; } .ds-mono-cell { font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Hairline Column Group",
+      "kind": "custom",
+      "refersTo": "section-container",
+      "description": "The page's answer to a card grid: one border-y group, 1px vertical rules between columns from md, flipping to horizontal rules when stacked. No cards, no gaps, no shadows.",
+      "html": "<div class=\"ds-columns\"><article><h3>Detective</h3><p>Spots discrepancies by holding every shift against the rulebook.</p><a class=\"ds-link-chapter\" href=\"#detective\">Watch the agent do it</a></article><article><h3>Data collector &amp; human chaser</h3><p>Pulls timesheets and location from every source, asks humans for what's missing.</p><a class=\"ds-link-chapter\" href=\"#chaser\">Watch the agent do it</a></article><article><h3>Data processor</h3><p>Moves the result between platforms and formats and initiates the payout.</p><a class=\"ds-link-chapter\" href=\"#processor\">Watch the agent do it</a></article></div>",
+      "css": ".ds-columns { display: grid; border-top: 1px solid var(--border, #e4e4e7); border-bottom: 1px solid var(--border, #e4e4e7); } .ds-columns article { display: flex; flex-direction: column; gap: 1.25rem; padding: 2rem 0; border-top: 1px solid var(--border, #e4e4e7); } .ds-columns article:first-child { border-top: 0; } .ds-columns h3 { margin: 0; font-family: 'Space Grotesk', Inter, sans-serif; font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em; } .ds-columns p { margin: 0; flex: 1; max-width: 42ch; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 1rem; line-height: 1.75; color: var(--muted-foreground, #71717a); } @media (min-width: 48rem) { .ds-columns { grid-template-columns: repeat(3, minmax(0, 1fr)); } .ds-columns article { padding: 2rem; border-top: 0; border-left: 1px solid var(--border, #e4e4e7); } .ds-columns article:first-child { padding-left: 0; border-left: 0; } .ds-columns article:last-child { padding-right: 0; } }"
+    },
+    {
+      "name": "Dollar Counter",
+      "kind": "custom",
+      "refersTo": "counter",
+      "description": "The two running totals — the page's proof object. Space Grotesk digits with a smaller mono dollar sign, tabular figures, animated by useCountUp over ~700ms.",
+      "html": "<div class=\"ds-counters\"><div class=\"ds-counter\"><div class=\"ds-counter-label\">Underpayments corrected ↓</div><div class=\"ds-counter-value\"><span class=\"ds-counter-sign\">$</span>4,318.72</div></div><div class=\"ds-counter\"><div class=\"ds-counter-label\">Overpayments corrected ↑</div><div class=\"ds-counter-value\"><span class=\"ds-counter-sign\">$</span>7,904.15</div></div></div>",
+      "css": ".ds-counters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; padding: 1rem; background: color-mix(in oklab, var(--muted, #f4f4f5) 40%, transparent); } .ds-counter:first-child { padding-right: 0.75rem; border-right: 1px solid var(--border, #e4e4e7); } .ds-counter-label { margin-bottom: 0.5rem; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; color: var(--muted-foreground, #71717a); } .ds-counter-value { font-family: 'Space Grotesk', Inter, sans-serif; font-size: 1.5rem; font-weight: 600; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; } .ds-counter-sign { margin-right: 0.125rem; font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 0.72em; font-weight: 500; }"
+    },
+    {
+      "name": "Site Header",
+      "kind": "nav",
+      "refersTo": "section-container",
+      "description": "Sticky 3.5rem bar, 85% white with backdrop blur and a bottom hairline; muted nav links darken to near-black, and the primary CTA sits at the right edge.",
+      "html": "<header class=\"ds-header\"><a class=\"ds-brand\" href=\"#top\"><span class=\"ds-brand-mark\"></span><span class=\"ds-brand-name\">HyperTrack</span><span class=\"ds-brand-sep\"></span><span class=\"ds-brand-sub\">Payroll Ops</span></a><nav class=\"ds-nav\" aria-label=\"Primary\"><a href=\"#jobs\">The three jobs</a><a href=\"#rules\">Rules</a><a href=\"#who\">Who it's for</a><a href=\"#thesis\">Thesis</a></nav><a class=\"ds-btn-primary ds-btn-sm\" href=\"#detective\">See it catch one</a></header>",
+      "css": ".ds-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; height: 3.5rem; padding: 0 1.25rem; border-bottom: 1px solid var(--border, #e4e4e7); background: color-mix(in oklab, var(--background, #ffffff) 85%, transparent); backdrop-filter: blur(8px); font-family: Inter, ui-sans-serif, system-ui, sans-serif; } .ds-brand { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; color: var(--foreground, #09090b); } .ds-brand-mark { width: 1.75rem; height: 1.75rem; border-radius: 0.5rem; background: var(--primary, #22c55e); } .ds-brand-name { font-family: 'Space Grotesk', Inter, sans-serif; font-weight: 500; } .ds-brand-sep { width: 1px; height: 1rem; margin: 0 0.25rem; background: var(--border, #e4e4e7); } .ds-brand-sub { font-size: 0.875rem; color: var(--muted-foreground, #71717a); } .ds-nav { display: flex; align-items: center; gap: 1.25rem; } .ds-nav a { font-size: 0.875rem; color: var(--muted-foreground, #71717a); text-decoration: none; transition: color 0.15s; } .ds-nav a:hover { color: var(--foreground, #09090b); } .ds-nav a:focus-visible { outline: none; border-radius: 0.375rem; box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring, #a1a1aa) 50%, transparent); } .ds-btn-sm { height: 1.75rem; padding: 0 0.625rem; font-size: 0.8rem; border-radius: 0.5rem; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Payroll Ledger, Live",
+    "overview": "This is a white operations surface that behaves like a ledger someone is actually keeping. The page is not decorated: it is ruled. Zinc hairlines divide columns and rows, product mocks are white cards held by a single 1px ring, and every quantity — a shift ID, a timestamp, a rate, a dollar figure, a confidence percentage — is set in JetBrains Mono with tabular figures so columns of numbers line up the way they would in a payroll export. Space Grotesk carries headings and the two running dollar counters; Inter carries everything a person reads as a sentence.\n\nOne green (#22c55e) does all the accent work, and it is spent only on the agent's own activity: the live pulse dot, the primary CTA, the dollar delta flying out of the log, the connector segment lighting as data moves, the phrase the compiler just picked out of a rule. Status is a separate, deliberately quieter vocabulary — warning / success / info / destructive as 10% tints behind darkened text — so a queue full of states never competes with the one green thing the agent is doing right now. There are no shadows anywhere on this surface, no gradients, no glass; depth is a hairline and a tint step.\n\nThe page argues by demonstration rather than assertion, and the visual system serves that: nine animated product mocks, each a self-contained white frame labelled synthetic, each looping a short evidence-to-decision sequence and each declared role=\"img\" so a screen reader gets one honest sentence instead of a moving table. Confirmed rejections: no dark mode on this surface, no eyebrows or kickers above headings, no section numbering, no card-grid \"feature\" layouts, no marketing photography, no shadows, no second accent hue.",
+    "keyCharacteristics": [
+      "White ground, zinc hairlines, one green reserved for agent action",
+      "Mono for every number; prose never mono",
+      "Flat by construction — 1px rings and tint steps, zero box-shadow",
+      "Hairline-divided columns and real tables instead of card grids",
+      "Headings are full declarative sentences ending in a period, with no eyebrow above them",
+      "Nine looping product mocks, all non-interactive, all labelled synthetic"
+    ],
+    "rules": [
+      { "name": "The One Green Rule", "body": "#22c55e marks agent action and nothing else. If a green element cannot be described as something the agent is doing or just did, it is the wrong colour.", "section": "colors" },
+      { "name": "The Tinted Status Rule", "body": "Status colour reaches the page as a ~10% tint behind its -foreground ink (bg-warning/10 text-warning-foreground), never as a saturated fill and never as saturated body text. The saturated value is allowed only on ≤14px icons and small link labels.", "section": "colors" },
+      { "name": "The Zinc-Only Divider Rule", "body": "Every border on the page is #e4e4e7. There is no coloured border, no coloured rule, and no border thicker than 1px.", "section": "colors" },
+      { "name": "The Mono Ledger Rule", "body": "Every timestamp, identifier, dollar amount, hour count and percentage is JetBrains Mono with tabular-nums. Prose is never mono; mono never carries a sentence longer than a field value.", "section": "typography" },
+      { "name": "The No-Eyebrow Rule", "body": "A section opens with its H2. No kicker, no eyebrow, no uppercase micro-label, no section number, no letter-spaced all-caps anywhere on the page.", "section": "typography" },
+      { "name": "The Full-Sentence Heading Rule", "body": "Headings are declarative sentences ending in a period, not noun phrases. A heading that could be a nav label is too short.", "section": "typography" },
+      { "name": "The Hairline Rule", "body": "Related items sit in one bordered group divided by 1px rules, not in separate cards with gaps. A \"three things\" block is one border-y grid with border-l between columns.", "section": "layout" },
+      { "name": "The Shed, Don't Scroll Rule", "body": "Nothing on this page scrolls horizontally at 390px. A mock that cannot fit drops columns; a mock declared role=\"img\" must never require a horizontal drag to be read.", "section": "layout" },
+      { "name": "The One Container Rule", "body": "Header, sections and footer all use max-w-7xl with px-5 sm:px-8 lg:px-10. No section invents its own gutter.", "section": "layout" },
+      { "name": "The No-Shadow Rule", "body": "This surface ships zero shadows. If something needs to separate from its ground, it gets a hairline or a tint step.", "section": "elevation" },
+      { "name": "The Two-Tone Rule", "body": "Sections alternate white and bg-muted/55 down the page. Alternation is the only sectioning device; there is no coloured band.", "section": "elevation" },
+      { "name": "The Squared-Corner Bubble Rule", "body": "A message bubble points at its sender by squaring exactly one corner. Never a tail, never an arrow.", "section": "shapes" },
+      { "name": "The One Card Rule", "body": "A MockFrame is the only Card in its subtree. Panels inside a mock are rounded-lg border bg-background p-3 divs with a 0.75rem medium title — never a nested card, never a second ring.", "section": "components" },
+      { "name": "The Synthetic Label Rule", "body": "Every mock carries the synthetic badge, and the footer repeats the disclosure. No number on this page is presented as real.", "section": "components" }
+    ],
+    "dos": [
+      "Do reserve #22c55e for what the agent is doing right now — live dot, primary CTA, dollar delta, active rail segment, compiled-phrase highlight.",
+      "Do set every identifier, time, rate, hour, dollar and percentage in JetBrains Mono with tabular-nums.",
+      "Do render every section through Section so the heading spec (text-3xl sm:text-4xl lg:text-5xl, tracking -0.03em, balanced) and the max-w-7xl / px-5 sm:px-8 lg:px-10 / py-20 md:py-28 / gap-12 container stay identical page-wide.",
+      "Do divide grouped content with 1px Hairline Zinc rules — border-y around the group, border-l between columns from md, border-t when stacked.",
+      "Do put every product mock in a MockFrame with role=\"img\", a full-sentence aria-label, and the synthetic badge.",
+      "Do drive every animation from useSequence and let it pause offscreen.",
+      "Do give reduced-motion users the final, fully populated frame of each mock.",
+      "Do shed table columns with hidden md:table-cell when space runs out.",
+      "Do write headings as complete declarative sentences ending in a period."
+    ],
+    "donts": [
+      "Don't add a shadow. There are none on this surface, at rest or on hover.",
+      "Don't add an eyebrow, kicker, uppercase micro-label or section number above a heading.",
+      "Don't nest a Card inside a MockFrame, or ring an inner panel.",
+      "Don't turn a \"three things\" block into a card grid; it is a hairline-divided three-column group or a table.",
+      "Don't let a status hue appear as a saturated fill or as saturated body text — 10% tint plus the -foreground ink, with saturated values reserved for ≤14px icons and small link labels.",
+      "Don't use green as a decorative, structural or background colour, and don't introduce a second accent hue.",
+      "Don't make a mock interactive, focusable, or aria-live; a click target inside a role=\"img\" is a bug.",
+      "Don't let any mock scroll horizontally at 390px.",
+      "Don't add a new keyframe or easing curve. The six keyframes and cubic-bezier(0.16, 1, 0.3, 1) cover the whole surface."
+    ]
+  }
+}
