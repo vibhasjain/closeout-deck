@@ -3,6 +3,7 @@ import { ChevronLeft, LogOut } from 'lucide-react'
 import { FilterChip, FilterChips } from '@/components/FilterChips'
 import { Button } from '@/components/ui'
 import { InternalTab } from '@/InternalTab'
+import { NotesTab } from '@/NotesTab'
 import { PipelineTab } from '@/PipelineTab'
 import { SignIn } from '@/SignIn'
 import { PIPELINE_FILTERS, type PipelineFilter } from '@/lib/filter'
@@ -40,7 +41,7 @@ export default function App() {
   const [refetching, setRefetching] = useState(false)
   const [mobileDetail, setMobileDetail] = useState(false)
   const [filter, setFilter] = useState<PipelineFilter>('qualified')
-  const [view, setView] = useState<'pipeline' | 'internal'>('pipeline')
+  const [view, setView] = useState<'pipeline' | 'internal' | 'notes'>('pipeline')
   // The Agent Keyboard token survives a sign-out now, so remember the click.
   const [signedOut, setSignedOut] = useState(false)
   const loadGeneration = useRef(0)
@@ -121,8 +122,8 @@ export default function App() {
     setMobileDetail(false)
   }, [])
 
-  const toggleInternal = useCallback(() => {
-    setView((current) => current === 'internal' ? 'pipeline' : 'internal')
+  const toggleView = useCallback((next: 'internal' | 'notes') => {
+    setView((current) => current === next ? 'pipeline' : next)
     setMobileDetail(false)
   }, [])
 
@@ -153,7 +154,7 @@ export default function App() {
               onClick={() => setMobileDetail(false)}
               className="flex items-center gap-1 text-[13px] text-muted-foreground md:hidden"
             >
-              <ChevronLeft className="size-4" /> {view === 'internal' ? 'Internal' : 'Pipeline'}
+              <ChevronLeft className="size-4" /> {view === 'internal' ? 'Internal' : view === 'notes' ? 'Notes' : 'Pipeline'}
             </button>
           )}
           <div className={`text-[15px] font-semibold tracking-tight ${mobileDetail ? 'hidden md:block' : ''}`}>
@@ -175,8 +176,14 @@ export default function App() {
           <FilterChip
             value="internal"
             selected={view === 'internal'}
-            onClick={toggleInternal}
+            onClick={() => toggleView('internal')}
             count={feed?.discussions?.length ?? 0}
+          />
+          <FilterChip
+            value="notes"
+            selected={view === 'notes'}
+            onClick={() => toggleView('notes')}
+            count={2}
           />
           {authenticated && (
             <Button
@@ -231,7 +238,9 @@ export default function App() {
             </Button>
           </div>
         ) : (
-          view === 'internal' ? (
+          view === 'notes' ? (
+            <NotesTab mobileDetail={mobileDetail} onMobileDetail={setMobileDetail} />
+          ) : view === 'internal' ? (
             <InternalTab
               feed={feed}
               initialLoading={initialLoading}

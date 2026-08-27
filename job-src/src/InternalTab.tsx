@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { FileText, X } from 'lucide-react'
+import { ExternalLink, FileText, X } from 'lucide-react'
 import { MarkdownText, TranscriptText } from '@/AttachmentViewer'
 import { loadFile } from '@/api'
 import { ClaudeCrab } from '@/components/ClaudeCrab'
@@ -200,6 +200,17 @@ export function InternalTab({
               {meta && <p className="font-mono text-[11px] text-muted-foreground">{meta}</p>}
             </div>
             <div className="ml-3 flex shrink-0 items-center gap-1">
+              {selected.loomUrl && (
+                <a
+                  href={selected.loomUrl}
+                  target="_blank"
+                  rel="noopener"
+                  className="mr-1 flex items-center gap-1 text-[11px] font-medium text-muted-foreground underline decoration-border underline-offset-2 hover:text-foreground"
+                >
+                  Loom
+                  <ExternalLink className="size-2.5" aria-hidden="true" />
+                </a>
+              )}
               {summary.text && <CopyButton text={stripMarkdown(summary.text)} />}
               <Button
                 variant="ghost"

@@ -27,6 +27,7 @@ export function parseDiscussion(value: unknown): Discussion | null {
     ...(string(item.recordedAt) ? { recordedAt: string(item.recordedAt) } : {}),
     ...(durationSec !== undefined ? { durationSec } : {}),
     ...(string(item.source) ? { source: string(item.source) } : {}),
+    ...(/^https:\/\/(www\.)?loom\.com\//.test(string(item.loomUrl)) ? { loomUrl: string(item.loomUrl) } : {}),
     ...(tags ? { tags } : {}),
     summaryPath,
     transcriptPath,

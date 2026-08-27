@@ -79,6 +79,7 @@ export interface Discussion {
   recordedAt?: string
   durationSec?: number
   source?: string
+  loomUrl?: string
   tags?: string[]
   speakers?: Record<string, string>
   summaryPath: string
