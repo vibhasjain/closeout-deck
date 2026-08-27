@@ -26,6 +26,9 @@
     --verify: 38 92% 45%;     /* amber: related, not exact */
     --nosource: 0 72% 51%;    /* red: refuse / escalate */
     --pending: 220 70% 52%;   /* blue: awaiting approval */
+    /* Segment tags (client vs agency) — deliberately quiet. */
+    --client: 190 35% 42%;    /* muted teal: direct employer */
+    --agency: 268 32% 52%;    /* muted violet: supplies workers to clients */
   }
 
   /* pan-x pan-y (not `manipulation`, which still permits pinch) blocks pinch AND

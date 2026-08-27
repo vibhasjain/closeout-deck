@@ -12,6 +12,8 @@ export function chipLabel(value: string): string {
   if (value === 'no-show') return 'No-show'
   if (value === 'meetings') return 'Meetings'
   if (value === 'internal') return 'Internal'
+  if (value === 'client') return 'Client'
+  if (value === 'agency') return 'Agency'
   return value
 }
 

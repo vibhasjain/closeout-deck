@@ -2,6 +2,10 @@ export type Status =
   | 'new' | 'qualified' | 'invited'
   | 'meeting-scheduled' | 'met' | 'disqualified' | 'no-show'
 
+/** Client = runs its own hourly workforce; agency = supplies workers to other businesses
+ *  (staffing/temp agencies, gig-staffing marketplaces) — the two-timesheet case. */
+export type Segment = 'client' | 'agency'
+
 export interface Attachment { name: string; path: string }
 
 export interface ThreadEntry {
@@ -50,6 +54,7 @@ export interface Candidate {
   appliedAt: string
   source: 'email' | 'linkedin'
   status: Status
+  segment?: Segment
   meetingAt?: string
   meetingEnd?: string
   meetLink?: string

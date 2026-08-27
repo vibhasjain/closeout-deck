@@ -245,6 +245,7 @@ function candidate(value: unknown, index: number): Candidate {
     appliedAt: string(item.appliedAt),
     source: item.source === 'linkedin' ? 'linkedin' : 'email',
     status,
+    ...(item.segment === 'client' || item.segment === 'agency' ? { segment: item.segment } : {}),
     ...(string(item.meetingAt) ? { meetingAt: string(item.meetingAt) } : {}),
     ...(string(item.meetingEnd) ? { meetingEnd: string(item.meetingEnd) } : {}),
     ...(safeHttpUrl(item.meetLink) ? { meetLink: safeHttpUrl(item.meetLink)! } : {}),

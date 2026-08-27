@@ -1,8 +1,8 @@
-import type { Candidate, Status } from '../types.ts'
+import type { Candidate, Segment, Status } from '../types.ts'
 
-export type CandidateFilter = 'all' | Status | 'meetings'
+export type CandidateFilter = 'all' | Status | 'meetings' | Segment
 
-export const PIPELINE_FILTERS = ['all', 'new', 'disqualified', 'no-show', 'qualified', 'invited', 'meeting-scheduled', 'met'] as const
+export const PIPELINE_FILTERS = ['all', 'new', 'disqualified', 'no-show', 'qualified', 'invited', 'meeting-scheduled', 'met', 'client', 'agency'] as const
 export type PipelineFilter = (typeof PIPELINE_FILTERS)[number]
 
 export function filterCandidates(
@@ -16,7 +16,9 @@ export function filterCandidates(
       status === 'all' ||
       (status === 'meetings'
         ? candidate.status === 'meeting-scheduled' || candidate.status === 'met'
-        : candidate.status === status)
+        : status === 'client' || status === 'agency'
+          ? candidate.segment === status
+          : candidate.status === status)
     if (!matchesStatus) return false
     if (!q) return true
     return [candidate.name, candidate.email, candidate.summary].some((value) =>

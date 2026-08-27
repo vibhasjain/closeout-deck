@@ -46,13 +46,17 @@ const candidates = [
 assert.equal(filterCandidates(candidates, 'all', '').length, candidates.length)
 assert.deepEqual(
   PIPELINE_FILTERS.filter((filter) => filter !== 'new'),
-  ['all', 'disqualified', 'no-show', 'qualified', 'invited', 'meeting-scheduled', 'met'],
+  ['all', 'disqualified', 'no-show', 'qualified', 'invited', 'meeting-scheduled', 'met', 'client', 'agency'],
 )
 assert.deepEqual(
   filterCandidates(candidates, 'meetings', '').map((candidate) => candidate.status).sort(),
   ['meeting-scheduled', 'met'],
 )
 assert.ok(filterCandidates(candidates, 'qualified', '').every((candidate) => candidate.status === 'qualified'))
+// Segment chips filter on segment, not status, and untagged candidates stay out.
+const segmented = candidates.map((c, i) => (i === 0 ? { ...c, segment: 'agency' } : c))
+assert.deepEqual(filterCandidates(segmented, 'agency', '').map((c) => c.id), ['c-maya'])
+assert.equal(filterCandidates(segmented, 'client', '').length, 0)
 assert.equal(filterCandidates(candidates, 'all', 'maya').length, 1)
 assert.equal(filterCandidates(candidates, 'all', 'THEO.EXAMPLE@EXAMPLE.COM').length, 1)
 assert.equal(filterCandidates(candidates, 'all', 'introductory conversation').length, 1)

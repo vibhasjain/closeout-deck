@@ -6,6 +6,7 @@ import { InternalTab } from '@/InternalTab'
 import { PipelineTab } from '@/PipelineTab'
 import { SignIn } from '@/SignIn'
 import { PIPELINE_FILTERS, type PipelineFilter } from '@/lib/filter'
+import { SEGMENT_CHIP } from '@/PipelineTab'
 import {
   HttpError,
   SESSION_EXPIRED_EVENT,
@@ -56,6 +57,8 @@ export default function App() {
       invited: candidates.filter((candidate) => candidate.status === 'invited').length,
       'meeting-scheduled': candidates.filter((candidate) => candidate.status === 'meeting-scheduled').length,
       met: candidates.filter((candidate) => candidate.status === 'met').length,
+      client: candidates.filter((candidate) => candidate.segment === 'client').length,
+      agency: candidates.filter((candidate) => candidate.segment === 'agency').length,
     }
   }, [feed])
 
@@ -163,6 +166,7 @@ export default function App() {
             options={PIPELINE_FILTERS}
             value={view === 'pipeline' ? filter : undefined}
             onChange={selectPipelineFilter}
+            chipStyles={SEGMENT_CHIP}
             counts={filterCounts}
           />
         </div>

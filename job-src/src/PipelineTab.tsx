@@ -25,6 +25,7 @@ import type {
   Meeting,
   MeetingPaneTab,
   MeetingRecording,
+  Segment,
   Status,
   ThreadEntry,
 } from '@/types'
@@ -56,6 +57,17 @@ export const STATUS_CHIP: Record<Status, string> = {
 
 function StatusBadge({ status, className }: { status: Status; className?: string }) {
   return <Badge className={cn('shrink-0', STATUS_CHIP[status], className)}>{chipLabel(status)}</Badge>
+}
+
+// Client vs agency sits next to the status — deliberately quieter than it.
+export const SEGMENT_CHIP: Record<Segment, string> = {
+  client: 'border-transparent bg-client/[0.08] text-client',
+  agency: 'border-transparent bg-agency/[0.08] text-agency',
+}
+
+function SegmentBadge({ segment }: { segment?: Segment }) {
+  if (!segment) return null
+  return <Badge className={cn('shrink-0', SEGMENT_CHIP[segment])}>{chipLabel(segment)}</Badge>
 }
 
 function candidateAttachments(candidate: Candidate | undefined): Attachment[] {
@@ -367,6 +379,7 @@ export function PipelineTab({
           options={PIPELINE_FILTERS}
           filter={filter}
           onFilter={onFilter}
+          chipStyles={SEGMENT_CHIP}
           counts={filterCounts}
         />
         <div className="min-h-0 flex-1 overflow-y-auto no-scrollbar">
@@ -402,6 +415,7 @@ export function PipelineTab({
                 <div className="flex items-center justify-between gap-2">
                   <FadeText text={candidate.name} className="min-w-0 flex-1 text-[12.5px] font-medium" />
                   <SourceIcon source={candidate.source} />
+                  <SegmentBadge segment={candidate.segment} />
                   <StatusBadge status={candidate.status} />
                 </div>
                 <FadeText text={candidate.summary} lines={2} className="mt-0.5 text-[12px] leading-snug text-muted-foreground" />
@@ -444,6 +458,7 @@ export function PipelineTab({
                 </div>
               </div>
               <div className="ml-3 flex shrink-0 items-center gap-1">
+                <SegmentBadge segment={selected.segment} />
                 <StatusBadge status={selected.status} />
                 {attachments.length > 0 && (
                   <button
