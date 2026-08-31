@@ -63,9 +63,16 @@
             <div class="col">
               <h4>The rules already exist</h4>
               <p>"Zero hours on an active day. Thirty-plus hours of overtime. A missed punch." Operators run these checks by hand today — 15 to 30 minutes per disputed shift, across spreadsheets.</p>
+              <p class="quote">The arithmetic is trivial, the data is not.<span class="by">Synthesis of 7 pay-ops interviews · Aug 27</span></p>
             </div>
             <div class="col">
-              <p class="quote">The arithmetic is trivial, the data is not.<span class="by">Synthesis of 7 pay-ops interviews · Aug 27</span></p>
+              <span class="lbl">One shift, three witnesses</span>
+              <table class="kvmini" style="margin-top:.75rem">
+                <tr><td class="k">Timesheet · ADP</td><td class="v">08:58 — <span class="hl">missing</span></td></tr>
+                <tr><td class="k">Geofence</td><td class="v">Entered 08:52 · Exited 17:01</td></tr>
+                <tr><td class="k">Schedule</td><td class="v">09:00 – 16:30</td></tr>
+                <tr><td class="k">Supervisor · SMS</td><td class="v">"Confirmed — she left at 5."</td></tr>
+              </table>
             </div>
           </div>
         </div>
@@ -79,7 +86,8 @@
         <div class="frame">
           <span class="eyebrow lbl">The problem we set out to solve</span>
           <h2>Customers can state their rules in plain English. How do we run those rules on money — without asking anyone to trust a chatbot?</h2>
-          <p class="lede sub">That sentence is the whole project. "No overtime at Mercy this week, please" has to become something that behaves identically every single time, can be tested before it touches a paycheck, and can show an auditor exactly why it fired.</p>
+          <p class="lede sub">That sentence is the whole project. This message has to become something that behaves identically every single time, can be tested before it touches a paycheck, and can show an auditor exactly why it fired:</p>
+          <div class="bubble"><span class="who">Sam T. · Payroll ops · Slack, Mon 9:12am</span>"No overtime at Mercy General this week please."</div>
         </div>
         <aside class="speaker-notes" data-notes>
           <p>Pause here. Everyone agrees LLMs can read rules. The hard part is that payroll is a domain where a wrong answer is a wage claim — "usually right" is not a product.</p>
@@ -98,6 +106,18 @@
             <li><b>Unauditable.</b> No trace of which rule fired, or why. "The model decided" is not an answer a wage claim accepts.</li>
             <li><b>The evidence is damning even at the high end.</b> Stanford found the professional legal-research AIs — Westlaw's and Lexis's own tools — hallucinate on 17–33% of queries.</li>
           </ul>
+          <div class="runrow">
+            <div class="rulecard">
+              <div class="rc-top"><span class="tag">Run 1 · Tuesday</span><span class="tag id">#4826</span></div>
+              <p class="rc-sent">"Reviewed against the rulebook — this shift looks compliant."</p>
+              <p class="rc-meta">No trace · No tests · No receipt</p>
+            </div>
+            <div class="rulecard">
+              <div class="rc-top"><span class="tag">Run 2 · Wednesday</span><span class="tag id">#4826</span><span class="tag amber">Same Shift</span></div>
+              <p class="rc-sent">"Possible meal-break violation; a premium may be owed."</p>
+              <p class="rc-meta">No trace · No tests · No receipt</p>
+            </div>
+          </div>
         </div>
         <aside class="speaker-notes" data-notes>
           <p>The Stanford RegLab study is the killer citation: purpose-built, retrieval-grounded, professionally-priced legal AI still fabricates. If that's the ceiling for "read the rules and answer," it cannot be the mechanism that computes pay.</p>
@@ -114,6 +134,20 @@
             <li><b>Deterministic, but dead.</b> The rules end up divorced from their sources, unreadable by the operator, and changeable only by the people who installed them.</li>
             <li><b>Nothing ships pre-built in the US.</b> UKG, Workday and Dayforce ship empty engines. Nobody reads the client contract — humans transcribe it into rate cards by hand.</li>
           </ul>
+          <div class="settings-mock" role="img" aria-label="A parody of an enterprise pay-rule configuration screen with hundreds of building blocks.">
+            <label>Overtime Rule 3 — Zone B <span class="sel">Building Block ▾</span></label>
+            <label>Pay Code Distribution 12 <span class="sel">Configured</span></label>
+            <label>Punch Rounding — Quarter <span class="sel">15 Min ▾</span></label>
+            <label>Shift Differential Zone 4 <span class="sel">+$1.25</span></label>
+            <label>Meal Deduct Policy 7 <span class="sel">30 Min ▾</span></label>
+            <label>Holiday Table (2019) <span class="sel">Legacy</span></label>
+            <label>Combination Rule 118 <span class="sel">See Consultant</span></label>
+            <label>Zone Matrix — Nights <span class="sel">Mapped ▾</span></label>
+            <label>Exception Code 44 <span class="sel">Unassigned</span></label>
+            <label>Accrual Profile C-7 <span class="sel">Inherited</span></label>
+            <label>Workweek Anchor — Plant 2 <span class="sel">Sun 00:00 ▾</span></label>
+            <label>Grace Window Policy <span class="sel">7 Min ▾</span></label>
+          </div>
         </div>
         <aside class="speaker-notes" data-notes>
           <p>Key tension to name: dead end №1 is flexible but untrustworthy; dead end №2 is trustworthy but rigid and brutally expensive. The compiler is how you get both halves.</p>
@@ -158,7 +192,9 @@
               <p class="rc-meta">Compiled from <span class="hl">Slack · Sam T. · Mon 9:12am</span> — expires by itself</p>
             </div>
           </div>
-          <div class="footline"><span class="count">Sources: Legal · State · Local · Contract · CBA · Facility · Vertical · Time-based · Common sense · This week</span></div>
+          <div class="chipsrow" aria-label="Rule sources">
+            <span class="chip active">All</span><span class="chip">Legal</span><span class="chip active">State</span><span class="chip">Local</span><span class="chip">Contract</span><span class="chip">CBA</span><span class="chip">Facility</span><span class="chip">Vertical</span><span class="chip">Time-Based</span><span class="chip">Common Sense</span><span class="chip active">This Week</span>
+          </div>
         </div>
         <aside class="speaker-notes" data-notes>
           <p>The point of the format: a statute and a Slack message become the same kind of object — same editor, same lifecycle, same receipt. That's what lets "change the rules in one sentence" coexist with "prove it to an auditor."</p>
@@ -176,6 +212,13 @@
             <li><b>It's the accuracy lever.</b> Every system we studied says the same thing: the quality of the typed vocabulary and its descriptions matters more than the model. AWS calls variable descriptions "the single most important factor."</li>
             <li><b>It's ours.</b> Location intelligence gives us features nobody else has — geofence dwell, badge-versus-clock gaps, impossible-travel speed. The vocabulary is where our data moat lives.</li>
           </ul>
+          <table class="kvmini">
+            <tr><td class="v">worked_min</td><td class="k">Payable worked minutes — merged, resolved, meal-adjusted</td></tr>
+            <tr><td class="v">meal_start_offset_min</td><td class="k">Shift start → meal start, minutes</td></tr>
+            <tr><td class="v">geo_out_gap_min</td><td class="k">Clock-out vs geofence-exit gap, minutes</td></tr>
+            <tr><td class="v">travel_speed_mph</td><td class="k">Implied speed from previous site to this clock-in</td></tr>
+          </table>
+          <p class="ask"><b>Not in the vocabulary:</b> "pay people for a fair number of hours" — the compiler refuses and asks, instead of guessing what "fair" computes to.</p>
         </div>
         <aside class="speaker-notes" data-notes>
           <p>Analogy that lands: the compiler plays Scrabble with a fixed set of tiles. It can arrange them into any rule, but it cannot draw a tile that doesn't exist. That constraint is why the output is trustworthy.</p>
@@ -194,7 +237,13 @@
             <li><b>Generate tests</b> from the rule itself, and <b>backtest</b> it against real history: "this would have flagged 34 of last month's 1,412 shifts."</li>
             <li><b>Activate in shadow.</b> New rules watch for a week without touching money — Draft → Shadow → Live, the same release discipline Stripe and the fraud-ops world use.</li>
           </ul>
-          <p class="body">It can even push back with knowledge: asked to "round everything to the nearest quarter hour," it split the rule by state and attached <i>Camp v. Home Depot</i> to the California sites, where exact-minute pay is required.</p>
+          <div class="bubble" style="margin-top:1.5rem"><span class="who">Ops email</span>"No shift longer than 12 hours at Bayview, and anything over 10 needs the lead's okay."</div>
+          <p class="ask"><b>The compiler asks —</b> does the 12-hour cap include the unpaid meal break, or worked hours only? The answer becomes a parameter.</p>
+          <div class="irblock"><span class="k">rule</span>   FAC-BAYVIEW-04   <span class="k">kind</span> <b>deterministic</b>
+<span class="k">check</span>  <b>hold if</b> shift_h &gt; 12.0
+<span class="k">rule</span>   FAC-BAYVIEW-05   <span class="k">kind</span> <b>deterministic</b>
+<span class="k">check</span>  <b>flag if</b> shift_h &gt; 10.0 ∧ ¬lead_approval_on_file</div>
+          <div class="tagrow"><span class="tag">6 Tests · Green</span><span class="tag">Backtest · 2 Of 96 Shifts</span><span class="tag blue">Activates In Shadow</span></div>
         </div>
         <aside class="speaker-notes" data-notes>
           <p>The Camp v. Home Depot compile is the demo moment — the customer asked for something partially unlawful, and the system knew, with the citation. That's the pre-ingested rulebook earning its keep on day one.</p>
@@ -234,7 +283,9 @@
             <span class="carrow">→</span>
             <span class="cnode">Document<small>Statute · contract · Slack</small></span>
           </div>
-          <p class="lede" style="margin-top:2rem">Click any rule anywhere in the product and the source opens beside it — the verbatim clause, highlighted, with its effective dates. The pitch isn't "trust the pack." It's <b>"verify by glancing."</b> Every incumbent disclaims liability for their compliance content; per-shift receipts are how we attack that.</p>
+          <p class="srcq">"No employer shall employ any person for a work period of <span class="hl">more than five (5) hours without a meal period of not less than 30 minutes</span>, except that when a work period of <span class="hl">not more than six (6) hours</span> will complete the day's work the meal period may be waived by mutual consent…"</p>
+          <div class="tagrow"><span class="btn">Open source document ↗</span><span class="count">IWC Wage Order 5-2001 §11(A) · Effective 2001 → current · Span verified as exact substring</span></div>
+          <p class="body">Click any rule anywhere in the product and this opens beside it. The pitch isn't "trust the pack" — it's <b>"verify by glancing."</b> Every incumbent disclaims liability for its compliance content; per-shift receipts are how we attack that.</p>
         </div>
         <aside class="speaker-notes" data-notes>
           <p>This chain is ShopStream's citation architecture pointed at payroll: the verbatim span is the citable atom, and the highlight is mechanically verified as an exact substring of the stored source — not a paraphrase.</p>
@@ -246,7 +297,13 @@
         <div class="frame">
           <span class="eyebrow lbl">The malleability story</span>
           <h2>Change the 5 to a 3. The program follows.</h2>
-          <p class="lede">Because every rule is typed, its numbers are parameters — and parameters render as controls automatically. A threshold is a stepper, a choice is a dropdown, a toggle is a switch. Editing one re-runs the whole week instantly and shows the backtest before anything goes live.</p>
+          <p class="lede">Because every rule is typed, its numbers are parameters — and parameters render as controls automatically. Editing one re-runs the whole week instantly and shows the backtest before anything goes live.</p>
+          <div class="paramrow" role="img" aria-label="Rule parameter controls: weekly threshold stepper at 40 hours, consecutive-days cap stepper edited to 3, action dropdown set to hold for review.">
+            <div class="param"><span class="lbl">Weekly threshold</span><span class="step"><span>−</span><span class="val">40</span><span>+</span><span class="unit">h</span></span></div>
+            <div class="param"><span class="lbl">Consecutive days cap</span><span class="step"><span>−</span><span class="val">3</span><span>+</span><span class="unit">Days</span></span></div>
+            <div class="param"><span class="lbl">Action on breach</span><span class="step"><span class="val" style="border-left:0">Hold for review</span><span>▾</span></span></div>
+          </div>
+          <div class="tagrow"><span class="tag blue">Draft</span><span class="count">Would have held 3 of 214 Mercy shifts last week · Engine re-ran all 54 shifts</span></div>
           <ul class="steps">
             <li><b>No re-prompting.</b> Moving a stepper edits data the engine reads. Nothing is regenerated; nothing can drift.</li>
             <li><b>Consequences first.</b> "This change would have flagged 3 of 214 Mercy shifts last week" — you see it before you commit.</li>
@@ -286,11 +343,13 @@
           <span class="eyebrow lbl">Where this goes</span>
           <h2>Point the same compiler at the public rulebook.</h2>
           <p class="lede">US wage-and-hour law is a surprisingly finite corpus — roughly 5,000–10,000 documents, ~85–90% public domain, with federal regulations available as one versioned XML file. Compile it once, maintain it centrally, and every customer starts with a rulebook that <b>provably knows every jurisdiction on day one</b> — then their contracts and facility policies compile in as an overlay.</p>
-          <ul class="steps">
-            <li><b>The proof it works:</b> Australia. Tanda and KeyPay ship 30–100+ pre-built award-interpretation packs, vendor-maintained, activated at a click. They won that market. The US equivalent does not exist yet.</li>
-            <li><b>The moat is maintenance.</b> ~49 localities changed minimum wage on one January 1st. The freshness pipeline is the subscription — and precisely what a customer's in-house LLM experiment will never do.</li>
-            <li><b>The demo:</b> "Give me this week's payroll and watch it spot every discrepancy — and every flag points to its clause, as of the shift's date."</li>
-          </ul>
+          <div class="stack">
+            <div class="layerrow base"><span class="ln">BASE PACK</span><span class="ld">Federal + 50 states + locals — compiled and maintained by us, effective-dated. Ships with the product; zero customer work.</span></div>
+            <div class="layerrow"><span class="ln">VERTICAL PACK</span><span class="ld">Healthcare, events, warehouse quirks — learned once, shared across customers.</span></div>
+            <div class="layerrow"><span class="ln">CUSTOMER OVERLAY</span><span class="ld">Their MSAs, facility policies and CBAs — compiled at onboarding from their documents.</span></div>
+            <div class="layerrow"><span class="ln">THIS WEEK</span><span class="ld">One-sentence rules from chat that expire on their own.</span></div>
+          </div>
+          <p class="body"><b>The proof it works is Australia:</b> Tanda and KeyPay won that market with 30–100+ pre-built, vendor-maintained award packs. The US equivalent doesn't exist. <b>The moat is maintenance</b> — ~49 localities changed minimum wage on one January 1st; the freshness pipeline is the subscription, and precisely what an in-house LLM experiment will never do.</p>
         </div>
         <aside class="speaker-notes" data-notes>
           <p>Answer the "won't they just run ChatGPT" objection here: what backs the demo sentence is a curated, effective-dated corpus, tested rule packs, and per-shift receipts. None of that comes out of a chat window — same reason Neuron7 isn't "ChatGPT with manuals."</p>
@@ -302,7 +361,14 @@
         <div class="frame">
           <span class="eyebrow lbl">Where it stands</span>
           <h2>It already runs. Go click it.</h2>
-          <p class="lede">The workbench at <b>closeoutcopilot.com/bench</b> is a working prototype: 22 compiled rules running as a real deterministic engine over a synthetic week of 54 shifts — live decision traces, editable parameters with instant backtests, a 36-rule research catalog behind them, and every rule opening to its source. The engine is real and runs in your browser; the three compile examples are recorded from the ingest flow.</p>
+          <p class="lede">The workbench at <b>closeoutcopilot.com/bench</b> is a working prototype: 22 compiled rules running as a real deterministic engine over a synthetic week — live decision traces, editable parameters with instant backtests, a 36-rule research catalog behind them, and every rule opening to its source. The engine runs in your browser; the three compile examples are recorded from the ingest flow.</p>
+          <div class="statstrip">
+            <div class="stat"><span class="lbl">Shifts</span><div class="sv">54</div></div>
+            <div class="stat"><span class="lbl">Flagged</span><div class="sv">17</div></div>
+            <div class="stat"><span class="lbl">Held</span><div class="sv">5</div></div>
+            <div class="stat"><span class="lbl">Underpay corrected</span><div class="sv">+$368.18</div></div>
+            <div class="stat"><span class="lbl">Overpay corrected</span><div class="sv">−$224.83</div></div>
+          </div>
           <ul class="steps">
             <li><b>Next 1 —</b> lock the rule format and vocabulary, then compile the full 56-rule research corpus into the engine.</li>
             <li><b>Next 2 —</b> seed the public rulebook narrow and deep: California first, on the ShopStream citation chassis.</li>
