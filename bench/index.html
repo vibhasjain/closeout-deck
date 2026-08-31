@@ -64,24 +64,20 @@ button { font-family: var(--sans); line-height: inherit; border: none; backgroun
 .icon-btn:hover { background: hsl(var(--muted)); }
 .icon-btn svg { width: 1rem; height: 1rem; flex-shrink: 0; }
 
-.tag { display: inline-flex; align-items: center; gap: .3rem; border-radius: 9999px;
-  border: 1px solid transparent; background: hsl(var(--muted)); color: hsl(var(--muted-foreground));
-  height: 1.125rem; padding: 0 .375rem; font-size: 9px; font-weight: 600; letter-spacing: .025em;
-  white-space: nowrap; flex-shrink: 0; }
+/* THE one tag — CitedText's chip from the original product. Grayscale; a tiny
+   dot is the only place color may appear; clickable chips invert on hover. */
+.tag { display: inline-flex; align-items: center; gap: .3rem; border-radius: .25rem;
+  border: 1px solid hsl(var(--border)); background: hsl(var(--muted) / .7);
+  color: hsl(var(--muted-foreground)); padding: 1px 5px;
+  font-family: var(--mono); font-size: 10px; font-weight: 500; line-height: 1rem;
+  white-space: nowrap; flex-shrink: 0; vertical-align: baseline; }
 .tag .dot { width: .375rem; height: .375rem; border-radius: 9999px; flex-shrink: 0; }
-.dot { width: .5rem; height: .5rem; border-radius: 9999px; flex-shrink: 0; display: inline-block; }
-.dot.solid { background: hsl(var(--solid)); }
+.tag.click { cursor: pointer; transition: background-color .12s, color .12s, border-color .12s; }
+.tag.click:hover { background: hsl(var(--foreground)); color: hsl(var(--background)); border-color: hsl(var(--foreground) / .4); }
+.tag.click svg { width: .625rem; height: .625rem; flex-shrink: 0; }
 .dot.verify { background: hsl(var(--verify)); }
-.dot.nosource { background: hsl(var(--nosource)); }
 .dot.pending { background: hsl(var(--pending)); }
-.dot.pack { background: transparent; border: 1.5px solid hsl(var(--muted-foreground) / .5); }
-.conf { display: inline-flex; align-items: center; gap: .4rem; }
-.conf .lbl { font-size: 11px; font-weight: 600; letter-spacing: .025em; }
-.conf.solid .lbl { color: hsl(var(--solid)); }
-.conf.verify .lbl { color: hsl(var(--verify)); }
-.conf.pending .lbl { color: hsl(var(--pending)); }
-.conf.nosource .lbl { color: hsl(var(--nosource)); }
-.conf.plain .lbl { color: hsl(var(--muted-foreground)); }
+.stat-txt { font-family: var(--mono); font-size: 10.5px; color: hsl(var(--muted-foreground)); white-space: nowrap; }
 
 .q-input { display: flex; height: 2.25rem; min-width: 0; flex: 1;
   border-radius: calc(var(--radius) - 2px); border: 1px solid hsl(var(--input));
@@ -161,7 +157,7 @@ button { font-family: var(--sans); line-height: inherit; border: none; backgroun
 .kv td { border-bottom: 1px solid hsl(var(--border)); padding: .35rem .5rem .35rem 0; vertical-align: top; }
 .kv td.k { font-family: var(--sans); font-size: 11px; color: hsl(var(--muted-foreground)); white-space: nowrap; width: 42%; }
 .kv tr:last-child td { border-bottom: 0; }
-.kv tr.hl-row td { background: hsl(var(--internal) / .06); }
+.kv tr.hl-row td { color: hsl(var(--foreground)); }
 
 /* Decision trace — the report. */
 .trace { list-style: none; margin: 0; padding: 0; max-width: 46rem; }
@@ -171,28 +167,11 @@ button { font-family: var(--sans); line-height: inherit; border: none; backgroun
 .t-note { color: hsl(var(--muted-foreground)); }
 .t-note b { color: hsl(var(--foreground)); font-weight: 600; }
 .t-stat { flex-shrink: 0; }
-.evchips { display: inline-flex; flex-wrap: wrap; gap: .3rem; margin-left: .3rem; vertical-align: baseline; }
-.evchip { font-family: var(--mono); font-size: 10px; border: 1px solid hsl(var(--border)); border-radius: .3rem;
-  padding: .05rem .35rem; color: hsl(var(--muted-foreground)); background: hsl(var(--muted) / .4); }
-
-/* Citations — the clickable rule reference, straight from the product. */
-.cite { --cite-ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 17 17 7'/%3E%3Cpath d='M7 7h10v10'/%3E%3C/svg%3E");
-  cursor: pointer; color: inherit; border-radius: .28rem; padding: .05em .18em .05em .3em; margin: 0 -0.04em;
-  box-decoration-break: clone; -webkit-box-decoration-break: clone; transition: background-color .12s;
-  font-family: var(--mono); font-size: 11.5px; font-weight: 600; background: hsl(var(--pending) / .12); }
-.cite:hover { background: hsl(var(--pending) / .22); }
-.cite::after { content: ""; display: inline-block; width: .56em; height: .56em; margin: 0 .04em 0 .18em;
-  vertical-align: .34em; background-color: currentColor; opacity: .42;
-  -webkit-mask: var(--cite-ico) center / contain no-repeat; mask: var(--cite-ico) center / contain no-repeat;
-  transition: opacity .12s; }
-.cite:hover::after { opacity: .7; }
-
 .payline { margin-top: 1rem; padding-top: .625rem; border-top: 1px solid hsl(var(--border));
   font-family: var(--mono); font-size: 11.5px; color: hsl(var(--muted-foreground));
   display: flex; gap: 1rem; flex-wrap: wrap; max-width: 46rem; }
 .payline b { color: hsl(var(--foreground)); font-weight: 600; }
-.payline .up { color: hsl(var(--solid)); }
-.payline .dn { color: hsl(var(--verify)); }
+.payline .up, .payline .dn { color: hsl(var(--foreground)); }
 .na-toggle { font-family: var(--mono); font-size: 11px; color: hsl(var(--muted-foreground)); text-decoration: underline; text-underline-offset: 2px; margin-top: .5rem; display: inline-block; }
 
 /* Internal whisper — dashed orange, mono. The engine↔operator back-channel. */
@@ -228,11 +207,11 @@ button { font-family: var(--sans); line-height: inherit; border: none; backgroun
 /* Source pane / drawer source block — the typology-library idiom. */
 .src-entry { padding: .625rem 0; }
 .src-entry h6 { margin: 0 0 .25rem; font-size: 12px; font-weight: 600; }
-.src-quote { margin: .375rem -1.25rem; padding: .625rem 1.25rem; background: hsl(var(--internal) / .06);
-  font-family: var(--mono); font-size: 11.5px; line-height: 1.625; color: hsl(var(--foreground)); }
+.src-quote { margin: .375rem -1.25rem; padding: .625rem 1.25rem; background: hsl(var(--muted) / .5);
+  font-family: var(--mono); font-size: 11.5px; line-height: 1.625; color: hsl(var(--muted-foreground)); }
 .drawer .src-quote { margin: .375rem -1.25rem; }
-.hl-cite { border-radius: .25rem; background: hsl(var(--internal) / .24); padding: 0 .15rem;
-  box-shadow: 0 0 0 1px hsl(var(--internal) / .5); color: hsl(var(--foreground)); }
+.hl-cite { border-radius: .25rem; background: hsl(var(--foreground) / .08); padding: 0 .15rem;
+  box-shadow: 0 0 0 1px hsl(var(--foreground) / .15); color: hsl(var(--foreground)); }
 .src-link { display: inline-block; margin-top: .5rem; font-size: 12px; color: hsl(var(--pending)); text-decoration: none; }
 .src-link:hover { text-decoration: underline; }
 .src-note { font-size: 11px; font-weight: 500; letter-spacing: .025em; color: hsl(var(--muted-foreground)); margin: 0 0 .25rem; }
@@ -281,7 +260,7 @@ button { font-family: var(--sans); line-height: inherit; border: none; backgroun
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
       Back
     </button>
-    <div class="brand">HyperTrack <span class="dim">· Rulebook Workbench</span></div>
+    <a class="brand" href="/" aria-label="HyperTrack"><img src="/logo-small.svg" alt="HyperTrack" style="height:22px;width:auto;display:block"></a>
     <div class="nav-tabs" id="navTabs">
       <button data-tab="shifts" class="active">Shifts</button>
       <button data-tab="rules">Rulebook</button>
@@ -1575,12 +1554,14 @@ const PROV = {
   'VER-EV-02': { doc:'Vertical pack · events', summary:'Post-event egress up to ~45 minutes is expected; beyond that the evidence is read, and a human decides.', dates:'pack v1' },
 };
 
-const CONF = { pass:['solid','Pass'], applied:['solid','Applied'], flag:['verify','Flag'], held:['pending','Held'], na:['plain','n/a'], error:['nosource','Error'] };
-const conf = (st,lbl) => { const c = CONF[st]||CONF.na; return `<span class="conf ${c[0]}"><span class="dot ${c[0]}"></span><span class="lbl">${lbl||c[1]}</span></span>`; };
-const kindTag = k => k==='det' ? `<span class="conf solid"><span class="dot solid"></span><span class="lbl">Deterministic</span></span>`
-  : k==='llm' ? `<span class="conf verify"><span class="dot verify"></span><span class="lbl">LLM leaf</span></span>`
-  : `<span class="conf verify"><span class="dot solid"></span><span class="dot verify"></span><span class="lbl">Det + LLM</span></span>`;
-const cite = id => `<button class="cite" data-cite="${id}">${id}</button>`;
+// One tag design. Color exists only as a 6px dot on the three states that need
+// a human's eye: flag (amber), review (amber), held (blue). Everything else is text.
+const FILE_ICO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>`;
+const tag = (label, dot) => `<span class="tag">${dot?`<span class="dot ${dot}"></span>`:''}${label}</span>`;
+const statTag = st => st==='flag' ? tag('flag','verify') : st==='held' ? tag('held','pending')
+  : st==='review' ? tag('review','verify') : `<span class="stat-txt">${st}</span>`;
+const kindTag = k => tag(k==='det'?'deterministic':k==='llm'?'llm leaf':'det + llm');
+const cite = id => `<button class="tag click" data-cite="${id}">${FILE_ICO}${id}</button>`;
 
 function rerun(){ run = runEngine(week, overrides); renderAll(); }
 function byId(id){ return run.shifts.find(r=>r.shift.id===id); }
@@ -1590,8 +1571,8 @@ function isEdited(r){ return Object.keys(r.params).some(k=>overrides[r.id+'.'+k]
 // ---------------- topbar ----------------
 function renderTop(){
   const t = run.totals;
-  document.getElementById('topstats').innerHTML =
-    `<b>${run.shifts.length}</b> shifts · <b>${t.flags}</b> flagged · <b>${t.held}</b> held · under <b>+${money(t.under)}</b> · over <b>−${money(t.over)}</b>${editedCount()?` · <b>${editedCount()}</b> param${editedCount()>1?'s':''} edited`:''}`;
+  document.getElementById('topstats').textContent =
+    `${t.flags} flagged · ${t.held} held · +${money(t.under)} / −${money(t.over)}${editedCount()?` · ${editedCount()} edited`:''}`;
 }
 
 // ---------------- shifts tab ----------------
@@ -1606,9 +1587,9 @@ function shiftRows(){
   return rows;
 }
 function shiftStatus(r){
-  if (r.held) return conf('held');
-  if (r.flagged) return conf('flag','Flagged');
-  return conf('pass','Clean');
+  if (r.held) return tag('held','pending');
+  if (r.flagged) return tag('flagged','verify');
+  return '';
 }
 function renderShiftQueue(){
   document.getElementById('shiftChips').innerHTML = SFILTERS.map(([k,l])=>`<button class="chip${shiftFilter===k?' active':''}" data-sfilter="${k}">${l}</button>`).join('');
@@ -1616,15 +1597,14 @@ function renderShiftQueue(){
     <button class="case${s.id===selShift?' active':''}" data-shift="${s.id}">
       <div class="row1"><span class="name fade-trunc">${esc(s.worker)}</span>${shiftStatus(r)}</div>
       <div class="meta fade-trunc">${esc(s.fac.name)} · ${DAYS[s.day]} · ${s.sched?fmtT(s.sched[0])+'–'+fmtT(s.sched[1]):'unscheduled'}</div>
-      <div class="row3"><span class="count">#${s.id}</span><span class="count">${esc(s.role)}</span><span class="count" style="margin-left:auto">${r.held?'held':money(r.pay)}</span></div>
+      <div class="row3"><span class="count">#${s.id} · ${esc(s.role)}</span><span class="count" style="margin-left:auto">${r.held?'held':money(r.pay)}</span></div>
     </button>`;}).join('') || `<div style="padding:1.5rem;color:hsl(var(--muted-foreground))">No shifts match.</div>`;
 }
 function traceLi(x){
-  const isLLM = x.kind==='llm', isHuman = x.kind==='human';
-  const stat = isHuman ? `<span class="conf plain"><span class="lbl">Human</span></span>`
-    : isLLM ? conf('flag','Review')
-    : conf(x.status);
-  return `<li><div class="t-body">${cite(x.ruleId)} <span class="t-note">${esc(x.note)}</span>${x.chips?`<span class="evchips">${x.chips.map(c=>`<span class="evchip">${esc(c)}</span>`).join('')}</span>`:''}</div><span class="t-stat">${stat}</span></li>`;
+  const stat = x.kind==='human' ? `<span class="stat-txt">human</span>`
+    : x.kind==='llm' ? statTag('review')
+    : statTag(x.status);
+  return `<li><div class="t-body">${cite(x.ruleId)} <span class="t-note">${esc(x.note)}</span></div><span class="t-stat">${stat}</span></li>`;
 }
 function renderShiftDetail(){
   const r = byId(selShift); if(!r){ document.getElementById('shiftDetail').innerHTML=''; return; }
@@ -1642,12 +1622,11 @@ function renderShiftDetail(){
       <ul class="trace">${main.map(traceLi).join('')}</ul>
       ${na.length?`<button class="na-toggle" data-natoggle="1">show ${na.length} not-applicable checks</button><ul class="trace" id="naRows" hidden>${na.map(traceLi).join('')}</ul>`:''}
       <div class="payline">
-        <span>engine payout ${r.held?conf('held'):`<b>${money(r.pay)}</b>`}</span>
+        <span>engine payout ${r.held?tag('held','pending'):`<b>${money(r.pay)}</b>`}</span>
         <span>spreadsheet would pay <b>${money(r.naive)}</b></span>
         ${r.deltaUnder>0.005&&!r.held?`<span class="up">underpay corrected +${money(r.deltaUnder)}</span>`:''}
         ${r.deltaOver>0.005&&!r.held?`<span class="dn">overpay corrected −${money(r.deltaOver)}</span>`:''}
       </div>
-      <div class="whisper">every check above ran deterministically in this page except the amber Review rows — those are where judgment enters, always labeled, always routed to a human. click any rule id to audit it.</div>
     </div>`;
 }
 function renderShiftAux(){
@@ -1655,7 +1634,7 @@ function renderShiftAux(){
   const s = r.shift, prs = s.punches;
   const pairs = prs.map(p=>`${fmtT(p.in)} – ${p.out==null?'<span class="hl-cite">missing</span>':fmtT(p.out)}`).join('<br>');
   document.getElementById('shiftAux').innerHTML = `
-    <div class="aux-head">EVIDENCE — three sources, one shift</div>
+    <div class="aux-head">Evidence</div>
     <div class="aux-body scroll">
       <h5>Timesheet · ${esc(SYSTEMS[s.fac.name]||'clock export')}</h5>
       <table class="kv">
@@ -1677,7 +1656,7 @@ function renderShiftAux(){
         <tr><td class="k">spreadsheet</td><td>${money(r.naive)}</td></tr>
         ${!r.held&&(r.deltaUnder>0.005||r.deltaOver>0.005)?`<tr class="hl-row"><td class="k">${r.deltaUnder>0.005?'underpay corrected':'overpay corrected'}</td><td>${r.deltaUnder>0.005?'+'+money(r.deltaUnder):'−'+money(r.deltaOver)}</td></tr>`:''}
       </table>
-      ${s.resolution?`<h5>Human word</h5><table class="kv"><tr><td class="k">${esc(s.resolution.by)}</td><td>“${esc(s.resolution.quote)}”</td></tr></table>`:''}
+      ${s.resolution?`<h5>Human</h5><table class="kv"><tr><td class="k">${esc(s.resolution.by)}</td><td>“${esc(s.resolution.quote)}”</td></tr></table>`:''}
     </div>`;
 }
 
@@ -1705,12 +1684,12 @@ function renderRuleQueue(){
         html += `<button class="case${selRule===r.id?' active':''}" data-rule="${r.id}">
           <div class="row1"><span class="name mono" style="font-size:11.5px;font-weight:600">${r.id}</span>${kindTag(r.kind)}</div>
           <div class="meta clamp-2">${esc(r.sentence)}</div>
-          <div class="row3"><span class="count">fires ${bt.fires}/${bt.of}</span>${isEdited(r)?`<span class="tag"><span class="dot pending"></span>edited · draft</span>`:''}${r.expires?`<span class="tag">expires ${r.expires}</span>`:''}<span class="count" style="margin-left:auto">live</span></div>
+          <div class="row3"><span class="count">fires ${bt.fires}/${bt.of}</span>${isEdited(r)?tag('draft','pending'):''}${r.expires?tag('expires '+r.expires):''}<span class="count" style="margin-left:auto">live</span></div>
         </button>`;
       } else {
         const c = x.c;
         html += `<button class="case${selRule===c.id?' active':''}" data-rule="${c.id}">
-          <div class="row1"><span class="name fade-trunc">${esc(c.name)}</span><span class="conf plain"><span class="dot pack"></span><span class="lbl">Pack</span></span></div>
+          <div class="row1"><span class="name fade-trunc">${esc(c.name)}</span>${tag('pack')}</div>
           <div class="meta clamp-2">${esc(c.statement)}</div>
           <div class="row3"><span class="count">${c.id}</span><span class="count">${esc(c.juris)}</span></div>
         </button>`;
@@ -1743,13 +1722,13 @@ function renderRuleDetail(){
     document.getElementById('ruleDetail').innerHTML = `
       <div class="info-bar">
         <div class="ib-text"><h2 class="mono" style="font-size:13px">${r.id}</h2><p class="ib-sub">${r.bucket} · compiled v${isEdited(r)?'draft':'3'} · fires on ${bt.fires} of ${bt.of} shifts</p></div>
-        <div class="ib-right">${kindTag(r.kind)}${r.expires?`<span class="tag">expires ${r.expires}</span>`:''}</div>
+        <div class="ib-right">${kindTag(r.kind)}${r.expires?tag('expires '+r.expires):''}</div>
       </div>
       <div class="detail-body scroll">
         <p class="r-sent">“${esc(r.sentence)}”</p>
         <p class="r-from">compiled from ${esc(r.source.doc)} — ${esc(r.source.cite)}</p>
         ${paramControls(r)}
-        ${isEdited(r)?`<div class="whisper"><span class="wq">edited · draft.</span> parameters changed from the approved version — the engine re-ran all 54 shifts instantly here. in the product this state goes backtest → shadow → live with a second operator's sign-off. <button class="wopt" data-resetrule="${r.id}">revert this rule</button></div>`:''}
+        ${isEdited(r)?`<p class="r-note">Draft — parameters differ from the approved version; the engine re-ran all 54 shifts. In the product this goes backtest → shadow → live with a second operator's sign-off. <button class="reset-link" data-resetrule="${r.id}">Revert this rule</button></p>`:''}
         <p class="r-note">${r.kind==='llm'?'Detection of the candidate is deterministic; the verdict needs judgment over unstructured evidence — an LLM narrates, a human decides.':r.kind==='both'?'Detection is deterministic; resolution reads evidence with an LLM and routes to a human.':'Fully deterministic — same shift in, same verdict out, every time.'}</p>
         <h5 style="margin:1.25rem 0 .25rem;font-size:11px;font-weight:600;letter-spacing:.025em;text-transform:uppercase;color:hsl(var(--muted-foreground))">Fires on</h5>
         ${firedList(r.id)}
@@ -1760,7 +1739,7 @@ function renderRuleDetail(){
     document.getElementById('ruleDetail').innerHTML = `
       <div class="info-bar">
         <div class="ib-text"><h2 class="fade-trunc">${esc(c.name)}</h2><p class="ib-sub">${c.id} · ${c.bucket} · ${esc(c.juris)}</p></div>
-        <div class="ib-right"><span class="conf plain"><span class="dot pack"></span><span class="lbl">Pack · cataloged</span></span></div>
+        <div class="ib-right">${tag('pack · cataloged')}</div>
       </div>
       <div class="detail-body scroll">
         <p class="r-sent">${esc(c.statement)}</p>
@@ -1768,7 +1747,7 @@ function renderRuleDetail(){
           <tr><td class="k">deterministic</td><td>${esc(c.det)}</td></tr>
           <tr><td class="k">parameters</td><td>${esc(c.params)}</td></tr>
         </table>
-        <div class="whisper">cataloged from the research corpus — sourced, parameterized, not yet compiled into the engine IR. the compile step turns the parameters column into the steppers you see on live rules.</div>
+        <p class="r-note">Cataloged from the research corpus — sourced and parameterized, not yet compiled into the engine IR. The compile step turns the parameters row into the steppers live rules have.</p>
       </div>`;
   }
 }
@@ -1797,7 +1776,7 @@ function renderRuleAux(){
         ${c.src.map(u=>`<a class="src-link" style="display:block;margin-top:.375rem;word-break:break-all" href="${u}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\/(www\.)?/,'').slice(0,60))}${u.length>68?'…':''} ↗</a>`).join('')}
       </div>`;
   }
-  document.getElementById('ruleAux').innerHTML = `<div class="aux-head">SOURCE — the receipt</div><div class="aux-body scroll">${inner}</div>`;
+  document.getElementById('ruleAux').innerHTML = `<div class="aux-head">Source</div><div class="aux-body scroll">${inner}</div>`;
 }
 
 // ---------------- compile tab ----------------
@@ -1822,7 +1801,7 @@ function renderCompileQueue(){
     <button class="case${selCompile===i?' active':''}" data-compile="${i}">
       <div class="row1"><span class="name fade-trunc">“${esc(c.q)}”</span></div>
       <div class="meta">${esc(c.who)} · ${esc(c.when)}</div>
-      <div class="row3">${c.amb?'<span class="tag"><span class="dot verify"></span>asked a question</span>':''}<span class="tag"><span class="dot solid"></span>${c.rules.length||2} rule${(c.rules.length||2)>1?'s':''}</span></div>
+      <div class="row3">${c.amb?tag('asked a question','verify'):''}${tag((c.rules.length||2)+' rule'+((c.rules.length||2)>1?'s':''))}</div>
     </button>`).join('');
 }
 function renderCompileDetail(){
@@ -1841,7 +1820,7 @@ function renderCompileDetail(){
 function renderCompileAux(){
   const c = COMPILES[selCompile];
   document.getElementById('compileAux').innerHTML = `
-    <div class="aux-head">RESULT — what landed in the rulebook</div>
+    <div class="aux-head">Result</div>
     <div class="aux-body scroll">
       ${c.rules.length?`<h5>Rules created</h5><ul class="fired">${c.rules.map(id=>`<li><button data-gorule="${id}"><span class="fid">${id}</span><span class="fnote">open in Rulebook</span></button></li>`).join('')}</ul>`:'<h5>Rules created</h5><p class="r-note">Blocked on the operator’s answer — nothing activates while a question is open.</p>'}
       ${c.shifts.length?`<h5>Touches this week</h5><ul class="fired">${c.shifts.map(id=>{const r=byId(id);return r?`<li><button data-goshift="${id}"><span class="fid">#${id}</span><span class="fnote fade-trunc">${esc(r.shift.worker)} · ${esc(r.shift.fac.name)}</span></button></li>`:'';}).join('')}</ul>`:''}
@@ -1881,7 +1860,7 @@ function renderVocabDetail(){
     </div>
     <div class="detail-body scroll">
       <p class="r-sent">${esc(desc)}</p>
-      <div class="whisper">the compiler may only reference features on this list — a sentence that can't ground into the vocabulary is refused, not guessed at. this is the hallucination firewall, and these descriptions are the compiler's biggest accuracy lever.</div>
+      <p class="r-note">The compiler may only reference features on this list — a sentence that can't ground into the vocabulary is refused, not guessed at.</p>
     </div>`;
 }
 function renderVocabAux(){
@@ -1892,7 +1871,7 @@ function renderVocabAux(){
     return `<tr><td class="k">#${sid} · ${esc(r.shift.worker.split(' ')[0])}</td><td>${esc(fmtVal(v))}</td></tr>`;
   }).join('');
   document.getElementById('vocabAux').innerHTML = `
-    <div class="aux-head">LIVE VALUES — computed now, from this week</div>
+    <div class="aux-head">Live values</div>
     <div class="aux-body scroll"><table class="kv">${samples}</table>
     <p class="r-note" style="margin-top:.75rem">Evaluated by the engine in your browser against the synthetic week — the same functions the rules read.</p></div>`;
 }
@@ -1920,7 +1899,7 @@ function renderDrawer(){
         <p class="r-sent" style="font-size:13.5px">“${esc(r.sentence)}”</p>
         <p style="margin:.375rem 0 .75rem">${kindTag(r.kind)}</p>
         ${paramControls(r)}
-        ${isEdited(r)?`<div class="whisper" style="margin:.5rem 0"><span class="wq">edited · draft.</span> live everywhere on this page; in the product: backtest → shadow → live.</div>`:''}
+        ${isEdited(r)?`<p class="r-note" style="margin:.5rem 0">Draft — edited parameters, live everywhere on this page. In the product: backtest → shadow → live.</p>`:''}
         <div class="src-entry" style="margin-top:.5rem">
           <h6>${esc(p.doc||r.source.doc)}</h6>
           ${p.verbatim?`<p class="src-note">verbatim · as ingested</p><div class="src-quote">${p.verbatim}</div>`:`<p class="src-note">obligation summary · as compiled</p><div class="src-quote">${esc(p.summary||r.source.cite)}</div>`}
