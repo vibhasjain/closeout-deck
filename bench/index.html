@@ -1753,7 +1753,9 @@ function renderRuleAux(){
       <div class="src-entry">
         <h6>Research corpus sources</h6>
         <p class="src-note">to be ingested verbatim in the giga-brain pass</p>
-        ${c.src.map(u=>`<a class="src-link" style="margin-top:.5rem" href="${u}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\/(www\.)?/,'').split('/')[0])} ↗</a>`).join('')}
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1rem">
+          ${c.src.map(u=>`<a class="src-link" href="${u}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\/(www\.)?/,'').split('/')[0])} ↗</a>`).join('')}
+        </div>
       </div>`;
   }
   document.getElementById('ruleAux').innerHTML = `<div class="aux-head">Source</div><div class="aux-body scroll">${inner}</div>`;
@@ -1885,9 +1887,11 @@ function renderDrawer(){
           <h6>${esc(p.doc||r.source.doc)}</h6>
           ${p.verbatim?`<p class="src-note">verbatim · as ingested</p><div class="src-quote">${p.verbatim}</div>`:`<p class="src-note">obligation summary · as compiled</p><div class="src-quote">${esc(p.summary||r.source.cite)}</div>`}
           ${p.dates?`<p class="drawer-sub" style="margin-top:.5rem">Effective: ${esc(p.dates)}</p>`:''}
-          ${p.url?`<a class="src-link" style="margin-top:.625rem" href="${p.url}" target="_blank" rel="noopener">Open source document ↗</a>`:''}
         </div>
-        <p style="margin-top:1rem"><button class="btn" data-gorule="${r.id}">Open in Rulebook →</button></p>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1rem">
+          ${p.url?`<a class="src-link" href="${p.url}" target="_blank" rel="noopener">Open source document ↗</a>`:''}
+          <button class="btn" data-gorule="${r.id}">Open in Rulebook →</button>
+        </div>
       </div>`;
   } else {
     const c = o.c;
@@ -1896,7 +1900,7 @@ function renderDrawer(){
       <div class="drawer-body scroll">
         <p class="r-sent" style="font-size:13.5px">${esc(c.statement)}</p>
         <table class="kv" style="margin-top:.75rem"><tr><td class="k">Deterministic</td><td>${esc(c.det)}</td></tr><tr><td class="k">Parameters</td><td>${esc(c.params)}</td></tr></table>
-        <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.75rem">${c.src.map(u=>`<a class="src-link" href="${u}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\/(www\.)?/,'').split('/')[0])} ↗</a>`).join('')}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.75rem">${c.src.map(u=>`<a class="src-link" href="${u}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\/(www\.)?/,'').split('/')[0])} ↗</a>`).join('')}<button class="btn" data-gorule="${c.id}">Open in Rulebook →</button></div>
       </div>`;
   }
 }
@@ -1965,8 +1969,10 @@ document.addEventListener('click', e=>{
   if (d.feature!=null){ selFeature=+d.feature; setMobileDetail(true); renderVocabQueue(); renderVocabDetail(); renderVocabAux(); return; }
   if (d.cite){ openDrawer(d.cite); return; }
   if (d.closedrawer){ closeDrawer(); return; }
-  if (d.goshift){ closeDrawer(); setTab('shifts'); selShift=d.goshift; shiftFilter='all'; setMobileDetail(true); renderShiftQueue(); renderShiftDetail(); renderShiftAux(); return; }
-  if (d.gorule){ closeDrawer(); setTab('rules'); selRule=d.gorule; bucketFilter='All'; setMobileDetail(true); renderRuleQueue(); renderRuleDetail(); renderRuleAux(); return; }
+  if (d.goshift){ closeDrawer(); setTab('shifts'); selShift=d.goshift; shiftFilter='all'; setMobileDetail(true); renderToolbar('shifts'); renderShiftQueue(); renderShiftDetail(); renderShiftAux();
+    const row=document.querySelector('#shiftList .case.active'); if(row) row.scrollIntoView({block:'center'}); return; }
+  if (d.gorule){ closeDrawer(); setTab('rules'); selRule=d.gorule; bucketFilter='All'; setMobileDetail(true); renderToolbar('rules'); renderRuleQueue(); renderRuleDetail(); renderRuleAux();
+    const row=document.querySelector('#ruleList .case.active'); if(row) row.scrollIntoView({block:'center'}); return; }
   if (d.natoggle){ const el=document.getElementById('naRows'); if(el){ el.hidden=!el.hidden; t.textContent=(el.hidden?'Show ':'Hide ')+el.children.length+' not-applicable checks'; } return; }
   if (d.resetrule){ const r=RULES.find(x=>x.id===d.resetrule); for(const k of Object.keys(r.params)) delete overrides[d.resetrule+'.'+k]; rerun(); return; }
   if (d.resetall){ for(const k of Object.keys(overrides)) delete overrides[k]; rerun(); return; }
