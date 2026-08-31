@@ -81,12 +81,16 @@ button { font-family: var(--sans); font-size: inherit; line-height: inherit; bor
 .tag.click { font-family: var(--mono); font-weight: 500; cursor: pointer; transition: background-color .12s, color .12s, border-color .12s; }
 .tag.click:hover { background: hsl(var(--foreground)); color: hsl(var(--background)); border-color: hsl(var(--foreground) / .4); }
 .tag.click svg { width: .625rem; height: .625rem; flex-shrink: 0; }
-.stat-txt { font-size: 11px; color: hsl(var(--muted-foreground)); white-space: nowrap; }
 
 .icon-btn { display: inline-flex; align-items: center; justify-content: center;
   height: 2.25rem; width: 2.25rem; flex-shrink: 0; border-radius: calc(var(--radius) - 2px);
   color: hsl(var(--foreground)); transition: background-color .15s; }
 .icon-btn:hover { background: hsl(var(--muted)); }
+.icon-btn.sm { height: 2rem; width: 2rem; }
+.icon-btn.sm svg { width: .875rem; height: .875rem; }
+.icon-btn.dim { color: hsl(var(--muted-foreground)); }
+.icon-btn.dim:hover { color: hsl(var(--foreground)); }
+.toolbar .q-input { height: 2rem; font-size: 13px; }
 .icon-btn svg { width: 1rem; height: 1rem; }
 
 .q-input { display: flex; height: 2.25rem; min-width: 0; flex: 1;
@@ -264,12 +268,7 @@ button { font-family: var(--sans); font-size: inherit; line-height: inherit; bor
 
   <div class="main on" id="m-shifts">
     <div class="queue">
-      <div class="toolbar">
-        <input class="q-input" id="qShifts" placeholder="Search shifts" aria-label="Search shifts">
-      </div>
-      <div class="toolbar" style="height:auto;min-height:0;padding:.5rem .75rem;border-bottom:1px solid hsl(var(--border))">
-        <div class="chips" id="shiftChips"></div>
-      </div>
+      <div class="toolbar" id="tb-shifts"></div>
       <div class="case-list scroll" id="shiftList"></div>
     </div>
     <div class="detail" id="shiftDetail"></div>
@@ -278,12 +277,7 @@ button { font-family: var(--sans); font-size: inherit; line-height: inherit; bor
 
   <div class="main" id="m-rules">
     <div class="queue">
-      <div class="toolbar">
-        <input class="q-input" id="qRules" placeholder="Search rules" aria-label="Search rules">
-      </div>
-      <div class="toolbar" style="height:auto;min-height:0;padding:.5rem .75rem;border-bottom:1px solid hsl(var(--border))">
-        <div class="chips" id="ruleChips"></div>
-      </div>
+      <div class="toolbar" id="tb-rules"></div>
       <div class="case-list scroll" id="ruleList"></div>
     </div>
     <div class="detail" id="ruleDetail"></div>
@@ -292,9 +286,7 @@ button { font-family: var(--sans); font-size: inherit; line-height: inherit; bor
 
   <div class="main" id="m-compile">
     <div class="queue">
-      <div class="toolbar" style="justify-content:flex-start">
-        <span style="font-size:12px;color:hsl(var(--muted-foreground))">Recorded compiles — ingest runs the LLM once; everything it emits runs live here.</span>
-      </div>
+      <div class="toolbar" id="tb-compile"></div>
       <div class="case-list scroll" id="compileList"></div>
     </div>
     <div class="detail" id="compileDetail"></div>
@@ -303,9 +295,7 @@ button { font-family: var(--sans); font-size: inherit; line-height: inherit; bor
 
   <div class="main" id="m-vocab">
     <div class="queue">
-      <div class="toolbar">
-        <input class="q-input" id="qVocab" placeholder="Search features" aria-label="Search features">
-      </div>
+      <div class="toolbar" id="tb-vocab"></div>
       <div class="case-list scroll" id="vocabList"></div>
     </div>
     <div class="detail" id="vocabDetail"></div>
@@ -430,7 +420,7 @@ const RULES = [
     evaluate(s, ctx, P) {
       const g = ctx.dupGap(s);
       if (g == null) return [{ status: 'pass', note: `1 clock-in found` }];
-      return [{ status: 'applied', note: `two clock-ins ${g} min apart → merged into one pair (avoided double shift)`, overNaive: true }];
+      return [{ status: 'applied', note: `Two clock-ins ${g} min apart → merged into one pair (avoided double shift)`, overNaive: true }];
     },
   },
   {
@@ -440,12 +430,12 @@ const RULES = [
     scope: () => true, params: {},
     evaluate(s, ctx) {
       const missing = ctx.mergedPairs(s).some(pr => pr.out == null);
-      if (!missing) return [{ status: 'pass', note: 'punch pairs complete' }];
+      if (!missing) return [{ status: 'pass', note: 'Punch pairs complete' }];
       const rows = [{ status: 'flag', note: 'timesheet.out = null → discrepancy opened' }];
       if (s.resolution) {
-        rows.push({ status: 'applied', kind: 'llm', note: `evidence read: geofence exit ${fmtT(s.geo[1])}, continuous presence → proposes out = ${fmtT(s.resolution.out)} · review recommended`, chips: ['timesheet', `geofence exit ${fmtT(s.geo[1])}`] });
+        rows.push({ status: 'applied', kind: 'llm', note: `Evidence read: geofence exit ${fmtT(s.geo[1])}, continuous presence → proposes out = ${fmtT(s.resolution.out)} · review recommended`, chips: ['timesheet', `geofence exit ${fmtT(s.geo[1])}`] });
         rows.push({ status: 'applied', kind: 'human', note: `${s.resolution.by}: "${s.resolution.quote}" → clock-out set to ${fmtT(s.resolution.out)}` });
-      } else rows.push({ status: 'held', note: 'no resolution yet — shift held, manager asked', effect: { holdAll: true } });
+      } else rows.push({ status: 'held', note: 'No resolution yet — shift held, manager asked', effect: { holdAll: true } });
       return rows;
     },
   },
@@ -456,10 +446,10 @@ const RULES = [
     scope: () => true,
     params: { cap_h: p(16, 12, 24, 1, 'h', 'length cap') },
     evaluate(s, ctx, P) {
-      const span = ctx.resolvedPairs(s); if (!span.length || span[span.length - 1].out == null) return [{ status: 'na', note: 'unresolved pair' }];
+      const span = ctx.resolvedPairs(s); if (!span.length || span[span.length - 1].out == null) return [{ status: 'na', note: 'Unresolved pair' }];
       const m = span[span.length - 1].out - span[0].in;
-      if (m > MIN(P('CS-16H', 'cap_h'))) return [{ status: 'held', note: `recorded span ${fmtH(m)}h > ${P('CS-16H', 'cap_h')}h cap → held for review`, effect: { holdAll: true } }];
-      return [{ status: 'pass', note: `span ${fmtH(m)}h within cap` }];
+      if (m > MIN(P('CS-16H', 'cap_h'))) return [{ status: 'held', note: `Recorded span ${fmtH(m)}h > ${P('CS-16H', 'cap_h')}h cap → held for review`, effect: { holdAll: true } }];
+      return [{ status: 'pass', note: `Span ${fmtH(m)}h within cap` }];
     },
   },
   {
@@ -469,8 +459,8 @@ const RULES = [
     scope: () => true, params: {},
     evaluate(s, ctx) {
       const o = ctx.overlap(s);
-      if (!o) return [{ status: 'pass', note: 'no overlapping shift' }];
-      return [{ status: 'held', note: `overlaps shift ${o.id} at ${o.fac.name} → both held`, effect: { holdAll: true } }];
+      if (!o) return [{ status: 'pass', note: 'No overlapping shift' }];
+      return [{ status: 'held', note: `Overlaps shift ${o.id} at ${o.fac.name} → both held`, effect: { holdAll: true } }];
     },
   },
   {
@@ -481,9 +471,9 @@ const RULES = [
     params: { max_mph: p(75, 40, 120, 5, 'mph', 'speed cap') },
     evaluate(s, ctx, P) {
       const v = ctx.travelSpeed(s);
-      if (v == null) return [{ status: 'na', note: 'no prior cross-site punch' }];
-      if (v > P('CS-SPEED', 'max_mph')) return [{ status: 'flag', note: `implied ${Math.round(v)} mph from previous site → one punch is wrong or spoofed` }];
-      return [{ status: 'pass', note: `implied ${Math.round(v)} mph plausible` }];
+      if (v == null) return [{ status: 'na', note: 'No prior cross-site punch' }];
+      if (v > P('CS-SPEED', 'max_mph')) return [{ status: 'flag', note: `Implied ${Math.round(v)} mph from previous site → one punch is wrong or spoofed` }];
+      return [{ status: 'pass', note: `Implied ${Math.round(v)} mph plausible` }];
     },
   },
   {
@@ -495,7 +485,7 @@ const RULES = [
     evaluate(s, ctx, P) {
       const n = ctx.exactStreak(s);
       if (n >= P('CS-EXACT', 'streak')) return [{ status: 'flag', note: `${n} consecutive shifts with identical duration → likely manual entry, verify source` }];
-      return [{ status: 'pass', note: 'duration pattern normal' }];
+      return [{ status: 'pass', note: 'Duration pattern normal' }];
     },
   },
   {
@@ -504,8 +494,8 @@ const RULES = [
     source: { doc: 'wage-theft litigation pattern', cite: 'post-approval edits are the classic vector' },
     scope: () => true, params: {},
     evaluate(s) {
-      if (s.editedAfterApproval) return [{ status: 'flag', note: `edited after approval by ${s.editedAfterApproval} → re-review required` }];
-      return [{ status: 'pass', note: 'no post-approval edits' }];
+      if (s.editedAfterApproval) return [{ status: 'flag', note: `Edited after approval by ${s.editedAfterApproval} → re-review required` }];
+      return [{ status: 'pass', note: 'No post-approval edits' }];
     },
   },
   {
@@ -515,11 +505,11 @@ const RULES = [
     scope: s => s.fac.geofence,
     params: { tol_min: p(15, 0, 60, 5, 'min', 'entry tolerance') },
     evaluate(s, ctx, P) {
-      if (!s.geo) return [{ status: 'flag', note: 'no geofence entry recorded for this punch → verify presence' }];
-      const pr = ctx.resolvedPairs(s); if (!pr.length) return [{ status: 'na', note: 'no punches' }];
+      if (!s.geo) return [{ status: 'flag', note: 'No geofence entry recorded for this punch → verify presence' }];
+      const pr = ctx.resolvedPairs(s); if (!pr.length) return [{ status: 'na', note: 'No punches' }];
       const gap = Math.abs(pr[0].in - s.geo[0]);
-      if (gap > P('FAC-GEO-01', 'tol_min')) return [{ status: 'flag', note: `clock-in ${gap} min from geofence entry (tol ±${P('FAC-GEO-01', 'tol_min')})` }];
-      return [{ status: 'pass', note: `clock-in within ±${P('FAC-GEO-01', 'tol_min')} min of geofence entry` }];
+      if (gap > P('FAC-GEO-01', 'tol_min')) return [{ status: 'flag', note: `Clock-in ${gap} min from geofence entry (tol ±${P('FAC-GEO-01', 'tol_min')})` }];
+      return [{ status: 'pass', note: `Clock-in within ±${P('FAC-GEO-01', 'tol_min')} min of geofence entry` }];
     },
   },
   {
@@ -530,17 +520,17 @@ const RULES = [
     params: { tol_min: p(15, 5, 60, 5, 'min', 'mismatch tolerance') },
     evaluate(s, ctx, P) {
       const pr = ctx.resolvedPairs(s);
-      if (!s.badgeOut || !pr.length || pr[pr.length - 1].rawOut == null) return [{ status: 'na', note: 'no badge/punch pair to compare' }];
+      if (!s.badgeOut || !pr.length || pr[pr.length - 1].rawOut == null) return [{ status: 'na', note: 'No badge/punch pair to compare' }];
       const gap = s.badgeOut - pr[pr.length - 1].rawOut;
       if (gap > P('FAC-BADGE-01', 'tol_min')) {
         return [
-          { status: 'flag', note: `clock-out ${fmtT(pr[pr.length - 1].rawOut)} but badge-out ${fmtT(s.badgeOut)} (+${gap} min)` },
+          { status: 'flag', note: `Clock-out ${fmtT(pr[pr.length - 1].rawOut)} but badge-out ${fmtT(s.badgeOut)} (+${gap} min)` },
           s.resolution
             ? { status: 'applied', kind: 'human', note: `${s.resolution.by}: "${s.resolution.quote}" → paid to badge-out`, effect: { extendToMin: s.badgeOut } }
-            : { status: 'held', note: 'awaiting lead confirmation', effect: { holdAll: true } },
+            : { status: 'held', note: 'Awaiting lead confirmation', effect: { holdAll: true } },
         ];
       }
-      return [{ status: 'pass', note: `badge and clock agree within ${P('FAC-BADGE-01', 'tol_min')} min` }];
+      return [{ status: 'pass', note: `Badge and clock agree within ${P('FAC-BADGE-01', 'tol_min')} min` }];
     },
   },
   {
@@ -550,13 +540,13 @@ const RULES = [
     scope: s => s.fac.autoDeduct,
     params: {},
     evaluate(s, ctx) {
-      if (s.meal) return [{ status: 'pass', note: 'meal punched — no auto-deduct' }];
-      if (ctx.workedMin(s) <= MIN(6)) return [{ status: 'na', note: 'short shift, no deduction' }];
+      if (s.meal) return [{ status: 'pass', note: 'Meal punched — no auto-deduct' }];
+      if (ctx.workedMin(s) <= MIN(6)) return [{ status: 'na', note: 'Short shift, no deduction' }];
       if (s.mealEvidence === false) return [
         { status: 'flag', note: '30 min auto-deducted but location shows continuous on-floor presence' },
-        { status: 'applied', kind: 'llm', note: 'no break-length gap in movement pattern; deduction reversed pending attestation · review recommended', effect: { premiumMin: 30 }, chips: ['location trace', 'no meal punch'] },
+        { status: 'applied', kind: 'llm', note: 'No break-length gap in movement pattern; deduction reversed pending attestation · review recommended', effect: { premiumMin: 30 }, chips: ['location trace', 'no meal punch'] },
       ];
-      return [{ status: 'pass', note: 'auto-deduct stands (break gap visible in location trace)' }];
+      return [{ status: 'pass', note: 'Auto-deduct stands (break gap visible in location trace)' }];
     },
   },
   {
@@ -564,7 +554,7 @@ const RULES = [
     sentence: 'California with exact capture: pay exact minutes — rounding is off.',
     source: { doc: 'Camp v. Home Depot (2022)', cite: 'if you capture exact time, pay exact time' },
     scope: s => s.fac.state === 'CA', params: {},
-    evaluate() { return [{ status: 'applied', note: 'exact-minute pay in force (rounding disabled)' }]; },
+    evaluate() { return [{ status: 'applied', note: 'Exact-minute pay in force (rounding disabled)' }]; },
   },
   {
     id: 'TB-ROUND-7', bucket: 'Time-based', kind: 'det',
@@ -572,7 +562,7 @@ const RULES = [
     source: { doc: '29 CFR 785.48', cite: 'neutral-over-time rounding' },
     scope: s => s.fac.state !== 'CA',
     params: { inc_min: p(15, 5, 15, 5, 'min', 'increment') },
-    evaluate(s, ctx, P) { return [{ status: 'applied', note: `punches rounded to nearest ${P('TB-ROUND-7', 'inc_min')} min` }]; },
+    evaluate(s, ctx, P) { return [{ status: 'applied', note: `Punches rounded to nearest ${P('TB-ROUND-7', 'inc_min')} min` }]; },
   },
   {
     id: 'CA-MB-01', bucket: 'State', kind: 'det',
@@ -584,16 +574,16 @@ const RULES = [
       const worked = ctx.workedMin(s);
       const dl = MIN(P('CA-MB-01', 'deadline_h'));
       if (!s.meal) {
-        if (s.fac.autoDeduct && s.mealEvidence !== false) return [{ status: 'pass', note: 'auto-deducted break, break gap visible in location trace' }];
-        if (worked <= MIN(P('CA-MB-01', 'waiver_cap_h')) && s.waiverOnFile) return [{ status: 'pass', note: 'no meal — valid waiver on file for short shift' }];
-        if (worked <= dl) return [{ status: 'pass', note: 'shift shorter than meal deadline' }];
-        return [{ status: 'flag', note: `no meal break in a ${fmtH(worked)}h shift → 1h premium`, effect: { premiumHours: 1 } }];
+        if (s.fac.autoDeduct && s.mealEvidence !== false) return [{ status: 'pass', note: 'Auto-deducted break, break gap visible in location trace' }];
+        if (worked <= MIN(P('CA-MB-01', 'waiver_cap_h')) && s.waiverOnFile) return [{ status: 'pass', note: 'No meal — valid waiver on file for short shift' }];
+        if (worked <= dl) return [{ status: 'pass', note: 'Shift shorter than meal deadline' }];
+        return [{ status: 'flag', note: `No meal break in a ${fmtH(worked)}h shift → 1h premium`, effect: { premiumHours: 1 } }];
       }
       const off = ctx.resolvedPairs(s).length ? s.meal[0] - ctx.resolvedPairs(s)[0].in : null;
       const len = s.meal[1] - s.meal[0];
-      if (off != null && off > dl) return [{ status: 'flag', note: `meal started ${fmtH(off)}h in (deadline ${P('CA-MB-01', 'deadline_h')}h) → 1h premium`, effect: { premiumHours: 1 } }];
-      if (len < P('CA-MB-01', 'min_len')) return [{ status: 'flag', note: `meal ${len} min < ${P('CA-MB-01', 'min_len')} min → 1h premium`, effect: { premiumHours: 1 } }];
-      return [{ status: 'pass', note: `meal ${len} min, started ${fmtH(off)}h in` }];
+      if (off != null && off > dl) return [{ status: 'flag', note: `Meal started ${fmtH(off)}h in (deadline ${P('CA-MB-01', 'deadline_h')}h) → 1h premium`, effect: { premiumHours: 1 } }];
+      if (len < P('CA-MB-01', 'min_len')) return [{ status: 'flag', note: `Meal ${len} min < ${P('CA-MB-01', 'min_len')} min → 1h premium`, effect: { premiumHours: 1 } }];
+      return [{ status: 'pass', note: `Meal ${len} min, started ${fmtH(off)}h in` }];
     },
   },
   {
@@ -606,7 +596,7 @@ const RULES = [
       const w = ctx.workedMin(s), d = MIN(P('CA-OT-8', 'daily_h')), dd = MIN(P('CA-OT-8', 'double_h'));
       if (w <= d) return [{ status: 'pass', note: `${fmtH(w)}h ≤ ${P('CA-OT-8', 'daily_h')}h` }];
       const ot = Math.min(w, dd) - d, dt = Math.max(0, w - dd);
-      return [{ status: 'applied', note: `daily OT: ${fmtH(ot)}h @1.5×${dt ? ` + ${fmtH(dt)}h @2×` : ''}`, effect: { otPremiumMin: ot * 0.5 + dt * 1.0, dailyOtMin: ot + dt } }];
+      return [{ status: 'applied', note: `Daily OT: ${fmtH(ot)}h @1.5×${dt ? ` + ${fmtH(dt)}h @2×` : ''}`, effect: { otPremiumMin: ot * 0.5 + dt * 1.0, dailyOtMin: ot + dt } }];
     },
   },
   {
@@ -618,12 +608,12 @@ const RULES = [
     evaluate(s, ctx, P) {
       // applied on the worker's LAST shift of week for legibility
       const arr = ctx.byWorker.get(s.worker) || [];
-      if (arr[arr.length - 1] !== s) return [{ status: 'na', note: 'assessed on last shift of week' }];
+      if (arr[arr.length - 1] !== s) return [{ status: 'na', note: 'Assessed on last shift of week' }];
       const total = ctx.weeklyWorked(s.worker);
       const daily = arr.reduce((t, x) => { const rows = x._dailyOtMin || 0; return t + rows; }, 0);
       const over = total - MIN(P('FED-OT-40', 'weekly_h')) - daily;
-      if (over <= 0) return [{ status: 'pass', note: `week ${fmtH(total)}h (daily-OT hours excluded: ${fmtH(daily)})` }];
-      return [{ status: 'applied', note: `weekly OT: ${fmtH(over)}h @1.5× (anti-pyramided)`, effect: { otPremiumMin: over * 0.5 } }];
+      if (over <= 0) return [{ status: 'pass', note: `Week ${fmtH(total)}h (daily-OT hours excluded: ${fmtH(daily)})` }];
+      return [{ status: 'applied', note: `Weekly OT: ${fmtH(over)}h @1.5× (anti-pyramided)`, effect: { otPremiumMin: over * 0.5 } }];
     },
   },
   {
@@ -634,14 +624,14 @@ const RULES = [
     params: { gap_min: p(60, 30, 180, 15, 'min', 'gap trigger') },
     evaluate(s, ctx, P) {
       const prs = ctx.resolvedPairs(s);
-      if (prs.length < 2) return [{ status: 'pass', note: 'no split' }];
+      if (prs.length < 2) return [{ status: 'pass', note: 'No split' }];
       const gap = prs[1].in - prs[0].out;
-      if (gap <= P('CA-SS-01', 'gap_min')) return [{ status: 'pass', note: `gap ${gap} min ≤ trigger` }];
+      if (gap <= P('CA-SS-01', 'gap_min')) return [{ status: 'pass', note: `Gap ${gap} min ≤ trigger` }];
       const worked = ctx.workedMin(s), mw = s.fac.minWage;
       const offset = Math.max(0, (s.rate - mw) * H(worked));
       const prem = Math.max(0, mw - offset);
-      if (prem <= 0) return [{ status: 'pass', note: `split ${fmtH(gap)}h gap — premium fully offset by wages above minimum` }];
-      return [{ status: 'flag', note: `split shift (${fmtH(gap)}h gap) → premium ${money(prem)} after offset`, effect: { premiumAmt: prem } }];
+      if (prem <= 0) return [{ status: 'pass', note: `Split ${fmtH(gap)}h gap — premium fully offset by wages above minimum` }];
+      return [{ status: 'flag', note: `Split shift (${fmtH(gap)}h gap) → premium ${money(prem)} after offset`, effect: { premiumAmt: prem } }];
     },
   },
   {
@@ -651,12 +641,12 @@ const RULES = [
     scope: s => s.fac.state === 'CA',
     params: { floor_h: p(2, 1, 4, 0.5, 'h', 'floor'), cap_h: p(4, 2, 6, 0.5, 'h', 'cap') },
     evaluate(s, ctx, P) {
-      if (!s.sched) return [{ status: 'na', note: 'unscheduled' }];
+      if (!s.sched) return [{ status: 'na', note: 'Unscheduled' }];
       const sm = s.sched[1] - s.sched[0], w = ctx.workedMin(s);
-      if (!ctx.resolvedPairs(s).length || w >= sm / 2) return [{ status: 'pass', note: 'worked ≥ half of schedule' }];
+      if (!ctx.resolvedPairs(s).length || w >= sm / 2) return [{ status: 'pass', note: 'Worked ≥ half of schedule' }];
       const owe = Math.min(Math.max(sm / 2, MIN(P('CA-RT-01', 'floor_h'))), MIN(P('CA-RT-01', 'cap_h')));
       const top = Math.max(0, owe - w);
-      return [{ status: 'flag', note: `worked ${fmtH(w)}h of ${fmtH(sm)}h scheduled → reporting-time pay tops up to ${fmtH(owe)}h`, effect: { topUpMin: top } }];
+      return [{ status: 'flag', note: `Worked ${fmtH(w)}h of ${fmtH(sm)}h scheduled → reporting-time pay tops up to ${fmtH(owe)}h`, effect: { topUpMin: top } }];
     },
   },
   {
@@ -666,10 +656,10 @@ const RULES = [
     scope: s => s.fac.state === 'NY',
     params: { spread_h: p(10, 8, 12, 0.5, 'h', 'spread trigger') },
     evaluate(s, ctx, P) {
-      const prs = ctx.resolvedPairs(s); if (!prs.length || prs[prs.length - 1].out == null) return [{ status: 'na', note: 'unresolved' }];
+      const prs = ctx.resolvedPairs(s); if (!prs.length || prs[prs.length - 1].out == null) return [{ status: 'na', note: 'Unresolved' }];
       const span = prs[prs.length - 1].out - prs[0].in;
-      if (span <= MIN(P('NY-SOH-01', 'spread_h'))) return [{ status: 'pass', note: `spread ${fmtH(span)}h ≤ ${P('NY-SOH-01', 'spread_h')}h` }];
-      return [{ status: 'flag', note: `spread ${fmtH(span)}h > ${P('NY-SOH-01', 'spread_h')}h → +1h at ${money(s.fac.minWage)}`, effect: { premiumAmt: s.fac.minWage } }];
+      if (span <= MIN(P('NY-SOH-01', 'spread_h'))) return [{ status: 'pass', note: `Spread ${fmtH(span)}h ≤ ${P('NY-SOH-01', 'spread_h')}h` }];
+      return [{ status: 'flag', note: `Spread ${fmtH(span)}h > ${P('NY-SOH-01', 'spread_h')}h → +1h at ${money(s.fac.minWage)}`, effect: { premiumAmt: s.fac.minWage } }];
     },
   },
   {
@@ -680,11 +670,11 @@ const RULES = [
     params: { gap_ny: p(11, 8, 12, 1, 'h', 'NYC threshold'), gap_chi: p(10, 8, 12, 1, 'h', 'Chicago threshold') },
     evaluate(s, ctx, P) {
       const g = ctx.gapSincePrev(s);
-      if (g == null) return [{ status: 'na', note: 'no previous shift' }];
+      if (g == null) return [{ status: 'na', note: 'No previous shift' }];
       const th = MIN(s.fac.city === 'New York' ? P('REST-GAP-01', 'gap_ny') : P('REST-GAP-01', 'gap_chi'));
-      if (g >= th) return [{ status: 'pass', note: `rest gap ${fmtH(g)}h ≥ ${fmtH(th)}h` }];
-      if (s.consentClopen) return [{ status: 'flag', note: `clopening (${fmtH(g)}h gap) with written consent → $100 premium`, effect: { premiumAmt: 100 } }];
-      return [{ status: 'flag', note: `clopening: only ${fmtH(g)}h rest, no consent on file → premium + consent needed`, effect: { premiumAmt: 100 } }];
+      if (g >= th) return [{ status: 'pass', note: `Rest gap ${fmtH(g)}h ≥ ${fmtH(th)}h` }];
+      if (s.consentClopen) return [{ status: 'flag', note: `Clopening (${fmtH(g)}h gap) with written consent → $100 premium`, effect: { premiumAmt: 100 } }];
+      return [{ status: 'flag', note: `Clopening: only ${fmtH(g)}h rest, no consent on file → premium + consent needed`, effect: { premiumAmt: 100 } }];
     },
   },
   {
@@ -695,9 +685,9 @@ const RULES = [
     params: { notice_days: p(14, 7, 21, 1, 'days', 'notice window') },
     evaluate(s, ctx, P) {
       const h = s.schedChangedHoursBefore;
-      if (h == null) return [{ status: 'pass', note: 'no employer-initiated change' }];
-      if (h < P('CHI-FWW-01', 'notice_days') * 24) return [{ status: 'flag', note: `schedule changed ${Math.round(h)}h before start (inside ${P('CHI-FWW-01', 'notice_days')}-day window) → +1h predictability pay`, effect: { premiumHours: 1 } }];
-      return [{ status: 'pass', note: 'change outside notice window' }];
+      if (h == null) return [{ status: 'pass', note: 'No employer-initiated change' }];
+      if (h < P('CHI-FWW-01', 'notice_days') * 24) return [{ status: 'flag', note: `Schedule changed ${Math.round(h)}h before start (inside ${P('CHI-FWW-01', 'notice_days')}-day window) → +1h predictability pay`, effect: { premiumHours: 1 } }];
+      return [{ status: 'pass', note: 'Change outside notice window' }];
     },
   },
   {
@@ -707,10 +697,10 @@ const RULES = [
     scope: s => !!s.contractMin,
     params: { min_h: p(4, 2, 6, 0.5, 'h', 'minimum hours') },
     evaluate(s, ctx, P) {
-      if (!(s.geo || s.badgeIn)) return [{ status: 'na', note: 'no evidence of reporting on site' }];
+      if (!(s.geo || s.badgeIn)) return [{ status: 'na', note: 'No evidence of reporting on site' }];
       const w = ctx.workedMin(s), m = MIN(P('CON-MIN-4H', 'min_h'));
-      if (w >= m) return [{ status: 'pass', note: `worked ${fmtH(w)}h ≥ minimum` }];
-      return [{ status: 'flag', note: `reported on site, worked ${fmtH(w)}h → topped up to ${P('CON-MIN-4H', 'min_h')}h per contract`, effect: { topUpMin: m - w } }];
+      if (w >= m) return [{ status: 'pass', note: `Worked ${fmtH(w)}h ≥ minimum` }];
+      return [{ status: 'flag', note: `Reported on site, worked ${fmtH(w)}h → topped up to ${P('CON-MIN-4H', 'min_h')}h per contract`, effect: { topUpMin: m - w } }];
     },
   },
   {
@@ -720,9 +710,9 @@ const RULES = [
     scope: s => s.fac === FACILITIES.sutter,
     params: { training_rate: p(18, 15, 26, 0.5, '$/h', 'training rate') },
     evaluate(s, ctx, P) {
-      if (!s.orientation) return [{ status: 'pass', note: 'not an orientation shift' }];
-      if (s.rate !== P('CON-SUTTER-01', 'training_rate')) return [{ status: 'flag', note: `orientation billed at standard ${money(s.rate)}/h → corrected to training ${money(P('CON-SUTTER-01', 'training_rate'))}/h, invoice line $0`, effect: { rateOverride: P('CON-SUTTER-01', 'training_rate') } }];
-      return [{ status: 'pass', note: 'training rate already applied' }];
+      if (!s.orientation) return [{ status: 'pass', note: 'Not an orientation shift' }];
+      if (s.rate !== P('CON-SUTTER-01', 'training_rate')) return [{ status: 'flag', note: `Orientation billed at standard ${money(s.rate)}/h → corrected to training ${money(P('CON-SUTTER-01', 'training_rate'))}/h, invoice line $0`, effect: { rateOverride: P('CON-SUTTER-01', 'training_rate') } }];
+      return [{ status: 'pass', note: 'Training rate already applied' }];
     },
   },
   {
@@ -733,7 +723,7 @@ const RULES = [
     params: { weekly_h: p(40, 30, 50, 1, 'h', 'weekly threshold') },
     evaluate(s, ctx, P) {
       const arr = (ctx.byWorker.get(s.worker) || []).filter(x => x.fac === FACILITIES.mercy);
-      if (arr[arr.length - 1] !== s) return [{ status: 'na', note: 'assessed on last Mercy shift of week' }];
+      if (arr[arr.length - 1] !== s) return [{ status: 'na', note: 'Assessed on last Mercy shift of week' }];
       let t = 0; for (const x of arr) t += ctx.workedMin(x);
       const over = t - MIN(P('TW-1187', 'weekly_h'));
       if (over <= 0) return [{ status: 'pass', note: `Mercy week ${fmtH(t)}h within threshold` }];
@@ -745,7 +735,7 @@ const RULES = [
     sentence: 'Healthcare: shift-handoff overlap up to 15 minutes is paid, expected time.',
     source: { doc: 'vertical pack · healthcare', cite: 'handoff overlap' },
     scope: s => s.fac.vertical === 'healthcare', params: {},
-    evaluate() { return [{ status: 'applied', note: 'handoff overlap ≤15 min treated as worked time' }]; },
+    evaluate() { return [{ status: 'applied', note: 'Handoff overlap ≤15 min treated as worked time' }]; },
   },
   {
     id: 'VER-EV-02', bucket: 'Vertical', kind: 'llm',
@@ -754,10 +744,10 @@ const RULES = [
     scope: s => s.fac.vertical === 'events',
     params: { egress_min: p(45, 15, 90, 5, 'min', 'expected egress') },
     evaluate(s, ctx, P) {
-      if (!s.sched) return [{ status: 'na', note: 'unscheduled' }];
-      const prs = ctx.resolvedPairs(s); if (!prs.length || prs[prs.length - 1].out == null) return [{ status: 'na', note: 'unresolved' }];
+      if (!s.sched) return [{ status: 'na', note: 'Unscheduled' }];
+      const prs = ctx.resolvedPairs(s); if (!prs.length || prs[prs.length - 1].out == null) return [{ status: 'na', note: 'Unresolved' }];
       const past = prs[prs.length - 1].out - s.sched[1];
-      if (past <= P('VER-EV-02', 'egress_min')) return [{ status: 'pass', note: `clock-out ${past > 0 ? past + ' min past schedule — within expected egress' : 'on schedule'}` }];
+      if (past <= P('VER-EV-02', 'egress_min')) return [{ status: 'pass', note: `Clock-out ${past > 0 ? past + ' min past schedule — within expected egress' : 'on schedule'}` }];
       return [{ status: 'applied', kind: 'llm', note: `${past} min past schedule end — crowd-exit pattern in location trace looks legitimate, but beyond expected egress · review recommended`, chips: ['location trace', 'schedule'] }];
     },
   },
@@ -1509,7 +1499,9 @@ let run = runEngine(week, overrides);
 
 // UI state
 let tab = 'shifts', selShift = '4821', selRule = 'CA-MB-01', selCompile = 0, selFeature = 0;
-let shiftFilter = 'flagged', bucketFilter = 'All', qShifts = '', qRules = '', qVocab = '';
+let shiftFilter = 'flagged', bucketFilter = 'All';
+const Q = { shifts:'', rules:'', compile:'', vocab:'' };
+const searchOpen = { shifts:false, rules:false, compile:false, vocab:false };
 let drawerRule = null, mobileDetail = false;
 const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
 
@@ -1517,40 +1509,41 @@ const SYSTEMS = { 'Mercy General':'ADP export', 'Sutter Health':'UKG Ready', 'No
 
 // Supplemental provenance for engine rules — url + (real) verbatim excerpts where we have them.
 const PROV = {
-  'CA-MB-01': { doc:'IWC Wage Order 5-2001 §11(A)', url:'https://www.dir.ca.gov/dlse/faq_mealperiods.htm', verbatim:'No employer shall employ any person for a work period of <span class="hl-cite">more than five (5) hours without a meal period of not less than 30 minutes</span>, except that when a work period of not more than six (6) hours will complete the day’s work the meal period may be waived by mutual consent of the employer and the employee.', dates:'effective 2001 → current' },
-  'CA-OT-8': { doc:'California Labor Code §510(a)', url:'https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=LAB&sectionNum=510', verbatim:'Eight hours of labor constitutes a day’s work. <span class="hl-cite">Any work in excess of eight hours in one workday</span> and any work in excess of 40 hours in any one workweek and the first eight hours worked on the seventh day of work in any one workweek <span class="hl-cite">shall be compensated at the rate of no less than one and one-half times the regular rate of pay</span>.', dates:'effective 2000 → current' },
-  'TB-ROUND-7': { doc:'29 CFR 785.48(b)', url:'https://www.ecfr.gov/current/title-29/section-785.48', verbatim:'…recording the employees’ starting time and stopping time to <span class="hl-cite">the nearest 5 minutes, or to the nearest one-tenth or quarter of an hour</span>. … this practice of computing working time will be accepted, provided that it is used in such a manner that <span class="hl-cite">it will not result, over a period of time, in failure to compensate the employees properly</span> for all the time they have actually worked.', dates:'point-in-time via eCFR API' },
+  'CA-MB-01': { doc:'IWC Wage Order 5-2001 §11(A)', url:'https://www.dir.ca.gov/dlse/faq_mealperiods.htm', verbatim:'No employer shall employ any person for a work period of <span class="hl-cite">more than five (5) hours without a meal period of not less than 30 minutes</span>, except that when a work period of not more than six (6) hours will complete the day’s work the meal period may be waived by mutual consent of the employer and the employee.', dates:'Effective 2001 → current' },
+  'CA-OT-8': { doc:'California Labor Code §510(a)', url:'https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=LAB&sectionNum=510', verbatim:'Eight hours of labor constitutes a day’s work. <span class="hl-cite">Any work in excess of eight hours in one workday</span> and any work in excess of 40 hours in any one workweek and the first eight hours worked on the seventh day of work in any one workweek <span class="hl-cite">shall be compensated at the rate of no less than one and one-half times the regular rate of pay</span>.', dates:'Effective 2000 → current' },
+  'TB-ROUND-7': { doc:'29 CFR 785.48(b)', url:'https://www.ecfr.gov/current/title-29/section-785.48', verbatim:'…recording the employees’ starting time and stopping time to <span class="hl-cite">the nearest 5 minutes, or to the nearest one-tenth or quarter of an hour</span>. … this practice of computing working time will be accepted, provided that it is used in such a manner that <span class="hl-cite">it will not result, over a period of time, in failure to compensate the employees properly</span> for all the time they have actually worked.', dates:'Point-in-time via eCFR API' },
   'CA-ROUND-0': { doc:'Camp v. Home Depot U.S.A., Inc. (Cal. Ct. App. 2022)', url:'https://law.justia.com/cases/california/court-of-appeal/2022/h049033.html', summary:'An employer that can and does capture the exact time worked must pay for all of it — quarter-hour rounding rejected where exact capture exists.', dates:'2022 → current (CA)' },
-  'FED-OT-40': { doc:'FLSA §7 · 29 CFR part 778', url:'https://www.dol.gov/agencies/whd/fact-sheets/23-flsa-overtime', summary:'Hours over 40 in the defined workweek are paid at one and one-half times the regular rate; the workweek is a fixed, recurring 168-hour period.', dates:'as amended → current' },
-  'NY-SOH-01': { doc:'12 NYCRR 142-2.4 (spread of hours)', url:'https://dol.ny.gov/minimum-wage-0', summary:'A workday whose interval from start to end exceeds 10 hours earns one additional hour of pay at the basic minimum hourly wage.', dates:'rates updated Dec 31 yearly' },
-  'REST-GAP-01': { doc:'Seattle SMC 14.22 · NYC Fair Workweek · Chicago MCC 6-110', url:'https://www.seattle.gov/laborstandards/ordinances/secure-scheduling', summary:'Working a shift inside the protected rest window between closing and opening owes premium pay; the window is 9–11 hours depending on jurisdiction.', dates:'per-city; verify on shift date' },
-  'CHI-FWW-01': { doc:'Chicago MCC 6-110 (Fair Workweek)', url:'https://www.chicago.gov/city/en/depts/bacp/supp_info/fairworkweek.html', summary:'Employer-initiated schedule changes inside the 14-day notice window owe one hour of predictability pay at the regular rate.', dates:'effective 2020 → current' },
-  'CA-SS-01': { doc:'IWC Wage Orders §4(C) (split shift)', url:'https://www.dir.ca.gov/dlse/faq_splitshifts.htm', summary:'A split shift owes one hour at minimum wage, offset by wages earned above the minimum for the day.', dates:'effective 2001 → current' },
-  'CA-RT-01': { doc:'IWC Wage Orders §5 (reporting time)', url:'https://www.dir.ca.gov/dlse/faq_reportingtimepay.htm', summary:'A worker who reports and is furnished less than half the scheduled shift is paid half the schedule — no less than 2 and no more than 4 hours.', dates:'effective 2001 → current' },
-  'CON-MIN-4H': { doc:'Staffing services agreement §5 (LGC-pattern)', url:'https://lgcassociates.com/wp-content/uploads/2023/04/LGC-Staffing-Services-Agreement-July-2021.pdf', summary:'Each worker who reports for a scheduled shift is billed and paid a minimum of four hours.', dates:'per contract term' },
-  'CON-SUTTER-01': { doc:'Sutter MSA §4.2 (customer overlay)', summary:'Orientation shifts pay the training rate and bill zero to the client.', dates:'contract effective dates' },
+  'FED-OT-40': { doc:'FLSA §7 · 29 CFR part 778', url:'https://www.dol.gov/agencies/whd/fact-sheets/23-flsa-overtime', summary:'Hours over 40 in the defined workweek are paid at one and one-half times the regular rate; the workweek is a fixed, recurring 168-hour period.', dates:'As amended → current' },
+  'NY-SOH-01': { doc:'12 NYCRR 142-2.4 (spread of hours)', url:'https://dol.ny.gov/minimum-wage-0', summary:'A workday whose interval from start to end exceeds 10 hours earns one additional hour of pay at the basic minimum hourly wage.', dates:'Rates updated Dec 31 yearly' },
+  'REST-GAP-01': { doc:'Seattle SMC 14.22 · NYC Fair Workweek · Chicago MCC 6-110', url:'https://www.seattle.gov/laborstandards/ordinances/secure-scheduling', summary:'Working a shift inside the protected rest window between closing and opening owes premium pay; the window is 9–11 hours depending on jurisdiction.', dates:'Per-city; verify on shift date' },
+  'CHI-FWW-01': { doc:'Chicago MCC 6-110 (Fair Workweek)', url:'https://www.chicago.gov/city/en/depts/bacp/supp_info/fairworkweek.html', summary:'Employer-initiated schedule changes inside the 14-day notice window owe one hour of predictability pay at the regular rate.', dates:'Effective 2020 → current' },
+  'CA-SS-01': { doc:'IWC Wage Orders §4(C) (split shift)', url:'https://www.dir.ca.gov/dlse/faq_splitshifts.htm', summary:'A split shift owes one hour at minimum wage, offset by wages earned above the minimum for the day.', dates:'Effective 2001 → current' },
+  'CA-RT-01': { doc:'IWC Wage Orders §5 (reporting time)', url:'https://www.dir.ca.gov/dlse/faq_reportingtimepay.htm', summary:'A worker who reports and is furnished less than half the scheduled shift is paid half the schedule — no less than 2 and no more than 4 hours.', dates:'Effective 2001 → current' },
+  'CON-MIN-4H': { doc:'Staffing services agreement §5 (LGC-pattern)', url:'https://lgcassociates.com/wp-content/uploads/2023/04/LGC-Staffing-Services-Agreement-July-2021.pdf', summary:'Each worker who reports for a scheduled shift is billed and paid a minimum of four hours.', dates:'Per contract term' },
+  'CON-SUTTER-01': { doc:'Sutter MSA §4.2 (customer overlay)', summary:'Orientation shifts pay the training rate and bill zero to the client.', dates:'Contract effective dates' },
   'TW-1187': { doc:'Slack · Sam T. · Mon Aug 24, 9:12am', summary:'"No overtime at Mercy General this week please." Compiled to a scoped, auto-expiring hold rule.', dates:'Aug 24 → Aug 30 (auto-expires)' },
-  'FAC-AUTODED-01': { doc:'Quickley v. Univ. of Maryland Medical System (D. Md.)', url:'https://www.fisherphillips.com/en/insights/publication/automatically-deducting-for-meal-breaks-can-be-costly.html', summary:'Auto-deducting meal periods without a reliable way to cancel the deduction when the break is missed creates FLSA class exposure.', dates:'doctrine · current' },
-  'FAC-GEO-01': { doc:'Site profile · geofence policy', summary:'Punches must be accompanied by location evidence inside the site geofence; unmatched punches route to review.', dates:'site config' },
-  'FAC-BADGE-01': { doc:'Bayview site profile', summary:'No GPS indoors; door-badge events are the location evidence of record.', dates:'site config' },
-  'CS-01': { doc:'Ops heuristic · interview synthesis', summary:'Two clock-ins minutes apart on a shared kiosk are one shift. Merge, don’t double-pay.', dates:'pack v1' },
-  'TS-COMPLETE': { doc:'Ops heuristic · interview synthesis', summary:'"Zero hours on an active day, 30+ hours of OT, a missed punch" — the missed punch is the most common discrepancy across all seven interviews.', dates:'pack v1' },
-  'CS-16H': { doc:'Timesheet-fraud audit guides', url:'https://onpay.com/insights/timesheet-fraud-prevention/', summary:'A recorded shift beyond the plausible-length cap is presumed a missed clock-out; hold rather than pay.', dates:'pack v1' },
-  'CS-OVLP': { doc:'Cross-facility identity heuristic', summary:'Interval intersection across facilities for one identity is a data error or fraud; both shifts hold.', dates:'pack v1' },
-  'CS-SPEED': { doc:'GPS audit heuristic', url:'https://smartbarrel.io/blog/how-to-eliminate-timesheet-fraud/', summary:'Consecutive punches at different sites must be reachable at road speed.', dates:'pack v1' },
-  'CS-EXACT': { doc:'Payroll-fraud detection guides', url:'https://onpay.com/insights/timesheet-fraud-prevention/', summary:'Streaks of identical exact durations indicate hand-entered time.', dates:'pack v1' },
-  'CS-EDIT': { doc:'Wage-theft litigation pattern', summary:'Post-approval mutations to a timesheet re-trigger review and land in the immutable audit log.', dates:'pack v1' },
-  'VER-HC-01': { doc:'Vertical pack · healthcare', summary:'Shift-handoff overlap up to 15 minutes is expected, paid time.', dates:'pack v1' },
-  'VER-EV-02': { doc:'Vertical pack · events', summary:'Post-event egress up to ~45 minutes is expected; beyond that the evidence is read, and a human decides.', dates:'pack v1' },
+  'FAC-AUTODED-01': { doc:'Quickley v. Univ. of Maryland Medical System (D. Md.)', url:'https://www.fisherphillips.com/en/insights/publication/automatically-deducting-for-meal-breaks-can-be-costly.html', summary:'Auto-deducting meal periods without a reliable way to cancel the deduction when the break is missed creates FLSA class exposure.', dates:'Doctrine · current' },
+  'FAC-GEO-01': { doc:'Site profile · geofence policy', summary:'Punches must be accompanied by location evidence inside the site geofence; unmatched punches route to review.', dates:'Site config' },
+  'FAC-BADGE-01': { doc:'Bayview site profile', summary:'No GPS indoors; door-badge events are the location evidence of record.', dates:'Site config' },
+  'CS-01': { doc:'Ops heuristic · interview synthesis', summary:'Two clock-ins minutes apart on a shared kiosk are one shift. Merge, don’t double-pay.', dates:'Pack v1' },
+  'TS-COMPLETE': { doc:'Ops heuristic · interview synthesis', summary:'"Zero hours on an active day, 30+ hours of OT, a missed punch" — the missed punch is the most common discrepancy across all seven interviews.', dates:'Pack v1' },
+  'CS-16H': { doc:'Timesheet-fraud audit guides', url:'https://onpay.com/insights/timesheet-fraud-prevention/', summary:'A recorded shift beyond the plausible-length cap is presumed a missed clock-out; hold rather than pay.', dates:'Pack v1' },
+  'CS-OVLP': { doc:'Cross-facility identity heuristic', summary:'Interval intersection across facilities for one identity is a data error or fraud; both shifts hold.', dates:'Pack v1' },
+  'CS-SPEED': { doc:'GPS audit heuristic', url:'https://smartbarrel.io/blog/how-to-eliminate-timesheet-fraud/', summary:'Consecutive punches at different sites must be reachable at road speed.', dates:'Pack v1' },
+  'CS-EXACT': { doc:'Payroll-fraud detection guides', url:'https://onpay.com/insights/timesheet-fraud-prevention/', summary:'Streaks of identical exact durations indicate hand-entered time.', dates:'Pack v1' },
+  'CS-EDIT': { doc:'Wage-theft litigation pattern', summary:'Post-approval mutations to a timesheet re-trigger review and land in the immutable audit log.', dates:'Pack v1' },
+  'VER-HC-01': { doc:'Vertical pack · healthcare', summary:'Shift-handoff overlap up to 15 minutes is expected, paid time.', dates:'Pack v1' },
+  'VER-EV-02': { doc:'Vertical pack · events', summary:'Post-event egress up to ~45 minutes is expected; beyond that the evidence is read, and a human decides.', dates:'Pack v1' },
 };
 
 // One pill design. Color exists only as the amber (flag/review) and blue (held)
 // tinted variants. Everything else is plain text.
 const FILE_ICO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>`;
-const tag = (label, tint) => `<span class="tag${tint?' '+tint:''}">${label}</span>`;
+const title = s => String(s).replace(/(^|[\s·(])([a-z])/g, (m,a,b)=>a+b.toUpperCase());
+const tag = (label, tint) => `<span class="tag${tint?' '+tint:''}">${title(label)}</span>`;
 const statTag = st => st==='flag' ? tag('flag','amber') : st==='held' ? tag('held','blue')
-  : st==='review' ? tag('review','amber') : `<span class="stat-txt">${st}</span>`;
-const kindTag = k => tag(k==='det'?'deterministic':k==='llm'?'llm leaf':'det + llm');
+  : st==='review' ? tag('review','amber') : st==='na' ? tag('N/A') : tag(st);
+const kindTag = k => tag(k==='det'?'Deterministic':k==='llm'?'LLM leaf':'Det + LLM');
 const cite = id => `<button class="tag click" data-cite="${id}">${FILE_ICO}${id}</button>`;
 
 function rerun(){ run = runEngine(week, overrides); renderAll(); }
@@ -1569,7 +1562,7 @@ function renderTop(){
 const SFILTERS = [['flagged','Flagged first'],['all','All'],['held','Held'],['clean','Clean']];
 function shiftRows(){
   let rows = run.shifts.slice();
-  const q = qShifts.trim().toLowerCase();
+  const q = Q.shifts.trim().toLowerCase();
   if (q) rows = rows.filter(r=>(r.shift.worker+' '+r.shift.fac.name+' '+r.shift.id).toLowerCase().includes(q));
   if (shiftFilter==='held') rows = rows.filter(r=>r.held);
   else if (shiftFilter==='clean') rows = rows.filter(r=>!r.flagged);
@@ -1582,7 +1575,6 @@ function shiftStatus(r){
   return '';
 }
 function renderShiftQueue(){
-  document.getElementById('shiftChips').innerHTML = SFILTERS.map(([k,l])=>`<button class="chip${shiftFilter===k?' active':''}" data-sfilter="${k}">${l}</button>`).join('');
   document.getElementById('shiftList').innerHTML = shiftRows().map(r=>{ const s=r.shift; return `
     <button class="case${s.id===selShift?' active':''}" data-shift="${s.id}">
       <div class="row1"><span class="name fade-trunc">${esc(s.worker)}</span>${shiftStatus(r)}</div>
@@ -1591,7 +1583,7 @@ function renderShiftQueue(){
     </button>`;}).join('') || `<div style="padding:1.5rem;color:hsl(var(--muted-foreground))">No shifts match.</div>`;
 }
 function traceLi(x){
-  const stat = x.kind==='human' ? `<span class="stat-txt">human</span>`
+  const stat = x.kind==='human' ? tag('human')
     : x.kind==='llm' ? statTag('review')
     : statTag(x.status);
   return `<li><div class="t-body">${cite(x.ruleId)} <span class="t-note">${esc(x.note)}</span></div><span class="t-stat">${stat}</span></li>`;
@@ -1610,12 +1602,12 @@ function renderShiftDetail(){
     </div>
     <div class="detail-body scroll">
       <ul class="trace">${main.map(traceLi).join('')}</ul>
-      ${na.length?`<button class="na-toggle" data-natoggle="1">show ${na.length} not-applicable checks</button><ul class="trace" id="naRows" hidden>${na.map(traceLi).join('')}</ul>`:''}
+      ${na.length?`<button class="na-toggle" data-natoggle="1">Show ${na.length} not-applicable checks</button><ul class="trace" id="naRows" hidden>${na.map(traceLi).join('')}</ul>`:''}
       <div class="payline">
-        <span>engine payout ${r.held?tag('held','blue'):`<b>${money(r.pay)}</b>`}</span>
-        <span>spreadsheet would pay <b>${money(r.naive)}</b></span>
-        ${r.deltaUnder>0.005&&!r.held?`<span class="up">underpay corrected +${money(r.deltaUnder)}</span>`:''}
-        ${r.deltaOver>0.005&&!r.held?`<span class="dn">overpay corrected −${money(r.deltaOver)}</span>`:''}
+        <span>Engine payout ${r.held?tag('held','blue'):`<b>${money(r.pay)}</b>`}</span>
+        <span>Spreadsheet would pay <b>${money(r.naive)}</b></span>
+        ${r.deltaUnder>0.005&&!r.held?`<span class="up">Underpay corrected +${money(r.deltaUnder)}</span>`:''}
+        ${r.deltaOver>0.005&&!r.held?`<span class="dn">Overpay corrected −${money(r.deltaOver)}</span>`:''}
       </div>
     </div>`;
 }
@@ -1628,23 +1620,23 @@ function renderShiftAux(){
     <div class="aux-body scroll">
       <h5>Timesheet · ${esc(SYSTEMS[s.fac.name]||'clock export')}</h5>
       <table class="kv">
-        <tr><td class="k">punches</td><td>${pairs}</td></tr>
-        <tr><td class="k">meal</td><td>${s.meal?fmtT(s.meal[0])+' – '+fmtT(s.meal[1])+' ('+(s.meal[1]-s.meal[0])+' min)':s.fac.autoDeduct?'none punched · 30 min auto-deduct':'none punched'}</td></tr>
-        <tr><td class="k">scheduled</td><td>${s.sched?fmtT(s.sched[0])+' – '+fmtT(s.sched[1]):'—'}</td></tr>
-        ${s.schedChangedHoursBefore!=null?`<tr class="hl-row"><td class="k">schedule changed</td><td>${Math.round(s.schedChangedHoursBefore)}h before start</td></tr>`:''}
-        ${s.editedAfterApproval?`<tr class="hl-row"><td class="k">edited after approval</td><td>${esc(s.editedAfterApproval)}</td></tr>`:''}
+        <tr><td class="k">Punches</td><td>${pairs}</td></tr>
+        <tr><td class="k">Meal</td><td>${s.meal?fmtT(s.meal[0])+' – '+fmtT(s.meal[1])+' ('+(s.meal[1]-s.meal[0])+' min)':s.fac.autoDeduct?'None punched · 30 min auto-deduct':'None punched'}</td></tr>
+        <tr><td class="k">Scheduled</td><td>${s.sched?fmtT(s.sched[0])+' – '+fmtT(s.sched[1]):'—'}</td></tr>
+        ${s.schedChangedHoursBefore!=null?`<tr class="hl-row"><td class="k">Schedule changed</td><td>${Math.round(s.schedChangedHoursBefore)}h before start</td></tr>`:''}
+        ${s.editedAfterApproval?`<tr class="hl-row"><td class="k">Edited after approval</td><td>${esc(s.editedAfterApproval)}</td></tr>`:''}
       </table>
       <h5>Location intelligence</h5>
       <table class="kv">
-        ${s.geo?`<tr><td class="k">geofence enter</td><td>${fmtT(s.geo[0])}</td></tr><tr><td class="k">geofence exit</td><td>${fmtT(s.geo[1])}</td></tr>`:`<tr><td class="k">GPS</td><td>${s.fac.badge?'no GPS indoors — badge is the witness':'no location data'}</td></tr>`}
-        ${s.badgeIn!=null?`<tr><td class="k">badge in / out</td><td>${fmtT(s.badgeIn)} / ${s.badgeOut!=null?fmtT(s.badgeOut):'—'}</td></tr>`:''}
+        ${s.geo?`<tr><td class="k">Geofence enter</td><td>${fmtT(s.geo[0])}</td></tr><tr><td class="k">Geofence exit</td><td>${fmtT(s.geo[1])}</td></tr>`:`<tr><td class="k">GPS</td><td>${s.fac.badge?'No GPS indoors — badge is the witness':'No location data'}</td></tr>`}
+        ${s.badgeIn!=null?`<tr><td class="k">Badge in / out</td><td>${fmtT(s.badgeIn)} / ${s.badgeOut!=null?fmtT(s.badgeOut):'—'}</td></tr>`:''}
       </table>
       <h5>Payout math</h5>
       <table class="kv">
-        <tr><td class="k">payable time</td><td>${fmtH(r.payableMin)} h × ${money(r.rate)}/h</td></tr>
-        <tr><td class="k">engine payout</td><td>${r.held?'held':money(r.pay)}</td></tr>
-        <tr><td class="k">spreadsheet</td><td>${money(r.naive)}</td></tr>
-        ${!r.held&&(r.deltaUnder>0.005||r.deltaOver>0.005)?`<tr class="hl-row"><td class="k">${r.deltaUnder>0.005?'underpay corrected':'overpay corrected'}</td><td>${r.deltaUnder>0.005?'+'+money(r.deltaUnder):'−'+money(r.deltaOver)}</td></tr>`:''}
+        <tr><td class="k">Payable time</td><td>${fmtH(r.payableMin)} h × ${money(r.rate)}/h</td></tr>
+        <tr><td class="k">Engine payout</td><td>${r.held?'held':money(r.pay)}</td></tr>
+        <tr><td class="k">Spreadsheet</td><td>${money(r.naive)}</td></tr>
+        ${!r.held&&(r.deltaUnder>0.005||r.deltaOver>0.005)?`<tr class="hl-row"><td class="k">${r.deltaUnder>0.005?'Underpay corrected':'Overpay corrected'}</td><td>${r.deltaUnder>0.005?'+'+money(r.deltaUnder):'−'+money(r.deltaOver)}</td></tr>`:''}
       </table>
       ${s.resolution?`<h5>Human</h5><table class="kv"><tr><td class="k">${esc(s.resolution.by)}</td><td>“${esc(s.resolution.quote)}”</td></tr></table>`:''}
     </div>`;
@@ -1658,9 +1650,7 @@ function allRules(){
   return live.concat(pack);
 }
 function renderRuleQueue(){
-  const q = qRules.trim().toLowerCase();
-  const chips = ['All'].concat(BUCKETS);
-  document.getElementById('ruleChips').innerHTML = chips.map(b=>`<button class="chip${bucketFilter===b?' active':''}" data-bucket="${b}">${b}</button>`).join('');
+  const q = Q.rules.trim().toLowerCase();
   let html = '';
   for (const b of BUCKETS){
     if (bucketFilter!=='All' && bucketFilter!==b) continue;
@@ -1674,7 +1664,7 @@ function renderRuleQueue(){
         html += `<button class="case${selRule===r.id?' active':''}" data-rule="${r.id}">
           <div class="row1"><span class="name mono" style="font-size:11.5px;font-weight:600">${r.id}</span>${kindTag(r.kind)}</div>
           <div class="meta clamp-2">${esc(r.sentence)}</div>
-          <div class="row3"><span class="count">fires ${bt.fires}/${bt.of}</span>${isEdited(r)?tag('draft','blue'):''}${r.expires?tag('expires '+r.expires):''}<span class="count" style="margin-left:auto">live</span></div>
+          <div class="row3"><span class="count">Fires ${bt.fires}/${bt.of}</span>${isEdited(r)?tag('draft','blue'):''}${r.expires?tag('expires '+r.expires):''}<span class="count" style="margin-left:auto">Live</span></div>
         </button>`;
       } else {
         const c = x.c;
@@ -1693,7 +1683,7 @@ function paramControls(r){
   if (!keys.length) return `<p class="r-note">No tunable parameters — a pure invariant.</p>`;
   return `<div class="params">${keys.map(k=>{
     const pd = r.params[k], v = overrides[r.id+'.'+k] ?? pd.v;
-    return `<div class="param"><span class="pl">${esc(pd.label)}</span><span class="step"><button data-p="${r.id}.${k}" data-d="-1" aria-label="decrease ${esc(pd.label)}">−</button><span class="val">${v}</span><button data-p="${r.id}.${k}" data-d="1" aria-label="increase ${esc(pd.label)}">+</button><span class="unit">${pd.unit}</span></span></div>`;
+    return `<div class="param"><span class="pl">${esc(pd.label)}</span><span class="step"><button data-p="${r.id}.${k}" data-d="-1" aria-label="Decrease ${esc(pd.label)}">−</button><span class="val">${v}</span><button data-p="${r.id}.${k}" data-d="1" aria-label="Increase ${esc(pd.label)}">+</button><span class="unit">${pd.unit}</span></span></div>`;
   }).join('')}</div>`;
 }
 function firedList(rid){
@@ -1711,12 +1701,12 @@ function renderRuleDetail(){
     const r = o.r, bt = backtest(week, r.id, overrides);
     document.getElementById('ruleDetail').innerHTML = `
       <div class="info-bar">
-        <div class="ib-text"><h2 class="mono" style="font-size:13px">${r.id}</h2><p class="ib-sub">${r.bucket} · compiled v${isEdited(r)?'draft':'3'} · fires on ${bt.fires} of ${bt.of} shifts</p></div>
+        <div class="ib-text"><h2 class="mono" style="font-size:13px">${r.id}</h2><p class="ib-sub">${r.bucket} · Compiled v${isEdited(r)?'draft':'3'} · Fires on ${bt.fires} of ${bt.of} shifts</p></div>
         <div class="ib-right">${kindTag(r.kind)}${r.expires?tag('expires '+r.expires):''}</div>
       </div>
       <div class="detail-body scroll">
         <p class="r-sent">“${esc(r.sentence)}”</p>
-        <p class="r-from">compiled from ${esc(r.source.doc)} — ${esc(r.source.cite)}</p>
+        <p class="r-from">Compiled from ${esc(r.source.doc)} — ${esc(r.source.cite)}</p>
         ${paramControls(r)}
         ${isEdited(r)?`<p class="r-note">Draft — parameters differ from the approved version; the engine re-ran all 54 shifts. In the product this goes backtest → shadow → live with a second operator's sign-off. <button class="reset-link" data-resetrule="${r.id}">Revert this rule</button></p>`:''}
         <p class="r-note">${r.kind==='llm'?'Detection of the candidate is deterministic; the verdict needs judgment over unstructured evidence — an LLM narrates, a human decides.':r.kind==='both'?'Detection is deterministic; resolution reads evidence with an LLM and routes to a human.':'Fully deterministic — same shift in, same verdict out, every time.'}</p>
@@ -1734,8 +1724,8 @@ function renderRuleDetail(){
       <div class="detail-body scroll">
         <p class="r-sent">${esc(c.statement)}</p>
         <table class="kv" style="max-width:42rem;margin-top:.75rem">
-          <tr><td class="k">deterministic</td><td>${esc(c.det)}</td></tr>
-          <tr><td class="k">parameters</td><td>${esc(c.params)}</td></tr>
+          <tr><td class="k">Deterministic</td><td>${esc(c.det)}</td></tr>
+          <tr><td class="k">Parameters</td><td>${esc(c.params)}</td></tr>
         </table>
         <p class="r-note">Cataloged from the research corpus — sourced and parameterized, not yet compiled into the engine IR. The compile step turns the parameters row into the steppers live rules have.</p>
       </div>`;
@@ -1752,8 +1742,8 @@ function renderRuleAux(){
         ${p.verbatim?`<p class="src-note">verbatim · as ingested</p><div class="src-quote">${p.verbatim}</div>`:
           `<p class="src-note">obligation summary · as compiled</p><div class="src-quote">${esc(p.summary||o.r.source.cite)}</div>`}
         <table class="kv" style="margin-top:.625rem">
-          <tr><td class="k">effective</td><td>${esc(p.dates||'—')}</td></tr>
-          <tr><td class="k">chain</td><td>flag → rule → clause → document</td></tr>
+          <tr><td class="k">Effective</td><td>${esc(p.dates||'—')}</td></tr>
+          <tr><td class="k">Chain</td><td>Flag → rule → clause → document</td></tr>
         </table>
         ${p.url?`<a class="src-link" style="margin-top:.625rem" href="${p.url}" target="_blank" rel="noopener">Open source document ↗</a>`:''}
       </div>`;
@@ -1775,19 +1765,20 @@ const COMPILES = [
     ir:`<span class="k">rule</span>     TW-1187          <span class="k">kind</span> <span class="g">deterministic</span>  <span class="k">expires</span> Sun Aug 30\n<span class="k">scope</span>    facility = Mercy General\n<span class="k">check</span>    <span class="g">hold if</span> mercy_weekly_worked_min &gt; weekly_h × 60\n<span class="k">effect</span>   hold excess hours · notify Dana K.\n<span class="k">tests</span>    4 generated · green`,
     note:()=>`This rule is live in this page's engine — it currently fires on <b>${backtest(week,'TW-1187',overrides).fires}</b> shift(s). It expires by itself on Sunday.`,
     rules:['TW-1187'], shifts:['4830'] },
-  { who:'ops email', when:'recorded compile', q:'No shift longer than 12 hours at Bayview, and anything over 10 needs the lead’s okay.',
+  { who:'Ops email', when:'Recorded compile', q:'No shift longer than 12 hours at Bayview, and anything over 10 needs the lead’s okay.',
     ir:`<span class="k">rule</span>     FAC-BAYVIEW-04   <span class="k">kind</span> <span class="g">deterministic</span>\n<span class="k">check</span>    <span class="g">hold if</span> shift_h &gt; 12.0\n<span class="k">rule</span>     FAC-BAYVIEW-05   <span class="k">kind</span> <span class="g">deterministic</span>\n<span class="k">check</span>    <span class="g">flag if</span> shift_h &gt; 10.0 ∧ ¬lead_approval_on_file`,
     amb:'Does the 12-hour cap include the unpaid meal break, or worked hours only? The answer becomes an explicit parameter — never a silent interpretation.',
     note:()=>`Backtest before activation: would flag 2 of 96 Bayview shifts last month. Activates in <b>shadow</b> — watches a week, flags nothing.`,
     rules:[], shifts:['4833'] },
-  { who:'onboarding doc', when:'recorded compile', q:'Round everything to the nearest quarter hour.',
+  { who:'Onboarding doc', when:'Recorded compile', q:'Round everything to the nearest quarter hour.',
     amb:'The compiler pushes back with the rule pack: quarter-hour rounding is lawful federally (29 CFR 785.48, 7-minute breakpoint) — but Mercy General, Sutter and St. Marks are in California, where Camp v. Home Depot holds that an employer capturing exact minutes must pay exact minutes. Proposed: rounding ON for TX / NY / IL sites, OFF for CA sites, with the citation attached to each.',
     ir:`<span class="k">rule</span>     TB-ROUND-7       <span class="k">scope</span> state ≠ CA     <span class="g">round nearest 15 min</span>\n<span class="k">rule</span>     CA-ROUND-0       <span class="k">scope</span> state = CA     <span class="g">exact-minute pay</span>  <span class="k">src</span> Camp v. Home Depot`,
     note:()=>`Both rules are live in this page's engine. The customer asked for something partially unlawful — the compiler knew, with the receipt.`,
     rules:['TB-ROUND-7','CA-ROUND-0'], shifts:[] },
 ];
 function renderCompileQueue(){
-  document.getElementById('compileList').innerHTML = COMPILES.map((c,i)=>`
+  const q = Q.compile.trim().toLowerCase();
+  document.getElementById('compileList').innerHTML = COMPILES.map((c,i)=>({c,i})).filter(x=>!q||(x.c.q+' '+x.c.who).toLowerCase().includes(q)).map(({c,i})=>`
     <button class="case${selCompile===i?' active':''}" data-compile="${i}">
       <div class="row1"><span class="name fade-trunc">“${esc(c.q)}”</span></div>
       <div class="meta">${esc(c.who)} · ${esc(c.when)}</div>
@@ -1798,11 +1789,11 @@ function renderCompileDetail(){
   const c = COMPILES[selCompile];
   document.getElementById('compileDetail').innerHTML = `
     <div class="info-bar">
-      <div class="ib-text"><h2 class="fade-trunc">Compile — ${esc(c.who)}</h2><p class="ib-sub">${esc(c.when)} · LLM runs once at ingest · output is data, not behavior</p></div>
+      <div class="ib-text"><h2 class="fade-trunc">Compile — ${esc(c.who)}</h2><p class="ib-sub">${esc(c.when)} · LLM runs once at ingest · Output is data, not behavior</p></div>
     </div>
     <div class="detail-body scroll">
       <div class="msg"><div class="who">${esc(c.who)}</div><div class="bubble op">“${esc(c.q)}”</div></div>
-      ${c.amb?`<div class="ask"><span class="wq">The compiler asks —</span> ${esc(c.amb)} ${selCompile===1?'<button class="wopt">includes break</button><button class="wopt" style="font-weight:700">worked hours only</button>':''}</div>`:''}
+      ${c.amb?`<div class="ask"><span class="wq">The compiler asks —</span> ${esc(c.amb)} ${selCompile===1?'<button class="wopt">Includes break</button><button class="wopt" style="font-weight:700">Worked hours only</button>':''}</div>`:''}
       ${c.ir?`<div class="msg"><div class="who">Compiled</div><div class="irblock">${c.ir}</div></div>`:''}
       <p class="r-note">${c.note()}</p>
     </div>`;
@@ -1812,21 +1803,21 @@ function renderCompileAux(){
   document.getElementById('compileAux').innerHTML = `
     <div class="aux-head">Result</div>
     <div class="aux-body scroll">
-      ${c.rules.length?`<h5>Rules created</h5><ul class="fired">${c.rules.map(id=>`<li><button data-gorule="${id}"><span class="fid">${id}</span><span class="fnote">open in Rulebook</span></button></li>`).join('')}</ul>`:'<h5>Rules created</h5><p class="r-note">Blocked on the operator’s answer — nothing activates while a question is open.</p>'}
+      ${c.rules.length?`<h5>Rules created</h5><ul class="fired">${c.rules.map(id=>`<li><button data-gorule="${id}"><span class="fid">${id}</span><span class="fnote">Open in Rulebook</span></button></li>`).join('')}</ul>`:'<h5>Rules created</h5><p class="r-note">Blocked on the operator’s answer — nothing activates while a question is open.</p>'}
       ${c.shifts.length?`<h5>Touches this week</h5><ul class="fired">${c.shifts.map(id=>{const r=byId(id);return r?`<li><button data-goshift="${id}"><span class="fid">#${id}</span><span class="fnote fade-trunc">${esc(r.shift.worker)} · ${esc(r.shift.fac.name)}</span></button></li>`:'';}).join('')}</ul>`:''}
       <h5>Doctrine</h5>
       <table class="kv">
-        <tr><td class="k">ambiguity</td><td>surfaced, never resolved silently</td></tr>
-        <tr><td class="k">tests</td><td>generated at compile</td></tr>
-        <tr><td class="k">backtest</td><td>shown before activation</td></tr>
-        <tr><td class="k">lifecycle</td><td>draft → shadow → live</td></tr>
+        <tr><td class="k">Ambiguity</td><td>Surfaced, never resolved silently</td></tr>
+        <tr><td class="k">Tests</td><td>Generated at compile</td></tr>
+        <tr><td class="k">Backtest</td><td>Shown before activation</td></tr>
+        <tr><td class="k">Lifecycle</td><td>Draft → shadow → live</td></tr>
       </table>
     </div>`;
 }
 
 // ---------------- vocabulary tab ----------------
 function renderVocabQueue(){
-  const q = qVocab.trim().toLowerCase();
+  const q = Q.vocab.trim().toLowerCase();
   document.getElementById('vocabList').innerHTML = FEATURES.map((f,i)=>({f,i}))
     .filter(x=>!q||x.f[0].toLowerCase().includes(q)||x.f[1].toLowerCase().includes(q))
     .map(x=>`<button class="case${selFeature===x.i?' active':''}" data-feature="${x.i}">
@@ -1846,7 +1837,7 @@ function renderVocabDetail(){
   const [id, desc] = FEATURES[selFeature];
   document.getElementById('vocabDetail').innerHTML = `
     <div class="info-bar">
-      <div class="ib-text"><h2 class="mono" style="font-size:13px">${id}</h2><p class="ib-sub">typed feature · ${selFeature+1} of ${FEATURES.length}</p></div>
+      <div class="ib-text"><h2 class="mono" style="font-size:13px">${id}</h2><p class="ib-sub">Typed feature · ${selFeature+1} of ${FEATURES.length}</p></div>
     </div>
     <div class="detail-body scroll">
       <p class="r-sent">${esc(desc)}</p>
@@ -1884,7 +1875,7 @@ function renderDrawer(){
   if (o.live){
     const r = o.r, bt = backtest(week, r.id, overrides), p = PROV[r.id]||{};
     document.getElementById('drawer').innerHTML = `
-      <div class="drawer-head"><div class="htext"><h3 class="drawer-title mono" style="font-size:13px">${r.id}</h3><p class="drawer-sub">${r.bucket} · fires ${bt.fires}/${bt.of} · rule → clause → document</p></div>${closeBtn}</div>
+      <div class="drawer-head"><div class="htext"><h3 class="drawer-title mono" style="font-size:13px">${r.id}</h3><p class="drawer-sub">${r.bucket} · Fires ${bt.fires}/${bt.of} · Rule → clause → document</p></div>${closeBtn}</div>
       <div class="drawer-body scroll">
         <p class="r-sent" style="font-size:13.5px">“${esc(r.sentence)}”</p>
         <p style="margin:.375rem 0 .75rem">${kindTag(r.kind)}</p>
@@ -1893,7 +1884,7 @@ function renderDrawer(){
         <div class="src-entry" style="margin-top:.5rem">
           <h6>${esc(p.doc||r.source.doc)}</h6>
           ${p.verbatim?`<p class="src-note">verbatim · as ingested</p><div class="src-quote">${p.verbatim}</div>`:`<p class="src-note">obligation summary · as compiled</p><div class="src-quote">${esc(p.summary||r.source.cite)}</div>`}
-          ${p.dates?`<p class="drawer-sub" style="margin-top:.5rem">effective: ${esc(p.dates)}</p>`:''}
+          ${p.dates?`<p class="drawer-sub" style="margin-top:.5rem">Effective: ${esc(p.dates)}</p>`:''}
           ${p.url?`<a class="src-link" style="margin-top:.625rem" href="${p.url}" target="_blank" rel="noopener">Open source document ↗</a>`:''}
         </div>
         <p style="margin-top:1rem"><button class="btn" data-gorule="${r.id}">Open in Rulebook →</button></p>
@@ -1901,10 +1892,10 @@ function renderDrawer(){
   } else {
     const c = o.c;
     document.getElementById('drawer').innerHTML = `
-      <div class="drawer-head"><div class="htext"><h3 class="drawer-title fade-trunc">${esc(c.name)}</h3><p class="drawer-sub">${c.id} · ${c.bucket} · pack, cataloged</p></div>${closeBtn}</div>
+      <div class="drawer-head"><div class="htext"><h3 class="drawer-title fade-trunc">${esc(c.name)}</h3><p class="drawer-sub">${c.id} · ${c.bucket} · Pack, cataloged</p></div>${closeBtn}</div>
       <div class="drawer-body scroll">
         <p class="r-sent" style="font-size:13.5px">${esc(c.statement)}</p>
-        <table class="kv" style="margin-top:.75rem"><tr><td class="k">deterministic</td><td>${esc(c.det)}</td></tr><tr><td class="k">parameters</td><td>${esc(c.params)}</td></tr></table>
+        <table class="kv" style="margin-top:.75rem"><tr><td class="k">Deterministic</td><td>${esc(c.det)}</td></tr><tr><td class="k">Parameters</td><td>${esc(c.params)}</td></tr></table>
         <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.75rem">${c.src.map(u=>`<a class="src-link" href="${u}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\/(www\.)?/,'').split('/')[0])} ↗</a>`).join('')}</div>
       </div>`;
   }
@@ -1918,8 +1909,27 @@ function setTab(t){
   document.querySelectorAll('.main').forEach(m=>m.classList.toggle('on', m.id==='m-'+t));
   setMobileDetail(false);
 }
+
+// ---------------- toolbars: magnifier that swaps into search ----------------
+const ICO_SEARCH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>`;
+const ICO_X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`;
+const QUEUE_RENDER = { shifts: renderShiftQueue, rules: renderRuleQueue, compile: renderCompileQueue, vocab: renderVocabQueue };
+function toolbarChips(t){
+  if (t==='shifts') return `<div class="chips">${SFILTERS.map(([k,l])=>`<button class="chip${shiftFilter===k?' active':''}" data-sfilter="${k}">${l}</button>`).join('')}</div>`;
+  if (t==='rules') return `<div class="chips">${['All'].concat(BUCKETS).map(b=>`<button class="chip${bucketFilter===b?' active':''}" data-bucket="${b}">${b}</button>`).join('')}</div>`;
+  return '';
+}
+function renderToolbar(t){
+  const el = document.getElementById('tb-'+t); if (!el) return;
+  el.innerHTML = searchOpen[t]
+    ? `<button class="icon-btn sm dim" data-stoggle="${t}" aria-label="Close search">${ICO_X}</button><input class="q-input" data-q="${t}" value="${esc(Q[t])}" placeholder="Search" aria-label="Search">`
+    : `<button class="icon-btn sm dim" data-stoggle="${t}" aria-label="Search">${ICO_SEARCH}</button>${toolbarChips(t)}`;
+}
+function renderToolbars(){ for (const t of ['shifts','rules','compile','vocab']) renderToolbar(t); }
+
 function renderAll(){
   renderTop();
+  renderToolbars();
   renderShiftQueue(); renderShiftDetail(); renderShiftAux();
   renderRuleQueue(); renderRuleDetail(); renderRuleAux();
   renderCompileQueue(); renderCompileDetail(); renderCompileAux();
@@ -1927,20 +1937,28 @@ function renderAll(){
   if (drawerRule) renderDrawer();
 }
 
-document.getElementById('qShifts').addEventListener('input', e=>{ qShifts=e.target.value; renderShiftQueue(); });
-document.getElementById('qRules').addEventListener('input', e=>{ qRules=e.target.value; renderRuleQueue(); });
-document.getElementById('qVocab').addEventListener('input', e=>{ qVocab=e.target.value; renderVocabQueue(); });
+document.addEventListener('input', e=>{
+  const k = e.target && e.target.dataset ? e.target.dataset.q : null;
+  if (!k) return; Q[k]=e.target.value; QUEUE_RENDER[k]();
+});
 document.getElementById('scrim').addEventListener('click', closeDrawer);
 document.getElementById('backBtn').addEventListener('click', ()=>setMobileDetail(false));
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeDrawer(); });
 
 document.addEventListener('click', e=>{
-  const t = e.target.closest('[data-tab],[data-sfilter],[data-shift],[data-rule],[data-bucket],[data-p],[data-cite],[data-compile],[data-feature],[data-goshift],[data-gorule],[data-natoggle],[data-closedrawer],[data-resetrule],[data-resetall]');
+  const t = e.target.closest('[data-stoggle],[data-tab],[data-sfilter],[data-shift],[data-rule],[data-bucket],[data-p],[data-cite],[data-compile],[data-feature],[data-goshift],[data-gorule],[data-natoggle],[data-closedrawer],[data-resetrule],[data-resetall]');
   if (!t) return;
   const d = t.dataset;
+  if (d.stoggle){
+    const k=d.stoggle; searchOpen[k]=!searchOpen[k];
+    if (!searchOpen[k] && Q[k]){ Q[k]=''; QUEUE_RENDER[k](); }
+    renderToolbar(k);
+    if (searchOpen[k]){ const inp=document.getElementById('tb-'+k).querySelector('input'); if(inp) inp.focus(); }
+    return;
+  }
   if (d.tab) return setTab(d.tab);
-  if (d.sfilter){ shiftFilter=d.sfilter; renderShiftQueue(); return; }
-  if (d.bucket){ bucketFilter=d.bucket; renderRuleQueue(); return; }
+  if (d.sfilter){ shiftFilter=d.sfilter; renderToolbar('shifts'); renderShiftQueue(); return; }
+  if (d.bucket){ bucketFilter=d.bucket; renderToolbar('rules'); renderRuleQueue(); return; }
   if (d.shift){ selShift=d.shift; setMobileDetail(true); renderShiftQueue(); renderShiftDetail(); renderShiftAux(); return; }
   if (d.rule){ selRule=d.rule; setMobileDetail(true); renderRuleQueue(); renderRuleDetail(); renderRuleAux(); return; }
   if (d.compile!=null){ selCompile=+d.compile; setMobileDetail(true); renderCompileQueue(); renderCompileDetail(); renderCompileAux(); return; }
@@ -1949,7 +1967,7 @@ document.addEventListener('click', e=>{
   if (d.closedrawer){ closeDrawer(); return; }
   if (d.goshift){ closeDrawer(); setTab('shifts'); selShift=d.goshift; shiftFilter='all'; setMobileDetail(true); renderShiftQueue(); renderShiftDetail(); renderShiftAux(); return; }
   if (d.gorule){ closeDrawer(); setTab('rules'); selRule=d.gorule; bucketFilter='All'; setMobileDetail(true); renderRuleQueue(); renderRuleDetail(); renderRuleAux(); return; }
-  if (d.natoggle){ const el=document.getElementById('naRows'); if(el){ el.hidden=!el.hidden; t.textContent=(el.hidden?'show ':'hide ')+el.children.length+' not-applicable checks'; } return; }
+  if (d.natoggle){ const el=document.getElementById('naRows'); if(el){ el.hidden=!el.hidden; t.textContent=(el.hidden?'Show ':'Hide ')+el.children.length+' not-applicable checks'; } return; }
   if (d.resetrule){ const r=RULES.find(x=>x.id===d.resetrule); for(const k of Object.keys(r.params)) delete overrides[d.resetrule+'.'+k]; rerun(); return; }
   if (d.resetall){ for(const k of Object.keys(overrides)) delete overrides[k]; rerun(); return; }
   if (d.p){
