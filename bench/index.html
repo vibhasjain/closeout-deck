@@ -1,0 +1,2001 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Rulebook Workbench — HyperTrack Payroll Ops</title>
+<meta name="description" content="Internal research prototype: natural-language payroll rules compiled into a deterministic engine — live decision traces, editable parameters, instant backtests. Synthetic data.">
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ShopStream's design system, transcribed from shopstream-cx
+   (frontend/src/index.css + casebuilder/web/styles.css). Same tokens, same
+   type sizes, same components — strict B&W; color reserved for status dots. */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 9%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 42%;
+  --border: 0 0% 90%;
+  --input: 0 0% 89%;
+  --radius: 0.6rem;
+  /* The only color in the product. */
+  --solid: 152 55% 38%;     /* green: deterministic, grounded */
+  --verify: 38 92% 45%;     /* amber: flag / LLM judgment — confirm */
+  --nosource: 0 72% 51%;    /* red: refuse / error */
+  --pending: 220 70% 52%;   /* blue: held, awaiting a human */
+  --internal: 24 84% 50%;   /* orange: engine↔operator back-channel, cited passages */
+  --sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+* { box-sizing: border-box; border-color: hsl(var(--border)); touch-action: pan-x pan-y; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html, body { margin: 0; height: 100%; overflow-x: hidden; }
+body {
+  font-family: var(--sans); font-size: 13.5px; line-height: 1.5;
+  color: hsl(var(--foreground)); background: hsl(var(--background));
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}
+*:focus, *:focus-visible { outline: none !important; box-shadow: none; }
+button { font-family: var(--sans); line-height: inherit; border: none; background: none; padding: 0; color: inherit; cursor: pointer; text-align: left; }
+[hidden] { display: none !important; }
+@media (max-width: 767.98px) { input { font-size: 16px !important; } }
+@keyframes fade-in { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+.scroll { scrollbar-width: thin; scrollbar-color: hsl(var(--foreground) / .15) transparent; }
+.scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.scroll::-webkit-scrollbar-track { background: transparent; }
+.scroll::-webkit-scrollbar-thumb { background: hsl(var(--foreground) / .12); border-radius: 9999px; }
+.scroll::-webkit-scrollbar-thumb:hover { background: hsl(var(--foreground) / .22); }
+.fade-trunc { overflow: hidden; white-space: nowrap;
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 14px), transparent 100%);
+  mask-image: linear-gradient(to right, black calc(100% - 14px), transparent 100%); }
+.clamp-2 { overflow: hidden; display: block; max-height: 2.75em; }
+
+.icon-btn { display: inline-flex; align-items: center; justify-content: center;
+  height: 2.25rem; width: 2.25rem; flex-shrink: 0; border-radius: calc(var(--radius) - 2px);
+  color: hsl(var(--foreground)); transition: background-color .15s, color .15s; }
+.icon-btn:hover { background: hsl(var(--muted)); }
+.icon-btn svg { width: 1rem; height: 1rem; flex-shrink: 0; }
+
+.tag { display: inline-flex; align-items: center; gap: .3rem; border-radius: 9999px;
+  border: 1px solid transparent; background: hsl(var(--muted)); color: hsl(var(--muted-foreground));
+  height: 1.125rem; padding: 0 .375rem; font-size: 9px; font-weight: 600; letter-spacing: .025em;
+  white-space: nowrap; flex-shrink: 0; }
+.tag .dot { width: .375rem; height: .375rem; border-radius: 9999px; flex-shrink: 0; }
+.dot { width: .5rem; height: .5rem; border-radius: 9999px; flex-shrink: 0; display: inline-block; }
+.dot.solid { background: hsl(var(--solid)); }
+.dot.verify { background: hsl(var(--verify)); }
+.dot.nosource { background: hsl(var(--nosource)); }
+.dot.pending { background: hsl(var(--pending)); }
+.dot.pack { background: transparent; border: 1.5px solid hsl(var(--muted-foreground) / .5); }
+.conf { display: inline-flex; align-items: center; gap: .4rem; }
+.conf .lbl { font-size: 11px; font-weight: 600; letter-spacing: .025em; }
+.conf.solid .lbl { color: hsl(var(--solid)); }
+.conf.verify .lbl { color: hsl(var(--verify)); }
+.conf.pending .lbl { color: hsl(var(--pending)); }
+.conf.nosource .lbl { color: hsl(var(--nosource)); }
+.conf.plain .lbl { color: hsl(var(--muted-foreground)); }
+
+.q-input { display: flex; height: 2.25rem; min-width: 0; flex: 1;
+  border-radius: calc(var(--radius) - 2px); border: 1px solid hsl(var(--input));
+  background: hsl(var(--background)); padding: .25rem .75rem;
+  font-family: var(--sans); font-size: 14px; line-height: 1.5; color: hsl(var(--foreground));
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / .05); }
+.q-input::placeholder { color: hsl(var(--muted-foreground)); }
+
+.chips { display: flex; min-width: 0; flex-wrap: nowrap; gap: .25rem; overflow-x: auto; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { white-space: nowrap; border-radius: 9999px; padding: .25rem .625rem; font-size: 11px; font-weight: 500;
+  border: 1px solid hsl(var(--border) / .6); color: hsl(var(--muted-foreground)); }
+.chip:hover { background: hsl(var(--muted) / .5); }
+.chip.active { border-color: hsl(var(--border)); background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+
+.app { display: flex; flex-direction: column; height: 100dvh; }
+.topbar { display: flex; height: 3rem; flex-shrink: 0; align-items: center; gap: .75rem;
+  border-bottom: 1px solid hsl(var(--border)); padding: 0 .75rem; }
+.back-btn { display: none; align-items: center; gap: .25rem; font-size: 13px; color: hsl(var(--muted-foreground)); }
+.back-btn svg { width: 1rem; height: 1rem; }
+.brand { font-size: 15px; font-weight: 600; letter-spacing: -.025em; white-space: nowrap; }
+.brand .dim { color: hsl(var(--muted-foreground)); font-weight: 500; }
+.topbar .spacer { flex: 1; min-width: 0; }
+.topstats { font-family: var(--mono); font-size: 11px; color: hsl(var(--muted-foreground)); white-space: nowrap; display: none; }
+@media (min-width: 900px) { .topstats { display: block; } }
+.topstats b { color: hsl(var(--foreground)); font-weight: 600; }
+.memo-link { font-size: 12px; color: hsl(var(--pending)); text-decoration: none; white-space: nowrap; }
+.memo-link:hover { text-decoration: underline; }
+
+.nav-tabs { display: flex; flex-shrink: 0; align-items: center; gap: 2px; padding: 2px;
+  border-radius: 9999px; background: hsl(var(--muted)); }
+.nav-tabs button { border-radius: 9999px; padding: .25rem .625rem; font-size: 12px; font-weight: 500;
+  line-height: 1.4; white-space: nowrap; color: hsl(var(--muted-foreground));
+  transition: color .15s, background-color .15s; }
+.nav-tabs button:hover { color: hsl(var(--foreground)); }
+.nav-tabs button.active { background: hsl(var(--background)); color: hsl(var(--foreground)); box-shadow: 0 1px 2px rgb(0 0 0 / .06); }
+
+.main { display: none; flex: 1; min-height: 0; }
+.main.on { display: flex; }
+.queue { display: flex; width: 100%; flex-shrink: 0; flex-direction: column; border-right: 1px solid hsl(var(--border)); }
+.toolbar { display: flex; height: 3.5rem; flex-shrink: 0; align-items: center; gap: .5rem;
+  border-bottom: 1px solid hsl(var(--border)); padding: 0 .75rem; }
+.toolbar.wrap2 { height: auto; min-height: 3.5rem; flex-wrap: wrap; padding: .5rem .75rem; }
+.case-list { min-height: 0; flex: 1; overflow-y: auto; }
+.sect { padding: .625rem .75rem .25rem; font-size: 10px; font-weight: 600; letter-spacing: .05em;
+  text-transform: uppercase; color: hsl(var(--muted-foreground)); }
+.case { display: block; width: 100%; border-left: 2px solid transparent; padding: .625rem .75rem;
+  transition: background-color .15s cubic-bezier(.4,0,.2,1), border-color .15s cubic-bezier(.4,0,.2,1); }
+.case:hover { background: hsl(var(--muted) / .4); }
+.case.active { border-left-color: hsl(var(--foreground)); background: hsl(var(--muted) / .7); }
+.case .row1 { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.case .name { min-width: 0; flex: 1; font-size: 12.5px; font-weight: 500; line-height: 1.5; }
+.case .meta { margin-top: .125rem; font-size: 12px; line-height: 1.375; color: hsl(var(--muted-foreground)); }
+.case .row3 { display: flex; align-items: center; gap: .375rem; margin-top: .375rem; }
+.mono { font-family: var(--mono); }
+.count { display: inline-flex; align-items: center; gap: .25rem; font-family: var(--mono); font-size: 11px; color: hsl(var(--muted-foreground)); }
+
+.detail { display: none; min-width: 0; flex: 1; flex-direction: column; }
+.info-bar { display: flex; height: 3.5rem; flex-shrink: 0; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid hsl(var(--border)); padding: 0 1rem; }
+.info-bar .ib-text { min-width: 0; }
+.info-bar h2 { margin: 0; font-size: 14px; font-weight: 600; line-height: 1.375; }
+.info-bar .ib-sub { margin: 0; font-family: var(--mono); font-size: 11px; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+.info-bar .ib-right { display: flex; flex-shrink: 0; align-items: center; gap: .625rem; margin-left: .75rem; }
+.detail-body { min-height: 0; flex: 1; overflow-y: auto; padding: 1rem 1.25rem 3rem; }
+
+/* Third pane — the product's audit pane. */
+.aux { display: none; width: 380px; flex-shrink: 0; flex-direction: column; border-left: 1px solid hsl(var(--border)); }
+@media (min-width: 1100px) { .aux { display: flex; } }
+.aux-head { display: flex; height: 3.5rem; flex-shrink: 0; align-items: center; gap: .5rem;
+  border-bottom: 1px solid hsl(var(--border)); padding: 0 1rem;
+  font-size: 11px; font-weight: 500; letter-spacing: .025em; color: hsl(var(--muted-foreground)); }
+.aux-body { min-height: 0; flex: 1; overflow-y: auto; padding: 1rem 1.25rem 2rem; }
+.aux h5 { margin: 1rem 0 .375rem; font-size: 11px; font-weight: 600; letter-spacing: .025em; text-transform: uppercase; color: hsl(var(--muted-foreground)); }
+.aux h5:first-child { margin-top: 0; }
+.kv { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 11.5px; }
+.kv td { border-bottom: 1px solid hsl(var(--border)); padding: .35rem .5rem .35rem 0; vertical-align: top; }
+.kv td.k { font-family: var(--sans); font-size: 11px; color: hsl(var(--muted-foreground)); white-space: nowrap; width: 42%; }
+.kv tr:last-child td { border-bottom: 0; }
+.kv tr.hl-row td { background: hsl(var(--internal) / .06); }
+
+/* Decision trace — the report. */
+.trace { list-style: none; margin: 0; padding: 0; max-width: 46rem; }
+.trace li { display: flex; gap: .625rem; padding: .5rem 0; border-bottom: 1px solid hsl(var(--border) / .7); align-items: baseline; }
+.trace li:last-child { border-bottom: 0; }
+.t-body { flex: 1; min-width: 0; font-size: 13px; line-height: 1.55; }
+.t-note { color: hsl(var(--muted-foreground)); }
+.t-note b { color: hsl(var(--foreground)); font-weight: 600; }
+.t-stat { flex-shrink: 0; }
+.evchips { display: inline-flex; flex-wrap: wrap; gap: .3rem; margin-left: .3rem; vertical-align: baseline; }
+.evchip { font-family: var(--mono); font-size: 10px; border: 1px solid hsl(var(--border)); border-radius: .3rem;
+  padding: .05rem .35rem; color: hsl(var(--muted-foreground)); background: hsl(var(--muted) / .4); }
+
+/* Citations — the clickable rule reference, straight from the product. */
+.cite { --cite-ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 17 17 7'/%3E%3Cpath d='M7 7h10v10'/%3E%3C/svg%3E");
+  cursor: pointer; color: inherit; border-radius: .28rem; padding: .05em .18em .05em .3em; margin: 0 -0.04em;
+  box-decoration-break: clone; -webkit-box-decoration-break: clone; transition: background-color .12s;
+  font-family: var(--mono); font-size: 11.5px; font-weight: 600; background: hsl(var(--pending) / .12); }
+.cite:hover { background: hsl(var(--pending) / .22); }
+.cite::after { content: ""; display: inline-block; width: .56em; height: .56em; margin: 0 .04em 0 .18em;
+  vertical-align: .34em; background-color: currentColor; opacity: .42;
+  -webkit-mask: var(--cite-ico) center / contain no-repeat; mask: var(--cite-ico) center / contain no-repeat;
+  transition: opacity .12s; }
+.cite:hover::after { opacity: .7; }
+
+.payline { margin-top: 1rem; padding-top: .625rem; border-top: 1px solid hsl(var(--border));
+  font-family: var(--mono); font-size: 11.5px; color: hsl(var(--muted-foreground));
+  display: flex; gap: 1rem; flex-wrap: wrap; max-width: 46rem; }
+.payline b { color: hsl(var(--foreground)); font-weight: 600; }
+.payline .up { color: hsl(var(--solid)); }
+.payline .dn { color: hsl(var(--verify)); }
+.na-toggle { font-family: var(--mono); font-size: 11px; color: hsl(var(--muted-foreground)); text-decoration: underline; text-underline-offset: 2px; margin-top: .5rem; display: inline-block; }
+
+/* Internal whisper — dashed orange, mono. The engine↔operator back-channel. */
+.whisper { border: 1px dashed hsl(var(--internal) / .3); border-radius: var(--radius);
+  background: hsl(var(--internal) / .06); padding: .625rem .875rem;
+  font-family: var(--mono); font-size: 10.5px; line-height: 1.625; margin: .75rem 0; max-width: 46rem; }
+.whisper .wq { font-weight: 600; }
+.whisper button.wopt { border: 1px solid hsl(var(--internal) / .4); border-radius: .3rem; padding: .05rem .45rem; margin: 0 .2rem; font-family: var(--mono); font-size: 10.5px; }
+.whisper button.wopt:hover { background: hsl(var(--internal) / .12); }
+
+/* Rule detail (middle pane of Rulebook + drawer body). */
+.r-sent { font-size: 14px; line-height: 1.55; max-width: 42rem; margin: 0 0 .25rem; }
+.r-from { font-family: var(--mono); font-size: 11px; color: hsl(var(--muted-foreground)); margin: 0 0 1rem; }
+.params { display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; margin: .75rem 0; }
+.param { display: flex; flex-direction: column; gap: .25rem; }
+.param .pl { font-size: 10px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: hsl(var(--muted-foreground)); }
+.step { display: inline-flex; align-items: center; border: 1px solid hsl(var(--input)); border-radius: calc(var(--radius) - 2px); overflow: hidden; background: hsl(var(--background)); }
+.step button { padding: .22rem .55rem; font-family: var(--mono); font-size: 13px; color: hsl(var(--muted-foreground)); background: hsl(var(--muted) / .5); }
+.step button:hover { color: hsl(var(--foreground)); background: hsl(var(--muted)); }
+.step .val { padding: .22rem .55rem; font-family: var(--mono); font-size: 12.5px; font-weight: 600; min-width: 3.1ch; text-align: center; border-left: 1px solid hsl(var(--border)); border-right: 1px solid hsl(var(--border)); font-variant-numeric: tabular-nums; }
+.step .unit { padding: 0 .5rem; font-family: var(--mono); font-size: 11px; color: hsl(var(--muted-foreground)); }
+.r-note { font-size: 12px; color: hsl(var(--muted-foreground)); max-width: 42rem; margin: .75rem 0 0; }
+.fired { list-style: none; margin: .375rem 0 0; padding: 0; max-width: 42rem; }
+.fired li { border-bottom: 1px solid hsl(var(--border) / .7); }
+.fired li:last-child { border-bottom: 0; }
+.fired button { display: flex; width: 100%; gap: .625rem; padding: .45rem 0; align-items: baseline; font-size: 12.5px; }
+.fired button:hover { background: hsl(var(--muted) / .4); }
+.fired .fid { font-family: var(--mono); font-size: 11px; font-weight: 600; }
+.fired .fnote { flex: 1; min-width: 0; color: hsl(var(--muted-foreground)); }
+.reset-link { font-size: 12px; color: hsl(var(--pending)); }
+.reset-link:hover { text-decoration: underline; }
+
+/* Source pane / drawer source block — the typology-library idiom. */
+.src-entry { padding: .625rem 0; }
+.src-entry h6 { margin: 0 0 .25rem; font-size: 12px; font-weight: 600; }
+.src-quote { margin: .375rem -1.25rem; padding: .625rem 1.25rem; background: hsl(var(--internal) / .06);
+  font-family: var(--mono); font-size: 11.5px; line-height: 1.625; color: hsl(var(--foreground)); }
+.drawer .src-quote { margin: .375rem -1.25rem; }
+.hl-cite { border-radius: .25rem; background: hsl(var(--internal) / .24); padding: 0 .15rem;
+  box-shadow: 0 0 0 1px hsl(var(--internal) / .5); color: hsl(var(--foreground)); }
+.src-link { display: inline-block; margin-top: .5rem; font-size: 12px; color: hsl(var(--pending)); text-decoration: none; }
+.src-link:hover { text-decoration: underline; }
+.src-note { font-size: 11px; font-weight: 500; letter-spacing: .025em; color: hsl(var(--muted-foreground)); margin: 0 0 .25rem; }
+
+/* Compile thread. */
+.msg { max-width: 42rem; margin: 0 0 .875rem; }
+.msg .who { font-size: 11px; font-weight: 600; color: hsl(var(--muted-foreground)); margin-bottom: .25rem; }
+.bubble { border: 1px solid hsl(var(--border)); border-radius: var(--radius); padding: .625rem .875rem; font-size: 13.5px; }
+.bubble.op { background: hsl(var(--muted) / .5); }
+.irblock { background: hsl(var(--muted)); border-radius: var(--radius); padding: .75rem .875rem;
+  font-family: var(--mono); font-size: 11.5px; line-height: 1.7; overflow-x: auto; white-space: pre; margin: .5rem 0; }
+.irblock .k { color: hsl(var(--muted-foreground)); }
+.irblock .g { color: hsl(var(--solid)); font-weight: 600; }
+
+/* Drawer — the SourceViewer. */
+.scrim { position: fixed; inset: 0; z-index: 40; background: rgb(0 0 0 / .2); display: none; }
+.scrim.open { display: block; animation: fade-in .15s ease-out; }
+.drawer { position: fixed; right: 0; top: 0; z-index: 50; height: 100%; width: 100%; max-width: 480px;
+  display: none; flex-direction: column; border-left: 1px solid hsl(var(--border)); background: hsl(var(--background));
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / .1), 0 8px 10px -6px rgb(0 0 0 / .1); }
+.drawer.open { display: flex; animation: fade-in .15s ease-out; }
+.drawer-head { display: flex; height: 3.5rem; flex-shrink: 0; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid hsl(var(--border)); padding: 0 1.25rem; }
+.drawer-head .htext { min-width: 0; flex: 1; }
+.drawer-title { margin: 0; font-size: 14px; font-weight: 600; line-height: 1.375; }
+.drawer-sub { margin: 0; font-family: var(--mono); font-size: 11px; color: hsl(var(--muted-foreground)); }
+.drawer-body { min-height: 0; flex: 1; overflow-y: auto; padding: 1rem 1.25rem 2rem; }
+@media (min-width: 768px) {
+  .topbar { padding: 0 1rem; }
+  .queue { width: 320px; }
+  .detail { display: flex; }
+  .toolbar { padding: 0 1rem; }
+  .info-bar { padding: 0 1.25rem; }
+}
+@media (max-width: 767.98px) {
+  .app.mobile-detail .queue { display: none; }
+  .app.mobile-detail .detail { display: flex; }
+  .app.mobile-detail .back-btn { display: flex; }
+  .app.mobile-detail .brand { display: none; }
+}
+</style>
+
+<div class="app" id="app">
+  <div class="topbar">
+    <button class="back-btn" id="backBtn" aria-label="Back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      Back
+    </button>
+    <div class="brand">HyperTrack <span class="dim">· Rulebook Workbench</span></div>
+    <div class="nav-tabs" id="navTabs">
+      <button data-tab="shifts" class="active">Shifts</button>
+      <button data-tab="rules">Rulebook</button>
+      <button data-tab="compile">Compile</button>
+      <button data-tab="vocab">Vocabulary</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="topstats" id="topstats"></div>
+    <a class="memo-link" href="/payroll">payroll ops ↗</a>
+  </div>
+
+  <div class="main on" id="m-shifts">
+    <div class="queue">
+      <div class="toolbar">
+        <input class="q-input" id="qShifts" placeholder="Search shifts" aria-label="Search shifts">
+      </div>
+      <div class="toolbar" style="height:auto;min-height:0;padding:.5rem .75rem;border-bottom:1px solid hsl(var(--border))">
+        <div class="chips" id="shiftChips"></div>
+      </div>
+      <div class="case-list scroll" id="shiftList"></div>
+    </div>
+    <div class="detail" id="shiftDetail"></div>
+    <aside class="aux" id="shiftAux"></aside>
+  </div>
+
+  <div class="main" id="m-rules">
+    <div class="queue">
+      <div class="toolbar">
+        <input class="q-input" id="qRules" placeholder="Search rules" aria-label="Search rules">
+      </div>
+      <div class="toolbar" style="height:auto;min-height:0;padding:.5rem .75rem;border-bottom:1px solid hsl(var(--border))">
+        <div class="chips" id="ruleChips"></div>
+      </div>
+      <div class="case-list scroll" id="ruleList"></div>
+    </div>
+    <div class="detail" id="ruleDetail"></div>
+    <aside class="aux" id="ruleAux"></aside>
+  </div>
+
+  <div class="main" id="m-compile">
+    <div class="queue">
+      <div class="toolbar" style="justify-content:flex-start">
+        <span style="font-size:12px;color:hsl(var(--muted-foreground))">Recorded compiles — ingest runs the LLM once; everything it emits runs live here.</span>
+      </div>
+      <div class="case-list scroll" id="compileList"></div>
+    </div>
+    <div class="detail" id="compileDetail"></div>
+    <aside class="aux" id="compileAux"></aside>
+  </div>
+
+  <div class="main" id="m-vocab">
+    <div class="queue">
+      <div class="toolbar">
+        <input class="q-input" id="qVocab" placeholder="Search features" aria-label="Search features">
+      </div>
+      <div class="case-list scroll" id="vocabList"></div>
+    </div>
+    <div class="detail" id="vocabDetail"></div>
+    <aside class="aux" id="vocabAux"></aside>
+  </div>
+
+  <div class="scrim" id="scrim"></div>
+  <aside class="drawer" id="drawer" aria-label="Rule audit"></aside>
+</div>
+
+<script>
+// Rulebook Workbench — vocabulary, rules, synthetic week, deterministic engine.
+// Runs in browser (inlined) and in node (self-check at bottom).
+// Times: minutes since day 00:00 (may exceed 1440 for cross-midnight). day: 0=Mon Aug 24 .. 6=Sun Aug 30, 2026.
+'use strict';
+
+// ---------- helpers ----------
+const H = m => m / 60;
+const MIN = h => Math.round(h * 60);
+const abs = (day, m) => day * 1440 + m; // absolute minute in week
+const fmtT = m => { const mm = ((m % 1440) + 1440) % 1440; return String(Math.floor(mm / 60)).padStart(2, '0') + ':' + String(mm % 60).padStart(2, '0'); };
+const fmtH = m => (m / 60).toFixed(2);
+const money = n => '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+const DAYS = ['Mon 24', 'Tue 25', 'Wed 26', 'Thu 27', 'Fri 28', 'Sat 29', 'Sun 30'];
+
+// ---------- facilities ----------
+const FACILITIES = {
+  mercy:    { name: 'Mercy General',     city: 'Oakland',    state: 'CA', vertical: 'healthcare', lat: 37.81, lng: -122.27, geofence: true,  badge: false, autoDeduct: true,  minWage: 16.50 },
+  sutter:   { name: 'Sutter Health',     city: 'Sacramento', state: 'CA', vertical: 'healthcare', lat: 38.57, lng: -121.47, geofence: true,  badge: false, autoDeduct: false, minWage: 16.50 },
+  northbank:{ name: 'Northbank Arena',   city: 'New York',   state: 'NY', vertical: 'events',     lat: 40.75, lng: -73.99,  geofence: true,  badge: false, autoDeduct: false, minWage: 17.00 },
+  bayview:  { name: 'Bayview Warehouse', city: 'Houston',    state: 'TX', vertical: 'warehouse',  lat: 29.74, lng: -95.36,  geofence: false, badge: true,  autoDeduct: false, minWage: 7.25 },
+  wicker:   { name: 'Wicker Park Kitchen', city: 'Chicago',  state: 'IL', vertical: 'foodservice', lat: 41.91, lng: -87.68, geofence: true,  badge: false, autoDeduct: false, minWage: 16.60 },
+  stmarks:  { name: 'St. Marks Clinic',  city: 'Oakland',    state: 'CA', vertical: 'healthcare', lat: 37.80, lng: -122.25, geofence: true,  badge: false, autoDeduct: false, minWage: 16.50 },
+};
+const distMi = (a, b) => {
+  const dx = (a.lat - b.lat) * 69, dy = (a.lng - b.lng) * 54.6;
+  return Math.sqrt(dx * dx + dy * dy);
+};
+
+// ---------- the typed vocabulary (feature library) ----------
+// Each feature: id, desc, fn(shift, ctx) -> value. ctx = {week: shifts[], byWorker: Map}
+const FEATURES = [
+  ['facility_state', 'Two-letter state of the worksite', s => s.fac.state],
+  ['facility_city', 'City of the worksite', s => s.fac.city],
+  ['vertical', 'Industry vertical of the site', s => s.fac.vertical],
+  ['scheduled_min', 'Scheduled shift length, minutes', s => s.sched ? s.sched[1] - s.sched[0] : null],
+  ['raw_pairs', 'Clock punch pairs as submitted', s => s.punches],
+  ['merged_pairs', 'Punch pairs after duplicate-merge (CS-01)', (s, c) => c.mergedPairs(s)],
+  ['dup_gap_min', 'Gap between duplicate clock-ins, if any', (s, c) => c.dupGap(s)],
+  ['missing_out', 'True if any punch pair lacks a clock-out', (s, c) => c.mergedPairs(s).some(p => p.out == null)],
+  ['resolved_pairs', 'Punch pairs after missing-out resolution', (s, c) => c.resolvedPairs(s)],
+  ['punched_span_min', 'First in → last out, minutes (resolved)', (s, c) => { const p = c.resolvedPairs(s); return p.length ? p[p.length - 1].out - p[0].in : 0; }],
+  ['worked_min', 'Payable worked minutes (merged, resolved, meal-adjusted)', (s, c) => c.workedMin(s)],
+  ['meal_taken', 'True if a meal punch pair exists', s => !!s.meal],
+  ['meal_length_min', 'Meal length in minutes', s => s.meal ? s.meal[1] - s.meal[0] : null],
+  ['meal_start_offset_min', 'Shift start → meal start, minutes', (s, c) => { if (!s.meal) return null; const p = c.resolvedPairs(s); return p.length ? s.meal[0] - p[0].in : null; }],
+  ['auto_deduct_applies', 'Site auto-deducts 30-min meal', s => s.fac.autoDeduct],
+  ['geo_enter', 'Geofence entry time', s => s.geo ? s.geo[0] : null],
+  ['geo_exit', 'Geofence exit time', s => s.geo ? s.geo[1] : null],
+  ['geo_out_gap_min', 'Clock-out vs geofence-exit gap, minutes', (s, c) => { const p = c.resolvedPairs(s); if (!s.geo || !p.length || p[p.length - 1].rawOut == null) return null; return Math.abs(s.geo[1] - p[p.length - 1].rawOut); }],
+  ['badge_out_gap_min', 'Clock-out vs door-badge-out gap, minutes', (s, c) => { const p = c.resolvedPairs(s); if (!s.badgeOut || !p.length || p[p.length - 1].rawOut == null) return null; return Math.abs(s.badgeOut - p[p.length - 1].rawOut); }],
+  ['weekly_worked_min', "Worker's total payable minutes this week", (s, c) => c.weeklyWorked(s.worker)],
+  ['daily_ot_min', 'Minutes past the CA daily-OT threshold', () => null],
+  ['gap_since_prev_min', 'Rest gap since previous shift end (same worker), minutes', (s, c) => c.gapSincePrev(s)],
+  ['overlap_shift', 'Another shift by same worker overlapping in time', (s, c) => c.overlap(s)],
+  ['travel_speed_mph', 'Implied speed from previous site to this clock-in', (s, c) => c.travelSpeed(s)],
+  ['exact_streak', 'Consecutive shifts with identical punched duration', (s, c) => c.exactStreak(s)],
+  ['edited_after_approval', 'Timesheet mutated after supervisor approval', s => !!s.editedAfterApproval],
+  ['sched_change_hours_before', 'Employer schedule change, hours before start', s => s.schedChangedHoursBefore ?? null],
+  ['worked_vs_sched_pct', 'Worked as % of scheduled', (s, c) => { const sm = s.sched ? s.sched[1] - s.sched[0] : null; return sm ? Math.round(100 * c.workedMin(s) / sm) : null; }],
+  ['orientation', 'Shift is a training/orientation shift', s => !!s.orientation],
+  ['arrived_on_site', 'Location shows worker reported to site', s => !!s.geo || !!s.badgeIn],
+  ['waiver_on_file', 'Signed meal-waiver on file', s => !!s.waiverOnFile],
+  ['consent_on_file', 'Written clopening consent on file', s => !!s.consentClopen],
+];
+
+// ---------- context: derived computations, memoized per run ----------
+function makeCtx(week, params) {
+  const P = params;
+  const byWorker = new Map();
+  for (const s of week) { if (!byWorker.has(s.worker)) byWorker.set(s.worker, []); byWorker.get(s.worker).push(s); }
+  for (const arr of byWorker.values()) arr.sort((a, b) => abs(a.day, a.sched ? a.sched[0] : 0) - abs(b.day, b.sched ? b.sched[0] : 0));
+  const memo = new Map();
+  const mz = (key, s, fn) => { const k = key + s.id; if (!memo.has(k)) memo.set(k, fn(s)); return memo.get(k); };
+  const ctx = {
+    week, byWorker, params,
+    dupGap: s => { if (s.punches.length < 2) return null; const g = s.punches[1].in - s.punches[0].in; return (s.punches[0].out == null && g <= P('CS-01', 'window_min')) ? g : null; },
+    mergedPairs: s => mz('mp', s, s2 => {
+      if (ctx.dupGap(s2) != null) return [{ in: s2.punches[0].in, out: s2.punches[1].out, rawOut: s2.punches[1].out, merged: true }];
+      return s2.punches.map(p => ({ in: p.in, out: p.out, rawOut: p.out }));
+    }),
+    resolvedPairs: s => mz('rp', s, s2 => ctx.mergedPairs(s2).map(p => p.out == null && s2.resolution ? { ...p, out: s2.resolution.out, resolved: true } : p)),
+    workedMin: s => mz('wm', s, s2 => {
+      const pairs = ctx.resolvedPairs(s2);
+      let m = pairs.reduce((t, p) => t + ((p.out ?? p.in) - p.in), 0);
+      if (s2.meal) m -= (s2.meal[1] - s2.meal[0]);
+      else if (s2.fac.autoDeduct && m > MIN(6)) m -= 30; // site policy; FAC-AUTODED audits it
+      return Math.max(0, m);
+    }),
+    weeklyWorked: w => { let t = 0; for (const s of byWorker.get(w) || []) t += ctx.workedMin(s); return t; },
+    prevShift: s => { const arr = byWorker.get(s.worker) || []; const i = arr.indexOf(s); return i > 0 ? arr[i - 1] : null; },
+    gapSincePrev: s => { const pv = ctx.prevShift(s); if (!pv) return null; const pvP = ctx.resolvedPairs(pv), cuP = ctx.resolvedPairs(s); if (!pvP.length || !cuP.length || pvP[pvP.length - 1].out == null) return null; return abs(s.day, cuP[0].in) - abs(pv.day, pvP[pvP.length - 1].out); },
+    overlap: s => { const arr = byWorker.get(s.worker) || []; const cu = ctx.resolvedPairs(s); if (!cu.length) return null; const a0 = abs(s.day, cu[0].in), a1 = abs(s.day, cu[cu.length - 1].out ?? cu[0].in); for (const o of arr) { if (o === s) continue; const op = ctx.resolvedPairs(o); if (!op.length || op[op.length - 1].out == null) continue; const b0 = abs(o.day, op[0].in), b1 = abs(o.day, op[op.length - 1].out); if (a0 < b1 && b0 < a1) return o; } return null; },
+    travelSpeed: s => { const pv = ctx.prevShift(s); if (!pv || pv.fac === s.fac) return null; const gap = ctx.gapSincePrev(s); if (gap == null || gap <= 0) return Infinity; const d = distMi(pv.fac, s.fac); return d / (gap / 60); },
+    exactStreak: s => { const arr = byWorker.get(s.worker) || []; const dur = x => { const p = ctx.resolvedPairs(x); return p.length ? (p[p.length - 1].out ?? 0) - p[0].in : 0; }; const i = arr.indexOf(s); let n = 1; for (let j = i - 1; j >= 0; j--) { if (dur(arr[j]) === dur(s) && dur(s) > 0) n++; else break; } return n; },
+  };
+  return ctx;
+}
+
+// ---------- the rulebook (compiled IR, engine subset) ----------
+// evaluate(f, s, ctx, P) -> array of trace rows:
+// {rule, status:'pass'|'flag'|'applied'|'na'|'held', note, kind, effect?:{premiumMin?, premiumAmt?, otAdj?, holdMin?, rateOverride?, topUpMin?}}
+const p = (v, min, max, step, unit, label) => ({ v, min, max, step, unit, label });
+
+const RULES = [
+  {
+    id: 'CS-01', bucket: 'Common sense', kind: 'det',
+    sentence: 'Two clock-ins within a few minutes are one shift, not two.',
+    source: { doc: 'ops heuristic · Aashish interviews', cite: 'duplicate punches on shared kiosks' },
+    scope: () => true,
+    params: { window_min: p(10, 2, 30, 1, 'min', 'merge window') },
+    evaluate(s, ctx, P) {
+      const g = ctx.dupGap(s);
+      if (g == null) return [{ status: 'pass', note: `1 clock-in found` }];
+      return [{ status: 'applied', note: `two clock-ins ${g} min apart → merged into one pair (avoided double shift)`, overNaive: true }];
+    },
+  },
+  {
+    id: 'TS-COMPLETE', bucket: 'Common sense', kind: 'both',
+    sentence: 'Every punch pair must close; a missing clock-out is resolved from location evidence plus a human, never assumed.',
+    source: { doc: 'ops heuristic', cite: 'missed punches are the #1 discrepancy across all 7 interviews' },
+    scope: () => true, params: {},
+    evaluate(s, ctx) {
+      const missing = ctx.mergedPairs(s).some(pr => pr.out == null);
+      if (!missing) return [{ status: 'pass', note: 'punch pairs complete' }];
+      const rows = [{ status: 'flag', note: 'timesheet.out = null → discrepancy opened' }];
+      if (s.resolution) {
+        rows.push({ status: 'applied', kind: 'llm', note: `evidence read: geofence exit ${fmtT(s.geo[1])}, continuous presence → proposes out = ${fmtT(s.resolution.out)} · review recommended`, chips: ['timesheet', `geofence exit ${fmtT(s.geo[1])}`] });
+        rows.push({ status: 'applied', kind: 'human', note: `${s.resolution.by}: "${s.resolution.quote}" → clock-out set to ${fmtT(s.resolution.out)}` });
+      } else rows.push({ status: 'held', note: 'no resolution yet — shift held, manager asked', effect: { holdAll: true } });
+      return rows;
+    },
+  },
+  {
+    id: 'CS-16H', bucket: 'Common sense', kind: 'det',
+    sentence: 'A single recorded shift over the length cap is presumed a missed clock-out, not a real shift.',
+    source: { doc: 'timesheet-fraud audit guides', cite: 'hold, don\'t pay 16h straight' },
+    scope: () => true,
+    params: { cap_h: p(16, 12, 24, 1, 'h', 'length cap') },
+    evaluate(s, ctx, P) {
+      const span = ctx.resolvedPairs(s); if (!span.length || span[span.length - 1].out == null) return [{ status: 'na', note: 'unresolved pair' }];
+      const m = span[span.length - 1].out - span[0].in;
+      if (m > MIN(P('CS-16H', 'cap_h'))) return [{ status: 'held', note: `recorded span ${fmtH(m)}h > ${P('CS-16H', 'cap_h')}h cap → held for review`, effect: { holdAll: true } }];
+      return [{ status: 'pass', note: `span ${fmtH(m)}h within cap` }];
+    },
+  },
+  {
+    id: 'CS-OVLP', bucket: 'Common sense', kind: 'det',
+    sentence: 'One person cannot be clocked in at two facilities at once.',
+    source: { doc: 'fraud heuristic', cite: 'cross-facility identity resolution' },
+    scope: () => true, params: {},
+    evaluate(s, ctx) {
+      const o = ctx.overlap(s);
+      if (!o) return [{ status: 'pass', note: 'no overlapping shift' }];
+      return [{ status: 'held', note: `overlaps shift ${o.id} at ${o.fac.name} → both held`, effect: { holdAll: true } }];
+    },
+  },
+  {
+    id: 'CS-SPEED', bucket: 'Common sense', kind: 'det',
+    sentence: 'Consecutive punches at different sites must be reachable at road speed.',
+    source: { doc: 'GPS spoofing audit guide', cite: 'haversine ÷ gap vs speed cap' },
+    scope: () => true,
+    params: { max_mph: p(75, 40, 120, 5, 'mph', 'speed cap') },
+    evaluate(s, ctx, P) {
+      const v = ctx.travelSpeed(s);
+      if (v == null) return [{ status: 'na', note: 'no prior cross-site punch' }];
+      if (v > P('CS-SPEED', 'max_mph')) return [{ status: 'flag', note: `implied ${Math.round(v)} mph from previous site → one punch is wrong or spoofed` }];
+      return [{ status: 'pass', note: `implied ${Math.round(v)} mph plausible` }];
+    },
+  },
+  {
+    id: 'CS-EXACT', bucket: 'Common sense', kind: 'det',
+    sentence: 'Punches are messy; a streak of identical exact durations means hand-entered time.',
+    source: { doc: 'payroll-fraud detection guides', cite: 'flag, don\'t auto-deny' },
+    scope: () => true,
+    params: { streak: p(3, 2, 7, 1, 'shifts', 'streak length') },
+    evaluate(s, ctx, P) {
+      const n = ctx.exactStreak(s);
+      if (n >= P('CS-EXACT', 'streak')) return [{ status: 'flag', note: `${n} consecutive shifts with identical duration → likely manual entry, verify source` }];
+      return [{ status: 'pass', note: 'duration pattern normal' }];
+    },
+  },
+  {
+    id: 'CS-EDIT', bucket: 'Common sense', kind: 'det',
+    sentence: 'Any timesheet edit after supervisor approval re-triggers review.',
+    source: { doc: 'wage-theft litigation pattern', cite: 'post-approval edits are the classic vector' },
+    scope: () => true, params: {},
+    evaluate(s) {
+      if (s.editedAfterApproval) return [{ status: 'flag', note: `edited after approval by ${s.editedAfterApproval} → re-review required` }];
+      return [{ status: 'pass', note: 'no post-approval edits' }];
+    },
+  },
+  {
+    id: 'FAC-GEO-01', bucket: 'Facility', kind: 'det',
+    sentence: 'A punch counts only with matching location evidence; punches with no geofence entry route to review.',
+    source: { doc: 'site policy', cite: 'geofence radius per site' },
+    scope: s => s.fac.geofence,
+    params: { tol_min: p(15, 0, 60, 5, 'min', 'entry tolerance') },
+    evaluate(s, ctx, P) {
+      if (!s.geo) return [{ status: 'flag', note: 'no geofence entry recorded for this punch → verify presence' }];
+      const pr = ctx.resolvedPairs(s); if (!pr.length) return [{ status: 'na', note: 'no punches' }];
+      const gap = Math.abs(pr[0].in - s.geo[0]);
+      if (gap > P('FAC-GEO-01', 'tol_min')) return [{ status: 'flag', note: `clock-in ${gap} min from geofence entry (tol ±${P('FAC-GEO-01', 'tol_min')})` }];
+      return [{ status: 'pass', note: `clock-in within ±${P('FAC-GEO-01', 'tol_min')} min of geofence entry` }];
+    },
+  },
+  {
+    id: 'FAC-BADGE-01', bucket: 'Facility', kind: 'det',
+    sentence: 'Bayview has no GPS indoors; door-badge times are the location evidence and must agree with the clock.',
+    source: { doc: 'Bayview site profile', cite: 'badge reader = witness' },
+    scope: s => s.fac.badge,
+    params: { tol_min: p(15, 5, 60, 5, 'min', 'mismatch tolerance') },
+    evaluate(s, ctx, P) {
+      const pr = ctx.resolvedPairs(s);
+      if (!s.badgeOut || !pr.length || pr[pr.length - 1].rawOut == null) return [{ status: 'na', note: 'no badge/punch pair to compare' }];
+      const gap = s.badgeOut - pr[pr.length - 1].rawOut;
+      if (gap > P('FAC-BADGE-01', 'tol_min')) {
+        return [
+          { status: 'flag', note: `clock-out ${fmtT(pr[pr.length - 1].rawOut)} but badge-out ${fmtT(s.badgeOut)} (+${gap} min)` },
+          s.resolution
+            ? { status: 'applied', kind: 'human', note: `${s.resolution.by}: "${s.resolution.quote}" → paid to badge-out`, effect: { extendToMin: s.badgeOut } }
+            : { status: 'held', note: 'awaiting lead confirmation', effect: { holdAll: true } },
+        ];
+      }
+      return [{ status: 'pass', note: `badge and clock agree within ${P('FAC-BADGE-01', 'tol_min')} min` }];
+    },
+  },
+  {
+    id: 'FAC-AUTODED-01', bucket: 'Facility', kind: 'both',
+    sentence: 'The 30-minute meal auto-deduct only stands if evidence shows the break actually happened.',
+    source: { doc: 'Quickley v. UMMS class-action pattern', cite: 'auto-deduct without a cancel path = FLSA exposure' },
+    scope: s => s.fac.autoDeduct,
+    params: {},
+    evaluate(s, ctx) {
+      if (s.meal) return [{ status: 'pass', note: 'meal punched — no auto-deduct' }];
+      if (ctx.workedMin(s) <= MIN(6)) return [{ status: 'na', note: 'short shift, no deduction' }];
+      if (s.mealEvidence === false) return [
+        { status: 'flag', note: '30 min auto-deducted but location shows continuous on-floor presence' },
+        { status: 'applied', kind: 'llm', note: 'no break-length gap in movement pattern; deduction reversed pending attestation · review recommended', effect: { premiumMin: 30 }, chips: ['location trace', 'no meal punch'] },
+      ];
+      return [{ status: 'pass', note: 'auto-deduct stands (break gap visible in location trace)' }];
+    },
+  },
+  {
+    id: 'CA-ROUND-0', bucket: 'State', kind: 'det',
+    sentence: 'California with exact capture: pay exact minutes — rounding is off.',
+    source: { doc: 'Camp v. Home Depot (2022)', cite: 'if you capture exact time, pay exact time' },
+    scope: s => s.fac.state === 'CA', params: {},
+    evaluate() { return [{ status: 'applied', note: 'exact-minute pay in force (rounding disabled)' }]; },
+  },
+  {
+    id: 'TB-ROUND-7', bucket: 'Time-based', kind: 'det',
+    sentence: 'Outside CA, round to the nearest quarter hour with the 7-minute breakpoint.',
+    source: { doc: '29 CFR 785.48', cite: 'neutral-over-time rounding' },
+    scope: s => s.fac.state !== 'CA',
+    params: { inc_min: p(15, 5, 15, 5, 'min', 'increment') },
+    evaluate(s, ctx, P) { return [{ status: 'applied', note: `punches rounded to nearest ${P('TB-ROUND-7', 'inc_min')} min` }]; },
+  },
+  {
+    id: 'CA-MB-01', bucket: 'State', kind: 'det',
+    sentence: 'CA: a 30-minute unpaid meal must start before the end of the 5th hour; missed, short or late → 1-hour premium.',
+    source: { doc: 'IWC Wage Order 5 §11 · Labor Code §226.7', cite: 'premium counts as wages' },
+    scope: s => s.fac.state === 'CA',
+    params: { deadline_h: p(5, 3, 6, 0.5, 'h', 'first-meal deadline'), min_len: p(30, 20, 45, 5, 'min', 'minimum length'), waiver_cap_h: p(6, 5, 8, 0.5, 'h', 'waivable if ≤') },
+    evaluate(s, ctx, P) {
+      const worked = ctx.workedMin(s);
+      const dl = MIN(P('CA-MB-01', 'deadline_h'));
+      if (!s.meal) {
+        if (s.fac.autoDeduct && s.mealEvidence !== false) return [{ status: 'pass', note: 'auto-deducted break, break gap visible in location trace' }];
+        if (worked <= MIN(P('CA-MB-01', 'waiver_cap_h')) && s.waiverOnFile) return [{ status: 'pass', note: 'no meal — valid waiver on file for short shift' }];
+        if (worked <= dl) return [{ status: 'pass', note: 'shift shorter than meal deadline' }];
+        return [{ status: 'flag', note: `no meal break in a ${fmtH(worked)}h shift → 1h premium`, effect: { premiumHours: 1 } }];
+      }
+      const off = ctx.resolvedPairs(s).length ? s.meal[0] - ctx.resolvedPairs(s)[0].in : null;
+      const len = s.meal[1] - s.meal[0];
+      if (off != null && off > dl) return [{ status: 'flag', note: `meal started ${fmtH(off)}h in (deadline ${P('CA-MB-01', 'deadline_h')}h) → 1h premium`, effect: { premiumHours: 1 } }];
+      if (len < P('CA-MB-01', 'min_len')) return [{ status: 'flag', note: `meal ${len} min < ${P('CA-MB-01', 'min_len')} min → 1h premium`, effect: { premiumHours: 1 } }];
+      return [{ status: 'pass', note: `meal ${len} min, started ${fmtH(off)}h in` }];
+    },
+  },
+  {
+    id: 'CA-OT-8', bucket: 'State', kind: 'det',
+    sentence: 'CA: over 8 hours in a workday is 1.5×; over 12 is 2× — even if the week is under 40.',
+    source: { doc: 'Labor Code §510', cite: 'daily OT, anti-pyramided with weekly' },
+    scope: s => s.fac.state === 'CA',
+    params: { daily_h: p(8, 6, 10, 0.5, 'h', '1.5× after'), double_h: p(12, 10, 14, 0.5, 'h', '2× after') },
+    evaluate(s, ctx, P) {
+      const w = ctx.workedMin(s), d = MIN(P('CA-OT-8', 'daily_h')), dd = MIN(P('CA-OT-8', 'double_h'));
+      if (w <= d) return [{ status: 'pass', note: `${fmtH(w)}h ≤ ${P('CA-OT-8', 'daily_h')}h` }];
+      const ot = Math.min(w, dd) - d, dt = Math.max(0, w - dd);
+      return [{ status: 'applied', note: `daily OT: ${fmtH(ot)}h @1.5×${dt ? ` + ${fmtH(dt)}h @2×` : ''}`, effect: { otPremiumMin: ot * 0.5 + dt * 1.0, dailyOtMin: ot + dt } }];
+    },
+  },
+  {
+    id: 'FED-OT-40', bucket: 'Legal', kind: 'det',
+    sentence: 'Over 40 hours in the workweek is 1.5× the regular rate.',
+    source: { doc: 'FLSA · 29 CFR 778', cite: 'workweek = fixed Mon–Sun here' },
+    scope: () => true,
+    params: { weekly_h: p(40, 30, 60, 1, 'h', 'weekly threshold') },
+    evaluate(s, ctx, P) {
+      // applied on the worker's LAST shift of week for legibility
+      const arr = ctx.byWorker.get(s.worker) || [];
+      if (arr[arr.length - 1] !== s) return [{ status: 'na', note: 'assessed on last shift of week' }];
+      const total = ctx.weeklyWorked(s.worker);
+      const daily = arr.reduce((t, x) => { const rows = x._dailyOtMin || 0; return t + rows; }, 0);
+      const over = total - MIN(P('FED-OT-40', 'weekly_h')) - daily;
+      if (over <= 0) return [{ status: 'pass', note: `week ${fmtH(total)}h (daily-OT hours excluded: ${fmtH(daily)})` }];
+      return [{ status: 'applied', note: `weekly OT: ${fmtH(over)}h @1.5× (anti-pyramided)`, effect: { otPremiumMin: over * 0.5 } }];
+    },
+  },
+  {
+    id: 'CA-SS-01', bucket: 'State', kind: 'det',
+    sentence: 'CA: an unpaid gap over an hour splitting the workday owes a 1-hour premium at minimum wage, offset by earnings above minimum.',
+    source: { doc: 'IWC orders §4(C)', cite: 'split-shift premium with offset' },
+    scope: s => s.fac.state === 'CA',
+    params: { gap_min: p(60, 30, 180, 15, 'min', 'gap trigger') },
+    evaluate(s, ctx, P) {
+      const prs = ctx.resolvedPairs(s);
+      if (prs.length < 2) return [{ status: 'pass', note: 'no split' }];
+      const gap = prs[1].in - prs[0].out;
+      if (gap <= P('CA-SS-01', 'gap_min')) return [{ status: 'pass', note: `gap ${gap} min ≤ trigger` }];
+      const worked = ctx.workedMin(s), mw = s.fac.minWage;
+      const offset = Math.max(0, (s.rate - mw) * H(worked));
+      const prem = Math.max(0, mw - offset);
+      if (prem <= 0) return [{ status: 'pass', note: `split ${fmtH(gap)}h gap — premium fully offset by wages above minimum` }];
+      return [{ status: 'flag', note: `split shift (${fmtH(gap)}h gap) → premium ${money(prem)} after offset`, effect: { premiumAmt: prem } }];
+    },
+  },
+  {
+    id: 'CA-RT-01', bucket: 'State', kind: 'det',
+    sentence: 'CA: sent home before half the scheduled shift → pay half the schedule (min 2h, max 4h).',
+    source: { doc: 'IWC orders §5', cite: 'reporting-time pay' },
+    scope: s => s.fac.state === 'CA',
+    params: { floor_h: p(2, 1, 4, 0.5, 'h', 'floor'), cap_h: p(4, 2, 6, 0.5, 'h', 'cap') },
+    evaluate(s, ctx, P) {
+      if (!s.sched) return [{ status: 'na', note: 'unscheduled' }];
+      const sm = s.sched[1] - s.sched[0], w = ctx.workedMin(s);
+      if (!ctx.resolvedPairs(s).length || w >= sm / 2) return [{ status: 'pass', note: 'worked ≥ half of schedule' }];
+      const owe = Math.min(Math.max(sm / 2, MIN(P('CA-RT-01', 'floor_h'))), MIN(P('CA-RT-01', 'cap_h')));
+      const top = Math.max(0, owe - w);
+      return [{ status: 'flag', note: `worked ${fmtH(w)}h of ${fmtH(sm)}h scheduled → reporting-time pay tops up to ${fmtH(owe)}h`, effect: { topUpMin: top } }];
+    },
+  },
+  {
+    id: 'NY-SOH-01', bucket: 'State', kind: 'det',
+    sentence: 'NY: if first-in to last-out spans more than 10 hours, add one hour at basic minimum wage.',
+    source: { doc: '12 NYCRR 142-2.4 / 146', cite: 'spread of hours' },
+    scope: s => s.fac.state === 'NY',
+    params: { spread_h: p(10, 8, 12, 0.5, 'h', 'spread trigger') },
+    evaluate(s, ctx, P) {
+      const prs = ctx.resolvedPairs(s); if (!prs.length || prs[prs.length - 1].out == null) return [{ status: 'na', note: 'unresolved' }];
+      const span = prs[prs.length - 1].out - prs[0].in;
+      if (span <= MIN(P('NY-SOH-01', 'spread_h'))) return [{ status: 'pass', note: `spread ${fmtH(span)}h ≤ ${P('NY-SOH-01', 'spread_h')}h` }];
+      return [{ status: 'flag', note: `spread ${fmtH(span)}h > ${P('NY-SOH-01', 'spread_h')}h → +1h at ${money(s.fac.minWage)}`, effect: { premiumAmt: s.fac.minWage } }];
+    },
+  },
+  {
+    id: 'REST-GAP-01', bucket: 'Local', kind: 'det',
+    sentence: 'Fair-workweek cities: working inside the protected rest window between shifts pays a premium (gap threshold varies 9–11h by city).',
+    source: { doc: 'Seattle SMC 14.22 · NYC · Chicago 6-110 · Philadelphia 9-4600', cite: 'right-to-rest' },
+    scope: s => ['New York', 'Chicago', 'Seattle', 'Philadelphia'].includes(s.fac.city),
+    params: { gap_ny: p(11, 8, 12, 1, 'h', 'NYC threshold'), gap_chi: p(10, 8, 12, 1, 'h', 'Chicago threshold') },
+    evaluate(s, ctx, P) {
+      const g = ctx.gapSincePrev(s);
+      if (g == null) return [{ status: 'na', note: 'no previous shift' }];
+      const th = MIN(s.fac.city === 'New York' ? P('REST-GAP-01', 'gap_ny') : P('REST-GAP-01', 'gap_chi'));
+      if (g >= th) return [{ status: 'pass', note: `rest gap ${fmtH(g)}h ≥ ${fmtH(th)}h` }];
+      if (s.consentClopen) return [{ status: 'flag', note: `clopening (${fmtH(g)}h gap) with written consent → $100 premium`, effect: { premiumAmt: 100 } }];
+      return [{ status: 'flag', note: `clopening: only ${fmtH(g)}h rest, no consent on file → premium + consent needed`, effect: { premiumAmt: 100 } }];
+    },
+  },
+  {
+    id: 'CHI-FWW-01', bucket: 'Local', kind: 'det',
+    sentence: 'Chicago: any employer schedule change inside 14 days\' notice owes one hour of predictability pay.',
+    source: { doc: 'Chicago MCC 6-110', cite: 'fair workweek' },
+    scope: s => s.fac.city === 'Chicago',
+    params: { notice_days: p(14, 7, 21, 1, 'days', 'notice window') },
+    evaluate(s, ctx, P) {
+      const h = s.schedChangedHoursBefore;
+      if (h == null) return [{ status: 'pass', note: 'no employer-initiated change' }];
+      if (h < P('CHI-FWW-01', 'notice_days') * 24) return [{ status: 'flag', note: `schedule changed ${Math.round(h)}h before start (inside ${P('CHI-FWW-01', 'notice_days')}-day window) → +1h predictability pay`, effect: { premiumHours: 1 } }];
+      return [{ status: 'pass', note: 'change outside notice window' }];
+    },
+  },
+  {
+    id: 'CON-MIN-4H', bucket: 'Contract', kind: 'det',
+    sentence: 'A worker who reports for a scheduled shift is paid (and billed) a minimum of 4 hours, even if sent home.',
+    source: { doc: 'LGC-style staffing MSA §5', cite: '4-hour show-up minimum' },
+    scope: s => !!s.contractMin,
+    params: { min_h: p(4, 2, 6, 0.5, 'h', 'minimum hours') },
+    evaluate(s, ctx, P) {
+      if (!(s.geo || s.badgeIn)) return [{ status: 'na', note: 'no evidence of reporting on site' }];
+      const w = ctx.workedMin(s), m = MIN(P('CON-MIN-4H', 'min_h'));
+      if (w >= m) return [{ status: 'pass', note: `worked ${fmtH(w)}h ≥ minimum` }];
+      return [{ status: 'flag', note: `reported on site, worked ${fmtH(w)}h → topped up to ${P('CON-MIN-4H', 'min_h')}h per contract`, effect: { topUpMin: m - w } }];
+    },
+  },
+  {
+    id: 'CON-SUTTER-01', bucket: 'Contract', kind: 'det',
+    sentence: 'Sutter orientation shifts pay the training rate and bill $0.',
+    source: { doc: 'Sutter MSA §4.2', cite: 'orientation carve-out' },
+    scope: s => s.fac === FACILITIES.sutter,
+    params: { training_rate: p(18, 15, 26, 0.5, '$/h', 'training rate') },
+    evaluate(s, ctx, P) {
+      if (!s.orientation) return [{ status: 'pass', note: 'not an orientation shift' }];
+      if (s.rate !== P('CON-SUTTER-01', 'training_rate')) return [{ status: 'flag', note: `orientation billed at standard ${money(s.rate)}/h → corrected to training ${money(P('CON-SUTTER-01', 'training_rate'))}/h, invoice line $0`, effect: { rateOverride: P('CON-SUTTER-01', 'training_rate') } }];
+      return [{ status: 'pass', note: 'training rate already applied' }];
+    },
+  },
+  {
+    id: 'TW-1187', bucket: 'This week', kind: 'det', expires: 'Sun Aug 30',
+    sentence: 'No overtime at Mercy General this week — hold anything over the weekly threshold for review.',
+    source: { doc: 'Slack · Sam T. · Aug 24', cite: 'compiled from one sentence' },
+    scope: s => s.fac === FACILITIES.mercy,
+    params: { weekly_h: p(40, 30, 50, 1, 'h', 'weekly threshold') },
+    evaluate(s, ctx, P) {
+      const arr = (ctx.byWorker.get(s.worker) || []).filter(x => x.fac === FACILITIES.mercy);
+      if (arr[arr.length - 1] !== s) return [{ status: 'na', note: 'assessed on last Mercy shift of week' }];
+      let t = 0; for (const x of arr) t += ctx.workedMin(x);
+      const over = t - MIN(P('TW-1187', 'weekly_h'));
+      if (over <= 0) return [{ status: 'pass', note: `Mercy week ${fmtH(t)}h within threshold` }];
+      return [{ status: 'held', note: `${fmtH(over)}h over the Mercy weekly cap → held, Dana K. notified`, effect: { holdMin: over } }];
+    },
+  },
+  {
+    id: 'VER-HC-01', bucket: 'Vertical', kind: 'det',
+    sentence: 'Healthcare: shift-handoff overlap up to 15 minutes is paid, expected time.',
+    source: { doc: 'vertical pack · healthcare', cite: 'handoff overlap' },
+    scope: s => s.fac.vertical === 'healthcare', params: {},
+    evaluate() { return [{ status: 'applied', note: 'handoff overlap ≤15 min treated as worked time' }]; },
+  },
+  {
+    id: 'VER-EV-02', bucket: 'Vertical', kind: 'llm',
+    sentence: 'Event security: post-event egress up to ~45 minutes is expected; beyond that, ask.',
+    source: { doc: 'vertical pack · events', cite: 'egress judgment' },
+    scope: s => s.fac.vertical === 'events',
+    params: { egress_min: p(45, 15, 90, 5, 'min', 'expected egress') },
+    evaluate(s, ctx, P) {
+      if (!s.sched) return [{ status: 'na', note: 'unscheduled' }];
+      const prs = ctx.resolvedPairs(s); if (!prs.length || prs[prs.length - 1].out == null) return [{ status: 'na', note: 'unresolved' }];
+      const past = prs[prs.length - 1].out - s.sched[1];
+      if (past <= P('VER-EV-02', 'egress_min')) return [{ status: 'pass', note: `clock-out ${past > 0 ? past + ' min past schedule — within expected egress' : 'on schedule'}` }];
+      return [{ status: 'applied', kind: 'llm', note: `${past} min past schedule end — crowd-exit pattern in location trace looks legitimate, but beyond expected egress · review recommended`, chips: ['location trace', 'schedule'] }];
+    },
+  },
+];
+
+// ---------- engine ----------
+function runEngine(week, paramOverrides) {
+  const overrides = paramOverrides || {};
+  const P = (rid, key) => {
+    const o = overrides[rid + '.' + key];
+    if (o != null) return o;
+    const r = RULES.find(x => x.id === rid);
+    return r.params[key].v;
+  };
+  const ctx = makeCtx(week, P);
+  // pass 1: daily rules (need _dailyOtMin before weekly)
+  const results = new Map();
+  for (const s of week) {
+    const rows = [];
+    for (const r of RULES) {
+      if (r.id === 'FED-OT-40' || r.id === 'TW-1187') continue; // pass 2
+      if (!r.scope(s)) continue;
+      try {
+        const out = r.evaluate(s, ctx, P);
+        for (const row of out) rows.push({ ruleId: r.id, kindDefault: r.kind, ...row });
+      } catch (e) { rows.push({ ruleId: r.id, status: 'error', note: String(e && e.message || e) }); }
+    }
+    const daily = rows.find(x => x.effect && x.effect.dailyOtMin);
+    s._dailyOtMin = daily ? daily.effect.dailyOtMin : 0;
+    results.set(s.id, rows);
+  }
+  // pass 2: weekly rules
+  for (const s of week) {
+    const rows = results.get(s.id);
+    for (const rid of ['FED-OT-40', 'TW-1187']) {
+      const r = RULES.find(x => x.id === rid);
+      if (!r.scope(s)) continue;
+      try { for (const row of r.evaluate(s, ctx, P)) rows.push({ ruleId: r.id, kindDefault: r.kind, ...row }); }
+      catch (e) { rows.push({ ruleId: r.id, status: 'error', note: String(e && e.message || e) }); }
+    }
+  }
+  // payout
+  const shifts = week.map(s => {
+    const rows = results.get(s.id);
+    let rate = s.rate, workedMin = ctx.workedMin(s);
+    let premiumAmt = 0, premiumHours = 0, otPremiumMin = 0, topUpMin = 0, holdMin = 0, holdAll = false, extendTo = null;
+    for (const row of rows) {
+      const e = row.effect; if (!e) continue;
+      if (e.rateOverride != null) rate = e.rateOverride;
+      if (e.premiumAmt) premiumAmt += e.premiumAmt;
+      if (e.premiumHours) premiumHours += e.premiumHours;
+      if (e.premiumMin) workedMin += e.premiumMin;
+      if (e.otPremiumMin) otPremiumMin += e.otPremiumMin;
+      if (e.topUpMin) topUpMin += e.topUpMin;
+      if (e.holdMin) holdMin += e.holdMin;
+      if (e.holdAll) holdAll = true;
+      if (e.extendToMin != null) extendTo = e.extendToMin;
+    }
+    if (extendTo != null) {
+      const prs = ctx.resolvedPairs(s);
+      if (prs.length && prs[prs.length - 1].rawOut != null) workedMin += Math.max(0, extendTo - prs[prs.length - 1].rawOut);
+    }
+    const payableMin = Math.max(0, workedMin + topUpMin - holdMin);
+    const pay = holdAll ? 0 : H(payableMin) * rate + H(otPremiumMin) * rate + premiumHours * rate + premiumAmt;
+    // naive spreadsheet pay: as-submitted punches (dups double-counted, missing out = assume sched end), base rate, no premiums
+    let naiveMin = 0;
+    for (const pr of s.punches) naiveMin += ((pr.out ?? (s.sched ? s.sched[1] : pr.in)) - pr.in);
+    if (s.meal) naiveMin -= (s.meal[1] - s.meal[0]); else if (s.fac.autoDeduct && naiveMin > MIN(6)) naiveMin -= 30;
+    const naive = H(Math.max(0, naiveMin)) * s.rate;
+    const flagged = rows.some(x => x.status === 'flag' || x.status === 'held');
+    const held = holdAll || holdMin > 0;
+    return { shift: s, rows, pay, naive, held, flagged, deltaUnder: Math.max(0, pay - naive), deltaOver: Math.max(0, naive - pay), payableMin, rate };
+  });
+  const totals = shifts.reduce((t, r) => {
+    t.under += r.held ? 0 : r.deltaUnder; t.over += r.held ? 0 : r.deltaOver;
+    t.flags += r.flagged ? 1 : 0; t.held += r.held ? 1 : 0; return t;
+  }, { under: 0, over: 0, flags: 0, held: 0 });
+  return { shifts, totals, ctx };
+}
+
+// backtest one rule id against the week: how many shifts get a flag/held/applied-with-effect from it
+function backtest(week, ruleId, paramOverrides) {
+  const { shifts } = runEngine(week, paramOverrides);
+  let n = 0;
+  for (const r of shifts) if (r.rows.some(x => x.ruleId === ruleId && (x.status === 'flag' || x.status === 'held' || (x.status === 'applied' && x.effect)))) n++;
+  return { fires: n, of: week.length };
+}
+
+// ---------- synthetic week ----------
+function lcg(seed) { let x = seed >>> 0; return () => (x = (1103515245 * x + 12345) >>> 0) / 4294967296; }
+
+function makeWeek() {
+  const F = FACILITIES;
+  const W = [];
+  let nextId = 5001; // seeded discrepancies use 48xx ids — keep auto ids clear of them
+  const T = (h, m) => h * 60 + (m || 0);
+  const rnd = lcg(20260824);
+  const jitter = (base, spread) => base + Math.floor(rnd() * (2 * spread + 1)) - spread;
+
+  function shift(o) {
+    const s = {
+      id: String(nextId++), meal: null, geo: null, badgeIn: null, badgeOut: null,
+      waiverOnFile: false, consentClopen: false, editedAfterApproval: null,
+      schedChangedHoursBefore: null, orientation: false, contractMin: false, mealEvidence: true,
+      resolution: null, ...o,
+    };
+    W.push(s); return s;
+  }
+  // clean baseline: regular crews at each facility
+  const crews = [
+    { worker: 'Maria R.', fac: F.mercy, role: 'Housekeeping', rate: 24.50, days: [0, 1, 2, 3, 4], start: T(9, 0), len: 450 },
+    { worker: 'Luis M.', fac: F.mercy, role: 'Housekeeping', rate: 24.50, days: [0, 1, 2, 3, 4], start: T(6, 0), len: 510 },
+    { worker: 'Aisha B.', fac: F.mercy, role: 'ICU tech', rate: 24.50, days: [0, 1, 2, 3, 4, 5], start: T(7, 0), len: 480 },
+    { worker: 'Priya S.', fac: F.sutter, role: 'CNA', rate: 26.00, days: [1, 2, 3, 4], start: T(7, 0), len: 480 },
+    { worker: 'Jamal W.', fac: F.northbank, role: 'Event security', rate: 21.00, days: [0, 2, 4], start: T(14, 0), len: 480 },
+    { worker: 'Dre P.', fac: F.northbank, role: 'Event security', rate: 21.00, days: [1, 3], start: T(14, 0), len: 480 },
+    { worker: 'Tom K.', fac: F.bayview, role: 'Forklift', rate: 19.00, days: [0, 1, 2, 3], start: T(8, 0), len: 510 },
+    { worker: 'Reggie F.', fac: F.bayview, role: 'Picker', rate: 17.50, days: [0, 1, 2, 3, 4], start: T(6, 0), len: 480 },
+    { worker: 'Elena V.', fac: F.wicker, role: 'Prep cook', rate: 19.75, days: [0, 1, 2, 4], start: T(10, 0), len: 480 },
+    { worker: 'Marcus D.', fac: F.wicker, role: 'Line cook', rate: 21.50, days: [0, 1, 3, 4], start: T(15, 0), len: 480 },
+    { worker: 'Grace H.', fac: F.stmarks, role: 'Med assistant', rate: 23.00, days: [0, 1, 2, 3], start: T(8, 30), len: 480 },
+    { worker: 'Sam O.', fac: F.mercy, role: 'Housekeeping', rate: 24.50, days: [5, 6], start: T(8, 0), len: 450 },
+    { worker: 'Nina T.', fac: F.sutter, role: 'CNA', rate: 26.00, days: [0, 1, 2], start: T(19, 0), len: 480 },
+    { worker: 'Omar S.', fac: F.northbank, role: 'Usher', rate: 18.50, days: [4, 5], start: T(16, 0), len: 420 },
+  ];
+  for (const c of crews) for (const d of c.days) {
+    const inJ = jitter(c.start, 4), outJ = jitter(c.start + c.len, 6);
+    const s = shift({
+      worker: c.worker, fac: c.fac, role: c.role, rate: c.rate, day: d,
+      sched: [c.start, c.start + c.len],
+      punches: [{ in: inJ, out: outJ }],
+      geo: c.fac.geofence ? [inJ - jitter(5, 3), outJ + jitter(4, 3)] : null,
+      badgeIn: c.fac.badge ? inJ - 3 : null, badgeOut: c.fac.badge ? outJ + 2 : null,
+    });
+    // meals for shifts > 6h (start ~3.5h in), CA compliant by default
+    if (c.len > 360 && !(c.fac === F.mercy && rnd() < 0.35)) { // some Mercy shifts rely on auto-deduct
+      const ms = s.punches[0].in + jitter(200, 20);
+      s.meal = [ms, ms + 32];
+    }
+  }
+
+  // ---- seeded discrepancies (findable by id in the UI) ----
+  // 4821: Maria Thu — missing clock-out, geofence exit 17:01, Dana confirms (TS-COMPLETE both)
+  const m4821 = W.find(s => s.worker === 'Maria R.' && s.day === 3);
+  m4821.id = '4821'; m4821.punches = [{ in: T(8, 58), out: null }]; m4821.geo = [T(8, 52), T(17, 1)];
+  m4821.meal = [T(12, 10), T(12, 44)];
+  m4821.resolution = { out: T(17, 1), by: 'Dana K. · supervisor', quote: 'Confirmed — she left at 5, we ran late on the east wing.' };
+
+  // 4822: Jamal Mon — duplicate clock-in 6 min apart (CS-01)
+  const m4822 = W.find(s => s.worker === 'Jamal W.' && s.day === 0);
+  m4822.id = '4822'; m4822.punches = [{ in: T(14, 0), out: null }, { in: T(14, 6), out: T(22, 4) }];
+
+  // 4823: Jamal Fri — long egress event (VER-EV-02 llm) + NY spread of hours (14:00 → 00:55)
+  const m4823 = W.find(s => s.worker === 'Jamal W.' && s.day === 4);
+  m4823.id = '4823'; m4823.sched = [T(14, 0), T(23, 0)]; m4823.punches = [{ in: T(13, 57), out: T(24, 55) }];
+  m4823.geo = [T(13, 50), T(24, 58)]; m4823.meal = [T(18, 0), T(18, 30)];
+
+  // 4824: Dre Thu — clopening: Wed ended 23:55, Thu starts 08:00 (REST-GAP NYC 11h)
+  const dreWed = W.find(s => s.worker === 'Dre P.' && s.day === 1);
+  dreWed.sched = [T(15, 0), T(23, 45)]; dreWed.punches = [{ in: T(14, 58), out: T(23, 55) }]; dreWed.geo = [T(14, 50), T(23, 58)];
+  const m4824 = W.find(s => s.worker === 'Dre P.' && s.day === 3);
+  m4824.id = '4824'; m4824.sched = [T(8, 0), T(16, 0)]; m4824.punches = [{ in: T(7, 58), out: T(16, 2) }]; m4824.geo = [T(7, 52), T(16, 5)]; m4824.day = 2;
+
+  // 4825: Priya Tue — orientation billed at standard rate (CON-SUTTER-01)
+  const m4825 = W.find(s => s.worker === 'Priya S.' && s.day === 1);
+  m4825.id = '4825'; m4825.orientation = true; // rate stays 26.00 → corrected to 18
+
+  // 4826: Luis Tue — no meal punch, no waiver, 8.5h (CA-MB-01) — Mercy auto-deduct + no evidence (FAC-AUTODED)
+  const m4826 = W.find(s => s.worker === 'Luis M.' && s.day === 1);
+  m4826.id = '4826'; m4826.meal = null; m4826.mealEvidence = false;
+
+  // 4827: Luis Thu — 10.6h day (CA-OT-8 daily overtime)
+  const m4827 = W.find(s => s.worker === 'Luis M.' && s.day === 3);
+  m4827.id = '4827'; m4827.punches = [{ in: T(6, 1), out: T(17, 20) }]; m4827.geo = [T(5, 57), T(17, 23)];
+  m4827.meal = [T(10, 30), T(11, 0)];
+
+  // 4830: Aisha week — 45.5h at Mercy (TW-1187 holds 5.5h; FED-OT-40 anti-pyramid demo)
+  const aSat = W.find(s => s.worker === 'Aisha B.' && s.day === 5);
+  aSat.id = '4830'; aSat.sched = [T(7, 0), T(16, 30)]; aSat.punches = [{ in: T(6, 58), out: T(16, 32) }]; aSat.geo = [T(6, 52), T(16, 35)];
+  aSat.meal = [T(11, 0), T(11, 32)];
+
+  // 4833: Tom Wed — facility clock caps at 16:00, badge-out 16:47 (FAC-BADGE-01), Ray confirms
+  const m4833 = W.find(s => s.worker === 'Tom K.' && s.day === 2);
+  m4833.id = '4833'; m4833.punches = [{ in: T(8, 2), out: T(16, 0) }]; m4833.badgeIn = T(7, 57); m4833.badgeOut = T(16, 47);
+  m4833.resolution = { by: 'Ray P. · shift lead', quote: 'Yeah the clock maxes out, he was here till quarter to five.' };
+
+  // 4834: Reggie — exact 8.00h Mon-Thu (CS-EXACT streak)
+  for (const d of [0, 1, 2, 3]) { const s = W.find(x => x.worker === 'Reggie F.' && x.day === d); s.punches = [{ in: T(6, 0), out: T(14, 30) }]; s.meal = [T(10, 0), T(10, 30)]; if (d === 3) s.id = '4834'; }
+
+  // 4835: Elena Fri — schedule moved 18h before start (CHI-FWW-01)
+  const m4835 = W.find(s => s.worker === 'Elena V.' && s.day === 4);
+  m4835.id = '4835'; m4835.schedChangedHoursBefore = 18;
+
+  // 4836: Grace Wed — sent home after 1.6h of an 8h schedule (CA-RT-01 + CON-MIN-4H)
+  const m4836 = W.find(s => s.worker === 'Grace H.' && s.day === 2);
+  m4836.id = '4836'; m4836.contractMin = true; m4836.punches = [{ in: T(8, 33), out: T(10, 10) }]; m4836.geo = [T(8, 30), T(10, 14)]; m4836.meal = null;
+
+  // 4837: Grace Thu — split shift: 8:30–11:30 + 15:00–19:00 (CA-SS-01; rate high → partial offset demo)
+  const m4837 = W.find(s => s.worker === 'Grace H.' && s.day === 3);
+  m4837.id = '4837'; m4837.punches = [{ in: T(8, 30), out: T(11, 30) }, { in: T(15, 0), out: T(19, 0) }]; m4837.meal = null; m4837.geo = [T(8, 26), T(19, 3)];
+
+  // 4838: Nina Mon — night shift edited after approval (CS-EDIT)
+  const m4838 = W.find(s => s.worker === 'Nina T.' && s.day === 0);
+  m4838.id = '4838'; m4838.editedAfterApproval = 'site portal · unknown editor';
+
+  // 4839: Sam O. Sun — 17.2h span, missed clock-out not resolved (CS-16H hold)
+  const m4839 = W.find(s => s.worker === 'Sam O.' && s.day === 6);
+  m4839.id = '4839'; m4839.punches = [{ in: T(8, 1), out: T(25, 12) }]; m4839.geo = [T(7, 55), T(15, 40)]; m4839.meal = null;
+
+  // 4840: Omar Sat — double-booked: overlapping shift at Wicker? (different city — use CS-SPEED instead)
+  // Omar works Northbank 16:00-23:00 Fri, then a Sat shift; give Grace an overlap instead:
+  // Grace Mon: overlapping St.Marks + Mercy pickup (CS-OVLP + CS-SPEED)
+  const gMon = W.find(s => s.worker === 'Grace H.' && s.day === 0);
+  gMon.id = '4840';
+  shift({
+    id: '4841', worker: 'Grace H.', fac: F.mercy, role: 'Housekeeping (pickup)', rate: 24.50, day: 0,
+    sched: [T(14, 0), T(18, 0)], punches: [{ in: T(14, 0), out: T(18, 0) }], geo: [T(13, 55), T(18, 2)],
+  }); // overlaps 8:30-16:30 St.Marks shift → CS-OVLP flags both
+
+  return W;
+}
+
+// ---------- exports / self-check ----------
+const BENCH = { FACILITIES, FEATURES, RULES, makeWeek, runEngine, backtest, fmtT, fmtH, money, DAYS, MIN, H };
+if (typeof module !== 'undefined') module.exports = BENCH;
+if (typeof window !== 'undefined') window.BENCH = BENCH;
+
+if (typeof require !== 'undefined' && typeof module !== 'undefined' && require.main === module) {
+  const week = makeWeek();
+  const { shifts, totals } = runEngine(week);
+  const byId = id => shifts.find(r => r.shift.id === id);
+  const hasRow = (id, rule, status) => byId(id).rows.some(x => x.ruleId === rule && (!status || x.status === status));
+  const assert = (cond, msg) => { if (!cond) { console.error('FAIL: ' + msg); process.exitCode = 1; } else console.log('ok: ' + msg); };
+
+  assert(week.length > 50, `week has ${week.length} shifts`);
+  assert(shifts.every(r => r.rows.every(x => x.status !== 'error')), 'no rule errors');
+  assert(hasRow('4821', 'TS-COMPLETE', 'flag'), '4821 missing clock-out flags');
+  assert(byId('4821').rows.some(x => x.ruleId === 'TS-COMPLETE' && x.kind === 'human'), '4821 human confirmation row');
+  assert(hasRow('4822', 'CS-01', 'applied'), '4822 duplicate merged');
+  assert(hasRow('4823', 'NY-SOH-01', 'flag'), '4823 spread of hours');
+  assert(hasRow('4823', 'VER-EV-02', 'applied'), '4823 egress LLM row');
+  assert(hasRow('4824', 'REST-GAP-01', 'flag'), '4824 clopening');
+  assert(hasRow('4825', 'CON-SUTTER-01', 'flag'), '4825 training rate corrected');
+  assert(byId('4825').rate === 18, '4825 rate overridden to 18');
+  assert(hasRow('4826', 'CA-MB-01', 'flag'), '4826 meal premium');
+  assert(hasRow('4826', 'FAC-AUTODED-01', 'flag'), '4826 auto-deduct reversed');
+  assert(hasRow('4827', 'CA-OT-8', 'applied'), '4827 daily OT');
+  assert(hasRow('4830', 'TW-1187', 'held'), '4830 OT held at Mercy');
+  assert(hasRow('4833', 'FAC-BADGE-01', 'flag'), '4833 badge mismatch');
+  assert(byId('4833').deltaUnder > 0, '4833 underpayment corrected (paid to badge)');
+  assert(hasRow('4834', 'CS-EXACT', 'flag'), '4834 exact streak');
+  assert(hasRow('4835', 'CHI-FWW-01', 'flag'), '4835 predictability pay');
+  assert(hasRow('4836', 'CA-RT-01', 'flag'), '4836 reporting time');
+  assert(hasRow('4836', 'CON-MIN-4H', 'flag'), '4836 4h minimum');
+  assert(hasRow('4837', 'CA-SS-01', 'flag') || byId('4837').rows.some(x => x.ruleId === 'CA-SS-01'), '4837 split shift evaluated');
+  assert(hasRow('4838', 'CS-EDIT', 'flag'), '4838 post-approval edit');
+  assert(hasRow('4839', 'CS-16H', 'held'), '4839 impossible length held');
+  assert(hasRow('4840', 'CS-OVLP', 'held') && hasRow('4841', 'CS-OVLP', 'held'), 'overlap holds both');
+  assert(totals.under > 0 && totals.over > 0, `corrections both ways (under ${money(totals.under)}, over ${money(totals.over)})`);
+  assert(shifts.every(r => isFinite(r.pay) && r.pay >= 0), 'all payouts finite');
+
+  // param edit changes behavior: widen meal deadline → 4826 meal-late flags may persist (missed meal), tighten CS-EXACT
+  const bt1 = backtest(week, 'CA-MB-01');
+  const bt2 = backtest(week, 'CS-EXACT', { 'CS-EXACT.streak': 2 });
+  const bt2b = backtest(week, 'CS-EXACT', { 'CS-EXACT.streak': 7 });
+  assert(bt2.fires > bt2b.fires, `param edit changes backtest (streak 2 → ${bt2.fires} fires, streak 7 → ${bt2b.fires})`);
+  console.log(`\nweek: ${week.length} shifts · flags ${totals.flags} · held ${totals.held} · under ${money(totals.under)} · over ${money(totals.over)} · CA-MB-01 fires ${bt1.fires}`);
+}
+
+</script>
+<script>
+window.CATALOG = [
+{
+"id": "PACK-04",
+"name": "De minimis time",
+"bucket": "Legal",
+"juris": "US federal (rejected in CA)",
+"statement": "Trivial, hard-to-capture bits of time (courts have allowed up to ~10 min) can be disregarded federally \u2014 but never regularly-occurring time, and California rejects the doctrine entirely.",
+"det": "partial \u2014 the minute cap encodes, but 'administratively difficult to capture' and 'irregular' are judgment calls",
+"params": "cap\u224810min/day; regularity test; state carve-out list (CA=no de minimis)",
+"src": [
+"https://www.casemine.com/commentary/us/anderson-v.-mt.-clemens-pottery-co.:-defining-compensable-work-time-under-the-fair-labor-standards-act/view",
+"https://www.constangy.com/newsroom/newsletters/California-rejects-em-de-minimis-em-standard-on-state-wage-and-hour-claims"
+]
+},
+{
+"id": "PACK-05",
+"name": "Regular rate must include differentials and nondiscretionary bonuses",
+"bucket": "Legal",
+"juris": "US",
+"statement": "Overtime is 1.5x the regular rate, not the base rate \u2014 shift differentials, attendance bonuses, and any promised production bonus must be folded in (total remuneration / total hours) before applying the OT premium.",
+"det": "yes \u2014 arithmetic, but requires correct classification of each pay component upstream",
+"params": "inclusion list (differentials, nondiscretionary bonuses, commissions); exclusion list (discretionary bonuses, gifts, premium pay already at 1.5x); lookback allocation method for lump-sum bonuses",
+"src": [
+"https://www.dol.gov/agencies/whd/fact-sheets/54-healthcare-overtime",
+"https://www.foley.com/insights/publications/2026/03/dol-reminds-employers-to-include-non-discretionary-bonuses-when-calculating-regular-rates-and-overtime-premiums-but-how/"
+]
+},
+{
+"id": "PACK-06",
+"name": "Blended rate for multiple pay rates in one week",
+"bucket": "Legal",
+"juris": "US",
+"statement": "A worker paid $18 at one client and $22 at another in the same week gets OT at a weighted-average regular rate: total straight-time earnings / total hours, then 0.5x extra on OT hours.",
+"det": "yes \u2014 pure arithmetic across all assignments in the week",
+"params": "averaging method=weighted (or rate-in-effect if agreed in advance where allowed)",
+"src": [
+"https://www.dol.gov/agencies/whd/fact-sheets/54-healthcare-overtime",
+"https://www.bairdquinn.com/blog/how-to-calculate-overtime-pay/"
+]
+},
+{
+"id": "PACK-07",
+"name": "Day-rate overtime (Helix v. Hewitt)",
+"bucket": "Legal",
+"juris": "US",
+"statement": "A day rate is not a salary \u2014 day-rate workers still get OT: regular rate = (day rate \u00d7 days worked) / total hours that week, plus 0.5x that rate per OT hour, no matter how high the day rate is.",
+"det": "yes \u2014 arithmetic, but requires actual hours tracked for day-rate workers",
+"params": "day rate; days worked; hours worked; OT threshold=40h",
+"src": [
+"https://natlawreview.com/article/daily-rate-workers-and-overtime-compensation-implications-supreme-court-s-upcoming",
+"https://www.overtime-flsa.com/faqs/how-are-you-paid/day-rate-workers/"
+]
+},
+{
+"id": "PACK-08",
+"name": "Travel time compensability",
+"bucket": "Legal",
+"juris": "US",
+"statement": "Home-to-work commute is unpaid; travel between job sites during the workday is paid time and counts toward overtime; travel to a farther-than-usual site is paid for the extra time.",
+"det": "partial \u2014 site-to-site travel is detectable from GPS and encodable; 'farther than usual' and special one-day-assignment rules need configured baselines",
+"params": "commute baseline distance/time; inter-site travel auto-add toggle",
+"src": [
+"https://www.smacna.org/resource/fair-labor-standards-act-and-travel-time",
+"https://www.overtime-flsa.com/blog/what-counts-as-hours-worked-the-flsa-rules-on-training-meetings-and-waiting-time/"
+]
+},
+{
+"id": "PACK-09",
+"name": "Waiting and on-call time",
+"bucket": "Legal",
+"juris": "US",
+"statement": "'Engaged to wait' (waiting at the site between tasks) is paid; 'waiting to be engaged' is not; on-call is paid only if restrictions effectively prevent personal use of the time.",
+"det": "no \u2014 fact-intensive freedom-of-use test; can only flag candidate intervals (e.g., long on-site gaps between punches) for human review",
+"params": "on-site wait auto-pay toggle; response-time threshold for on-call; geographic restriction flag",
+"src": [
+"https://www.overtime-flsa.com/blog/what-counts-as-hours-worked-the-flsa-rules-on-training-meetings-and-waiting-time/",
+"https://www.breakroomapp.com/glossary/compensable-time"
+]
+},
+{
+"id": "PACK-10",
+"name": "Donning/doffing and pre/post-shift work",
+"bucket": "Legal",
+"juris": "US",
+"statement": "Time putting on required protective gear on premises is paid if integral and indispensable to the job, and so is the walk from gear-up to the workstation.",
+"det": "partial \u2014 once a site is classified as requiring gear, a fixed minute allowance encodes cleanly; the classification itself is legal judgment",
+"params": "per-site fixed allowance (min/shift) added before first punch / after last punch",
+"src": [
+"https://carolinaspayrollconference.starchapter.com/images/downloads/2016_Presentations/12___compensable_time_under_flsa.pdf",
+"https://www.myhrconcierge.com/2025/08/07/employers-guide-to-understanding-compensable-time-for-non-exempt-employees-under-the-flsa/"
+]
+},
+{
+"id": "PACK-11",
+"name": "Sleep-time exclusion on 24h+ duty",
+"bucket": "Legal",
+"juris": "US (home care, live-in)",
+"statement": "On a shift of 24h or more, you may exclude up to 8h of scheduled sleep by agreement \u2014 but only with adequate facilities; interruptions are paid, and if the worker can't get at least 5 consecutive hours of sleep the whole period is paid.",
+"det": "yes \u2014 thresholds encode; interruption minutes come from call logs/attestation",
+"params": "max exclusion=8h; min uninterrupted sleep=5h; agreement-on-file flag; shift length trigger=24h",
+"src": [
+"https://www.ecfr.gov/current/title-29/subtitle-B/chapter-V/subchapter-B/part-785/subpart-C/subject-group-ECFRecc40629d2c64c8/section-785.22",
+"https://www.dol.gov/sites/dolgov/files/WHD/legacy/files/fab2016_1.pdf"
+]
+},
+{
+"id": "PACK-12",
+"name": "FLSA recordkeeping",
+"bucket": "Legal",
+"juris": "US",
+"statement": "For every nonexempt worker you must keep hours worked each day, total hours each workweek, the regular rate, straight-time and OT earnings, all deductions, and pay dates \u2014 payroll records 3 years, time cards 2 years, producible within 72 hours of a DOL request.",
+"det": "yes \u2014 a completeness checklist over stored fields",
+"params": "retention: payroll=3yr, time cards/schedules=2yr; production SLA=72h",
+"src": [
+"https://www.dol.gov/agencies/whd/fact-sheets/21-flsa-recordkeeping",
+"https://www.ecfr.gov/current/title-29/subtitle-B/chapter-V/subchapter-A/part-516"
+]
+},
+{
+"id": "PACK-14",
+"name": "California 7th consecutive day premium",
+"bucket": "State",
+"juris": "California",
+"statement": "Work all seven days of the employer's workweek and the seventh day is 1.5x for the first 8 hours and 2x after 8 \u2014 keyed to the defined workweek, not any rolling 7 days.",
+"det": "yes \u2014 countable from daily records once workweek anchor is set",
+"params": "consecutive-day count=7 within workweek; first 8h=1.5x; beyond 8h=2x",
+"src": [
+"https://www.employmentlawaid.org/california/wages-and-hours/overtime-laws/",
+"https://myworklaws.com/overtime-laws/california/"
+]
+},
+{
+"id": "PACK-16",
+"name": "California meal waivers",
+"bucket": "State",
+"juris": "California",
+"statement": "The meal can be waived by mutual consent only if the day's work is 6 hours or less; the second meal is waivable only if total hours \u226412 AND the first meal wasn't waived; on-duty paid meals need a written, revocable agreement and a job that truly prevents relief.",
+"det": "yes \u2014 waiver flags plus hour thresholds fully encode; validating the on-duty justification is judgment",
+"params": "first-waiver cap=6h; second-waiver cap=12h; waiver-on-file flags; on-duty agreement flag",
+"src": [
+"https://www.dir.ca.gov/dlse/faq_mealperiods.htm",
+"https://www.calchamber.com/california-labor-law/meal-and-rest-breaks"
+]
+},
+{
+"id": "PACK-17",
+"name": "California rest breaks",
+"bucket": "State",
+"juris": "California",
+"statement": "A paid 10-minute rest break per 4 hours worked 'or major fraction thereof' (so 3.5\u20136h = 1 break, 6\u201310h = 2, 10\u201314h = 3); a missed rest break owes one extra hour at the regular rate for that day.",
+"det": "partial \u2014 the count owed is arithmetic, but rest breaks are paid and usually unpunched, so violations are detected by attestation, not punches",
+"params": "10min per 4h block; major-fraction trigger=2h; premium=1h/day",
+"src": [
+"https://www.dir.ca.gov/dlse/RestAndMealPeriods.pdf",
+"https://legalclarity.org/what-is-california-labor-code-226-7/"
+]
+},
+{
+"id": "PACK-21",
+"name": "NY manual-worker weekly pay",
+"bucket": "State",
+"juris": "New York",
+"statement": "'Manual workers' (>25% physical labor \u2014 most shift/warehouse/hospitality workers) must be paid weekly, within 7 calendar days of the end of the week the wages were earned (Labor Law \u00a7191).",
+"det": "yes \u2014 pay-run cadence check once the worker is classified manual",
+"params": "classification threshold=25% physical work; pay lag cap=7 days; frequency=weekly",
+"src": [
+"https://www.nysenate.gov/legislation/laws/LAB/191",
+"https://dol.ny.gov/frequency-pay"
+]
+},
+{
+"id": "PACK-22",
+"name": "Colorado daily/consecutive overtime",
+"bucket": "State",
+"juris": "Colorado",
+"statement": "1.5x after 12 hours in a workday, after 12 consecutive hours regardless of shift boundaries, or after 40 in the week \u2014 whichever yields more pay.",
+"det": "yes \u2014 three parallel computations, take max",
+"params": "daily threshold=12h; consecutive threshold=12h (crosses shifts); weekly=40h; multiplier=1.5x; pick-greatest rule",
+"src": [
+"https://www.workyard.com/us-labor-laws/colorado-overtime-laws",
+"https://pro.bloomberglaw.com/insights/labor-employment/overtime-pay-laws-by-state/"
+]
+},
+{
+"id": "PACK-23",
+"name": "State daily-OT patchwork",
+"bucket": "State",
+"juris": "US (per-state)",
+"statement": "Most states are weekly-40 only, but Alaska and California have 8h/day OT, Nevada has 8h/day for workers earning under 1.5x minimum wage, Colorado 12h, Oregon 10h in manufacturing/canneries \u2014 the pay engine must key OT rules to work-state.",
+"det": "yes \u2014 lookup table by work-state and industry",
+"params": "per-state rule table: {AK:8h, CA:8h/12h 2x, NV:8h if rate<1.5x MW, CO:12h, OR-mfg:10h, default:none}",
+"src": [
+"https://pro.bloomberglaw.com/insights/labor-employment/overtime-pay-laws-by-state/",
+"https://www.paycor.com/resource-center/articles/overtime-pay-laws-by-state/"
+]
+},
+{
+"id": "PACK-24",
+"name": "Other-state reporting/show-up pay",
+"bucket": "State",
+"juris": "MA, NH, CT, NJ, others",
+"statement": "Massachusetts owes 3 hours at minimum wage if a 3h+ shift is cut short; New Hampshire owes 2 hours at the regular rate; Connecticut owes 2\u20134 hours depending on industry; several states have none \u2014 table it by state.",
+"det": "yes \u2014 schedule + actual hours + state lookup",
+"params": "per-state table: {MA:3h@MW if scheduled\u22653h, NH:2h@regular, CT:2h hotel/restaurant, 4h laundry/mercantile}",
+"src": [
+"https://www.laborlawcenter.com/education-center/reporting-time-pay-varies-by-state/",
+"https://www.shrm.org/topics-tools/news/benefits-compensation/reporting-time-pay-wage-hour-winter-wonderland"
+]
+},
+{
+"id": "PACK-25",
+"name": "Temp-worker equal pay laws (NJ/IL)",
+"bucket": "State",
+"juris": "New Jersey, Illinois",
+"statement": "Illinois' Day and Temporary Labor Services Act requires temps assigned to a client >90 days to be paid like the client's own comparable employees (720h triggers comparability to lowest-paid similar role); New Jersey's Temp Worker Bill of Rights makes agency and client jointly liable and mandates 4 hours' pay when a scheduled assignment has no work and 2 hours when the worksite changes mid-shift.",
+"det": "yes \u2014 day/hour counters against assignment history; the comparable-wage lookup needs client pay data",
+"params": "IL trigger=90 days / 720h; NJ min pay: no-work=4h, site change=2h; penalties $500\u2013$5,000/violation (NJ)",
+"src": [
+"https://trusaic.com/blog/contract-worker-rights-new-jersey-illinois-break-the-mold/",
+"https://perkinscoie.com/insights/update/illinois-expands-rights-and-remedies-temporary-workers"
+]
+},
+{
+"id": "PACK-26",
+"name": "Final-pay timing",
+"bucket": "State",
+"juris": "per-state (CA strictest)",
+"statement": "California: fired = pay everything (including accrued break premiums) immediately; quit without notice = within 72 hours \u2014 miss it and waiting-time penalties run a full day's wages per day up to 30 days. Most states: next regular payday.",
+"det": "yes \u2014 date arithmetic against termination event",
+"params": "per-state deadline table; CA penalty=1 day wage/day late, cap=30 days",
+"src": [
+"https://www.paycom.com/resources/blog/final-paycheck-laws-by-state/",
+"https://www.seyfarth.com/news-insights/wage-statement-and-final-pay-rules-apply-to-meal-and-rest-break-premiums.html"
+]
+},
+{
+"id": "PACK-27",
+"name": "Minimum wage by work location",
+"bucket": "State",
+"juris": "US (state+local patchwork)",
+"statement": "Pay the highest of federal, state, and city/county minimum wage for where the shift was actually worked \u2014 Seattle $21.30, Denver $19.29, West Hollywood $20.25 (2026); ~49 localities changed rates on Jan 1 alone, so the rate table is per-geofence, per-date.",
+"det": "yes \u2014 geocode the worksite and date-lookup the rate",
+"params": "rate table keyed by (lat/long\u2192jurisdiction, effective date, employer size, industry); rule=max(applicable rates)",
+"src": [
+"https://laborstandards.seattle.gov/2025/09/30/office-of-labor-standards-announces-seattles-2026-minimum-wage",
+"https://coloradosun.com/2025/08/07/denvers-minimum-wage-colorado/"
+]
+},
+{
+"id": "PACK-28",
+"name": "Nurse hour caps / mandatory OT bans",
+"bucket": "State",
+"juris": "18 states (MA, NY, PA, WA, etc.)",
+"statement": "18 states restrict mandatory nurse overtime; Massachusetts flatly bars nurses from working more than 16 consecutive hours in 24 and requires 8 consecutive hours off afterward; Pennsylvania requires 10 hours off after a 12-hour stretch.",
+"det": "yes \u2014 consecutive-hour and rest-gap checks on punch history",
+"params": "per-state: MA cap=16 consecutive h + 8h off after; PA rest=10h after 12h worked; occupation flag=nurse/healthcare",
+"src": [
+"https://malegislature.gov/Laws/GeneralLaws/PartI/TitleXVI/Chapter111/Section226",
+"https://www.overtime-flsa.com/blog/which-states-restrict-mandatory-overtime-for-nurses/"
+]
+},
+{
+"id": "PACK-29",
+"name": "Predictive-scheduling advance notice + predictability pay",
+"bucket": "Local",
+"juris": "Oregon statewide; Seattle, NYC, SF, Chicago, Philadelphia, LA, Emeryville, Berkeley, Evanston",
+"statement": "Covered employers (retail/food/hospitality over size thresholds) must post schedules 14 days ahead; any employer-initiated change inside the window triggers premium pay \u2014 one extra hour in Oregon/Chicago/Seattle for additions, $10\u2013$75 per change in NYC.",
+"det": "yes \u2014 diff posted schedule vs worked/changed schedule, then per-city premium table",
+"params": "notice window=14 days (Philly uses 10 initially, now 14); premium per jurisdiction: OR/CHI/SEA=+1h regular rate for added time, NYC=$10\u2013$75 by change type/timing; covered-industry + headcount thresholds",
+"src": [
+"https://www.workaxle.com/blog/fair-workweek-laws-2026",
+"https://www.joinhomebase.com/blog/predictive-scheduling-laws"
+]
+},
+{
+"id": "PACK-32",
+"name": "Seattle Secure Scheduling premiums",
+"bucket": "Local",
+"juris": "Seattle (retail/food, 500+ employees)",
+"statement": "Add hours inside the 14-day window: one extra hour of pay. Cut or cancel hours (including sending someone home early): half-time pay for every lost hour. Work during the 10-hour rest window: 1.5x.",
+"det": "yes \u2014 schedule-diff arithmetic",
+"params": "added-hours premium=+1h; subtracted-hours=0.5x per lost hour; rest window=10h at 1.5x; notice=14 days",
+"src": [
+"https://www.seattle.gov/documents/Departments/LaborStandards/SS%20QA_FINAL_02272023%20comprehensive.pdf",
+"https://www.myshyft.com/schedule-legislation/seattle-secure-scheduling/"
+]
+},
+{
+"id": "PACK-34",
+"name": "LA Fair Work Week premiums",
+"bucket": "Local",
+"juris": "City of LA (retail 300+ employees); LA County unincorporated since 7/2025",
+"statement": "Employer-initiated change that doesn't cut time (or adds >15 min): one extra hour at the regular rate; cutting at least 15 minutes: half the regular rate for the unworked time.",
+"det": "yes \u2014 schedule-diff with a 15-minute materiality filter",
+"params": "change premium=+1h; reduction premium=0.5x lost time; materiality threshold=15min; coverage=NAICS retail, 300+ global employees",
+"src": [
+"https://wagesla.lacity.gov/sites/g/files/wph1941/files/2023-03/Fair%20Work%20Week%20FAQs.pdf",
+"https://www.sidley.com/en/insights/newsupdates/2023/03/los-angeles-fair-work-week-means-predictable-schedules-for-retail-employees"
+]
+},
+{
+"id": "PACK-35",
+"name": "Oregon statewide predictive scheduling",
+"bucket": "Local",
+"juris": "Oregon (retail/hospitality/food, 500+ employees worldwide)",
+"statement": "14 days' schedule notice; adding 30+ minutes to a shift owes one extra hour; the worker gets a 10-hour rest window between shifts paid at 1.5x if worked.",
+"det": "yes \u2014 same schedule-diff machinery",
+"params": "notice=14 days; addition trigger=30min; addition premium=+1h; rest=10h at 1.5x",
+"src": [
+"https://www.workaxle.com/blog/fair-workweek-laws-2026",
+"https://www.paycom.com/resources/blog/predictive-scheduling-laws/"
+]
+},
+{
+"id": "PACK-36",
+"name": "Bill rate vs pay rate schedule",
+"bucket": "Contract",
+"juris": "per-contract",
+"statement": "Every position on the work order has its own bill rate; bill rate = pay rate \u00d7 (1 + markup), with markups typically 25\u201375% \u2014 validation means every shift's hours price out at the right position's rate for both payout and invoice.",
+"det": "yes \u2014 rate-table lookup keyed to position and site",
+"params": "per-position rate table (state, job title, bill rate/hr); markup 25\u201375% typical; effective dates",
+"src": [
+"https://lgcassociates.com/wp-content/uploads/2023/04/LGC-Staffing-Services-Agreement-July-2021.pdf",
+"https://altline.sobanco.com/staffing-agency-markup-rates/"
+]
+},
+{
+"id": "PACK-37",
+"name": "OT and holiday billing multiplier",
+"bucket": "Contract",
+"juris": "per-contract (LGC example)",
+"statement": "Overtime and holidays are billed at 1.5x the hourly bill rate for hours over 40 in a standard Monday\u2013Sunday week; 'holiday' is an enumerated list (Easter, Memorial Day, July 4th, Labor Day, Thanksgiving, Christmas, NYE, New Year's Day, MLK Day, Juneteenth in LGC's contract).",
+"det": "yes \u2014 same OT math applied to bill rate, plus a holiday calendar",
+"params": "billing OT multiplier=1.5x; workweek=Mon\u2013Sun; named-holiday list per contract",
+"src": [
+"https://lgcassociates.com/wp-content/uploads/2023/04/LGC-Staffing-Services-Agreement-July-2021.pdf"
+]
+},
+{
+"id": "PACK-39",
+"name": "Late-cancellation billing",
+"bucket": "Contract",
+"juris": "per-contract (LGC example)",
+"statement": "Client cancels a work order with fewer than 24 hours' notice: billed 2 hours per canceled worker (other agencies bill 4 hours if canceled under 2 hours before start).",
+"det": "yes \u2014 timestamp of cancellation vs shift start",
+"params": "notice window=24h (or 2h); penalty=2h (or 4h) per worker at bill rate",
+"src": [
+"https://lgcassociates.com/wp-content/uploads/2023/04/LGC-Staffing-Services-Agreement-July-2021.pdf",
+"https://contracko.com/blog/staffing-agency-contracts"
+]
+},
+{
+"id": "PACK-40",
+"name": "Timesheet dispute window / approval SLA",
+"bucket": "Contract",
+"juris": "per-contract (LGC example)",
+"statement": "The client must report time or dispute the worker-reported hours within 48 hours of work-order completion; silence means the worker-reported time (or scheduled start/end) is deemed accurate, final, and accepted \u2014 then invoice is Net 30.",
+"det": "yes \u2014 clock the dispute window and auto-finalize",
+"params": "dispute window=48h; default source on silence=worker-reported time or schedule; payment terms=Net 30",
+"src": [
+"https://lgcassociates.com/wp-content/uploads/2023/04/LGC-Staffing-Services-Agreement-July-2021.pdf",
+"https://invoicedataextraction.com/blog/staffing-agency-invoice-processing"
+]
+},
+{
+"id": "PACK-41",
+"name": "Conversion / temp-to-hire fee",
+"bucket": "Contract",
+"juris": "per-contract (LGC example)",
+"statement": "Client hires a worker within 12 months who has under 420 hours of temp work: $2,500 referral fee, waived at 420+ hours; unreported conversions can cost up to $10,000 \u2014 so the system must track cumulative hours per worker-client pair.",
+"det": "yes \u2014 cumulative hour counter per worker\u00d7client",
+"params": "hour threshold=420h; fee=$2,500; lookback=12 months; unnotified-conversion fee up to $10,000",
+"src": [
+"https://lgcassociates.com/wp-content/uploads/2023/04/LGC-Staffing-Services-Agreement-July-2021.pdf"
+]
+},
+{
+"id": "PACK-42",
+"name": "Gig-platform attendance policy",
+"bucket": "Contract",
+"juris": "per-platform (Instawork example)",
+"statement": "Not arrived 60 minutes after start = no-show, zero pay, immediate suspension (1 no-show in 30 days = 7-day suspension, 2 = 30 days); cancel within 24 hours of start = late cancel; workers must confirm 48h out and are auto-removed if unconfirmed 16h before start; 15-minute post-booking free-cancel window.",
+"det": "yes \u2014 all pure timestamp rules",
+"params": "no-show threshold=60min after start; late-cancel window=24h; confirm-by=16h before; grace=15min after booking; suspension ladder 7/30 days",
+"src": [
+"https://help.instawork.com/en/articles/6122001-cancellation-policy",
+"https://help.instawork.com/en/articles/2226313-shift-cancellation-policy"
+]
+},
+{
+"id": "PACK-43",
+"name": "CBA shift differentials",
+"bucket": "CBA",
+"juris": "per-CBA",
+"statement": "Night/evening/weekend hours carry a premium \u2014 flat (+$3/hr) or percentage (healthcare typically 10\u201320% nights, 15\u201325% weekends) \u2014 applied per hour worked in the differential window, and it feeds the OT regular rate.",
+"det": "yes \u2014 window overlap arithmetic on punches",
+"params": "window definitions (e.g., 6pm\u20136am, Sat/Sun); rate=flat $/hr or % uplift; interaction=include in regular rate",
+"src": [
+"https://timeclock44.com/blog/shift-differential-pay-night-weekend-premium/",
+"https://legalclarity.org/shift-differentials-and-the-regular-rate-of-pay-flsa-rules/"
+]
+},
+{
+"id": "PACK-44",
+"name": "CBA overtime distribution / equalization",
+"bucket": "CBA",
+"juris": "per-CBA",
+"statement": "Overtime must be offered by seniority or equalized across the unit over a period \u2014 a payroll validation angle: OT consistently landing on the same few workers is a grievance risk flag.",
+"det": "partial \u2014 the equalization ledger is computable, but 'offered and declined' events need capture",
+"params": "equalization window (month/quarter); allowable variance in cumulative OT hours; seniority ordering",
+"src": [
+"https://www.bloomberglaw.com/external/document/X5A6HQAS000000/labor-relations-drafting-guide-overtime-provisions-in-cbas",
+"https://fraser.stlouisfed.org/files/docs/publications/bls/bls_0908-18_1950.pdf"
+]
+},
+{
+"id": "PACK-45",
+"name": "CBA guaranteed hours / call-in guarantees",
+"bucket": "CBA",
+"juris": "per-CBA",
+"statement": "Union contracts commonly guarantee minimum daily hours (e.g., 4-hour show-up guarantee) or weekly hours \u2014 a reported shift below the guarantee is topped up to the guaranteed amount at the regular rate.",
+"det": "yes \u2014 max(worked, guaranteed) per day/week",
+"params": "daily guarantee (often 4h); weekly guarantee; top-up rate=regular",
+"src": [
+"https://lawinsider.com/clause/show-up-guarantee",
+"https://fraser.stlouisfed.org/files/docs/publications/bls/bls_0908-18_1950.pdf"
+]
+},
+{
+"id": "PACK-49",
+"name": "Buddy-punch prevention and early-punch lockout",
+"bucket": "Facility",
+"juris": "per-site policy",
+"statement": "Require biometric/photo/GPS identity at punch; lock the clock so workers can't punch in more than 5\u201310 minutes before scheduled start; a 5\u20137 minute grace window is for discipline only \u2014 grace never trims minutes actually worked.",
+"det": "yes \u2014 lockout and grace are timestamp rules; the pay-vs-discipline distinction is a hard invariant",
+"params": "early-punch lockout=5\u201310min before start; grace window=5\u20137min (enforcement only, not pay); identity method=biometric/photo/geo",
+"src": [
+"https://www.opentimeclock.com/docs/blog1/february-2026/what-is-a-time-clock-grace-period-and-when-it-causes-wage-claims",
+"https://www.7shifts.com/blog/employee-clock-in-and-clock-out-policy/"
+]
+},
+{
+"id": "PACK-55",
+"name": "Same-second / identical-hours cluster",
+"bucket": "Common sense",
+"juris": "universal ops heuristic",
+"statement": "Multiple workers punching at the exact same second on a shared device, or several timesheets with identical hours all period, points to one person punching for the group \u2014 cluster-flag simultaneous punches and duplicate-hour groups.",
+"det": "yes \u2014 grouping/equality tests on punch streams",
+"params": "simultaneity window=0\u20132s on same device; duplicate-group size threshold (\u22653 identical timesheets); device ID correlation",
+"src": [
+"https://onpay.com/insights/timesheet-fraud-prevention/",
+"https://www.eportid.com/feeds/blog/employee-time-tracking-fraud-prevention"
+]
+},
+{
+"id": "PACK-56",
+"name": "Unscheduled/unapproved overtime creep",
+"bucket": "Common sense",
+"juris": "universal ops heuristic",
+"statement": "Routine overtime with no prior approval, chronic clock-ins well before the site opens, or hours consistently pinned at the plan's maximum are the top audit red flags \u2014 compare worked vs scheduled every shift and route variance over the threshold to a supervisor before pay.",
+"det": "yes \u2014 schedule-vs-actual variance math; the disposition (pay vs coach) is human",
+"params": "variance threshold (e.g., >15min over schedule); OT pre-approval flag; site opening-hours window; frequency trigger (n flags in 30 days)",
+"src": [
+"https://onpay.com/insights/timesheet-fraud-prevention/",
+"https://www.joinhomebase.com/blog/payroll-fraud"
+]
+}
+];
+</script>
+<script>
+(function(){
+'use strict';
+const {FACILITIES, FEATURES, RULES, makeWeek, runEngine, backtest, fmtT, fmtH, money, DAYS, MIN, H} = window.BENCH;
+const CATALOG = window.CATALOG;
+const week = makeWeek();
+const overrides = {};
+let run = runEngine(week, overrides);
+
+// UI state
+let tab = 'shifts', selShift = '4821', selRule = 'CA-MB-01', selCompile = 0, selFeature = 0;
+let shiftFilter = 'flagged', bucketFilter = 'All', qShifts = '', qRules = '', qVocab = '';
+let drawerRule = null, mobileDetail = false;
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+
+const SYSTEMS = { 'Mercy General':'ADP export', 'Sutter Health':'UKG Ready', 'Northbank Arena':'Ubeya', 'Bayview Warehouse':'facility wall clock', 'Wicker Park Kitchen':'7shifts', 'St. Marks Clinic':'Paylocity' };
+
+// Supplemental provenance for engine rules — url + (real) verbatim excerpts where we have them.
+const PROV = {
+  'CA-MB-01': { doc:'IWC Wage Order 5-2001 §11(A)', url:'https://www.dir.ca.gov/dlse/faq_mealperiods.htm', verbatim:'No employer shall employ any person for a work period of <span class="hl-cite">more than five (5) hours without a meal period of not less than 30 minutes</span>, except that when a work period of not more than six (6) hours will complete the day’s work the meal period may be waived by mutual consent of the employer and the employee.', dates:'effective 2001 → current' },
+  'CA-OT-8': { doc:'California Labor Code §510(a)', url:'https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=LAB&sectionNum=510', verbatim:'Eight hours of labor constitutes a day’s work. <span class="hl-cite">Any work in excess of eight hours in one workday</span> and any work in excess of 40 hours in any one workweek and the first eight hours worked on the seventh day of work in any one workweek <span class="hl-cite">shall be compensated at the rate of no less than one and one-half times the regular rate of pay</span>.', dates:'effective 2000 → current' },
+  'TB-ROUND-7': { doc:'29 CFR 785.48(b)', url:'https://www.ecfr.gov/current/title-29/section-785.48', verbatim:'…recording the employees’ starting time and stopping time to <span class="hl-cite">the nearest 5 minutes, or to the nearest one-tenth or quarter of an hour</span>. … this practice of computing working time will be accepted, provided that it is used in such a manner that <span class="hl-cite">it will not result, over a period of time, in failure to compensate the employees properly</span> for all the time they have actually worked.', dates:'point-in-time via eCFR API' },
+  'CA-ROUND-0': { doc:'Camp v. Home Depot U.S.A., Inc. (Cal. Ct. App. 2022)', url:'https://law.justia.com/cases/california/court-of-appeal/2022/h049033.html', summary:'An employer that can and does capture the exact time worked must pay for all of it — quarter-hour rounding rejected where exact capture exists.', dates:'2022 → current (CA)' },
+  'FED-OT-40': { doc:'FLSA §7 · 29 CFR part 778', url:'https://www.dol.gov/agencies/whd/fact-sheets/23-flsa-overtime', summary:'Hours over 40 in the defined workweek are paid at one and one-half times the regular rate; the workweek is a fixed, recurring 168-hour period.', dates:'as amended → current' },
+  'NY-SOH-01': { doc:'12 NYCRR 142-2.4 (spread of hours)', url:'https://dol.ny.gov/minimum-wage-0', summary:'A workday whose interval from start to end exceeds 10 hours earns one additional hour of pay at the basic minimum hourly wage.', dates:'rates updated Dec 31 yearly' },
+  'REST-GAP-01': { doc:'Seattle SMC 14.22 · NYC Fair Workweek · Chicago MCC 6-110', url:'https://www.seattle.gov/laborstandards/ordinances/secure-scheduling', summary:'Working a shift inside the protected rest window between closing and opening owes premium pay; the window is 9–11 hours depending on jurisdiction.', dates:'per-city; verify on shift date' },
+  'CHI-FWW-01': { doc:'Chicago MCC 6-110 (Fair Workweek)', url:'https://www.chicago.gov/city/en/depts/bacp/supp_info/fairworkweek.html', summary:'Employer-initiated schedule changes inside the 14-day notice window owe one hour of predictability pay at the regular rate.', dates:'effective 2020 → current' },
+  'CA-SS-01': { doc:'IWC Wage Orders §4(C) (split shift)', url:'https://www.dir.ca.gov/dlse/faq_splitshifts.htm', summary:'A split shift owes one hour at minimum wage, offset by wages earned above the minimum for the day.', dates:'effective 2001 → current' },
+  'CA-RT-01': { doc:'IWC Wage Orders §5 (reporting time)', url:'https://www.dir.ca.gov/dlse/faq_reportingtimepay.htm', summary:'A worker who reports and is furnished less than half the scheduled shift is paid half the schedule — no less than 2 and no more than 4 hours.', dates:'effective 2001 → current' },
+  'CON-MIN-4H': { doc:'Staffing services agreement §5 (LGC-pattern)', url:'https://lgcassociates.com/wp-content/uploads/2023/04/LGC-Staffing-Services-Agreement-July-2021.pdf', summary:'Each worker who reports for a scheduled shift is billed and paid a minimum of four hours.', dates:'per contract term' },
+  'CON-SUTTER-01': { doc:'Sutter MSA §4.2 (customer overlay)', summary:'Orientation shifts pay the training rate and bill zero to the client.', dates:'contract effective dates' },
+  'TW-1187': { doc:'Slack · Sam T. · Mon Aug 24, 9:12am', summary:'"No overtime at Mercy General this week please." Compiled to a scoped, auto-expiring hold rule.', dates:'Aug 24 → Aug 30 (auto-expires)' },
+  'FAC-AUTODED-01': { doc:'Quickley v. Univ. of Maryland Medical System (D. Md.)', url:'https://www.fisherphillips.com/en/insights/publication/automatically-deducting-for-meal-breaks-can-be-costly.html', summary:'Auto-deducting meal periods without a reliable way to cancel the deduction when the break is missed creates FLSA class exposure.', dates:'doctrine · current' },
+  'FAC-GEO-01': { doc:'Site profile · geofence policy', summary:'Punches must be accompanied by location evidence inside the site geofence; unmatched punches route to review.', dates:'site config' },
+  'FAC-BADGE-01': { doc:'Bayview site profile', summary:'No GPS indoors; door-badge events are the location evidence of record.', dates:'site config' },
+  'CS-01': { doc:'Ops heuristic · interview synthesis', summary:'Two clock-ins minutes apart on a shared kiosk are one shift. Merge, don’t double-pay.', dates:'pack v1' },
+  'TS-COMPLETE': { doc:'Ops heuristic · interview synthesis', summary:'"Zero hours on an active day, 30+ hours of OT, a missed punch" — the missed punch is the most common discrepancy across all seven interviews.', dates:'pack v1' },
+  'CS-16H': { doc:'Timesheet-fraud audit guides', url:'https://onpay.com/insights/timesheet-fraud-prevention/', summary:'A recorded shift beyond the plausible-length cap is presumed a missed clock-out; hold rather than pay.', dates:'pack v1' },
+  'CS-OVLP': { doc:'Cross-facility identity heuristic', summary:'Interval intersection across facilities for one identity is a data error or fraud; both shifts hold.', dates:'pack v1' },
+  'CS-SPEED': { doc:'GPS audit heuristic', url:'https://smartbarrel.io/blog/how-to-eliminate-timesheet-fraud/', summary:'Consecutive punches at different sites must be reachable at road speed.', dates:'pack v1' },
+  'CS-EXACT': { doc:'Payroll-fraud detection guides', url:'https://onpay.com/insights/timesheet-fraud-prevention/', summary:'Streaks of identical exact durations indicate hand-entered time.', dates:'pack v1' },
+  'CS-EDIT': { doc:'Wage-theft litigation pattern', summary:'Post-approval mutations to a timesheet re-trigger review and land in the immutable audit log.', dates:'pack v1' },
+  'VER-HC-01': { doc:'Vertical pack · healthcare', summary:'Shift-handoff overlap up to 15 minutes is expected, paid time.', dates:'pack v1' },
+  'VER-EV-02': { doc:'Vertical pack · events', summary:'Post-event egress up to ~45 minutes is expected; beyond that the evidence is read, and a human decides.', dates:'pack v1' },
+};
+
+const CONF = { pass:['solid','Pass'], applied:['solid','Applied'], flag:['verify','Flag'], held:['pending','Held'], na:['plain','n/a'], error:['nosource','Error'] };
+const conf = (st,lbl) => { const c = CONF[st]||CONF.na; return `<span class="conf ${c[0]}"><span class="dot ${c[0]}"></span><span class="lbl">${lbl||c[1]}</span></span>`; };
+const kindTag = k => k==='det' ? `<span class="conf solid"><span class="dot solid"></span><span class="lbl">Deterministic</span></span>`
+  : k==='llm' ? `<span class="conf verify"><span class="dot verify"></span><span class="lbl">LLM leaf</span></span>`
+  : `<span class="conf verify"><span class="dot solid"></span><span class="dot verify"></span><span class="lbl">Det + LLM</span></span>`;
+const cite = id => `<button class="cite" data-cite="${id}">${id}</button>`;
+
+function rerun(){ run = runEngine(week, overrides); renderAll(); }
+function byId(id){ return run.shifts.find(r=>r.shift.id===id); }
+function editedCount(){ return Object.keys(overrides).length; }
+function isEdited(r){ return Object.keys(r.params).some(k=>overrides[r.id+'.'+k]!=null); }
+
+// ---------------- topbar ----------------
+function renderTop(){
+  const t = run.totals;
+  document.getElementById('topstats').innerHTML =
+    `<b>${run.shifts.length}</b> shifts · <b>${t.flags}</b> flagged · <b>${t.held}</b> held · under <b>+${money(t.under)}</b> · over <b>−${money(t.over)}</b>${editedCount()?` · <b>${editedCount()}</b> param${editedCount()>1?'s':''} edited`:''}`;
+}
+
+// ---------------- shifts tab ----------------
+const SFILTERS = [['flagged','Flagged first'],['all','All'],['held','Held'],['clean','Clean']];
+function shiftRows(){
+  let rows = run.shifts.slice();
+  const q = qShifts.trim().toLowerCase();
+  if (q) rows = rows.filter(r=>(r.shift.worker+' '+r.shift.fac.name+' '+r.shift.id).toLowerCase().includes(q));
+  if (shiftFilter==='held') rows = rows.filter(r=>r.held);
+  else if (shiftFilter==='clean') rows = rows.filter(r=>!r.flagged);
+  else if (shiftFilter==='flagged') rows.sort((a,b)=>(b.held?2:b.flagged?1:0)-(a.held?2:a.flagged?1:0));
+  return rows;
+}
+function shiftStatus(r){
+  if (r.held) return conf('held');
+  if (r.flagged) return conf('flag','Flagged');
+  return conf('pass','Clean');
+}
+function renderShiftQueue(){
+  document.getElementById('shiftChips').innerHTML = SFILTERS.map(([k,l])=>`<button class="chip${shiftFilter===k?' active':''}" data-sfilter="${k}">${l}</button>`).join('');
+  document.getElementById('shiftList').innerHTML = shiftRows().map(r=>{ const s=r.shift; return `
+    <button class="case${s.id===selShift?' active':''}" data-shift="${s.id}">
+      <div class="row1"><span class="name fade-trunc">${esc(s.worker)}</span>${shiftStatus(r)}</div>
+      <div class="meta fade-trunc">${esc(s.fac.name)} · ${DAYS[s.day]} · ${s.sched?fmtT(s.sched[0])+'–'+fmtT(s.sched[1]):'unscheduled'}</div>
+      <div class="row3"><span class="count">#${s.id}</span><span class="count">${esc(s.role)}</span><span class="count" style="margin-left:auto">${r.held?'held':money(r.pay)}</span></div>
+    </button>`;}).join('') || `<div style="padding:1.5rem;color:hsl(var(--muted-foreground))">No shifts match.</div>`;
+}
+function traceLi(x){
+  const isLLM = x.kind==='llm', isHuman = x.kind==='human';
+  const stat = isHuman ? `<span class="conf plain"><span class="lbl">Human</span></span>`
+    : isLLM ? conf('flag','Review')
+    : conf(x.status);
+  return `<li><div class="t-body">${cite(x.ruleId)} <span class="t-note">${esc(x.note)}</span>${x.chips?`<span class="evchips">${x.chips.map(c=>`<span class="evchip">${esc(c)}</span>`).join('')}</span>`:''}</div><span class="t-stat">${stat}</span></li>`;
+}
+function renderShiftDetail(){
+  const r = byId(selShift); if(!r){ document.getElementById('shiftDetail').innerHTML=''; return; }
+  const s = r.shift;
+  const main = r.rows.filter(x=>x.status!=='na'), na = r.rows.filter(x=>x.status==='na');
+  document.getElementById('shiftDetail').innerHTML = `
+    <div class="info-bar">
+      <div class="ib-text">
+        <h2 class="fade-trunc">${esc(s.worker)} — ${esc(s.role)}</h2>
+        <p class="ib-sub">#${s.id} · ${esc(s.fac.name)} · ${esc(s.fac.city)}, ${s.fac.state} · ${DAYS[s.day]}</p>
+      </div>
+      <div class="ib-right">${shiftStatus(r)}</div>
+    </div>
+    <div class="detail-body scroll">
+      <ul class="trace">${main.map(traceLi).join('')}</ul>
+      ${na.length?`<button class="na-toggle" data-natoggle="1">show ${na.length} not-applicable checks</button><ul class="trace" id="naRows" hidden>${na.map(traceLi).join('')}</ul>`:''}
+      <div class="payline">
+        <span>engine payout ${r.held?conf('held'):`<b>${money(r.pay)}</b>`}</span>
+        <span>spreadsheet would pay <b>${money(r.naive)}</b></span>
+        ${r.deltaUnder>0.005&&!r.held?`<span class="up">underpay corrected +${money(r.deltaUnder)}</span>`:''}
+        ${r.deltaOver>0.005&&!r.held?`<span class="dn">overpay corrected −${money(r.deltaOver)}</span>`:''}
+      </div>
+      <div class="whisper">every check above ran deterministically in this page except the amber Review rows — those are where judgment enters, always labeled, always routed to a human. click any rule id to audit it.</div>
+    </div>`;
+}
+function renderShiftAux(){
+  const r = byId(selShift); if(!r){ document.getElementById('shiftAux').innerHTML=''; return; }
+  const s = r.shift, prs = s.punches;
+  const pairs = prs.map(p=>`${fmtT(p.in)} – ${p.out==null?'<span class="hl-cite">missing</span>':fmtT(p.out)}`).join('<br>');
+  document.getElementById('shiftAux').innerHTML = `
+    <div class="aux-head">EVIDENCE — three sources, one shift</div>
+    <div class="aux-body scroll">
+      <h5>Timesheet · ${esc(SYSTEMS[s.fac.name]||'clock export')}</h5>
+      <table class="kv">
+        <tr><td class="k">punches</td><td>${pairs}</td></tr>
+        <tr><td class="k">meal</td><td>${s.meal?fmtT(s.meal[0])+' – '+fmtT(s.meal[1])+' ('+(s.meal[1]-s.meal[0])+' min)':s.fac.autoDeduct?'none punched · 30 min auto-deduct':'none punched'}</td></tr>
+        <tr><td class="k">scheduled</td><td>${s.sched?fmtT(s.sched[0])+' – '+fmtT(s.sched[1]):'—'}</td></tr>
+        ${s.schedChangedHoursBefore!=null?`<tr class="hl-row"><td class="k">schedule changed</td><td>${Math.round(s.schedChangedHoursBefore)}h before start</td></tr>`:''}
+        ${s.editedAfterApproval?`<tr class="hl-row"><td class="k">edited after approval</td><td>${esc(s.editedAfterApproval)}</td></tr>`:''}
+      </table>
+      <h5>Location intelligence</h5>
+      <table class="kv">
+        ${s.geo?`<tr><td class="k">geofence enter</td><td>${fmtT(s.geo[0])}</td></tr><tr><td class="k">geofence exit</td><td>${fmtT(s.geo[1])}</td></tr>`:`<tr><td class="k">GPS</td><td>${s.fac.badge?'no GPS indoors — badge is the witness':'no location data'}</td></tr>`}
+        ${s.badgeIn!=null?`<tr><td class="k">badge in / out</td><td>${fmtT(s.badgeIn)} / ${s.badgeOut!=null?fmtT(s.badgeOut):'—'}</td></tr>`:''}
+      </table>
+      <h5>Payout math</h5>
+      <table class="kv">
+        <tr><td class="k">payable time</td><td>${fmtH(r.payableMin)} h × ${money(r.rate)}/h</td></tr>
+        <tr><td class="k">engine payout</td><td>${r.held?'held':money(r.pay)}</td></tr>
+        <tr><td class="k">spreadsheet</td><td>${money(r.naive)}</td></tr>
+        ${!r.held&&(r.deltaUnder>0.005||r.deltaOver>0.005)?`<tr class="hl-row"><td class="k">${r.deltaUnder>0.005?'underpay corrected':'overpay corrected'}</td><td>${r.deltaUnder>0.005?'+'+money(r.deltaUnder):'−'+money(r.deltaOver)}</td></tr>`:''}
+      </table>
+      ${s.resolution?`<h5>Human word</h5><table class="kv"><tr><td class="k">${esc(s.resolution.by)}</td><td>“${esc(s.resolution.quote)}”</td></tr></table>`:''}
+    </div>`;
+}
+
+// ---------------- rulebook tab ----------------
+const BUCKETS = ['Legal','State','Local','Contract','CBA','Facility','Vertical','Time-based','Common sense','This week'];
+function allRules(){
+  const live = RULES.map(r=>({live:true, r}));
+  const pack = CATALOG.map(c=>({live:false, c}));
+  return live.concat(pack);
+}
+function renderRuleQueue(){
+  const q = qRules.trim().toLowerCase();
+  const chips = ['All'].concat(BUCKETS);
+  document.getElementById('ruleChips').innerHTML = chips.map(b=>`<button class="chip${bucketFilter===b?' active':''}" data-bucket="${b}">${b}</button>`).join('');
+  let html = '';
+  for (const b of BUCKETS){
+    if (bucketFilter!=='All' && bucketFilter!==b) continue;
+    const items = allRules().filter(x=>(x.live?x.r.bucket:x.c.bucket)===b)
+      .filter(x=>{ if(!q) return true; const t = x.live?(x.r.id+' '+x.r.sentence):(x.c.id+' '+x.c.name+' '+x.c.statement); return t.toLowerCase().includes(q); });
+    if (!items.length) continue;
+    html += `<div class="sect">${b}</div>`;
+    for (const x of items){
+      if (x.live){
+        const r = x.r, bt = backtest(week, r.id, overrides);
+        html += `<button class="case${selRule===r.id?' active':''}" data-rule="${r.id}">
+          <div class="row1"><span class="name mono" style="font-size:11.5px;font-weight:600">${r.id}</span>${kindTag(r.kind)}</div>
+          <div class="meta clamp-2">${esc(r.sentence)}</div>
+          <div class="row3"><span class="count">fires ${bt.fires}/${bt.of}</span>${isEdited(r)?`<span class="tag"><span class="dot pending"></span>edited · draft</span>`:''}${r.expires?`<span class="tag">expires ${r.expires}</span>`:''}<span class="count" style="margin-left:auto">live</span></div>
+        </button>`;
+      } else {
+        const c = x.c;
+        html += `<button class="case${selRule===c.id?' active':''}" data-rule="${c.id}">
+          <div class="row1"><span class="name fade-trunc">${esc(c.name)}</span><span class="conf plain"><span class="dot pack"></span><span class="lbl">Pack</span></span></div>
+          <div class="meta clamp-2">${esc(c.statement)}</div>
+          <div class="row3"><span class="count">${c.id}</span><span class="count">${esc(c.juris)}</span></div>
+        </button>`;
+      }
+    }
+  }
+  document.getElementById('ruleList').innerHTML = html || `<div style="padding:1.5rem;color:hsl(var(--muted-foreground))">No rules match.</div>`;
+}
+function paramControls(r){
+  const keys = Object.keys(r.params);
+  if (!keys.length) return `<p class="r-note">No tunable parameters — a pure invariant.</p>`;
+  return `<div class="params">${keys.map(k=>{
+    const pd = r.params[k], v = overrides[r.id+'.'+k] ?? pd.v;
+    return `<div class="param"><span class="pl">${esc(pd.label)}</span><span class="step"><button data-p="${r.id}.${k}" data-d="-1" aria-label="decrease ${esc(pd.label)}">−</button><span class="val">${v}</span><button data-p="${r.id}.${k}" data-d="1" aria-label="increase ${esc(pd.label)}">+</button><span class="unit">${pd.unit}</span></span></div>`;
+  }).join('')}</div>`;
+}
+function firedList(rid){
+  const hits = run.shifts.filter(r=>r.rows.some(x=>x.ruleId===rid&&(x.status==='flag'||x.status==='held'||(x.status==='applied'&&x.effect))));
+  if (!hits.length) return `<p class="r-note">Fires on no shifts this week at current parameters.</p>`;
+  return `<ul class="fired">${hits.map(r=>{
+    const row = r.rows.find(x=>x.ruleId===rid&&x.status!=='na'&&x.status!=='pass');
+    return `<li><button data-goshift="${r.shift.id}"><span class="fid">#${r.shift.id}</span><span class="fnote fade-trunc">${esc(r.shift.worker)} — ${row?row.note.replace(/<[^>]*>/g,''):''}</span></button></li>`;
+  }).join('')}</ul>`;
+}
+function ruleObj(id){ const r = RULES.find(x=>x.id===id); if (r) return {live:true,r}; const c = CATALOG.find(x=>x.id===id); return c?{live:false,c}:null; }
+function renderRuleDetail(){
+  const o = ruleObj(selRule); if(!o){ document.getElementById('ruleDetail').innerHTML=''; return; }
+  if (o.live){
+    const r = o.r, bt = backtest(week, r.id, overrides);
+    document.getElementById('ruleDetail').innerHTML = `
+      <div class="info-bar">
+        <div class="ib-text"><h2 class="mono" style="font-size:13px">${r.id}</h2><p class="ib-sub">${r.bucket} · compiled v${isEdited(r)?'draft':'3'} · fires on ${bt.fires} of ${bt.of} shifts</p></div>
+        <div class="ib-right">${kindTag(r.kind)}${r.expires?`<span class="tag">expires ${r.expires}</span>`:''}</div>
+      </div>
+      <div class="detail-body scroll">
+        <p class="r-sent">“${esc(r.sentence)}”</p>
+        <p class="r-from">compiled from ${esc(r.source.doc)} — ${esc(r.source.cite)}</p>
+        ${paramControls(r)}
+        ${isEdited(r)?`<div class="whisper"><span class="wq">edited · draft.</span> parameters changed from the approved version — the engine re-ran all 54 shifts instantly here. in the product this state goes backtest → shadow → live with a second operator's sign-off. <button class="wopt" data-resetrule="${r.id}">revert this rule</button></div>`:''}
+        <p class="r-note">${r.kind==='llm'?'Detection of the candidate is deterministic; the verdict needs judgment over unstructured evidence — an LLM narrates, a human decides.':r.kind==='both'?'Detection is deterministic; resolution reads evidence with an LLM and routes to a human.':'Fully deterministic — same shift in, same verdict out, every time.'}</p>
+        <h5 style="margin:1.25rem 0 .25rem;font-size:11px;font-weight:600;letter-spacing:.025em;text-transform:uppercase;color:hsl(var(--muted-foreground))">Fires on</h5>
+        ${firedList(r.id)}
+        ${editedCount()?`<p style="margin-top:1rem"><button class="reset-link" data-resetall="1">Reset all ${editedCount()} edited parameter${editedCount()>1?'s':''}</button></p>`:''}
+      </div>`;
+  } else {
+    const c = o.c;
+    document.getElementById('ruleDetail').innerHTML = `
+      <div class="info-bar">
+        <div class="ib-text"><h2 class="fade-trunc">${esc(c.name)}</h2><p class="ib-sub">${c.id} · ${c.bucket} · ${esc(c.juris)}</p></div>
+        <div class="ib-right"><span class="conf plain"><span class="dot pack"></span><span class="lbl">Pack · cataloged</span></span></div>
+      </div>
+      <div class="detail-body scroll">
+        <p class="r-sent">${esc(c.statement)}</p>
+        <table class="kv" style="max-width:42rem;margin-top:.75rem">
+          <tr><td class="k">deterministic</td><td>${esc(c.det)}</td></tr>
+          <tr><td class="k">parameters</td><td>${esc(c.params)}</td></tr>
+        </table>
+        <div class="whisper">cataloged from the research corpus — sourced, parameterized, not yet compiled into the engine IR. the compile step turns the parameters column into the steppers you see on live rules.</div>
+      </div>`;
+  }
+}
+function renderRuleAux(){
+  const o = ruleObj(selRule); if(!o){ document.getElementById('ruleAux').innerHTML=''; return; }
+  let inner = '';
+  if (o.live){
+    const p = PROV[o.r.id] || {};
+    inner = `
+      <div class="src-entry">
+        <h6>${esc(p.doc||o.r.source.doc)}</h6>
+        ${p.verbatim?`<p class="src-note">verbatim · as ingested</p><div class="src-quote">${p.verbatim}</div>`:
+          `<p class="src-note">obligation summary · as compiled</p><div class="src-quote">${esc(p.summary||o.r.source.cite)}</div>`}
+        <table class="kv" style="margin-top:.625rem">
+          <tr><td class="k">effective</td><td>${esc(p.dates||'—')}</td></tr>
+          <tr><td class="k">chain</td><td>flag → rule → clause → document</td></tr>
+        </table>
+        ${p.url?`<a class="src-link" href="${p.url}" target="_blank" rel="noopener">open source document ↗</a>`:''}
+      </div>`;
+  } else {
+    const c = o.c;
+    inner = `
+      <div class="src-entry">
+        <h6>Research corpus sources</h6>
+        <p class="src-note">to be ingested verbatim in the giga-brain pass</p>
+        ${c.src.map(u=>`<a class="src-link" style="display:block;margin-top:.375rem;word-break:break-all" href="${u}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\/(www\.)?/,'').slice(0,60))}${u.length>68?'…':''} ↗</a>`).join('')}
+      </div>`;
+  }
+  document.getElementById('ruleAux').innerHTML = `<div class="aux-head">SOURCE — the receipt</div><div class="aux-body scroll">${inner}</div>`;
+}
+
+// ---------------- compile tab ----------------
+const COMPILES = [
+  { who:'Sam T. · Slack', when:'Mon Aug 24 · 9:12am', q:'No overtime at Mercy General this week please.',
+    ir:`<span class="k">rule</span>     TW-1187          <span class="k">kind</span> <span class="g">deterministic</span>  <span class="k">expires</span> Sun Aug 30\n<span class="k">scope</span>    facility = Mercy General\n<span class="k">check</span>    <span class="g">hold if</span> mercy_weekly_worked_min &gt; weekly_h × 60\n<span class="k">effect</span>   hold excess hours · notify Dana K.\n<span class="k">tests</span>    4 generated · green`,
+    note:()=>`This rule is live in this page's engine — it currently fires on <b>${backtest(week,'TW-1187',overrides).fires}</b> shift(s). It expires by itself on Sunday.`,
+    rules:['TW-1187'], shifts:['4830'] },
+  { who:'ops email', when:'recorded compile', q:'No shift longer than 12 hours at Bayview, and anything over 10 needs the lead’s okay.',
+    ir:`<span class="k">rule</span>     FAC-BAYVIEW-04   <span class="k">kind</span> <span class="g">deterministic</span>\n<span class="k">check</span>    <span class="g">hold if</span> shift_h &gt; 12.0\n<span class="k">rule</span>     FAC-BAYVIEW-05   <span class="k">kind</span> <span class="g">deterministic</span>\n<span class="k">check</span>    <span class="g">flag if</span> shift_h &gt; 10.0 ∧ ¬lead_approval_on_file`,
+    amb:'Does the 12-hour cap include the unpaid meal break, or worked hours only? The answer becomes an explicit parameter — never a silent interpretation.',
+    note:()=>`Backtest before activation: would flag 2 of 96 Bayview shifts last month. Activates in <b>shadow</b> — watches a week, flags nothing.`,
+    rules:[], shifts:['4833'] },
+  { who:'onboarding doc', when:'recorded compile', q:'Round everything to the nearest quarter hour.',
+    amb:'The compiler pushes back with the rule pack: quarter-hour rounding is lawful federally (29 CFR 785.48, 7-minute breakpoint) — but Mercy General, Sutter and St. Marks are in California, where Camp v. Home Depot holds that an employer capturing exact minutes must pay exact minutes. Proposed: rounding ON for TX / NY / IL sites, OFF for CA sites, with the citation attached to each.',
+    ir:`<span class="k">rule</span>     TB-ROUND-7       <span class="k">scope</span> state ≠ CA     <span class="g">round nearest 15 min</span>\n<span class="k">rule</span>     CA-ROUND-0       <span class="k">scope</span> state = CA     <span class="g">exact-minute pay</span>  <span class="k">src</span> Camp v. Home Depot`,
+    note:()=>`Both rules are live in this page's engine. The customer asked for something partially unlawful — the compiler knew, with the receipt.`,
+    rules:['TB-ROUND-7','CA-ROUND-0'], shifts:[] },
+];
+function renderCompileQueue(){
+  document.getElementById('compileList').innerHTML = COMPILES.map((c,i)=>`
+    <button class="case${selCompile===i?' active':''}" data-compile="${i}">
+      <div class="row1"><span class="name fade-trunc">“${esc(c.q)}”</span></div>
+      <div class="meta">${esc(c.who)} · ${esc(c.when)}</div>
+      <div class="row3">${c.amb?'<span class="tag"><span class="dot verify"></span>asked a question</span>':''}<span class="tag"><span class="dot solid"></span>${c.rules.length||2} rule${(c.rules.length||2)>1?'s':''}</span></div>
+    </button>`).join('');
+}
+function renderCompileDetail(){
+  const c = COMPILES[selCompile];
+  document.getElementById('compileDetail').innerHTML = `
+    <div class="info-bar">
+      <div class="ib-text"><h2 class="fade-trunc">Compile — ${esc(c.who)}</h2><p class="ib-sub">${esc(c.when)} · LLM runs once at ingest · output is data, not behavior</p></div>
+    </div>
+    <div class="detail-body scroll">
+      <div class="msg"><div class="who">${esc(c.who)}</div><div class="bubble op">“${esc(c.q)}”</div></div>
+      ${c.amb?`<div class="whisper"><span class="wq">the compiler asks:</span> ${esc(c.amb)} ${selCompile===1?'<button class="wopt">includes break</button><button class="wopt" style="font-weight:700">worked hours only</button>':''}</div>`:''}
+      ${c.ir?`<div class="msg"><div class="who">Compiled</div><div class="irblock">${c.ir}</div></div>`:''}
+      <p class="r-note">${c.note()}</p>
+    </div>`;
+}
+function renderCompileAux(){
+  const c = COMPILES[selCompile];
+  document.getElementById('compileAux').innerHTML = `
+    <div class="aux-head">RESULT — what landed in the rulebook</div>
+    <div class="aux-body scroll">
+      ${c.rules.length?`<h5>Rules created</h5><ul class="fired">${c.rules.map(id=>`<li><button data-gorule="${id}"><span class="fid">${id}</span><span class="fnote">open in Rulebook</span></button></li>`).join('')}</ul>`:'<h5>Rules created</h5><p class="r-note">Blocked on the operator’s answer — nothing activates while a question is open.</p>'}
+      ${c.shifts.length?`<h5>Touches this week</h5><ul class="fired">${c.shifts.map(id=>{const r=byId(id);return r?`<li><button data-goshift="${id}"><span class="fid">#${id}</span><span class="fnote fade-trunc">${esc(r.shift.worker)} · ${esc(r.shift.fac.name)}</span></button></li>`:'';}).join('')}</ul>`:''}
+      <h5>Doctrine</h5>
+      <table class="kv">
+        <tr><td class="k">ambiguity</td><td>surfaced, never resolved silently</td></tr>
+        <tr><td class="k">tests</td><td>generated at compile</td></tr>
+        <tr><td class="k">backtest</td><td>shown before activation</td></tr>
+        <tr><td class="k">lifecycle</td><td>draft → shadow → live</td></tr>
+      </table>
+    </div>`;
+}
+
+// ---------------- vocabulary tab ----------------
+function renderVocabQueue(){
+  const q = qVocab.trim().toLowerCase();
+  document.getElementById('vocabList').innerHTML = FEATURES.map((f,i)=>({f,i}))
+    .filter(x=>!q||x.f[0].toLowerCase().includes(q)||x.f[1].toLowerCase().includes(q))
+    .map(x=>`<button class="case${selFeature===x.i?' active':''}" data-feature="${x.i}">
+      <div class="row1"><span class="name mono" style="font-size:11.5px;font-weight:600">${x.f[0]}</span></div>
+      <div class="meta clamp-2">${esc(x.f[1])}</div>
+    </button>`).join('');
+}
+function fmtVal(v){
+  if (v==null) return '—';
+  if (typeof v==='boolean') return v?'true':'false';
+  if (typeof v==='number') return Number.isInteger(v)?String(v):v.toFixed(1);
+  if (Array.isArray(v)) return v.map(p=>p&&p.in!=null?`${fmtT(p.in)}–${p.out==null?'—':fmtT(p.out)}`:JSON.stringify(p)).join(' · ')||'—';
+  if (typeof v==='object') return v.id?('#'+v.id):JSON.stringify(v);
+  return String(v);
+}
+function renderVocabDetail(){
+  const [id, desc] = FEATURES[selFeature];
+  document.getElementById('vocabDetail').innerHTML = `
+    <div class="info-bar">
+      <div class="ib-text"><h2 class="mono" style="font-size:13px">${id}</h2><p class="ib-sub">typed feature · ${selFeature+1} of ${FEATURES.length}</p></div>
+    </div>
+    <div class="detail-body scroll">
+      <p class="r-sent">${esc(desc)}</p>
+      <div class="whisper">the compiler may only reference features on this list — a sentence that can't ground into the vocabulary is refused, not guessed at. this is the hallucination firewall, and these descriptions are the compiler's biggest accuracy lever.</div>
+    </div>`;
+}
+function renderVocabAux(){
+  const [id, , fn] = FEATURES[selFeature];
+  const samples = ['4821','4826','4830','4833','4823','4836'].map(sid=>{
+    const r = byId(sid); if(!r) return '';
+    let v; try { v = fn(r.shift, run.ctx); } catch(e){ v = '—'; }
+    return `<tr><td class="k">#${sid} · ${esc(r.shift.worker.split(' ')[0])}</td><td>${esc(fmtVal(v))}</td></tr>`;
+  }).join('');
+  document.getElementById('vocabAux').innerHTML = `
+    <div class="aux-head">LIVE VALUES — computed now, from this week</div>
+    <div class="aux-body scroll"><table class="kv">${samples}</table>
+    <p class="r-note" style="margin-top:.75rem">Evaluated by the engine in your browser against the synthetic week — the same functions the rules read.</p></div>`;
+}
+
+// ---------------- drawer ----------------
+function openDrawer(rid){
+  drawerRule = rid; renderDrawer();
+  document.getElementById('scrim').classList.add('open');
+  document.getElementById('drawer').classList.add('open');
+}
+function closeDrawer(){
+  drawerRule = null;
+  document.getElementById('scrim').classList.remove('open');
+  document.getElementById('drawer').classList.remove('open');
+}
+function renderDrawer(){
+  if (!drawerRule) return;
+  const o = ruleObj(drawerRule); if(!o) return;
+  const closeBtn = `<button class="icon-btn" data-closedrawer="1" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>`;
+  if (o.live){
+    const r = o.r, bt = backtest(week, r.id, overrides), p = PROV[r.id]||{};
+    document.getElementById('drawer').innerHTML = `
+      <div class="drawer-head"><div class="htext"><h3 class="drawer-title mono" style="font-size:13px">${r.id}</h3><p class="drawer-sub">${r.bucket} · fires ${bt.fires}/${bt.of} · rule → clause → document</p></div>${closeBtn}</div>
+      <div class="drawer-body scroll">
+        <p class="r-sent" style="font-size:13.5px">“${esc(r.sentence)}”</p>
+        <p style="margin:.375rem 0 .75rem">${kindTag(r.kind)}</p>
+        ${paramControls(r)}
+        ${isEdited(r)?`<div class="whisper" style="margin:.5rem 0"><span class="wq">edited · draft.</span> live everywhere on this page; in the product: backtest → shadow → live.</div>`:''}
+        <div class="src-entry" style="margin-top:.5rem">
+          <h6>${esc(p.doc||r.source.doc)}</h6>
+          ${p.verbatim?`<p class="src-note">verbatim · as ingested</p><div class="src-quote">${p.verbatim}</div>`:`<p class="src-note">obligation summary · as compiled</p><div class="src-quote">${esc(p.summary||r.source.cite)}</div>`}
+          ${p.dates?`<p class="drawer-sub" style="margin-top:.5rem">effective: ${esc(p.dates)}</p>`:''}
+          ${p.url?`<a class="src-link" href="${p.url}" target="_blank" rel="noopener">open source document ↗</a>`:''}
+        </div>
+        <p style="margin-top:1rem"><button class="reset-link" data-gorule="${r.id}">Open in Rulebook →</button></p>
+      </div>`;
+  } else {
+    const c = o.c;
+    document.getElementById('drawer').innerHTML = `
+      <div class="drawer-head"><div class="htext"><h3 class="drawer-title fade-trunc">${esc(c.name)}</h3><p class="drawer-sub">${c.id} · ${c.bucket} · pack, cataloged</p></div>${closeBtn}</div>
+      <div class="drawer-body scroll">
+        <p class="r-sent" style="font-size:13.5px">${esc(c.statement)}</p>
+        <table class="kv" style="margin-top:.75rem"><tr><td class="k">deterministic</td><td>${esc(c.det)}</td></tr><tr><td class="k">parameters</td><td>${esc(c.params)}</td></tr></table>
+        ${c.src.map(u=>`<a class="src-link" style="display:block;word-break:break-all" href="${u}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\/(www\.)?/,'').slice(0,56))}… ↗</a>`).join('')}
+      </div>`;
+  }
+}
+
+// ---------------- shell ----------------
+function setMobileDetail(on){ mobileDetail = on; document.getElementById('app').classList.toggle('mobile-detail', on); }
+function setTab(t){
+  tab = t;
+  document.querySelectorAll('#navTabs button').forEach(b=>b.classList.toggle('active', b.dataset.tab===t));
+  document.querySelectorAll('.main').forEach(m=>m.classList.toggle('on', m.id==='m-'+t));
+  setMobileDetail(false);
+}
+function renderAll(){
+  renderTop();
+  renderShiftQueue(); renderShiftDetail(); renderShiftAux();
+  renderRuleQueue(); renderRuleDetail(); renderRuleAux();
+  renderCompileQueue(); renderCompileDetail(); renderCompileAux();
+  renderVocabQueue(); renderVocabDetail(); renderVocabAux();
+  if (drawerRule) renderDrawer();
+}
+
+document.getElementById('qShifts').addEventListener('input', e=>{ qShifts=e.target.value; renderShiftQueue(); });
+document.getElementById('qRules').addEventListener('input', e=>{ qRules=e.target.value; renderRuleQueue(); });
+document.getElementById('qVocab').addEventListener('input', e=>{ qVocab=e.target.value; renderVocabQueue(); });
+document.getElementById('scrim').addEventListener('click', closeDrawer);
+document.getElementById('backBtn').addEventListener('click', ()=>setMobileDetail(false));
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeDrawer(); });
+
+document.addEventListener('click', e=>{
+  const t = e.target.closest('[data-tab],[data-sfilter],[data-shift],[data-rule],[data-bucket],[data-p],[data-cite],[data-compile],[data-feature],[data-goshift],[data-gorule],[data-natoggle],[data-closedrawer],[data-resetrule],[data-resetall]');
+  if (!t) return;
+  const d = t.dataset;
+  if (d.tab) return setTab(d.tab);
+  if (d.sfilter){ shiftFilter=d.sfilter; renderShiftQueue(); return; }
+  if (d.bucket){ bucketFilter=d.bucket; renderRuleQueue(); return; }
+  if (d.shift){ selShift=d.shift; setMobileDetail(true); renderShiftQueue(); renderShiftDetail(); renderShiftAux(); return; }
+  if (d.rule){ selRule=d.rule; setMobileDetail(true); renderRuleQueue(); renderRuleDetail(); renderRuleAux(); return; }
+  if (d.compile!=null){ selCompile=+d.compile; setMobileDetail(true); renderCompileQueue(); renderCompileDetail(); renderCompileAux(); return; }
+  if (d.feature!=null){ selFeature=+d.feature; setMobileDetail(true); renderVocabQueue(); renderVocabDetail(); renderVocabAux(); return; }
+  if (d.cite){ openDrawer(d.cite); return; }
+  if (d.closedrawer){ closeDrawer(); return; }
+  if (d.goshift){ closeDrawer(); setTab('shifts'); selShift=d.goshift; shiftFilter='all'; setMobileDetail(true); renderShiftQueue(); renderShiftDetail(); renderShiftAux(); return; }
+  if (d.gorule){ closeDrawer(); setTab('rules'); selRule=d.gorule; bucketFilter='All'; setMobileDetail(true); renderRuleQueue(); renderRuleDetail(); renderRuleAux(); return; }
+  if (d.natoggle){ const el=document.getElementById('naRows'); if(el){ el.hidden=!el.hidden; t.textContent=(el.hidden?'show ':'hide ')+el.children.length+' not-applicable checks'; } return; }
+  if (d.resetrule){ const r=RULES.find(x=>x.id===d.resetrule); for(const k of Object.keys(r.params)) delete overrides[d.resetrule+'.'+k]; rerun(); return; }
+  if (d.resetall){ for(const k of Object.keys(overrides)) delete overrides[k]; rerun(); return; }
+  if (d.p){
+    const [rid,key]=d.p.split('.');
+    const r=RULES.find(x=>x.id===rid), pd=r.params[key];
+    const cur=overrides[d.p] ?? pd.v;
+    let nv=Math.round((cur + pd.step*(+d.d))*100)/100;
+    nv=Math.min(pd.max,Math.max(pd.min,nv));
+    if (nv===pd.v) delete overrides[d.p]; else overrides[d.p]=nv;
+    rerun(); return;
+  }
+});
+
+renderAll();
+})();
+</script>
+</body>
+</html>
