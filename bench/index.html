@@ -17,7 +17,7 @@
 /* Design system of closeoutcopilot.com/job, transcribed. Two families only:
    Inter for all UI text; mono strictly for data — ids, clock times, money,
    meta lines, code — plus ONE label treatment (mono 10.5 uppercase wide).
-   Grayscale; color exists only as two 6px status dots. */
+   Grayscale; color exists only as two tinted status pills. */
 :root {
   --background: 0 0% 100%;
   --foreground: 0 0% 9%;
@@ -26,8 +26,8 @@
   --border: 0 0% 90%;
   --input: 0 0% 89%;
   --radius: 0.6rem;
-  --verify: 38 92% 45%;     /* amber dot: flag / review */
-  --pending: 220 70% 52%;   /* blue dot: held */
+  --verify: 38 92% 45%;     /* amber tint: flag / review */
+  --pending: 220 70% 52%;   /* blue tint: held */
   --sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
@@ -57,22 +57,30 @@ button { font-family: var(--sans); font-size: inherit; line-height: inherit; bor
 /* THE meta line — mono 11, muted (ids · times · money). */
 .count { display: inline-flex; align-items: center; gap: .25rem; font-family: var(--mono); font-size: 11px; color: hsl(var(--muted-foreground)); }
 /* THE link — muted underline, darkens on hover. */
-.lnk, .src-link, .memo-link, .na-toggle, .reset-link { font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground));
+.lnk, .memo-link, .na-toggle { font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground));
   text-decoration: underline; text-underline-offset: 2px; text-decoration-color: hsl(var(--border)); }
-.lnk:hover, .src-link:hover, .memo-link:hover, .na-toggle:hover, .reset-link:hover { color: hsl(var(--foreground)); }
+.lnk:hover, .memo-link:hover, .na-toggle:hover { color: hsl(var(--foreground)); }
+/* THE button — shadcn outline: real, clickable, never a floating link. */
+.btn, .src-link, .reset-link { display: inline-flex; align-items: center; gap: .4rem; height: 2rem;
+  padding: 0 .75rem; border-radius: calc(var(--radius) - 2px); border: 1px solid hsl(var(--input));
+  background: hsl(var(--background)); box-shadow: 0 1px 2px 0 rgb(0 0 0 / .05);
+  font-size: 12px; font-weight: 500; color: hsl(var(--foreground));
+  text-decoration: none; white-space: nowrap; max-width: 100%; overflow: hidden;
+  transition: background-color .15s; }
+.btn:hover, .src-link:hover, .reset-link:hover { background: hsl(var(--muted)); }
+.btn svg, .src-link svg { width: .75rem; height: .75rem; flex-shrink: 0; }
 
-/* THE tag — one design. Inter 10.5/500; a 6px dot is the only color. */
-.tag { display: inline-flex; align-items: center; gap: .3rem; border-radius: .25rem;
+/* THE tag — one pill design; amber/blue tinted variants are the only color. */
+.tag { display: inline-flex; align-items: center; gap: .3rem; border-radius: 9999px;
   border: 1px solid hsl(var(--border)); background: hsl(var(--muted) / .7);
-  color: hsl(var(--muted-foreground)); padding: 1px 6px;
+  color: hsl(var(--muted-foreground)); padding: 1px 8px;
   font-family: var(--sans); font-size: 10.5px; font-weight: 500; line-height: 1rem;
   white-space: nowrap; flex-shrink: 0; vertical-align: baseline; }
-.tag .dot { width: .375rem; height: .375rem; border-radius: 9999px; flex-shrink: 0; }
+.tag.amber { background: hsl(var(--verify) / .08); border-color: hsl(var(--verify) / .25); color: hsl(38 50% 34%); }
+.tag.blue { background: hsl(var(--pending) / .08); border-color: hsl(var(--pending) / .25); color: hsl(220 40% 42%); }
 .tag.click { font-family: var(--mono); font-weight: 500; cursor: pointer; transition: background-color .12s, color .12s, border-color .12s; }
 .tag.click:hover { background: hsl(var(--foreground)); color: hsl(var(--background)); border-color: hsl(var(--foreground) / .4); }
 .tag.click svg { width: .625rem; height: .625rem; flex-shrink: 0; }
-.dot.verify { background: hsl(var(--verify)); }
-.dot.pending { background: hsl(var(--pending)); }
 .stat-txt { font-size: 11px; color: hsl(var(--muted-foreground)); white-space: nowrap; }
 
 .icon-btn { display: inline-flex; align-items: center; justify-content: center;
@@ -1536,12 +1544,12 @@ const PROV = {
   'VER-EV-02': { doc:'Vertical pack · events', summary:'Post-event egress up to ~45 minutes is expected; beyond that the evidence is read, and a human decides.', dates:'pack v1' },
 };
 
-// One tag design. Color exists only as a 6px dot on the three states that need
-// a human's eye: flag (amber), review (amber), held (blue). Everything else is text.
+// One pill design. Color exists only as the amber (flag/review) and blue (held)
+// tinted variants. Everything else is plain text.
 const FILE_ICO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>`;
-const tag = (label, dot) => `<span class="tag">${dot?`<span class="dot ${dot}"></span>`:''}${label}</span>`;
-const statTag = st => st==='flag' ? tag('flag','verify') : st==='held' ? tag('held','pending')
-  : st==='review' ? tag('review','verify') : `<span class="stat-txt">${st}</span>`;
+const tag = (label, tint) => `<span class="tag${tint?' '+tint:''}">${label}</span>`;
+const statTag = st => st==='flag' ? tag('flag','amber') : st==='held' ? tag('held','blue')
+  : st==='review' ? tag('review','amber') : `<span class="stat-txt">${st}</span>`;
 const kindTag = k => tag(k==='det'?'deterministic':k==='llm'?'llm leaf':'det + llm');
 const cite = id => `<button class="tag click" data-cite="${id}">${FILE_ICO}${id}</button>`;
 
@@ -1569,8 +1577,8 @@ function shiftRows(){
   return rows;
 }
 function shiftStatus(r){
-  if (r.held) return tag('held','pending');
-  if (r.flagged) return tag('flagged','verify');
+  if (r.held) return tag('held','blue');
+  if (r.flagged) return tag('flagged','amber');
   return '';
 }
 function renderShiftQueue(){
@@ -1604,7 +1612,7 @@ function renderShiftDetail(){
       <ul class="trace">${main.map(traceLi).join('')}</ul>
       ${na.length?`<button class="na-toggle" data-natoggle="1">show ${na.length} not-applicable checks</button><ul class="trace" id="naRows" hidden>${na.map(traceLi).join('')}</ul>`:''}
       <div class="payline">
-        <span>engine payout ${r.held?tag('held','pending'):`<b>${money(r.pay)}</b>`}</span>
+        <span>engine payout ${r.held?tag('held','blue'):`<b>${money(r.pay)}</b>`}</span>
         <span>spreadsheet would pay <b>${money(r.naive)}</b></span>
         ${r.deltaUnder>0.005&&!r.held?`<span class="up">underpay corrected +${money(r.deltaUnder)}</span>`:''}
         ${r.deltaOver>0.005&&!r.held?`<span class="dn">overpay corrected −${money(r.deltaOver)}</span>`:''}
@@ -1666,7 +1674,7 @@ function renderRuleQueue(){
         html += `<button class="case${selRule===r.id?' active':''}" data-rule="${r.id}">
           <div class="row1"><span class="name mono" style="font-size:11.5px;font-weight:600">${r.id}</span>${kindTag(r.kind)}</div>
           <div class="meta clamp-2">${esc(r.sentence)}</div>
-          <div class="row3"><span class="count">fires ${bt.fires}/${bt.of}</span>${isEdited(r)?tag('draft','pending'):''}${r.expires?tag('expires '+r.expires):''}<span class="count" style="margin-left:auto">live</span></div>
+          <div class="row3"><span class="count">fires ${bt.fires}/${bt.of}</span>${isEdited(r)?tag('draft','blue'):''}${r.expires?tag('expires '+r.expires):''}<span class="count" style="margin-left:auto">live</span></div>
         </button>`;
       } else {
         const c = x.c;
@@ -1747,7 +1755,7 @@ function renderRuleAux(){
           <tr><td class="k">effective</td><td>${esc(p.dates||'—')}</td></tr>
           <tr><td class="k">chain</td><td>flag → rule → clause → document</td></tr>
         </table>
-        ${p.url?`<a class="src-link" href="${p.url}" target="_blank" rel="noopener">open source document ↗</a>`:''}
+        ${p.url?`<a class="src-link" style="margin-top:.625rem" href="${p.url}" target="_blank" rel="noopener">Open source document ↗</a>`:''}
       </div>`;
   } else {
     const c = o.c;
@@ -1755,7 +1763,7 @@ function renderRuleAux(){
       <div class="src-entry">
         <h6>Research corpus sources</h6>
         <p class="src-note">to be ingested verbatim in the giga-brain pass</p>
-        ${c.src.map(u=>`<a class="src-link" style="display:block;margin-top:.375rem;word-break:break-all" href="${u}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\/(www\.)?/,'').slice(0,60))}${u.length>68?'…':''} ↗</a>`).join('')}
+        ${c.src.map(u=>`<a class="src-link" style="margin-top:.5rem" href="${u}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\/(www\.)?/,'').split('/')[0])} ↗</a>`).join('')}
       </div>`;
   }
   document.getElementById('ruleAux').innerHTML = `<div class="aux-head">Source</div><div class="aux-body scroll">${inner}</div>`;
@@ -1783,7 +1791,7 @@ function renderCompileQueue(){
     <button class="case${selCompile===i?' active':''}" data-compile="${i}">
       <div class="row1"><span class="name fade-trunc">“${esc(c.q)}”</span></div>
       <div class="meta">${esc(c.who)} · ${esc(c.when)}</div>
-      <div class="row3">${c.amb?tag('asked a question','verify'):''}${tag((c.rules.length||2)+' rule'+((c.rules.length||2)>1?'s':''))}</div>
+      <div class="row3">${c.amb?tag('asked a question','amber'):''}${tag((c.rules.length||2)+' rule'+((c.rules.length||2)>1?'s':''))}</div>
     </button>`).join('');
 }
 function renderCompileDetail(){
@@ -1886,9 +1894,9 @@ function renderDrawer(){
           <h6>${esc(p.doc||r.source.doc)}</h6>
           ${p.verbatim?`<p class="src-note">verbatim · as ingested</p><div class="src-quote">${p.verbatim}</div>`:`<p class="src-note">obligation summary · as compiled</p><div class="src-quote">${esc(p.summary||r.source.cite)}</div>`}
           ${p.dates?`<p class="drawer-sub" style="margin-top:.5rem">effective: ${esc(p.dates)}</p>`:''}
-          ${p.url?`<a class="src-link" href="${p.url}" target="_blank" rel="noopener">open source document ↗</a>`:''}
+          ${p.url?`<a class="src-link" style="margin-top:.625rem" href="${p.url}" target="_blank" rel="noopener">Open source document ↗</a>`:''}
         </div>
-        <p style="margin-top:1rem"><button class="reset-link" data-gorule="${r.id}">Open in Rulebook →</button></p>
+        <p style="margin-top:1rem"><button class="btn" data-gorule="${r.id}">Open in Rulebook →</button></p>
       </div>`;
   } else {
     const c = o.c;
@@ -1897,7 +1905,7 @@ function renderDrawer(){
       <div class="drawer-body scroll">
         <p class="r-sent" style="font-size:13.5px">${esc(c.statement)}</p>
         <table class="kv" style="margin-top:.75rem"><tr><td class="k">deterministic</td><td>${esc(c.det)}</td></tr><tr><td class="k">parameters</td><td>${esc(c.params)}</td></tr></table>
-        ${c.src.map(u=>`<a class="src-link" style="display:block;word-break:break-all" href="${u}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\/(www\.)?/,'').slice(0,56))}… ↗</a>`).join('')}
+        <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.75rem">${c.src.map(u=>`<a class="src-link" href="${u}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\/(www\.)?/,'').split('/')[0])} ↗</a>`).join('')}</div>
       </div>`;
   }
 }
