@@ -24,3 +24,6 @@
 
 /bench/index.html
   Cache-Control: no-cache
+
+/decks/rule-compiler/*
+  Cache-Control: no-cache

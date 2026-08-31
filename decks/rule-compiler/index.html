@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="Team walkthrough: how Closeout Copilot turns plain-English payroll rules into deterministic checks — the rulebook, the vocabulary, the compiler, the engine, and why.">
+  <title>The Rule Compiler — team walkthrough</title>
+  <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="deck.css">
+</head>
+<body>
+  <a class="skip-link" href="#deck">Skip to presentation</a>
+
+  <div class="deck-shell">
+    <header class="deck-chrome" aria-label="Presentation controls">
+      <a href="/" aria-label="HyperTrack"><img class="logo" src="../../logo-small.svg" alt="HyperTrack"></a>
+      <div class="deck-status" aria-live="polite">
+        <span id="sectionLabel">Cover</span>
+        <span class="deck-status__rule" aria-hidden="true"></span>
+        <span><span id="currentSlide">01</span> / <span id="totalSlides">15</span></span>
+      </div>
+      <div class="deck-actions">
+        <button class="chrome-button" id="notesButton" type="button" aria-pressed="false" aria-label="Toggle speaker notes">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4.5h14v15H5zM8 8h8M8 12h8M8 16h5"/></svg>
+          <span>Notes</span>
+        </button>
+        <button class="chrome-button chrome-button--icon" id="fullscreenButton" type="button" aria-label="Enter fullscreen">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="deck" id="deck" tabindex="-1">
+
+      <!-- 01 · Cover -->
+      <section class="slide is-active" data-title="Cover" aria-hidden="false">
+        <div class="frame">
+          <span class="eyebrow lbl">Payroll ops · Internal walkthrough · Aug 31, 2026</span>
+          <h1>The rule compiler</h1>
+          <p class="lede">How Closeout Copilot turns plain-English payroll rules into checks a customer can trust with money — what we built, why it exists, and how every piece works.</p>
+          <div class="footline">
+            <a class="btn" href="https://closeoutcopilot.com/bench" target="_blank" rel="noopener">Open the live workbench ↗</a>
+            <span class="count">15 slides · ~12 minutes · N for notes</span>
+          </div>
+        </div>
+        <aside class="speaker-notes" data-notes>
+          <p><strong>Framing:</strong> this is a teaching deck, not a pitch. By the end everyone should be able to explain four words — rulebook, vocabulary, compiler, engine — and click through the live prototype themselves.</p>
+        </aside>
+      </section>
+
+      <!-- 02 · The job -->
+      <section class="slide" data-title="The job" aria-hidden="true">
+        <div class="frame">
+          <span class="eyebrow lbl">Why this exists</span>
+          <h2>Payroll ops is detective work, and it runs on rules.</h2>
+          <p class="lede">Every shift produces two competing time records — the client's clock and ours — plus GPS, badges, schedules and messages. A payroll operator holds each shift against everything they know, spots what breaks a pattern, chases the human who knows, and only then pays and invoices.</p>
+          <div class="cols">
+            <div class="col">
+              <h4>The rules already exist</h4>
+              <p>"Zero hours on an active day. Thirty-plus hours of overtime. A missed punch." Operators run these checks by hand today — 15 to 30 minutes per disputed shift, across spreadsheets.</p>
+            </div>
+            <div class="col">
+              <p class="quote">The arithmetic is trivial, the data is not.<span class="by">Synthesis of 7 pay-ops interviews · Aug 27</span></p>
+            </div>
+          </div>
+        </div>
+        <aside class="speaker-notes" data-notes>
+          <p>Ground everything in Aashish's interviews: manufacturing, home care, nursing homes, construction — same loop everywhere. Two time records, a reconciliation step, an escalation ladder, then payroll and the invoice.</p>
+        </aside>
+      </section>
+
+      <!-- 03 · The question -->
+      <section class="slide statement" data-title="The question" aria-hidden="true">
+        <div class="frame">
+          <span class="eyebrow lbl">The problem we set out to solve</span>
+          <h2>Customers can state their rules in plain English. How do we run those rules on money — without asking anyone to trust a chatbot?</h2>
+          <p class="lede sub">That sentence is the whole project. "No overtime at Mercy this week, please" has to become something that behaves identically every single time, can be tested before it touches a paycheck, and can show an auditor exactly why it fired.</p>
+        </div>
+        <aside class="speaker-notes" data-notes>
+          <p>Pause here. Everyone agrees LLMs can read rules. The hard part is that payroll is a domain where a wrong answer is a wage claim — "usually right" is not a product.</p>
+        </aside>
+      </section>
+
+      <!-- 04 · Dead end 1 -->
+      <section class="slide" data-title="Dead end №1" aria-hidden="true">
+        <div class="frame">
+          <span class="eyebrow lbl">What we ruled out — 1 of 2</span>
+          <h2>Throw the rulebook into the LLM's context window.</h2>
+          <p class="lede">Write every rule in a document, hand it to the model with each shift, hope. This is what "just use AI" means by default — and customers are right to refuse it.</p>
+          <ul class="steps">
+            <li><b>Different answer on different runs.</b> The same shift can pass on Tuesday and flag on Wednesday.</li>
+            <li><b>Untestable.</b> There is no way to know what a rule change does before it touches real payouts.</li>
+            <li><b>Unauditable.</b> No trace of which rule fired, or why. "The model decided" is not an answer a wage claim accepts.</li>
+            <li><b>The evidence is damning even at the high end.</b> Stanford found the professional legal-research AIs — Westlaw's and Lexis's own tools — hallucinate on 17–33% of queries.</li>
+          </ul>
+        </div>
+        <aside class="speaker-notes" data-notes>
+          <p>The Stanford RegLab study is the killer citation: purpose-built, retrieval-grounded, professionally-priced legal AI still fabricates. If that's the ceiling for "read the rules and answer," it cannot be the mechanism that computes pay.</p>
+        </aside>
+      </section>
+
+      <!-- 05 · Dead end 2 -->
+      <section class="slide" data-title="Dead end №2" aria-hidden="true">
+        <div class="frame">
+          <span class="eyebrow lbl">What we ruled out — 2 of 2</span>
+          <h2>Four hundred settings screens.</h2>
+          <p class="lede">The incumbent answer is fully deterministic — and it's why implementations take forever. UKG's pay rules are assembled from "work rule building blocks" by consultants: $300K–$750K and 3–18 months per deployment, with a whole consulting industry living off the configuration.</p>
+          <ul class="steps">
+            <li><b>Deterministic, but dead.</b> The rules end up divorced from their sources, unreadable by the operator, and changeable only by the people who installed them.</li>
+            <li><b>Nothing ships pre-built in the US.</b> UKG, Workday and Dayforce ship empty engines. Nobody reads the client contract — humans transcribe it into rate cards by hand.</li>
+          </ul>
+        </div>
+        <aside class="speaker-notes" data-notes>
+          <p>Key tension to name: dead end №1 is flexible but untrustworthy; dead end №2 is trustworthy but rigid and brutally expensive. The compiler is how you get both halves.</p>
+        </aside>
+      </section>
+
+      <!-- 06 · The idea -->
+      <section class="slide" data-title="The idea" aria-hidden="true">
+        <div class="frame">
+          <span class="eyebrow lbl">The one-sentence answer</span>
+          <h2>Compile, don't improvise.</h2>
+          <p class="lede">The LLM does its expensive interpretive work <b>once, when a rule enters the system</b> — not on every shift. It translates the English sentence into a small, typed, deterministic check. From then on, a plain engine runs that check identically, forever. The model writes the program; it never runs the payroll.</p>
+          <div class="flow" role="img" aria-label="English rule flows into the compiler once, producing a typed rule that the deterministic engine runs on every shift.">
+            <div class="fnode"><span class="fk lbl">English, once</span><span class="fv">"No overtime at Mercy General this week, please."</span></div>
+            <div class="farrow">→</div>
+            <div class="fnode"><span class="fk lbl">Compiled, once</span><span class="fv">A typed rule: scope, condition, effect, parameters — plus generated tests.</span></div>
+            <div class="farrow">→</div>
+            <div class="fnode dim"><span class="fk lbl">Deterministic, forever</span><span class="fv">The engine runs it on every shift. Same input, same verdict, every time.</span></div>
+          </div>
+          <p class="body">This is not our invention — it's the pattern AWS (Automated Reasoning checks), Norm Ai, Catala, Stripe Radar and Ramp all converged on independently. We researched every serious attempt; they all landed here.</p>
+        </div>
+        <aside class="speaker-notes" data-notes>
+          <p>"Compiler" scares people — demystify it: a compiler is just a translator from a language humans write to a language a machine executes. Ours translates payroll English into checks. The trust comes from <em>when</em> the LLM runs: once, at the door, where its output can be reviewed and tested — not live on every paycheck.</p>
+        </aside>
+      </section>
+
+      <!-- 07 · The rulebook -->
+      <section class="slide" data-title="The rulebook" aria-hidden="true">
+        <div class="frame">
+          <span class="eyebrow lbl">Word 1 of 4</span>
+          <h2>The rulebook — every rule, one place, each with a receipt.</h2>
+          <p class="lede">Rules come from law, contracts, facilities, unions, the vertical, common sense, and this week's Slack message. The rulebook holds all of them in one format, and every rule keeps a pointer to the exact sentence and document it came from.</p>
+          <div class="cols" style="margin-top:1.5rem">
+            <div class="rulecard">
+              <div class="rc-top"><span class="tag id">CA-MB-01</span><span class="tag">State</span><span class="tag">Deterministic</span></div>
+              <p class="rc-sent">"A 30-minute unpaid meal break must start before the end of the 5th hour; missed, short or late → pay a 1-hour premium."</p>
+              <p class="rc-meta">Compiled from <span class="hl">IWC Wage Order 5 §11 · Labor Code §226.7</span></p>
+            </div>
+            <div class="rulecard">
+              <div class="rc-top"><span class="tag id">TW-1187</span><span class="tag">This Week</span><span class="tag amber">Expires Sun Aug 30</span></div>
+              <p class="rc-sent">"No overtime at Mercy General this week — hold anything over the limit for review."</p>
+              <p class="rc-meta">Compiled from <span class="hl">Slack · Sam T. · Mon 9:12am</span> — expires by itself</p>
+            </div>
+          </div>
+          <div class="footline"><span class="count">Sources: Legal · State · Local · Contract · CBA · Facility · Vertical · Time-based · Common sense · This week</span></div>
+        </div>
+        <aside class="speaker-notes" data-notes>
+          <p>The point of the format: a statute and a Slack message become the same kind of object — same editor, same lifecycle, same receipt. That's what lets "change the rules in one sentence" coexist with "prove it to an auditor."</p>
+        </aside>
+      </section>
+
+      <!-- 08 · The vocabulary -->
+      <section class="slide" data-title="The vocabulary" aria-hidden="true">
+        <div class="frame">
+          <span class="eyebrow lbl">Word 2 of 4</span>
+          <h2>The vocabulary — the only words the compiler may use.</h2>
+          <p class="lede">About thirty named, typed facts the engine knows how to compute about any shift from punches, GPS, badges, schedules and rosters: <span class="count">worked_min · meal_start_offset_min · geofence exit · rest gap · weekly totals · implied travel speed…</span></p>
+          <ul class="steps">
+            <li><b>It's the hallucination firewall.</b> A rule that can't be expressed in these words is refused, not guessed at. The compiler cannot invent a fact the engine can't compute.</li>
+            <li><b>It's the accuracy lever.</b> Every system we studied says the same thing: the quality of the typed vocabulary and its descriptions matters more than the model. AWS calls variable descriptions "the single most important factor."</li>
+            <li><b>It's ours.</b> Location intelligence gives us features nobody else has — geofence dwell, badge-versus-clock gaps, impossible-travel speed. The vocabulary is where our data moat lives.</li>
+          </ul>
+        </div>
+        <aside class="speaker-notes" data-notes>
+          <p>Analogy that lands: the compiler plays Scrabble with a fixed set of tiles. It can arrange them into any rule, but it cannot draw a tile that doesn't exist. That constraint is why the output is trustworthy.</p>
+        </aside>
+      </section>
+
+      <!-- 09 · The compiler -->
+      <section class="slide" data-title="The compiler" aria-hidden="true">
+        <div class="frame">
+          <span class="eyebrow lbl">Word 3 of 4</span>
+          <h2>The compiler — from a sentence to a tested rule.</h2>
+          <ul class="steps">
+            <li><b>Read the sentence</b> and ground every noun into the vocabulary — or refuse.</li>
+            <li><b>Emit a typed rule:</b> scope (where it applies) · condition (when it fires) · effect (what it does) · parameters (the numbers you can change).</li>
+            <li><b>Surface every ambiguity as a question.</b> "No shift longer than 12 hours" — does that include the unpaid meal break? The compiler asks; the answer becomes an explicit parameter. Never a silent interpretation.</li>
+            <li><b>Generate tests</b> from the rule itself, and <b>backtest</b> it against real history: "this would have flagged 34 of last month's 1,412 shifts."</li>
+            <li><b>Activate in shadow.</b> New rules watch for a week without touching money — Draft → Shadow → Live, the same release discipline Stripe and the fraud-ops world use.</li>
+          </ul>
+          <p class="body">It can even push back with knowledge: asked to "round everything to the nearest quarter hour," it split the rule by state and attached <i>Camp v. Home Depot</i> to the California sites, where exact-minute pay is required.</p>
+        </div>
+        <aside class="speaker-notes" data-notes>
+          <p>The Camp v. Home Depot compile is the demo moment — the customer asked for something partially unlawful, and the system knew, with the citation. That's the pre-ingested rulebook earning its keep on day one.</p>
+        </aside>
+      </section>
+
+      <!-- 10 · The engine -->
+      <section class="slide" data-title="The engine" aria-hidden="true">
+        <div class="frame">
+          <span class="eyebrow lbl">Word 4 of 4</span>
+          <h2>The engine — dumb on purpose.</h2>
+          <p class="lede">The engine evaluates every shift against every in-scope rule and writes down everything it did. No model, no temperature, no surprises — milliseconds per shift, identical output for identical input. The prototype's engine runs entirely in your browser.</p>
+          <ul class="trace" aria-label="Excerpt of a decision trace">
+            <li><span class="tag id">TS-COMPLETE</span><span class="t-note">timesheet.out = null → discrepancy opened</span><span class="t-stat"><span class="tag amber">Flag</span></span></li>
+            <li><span class="tag id">TS-COMPLETE</span><span class="t-note">Evidence read: geofence exit 17:01, continuous presence → proposes out = 17:01</span><span class="t-stat"><span class="tag amber">Review</span></span></li>
+            <li><span class="tag id">TS-COMPLETE</span><span class="t-note">Dana K. · supervisor: "Confirmed — she left at 5." → clock-out set to 17:01</span><span class="t-stat"><span class="tag">Human</span></span></li>
+            <li><span class="tag id">CA-MB-01</span><span class="t-note">Meal 34 min, started 3.20h in</span><span class="t-stat"><span class="tag">Pass</span></span></li>
+          </ul>
+          <p class="body">The LLM survives in exactly one runtime place: <b>reading messy evidence</b> — a missing clock-out, a supervisor's text, a crowd-exit pattern. Those rows are always labeled Review, always amber, and always end with a human. The model proposes; it never pays.</p>
+        </div>
+        <aside class="speaker-notes" data-notes>
+          <p>"Dumb on purpose" is the phrase to keep. All the intelligence got spent at compile time, where it's reviewable. What runs on money is arithmetic. This split — deterministic structure, LLM only at the leaves over unstructured evidence — is exactly Norm Ai's architecture for regulatory compliance.</p>
+        </aside>
+      </section>
+
+      <!-- 11 · The receipt -->
+      <section class="slide" data-title="The receipt" aria-hidden="true">
+        <div class="frame">
+          <span class="eyebrow lbl">Why customers believe it</span>
+          <h2>Every flag carries its whole ancestry.</h2>
+          <div class="chain" role="img" aria-label="Chain from flag to rule to clause to document">
+            <span class="cnode">Flag<small>"3.0h OT held"</small></span>
+            <span class="carrow">→</span>
+            <span class="cnode">Rule<small>TW-1187, v2</small></span>
+            <span class="carrow">→</span>
+            <span class="cnode">Clause<small>The exact sentence, highlighted</small></span>
+            <span class="carrow">→</span>
+            <span class="cnode">Document<small>Statute · contract · Slack</small></span>
+          </div>
+          <p class="lede" style="margin-top:2rem">Click any rule anywhere in the product and the source opens beside it — the verbatim clause, highlighted, with its effective dates. The pitch isn't "trust the pack." It's <b>"verify by glancing."</b> Every incumbent disclaims liability for their compliance content; per-shift receipts are how we attack that.</p>
+        </div>
+        <aside class="speaker-notes" data-notes>
+          <p>This chain is ShopStream's citation architecture pointed at payroll: the verbatim span is the citable atom, and the highlight is mechanically verified as an exact substring of the stored source — not a paraphrase.</p>
+        </aside>
+      </section>
+
+      <!-- 12 · Changing a rule -->
+      <section class="slide" data-title="Changing a rule" aria-hidden="true">
+        <div class="frame">
+          <span class="eyebrow lbl">The malleability story</span>
+          <h2>Change the 5 to a 3. The program follows.</h2>
+          <p class="lede">Because every rule is typed, its numbers are parameters — and parameters render as controls automatically. A threshold is a stepper, a choice is a dropdown, a toggle is a switch. Editing one re-runs the whole week instantly and shows the backtest before anything goes live.</p>
+          <ul class="steps">
+            <li><b>No re-prompting.</b> Moving a stepper edits data the engine reads. Nothing is regenerated; nothing can drift.</li>
+            <li><b>Consequences first.</b> "This change would have flagged 3 of 214 Mercy shifts last week" — you see it before you commit.</li>
+            <li><b>Edits are drafts.</b> An edited rule is marked Draft and, in the product, goes backtest → shadow → live with a second operator's sign-off.</li>
+          </ul>
+        </div>
+        <aside class="speaker-notes" data-notes>
+          <p>Demo this live on /bench: open TW-1187, change the consecutive-days cap, watch the fire-count and totals recompute across all 54 shifts in real time. This is the moment the "settings screens vs chatbot" dichotomy dissolves.</p>
+        </aside>
+      </section>
+
+      <!-- 13 · Why it wins -->
+      <section class="slide" data-title="Why it wins" aria-hidden="true">
+        <div class="frame">
+          <span class="eyebrow lbl">Against both dead ends</span>
+          <h2>Both halves, no trade.</h2>
+          <div style="overflow-x:auto">
+            <table class="compare">
+              <tr><th></th><th>LLM + context window</th><th>Settings screens</th><th>The compiler</th></tr>
+              <tr><td>Same answer twice</td><td>No</td><td>Yes</td><td class="win">Yes</td></tr>
+              <tr><td>Rules stated in English</td><td>Yes</td><td>No — consultants</td><td class="win">Yes</td></tr>
+              <tr><td>Tested before touching money</td><td>No</td><td>Rarely</td><td class="win">Backtest + shadow, always</td></tr>
+              <tr><td>Shows its receipt</td><td>No</td><td>No</td><td class="win">Flag → rule → clause → document</td></tr>
+              <tr><td>Setup</td><td>Minutes, worthless</td><td>3–18 months, $300–750K</td><td class="win">Minutes, reviewable</td></tr>
+              <tr><td>Rule changes</td><td>Re-prompt and pray</td><td>Change order to the vendor</td><td class="win">One sentence, or one stepper</td></tr>
+            </table>
+          </div>
+        </div>
+        <aside class="speaker-notes" data-notes>
+          <p>If someone keeps one slide, it's this one. The compiler isn't a compromise between the two dead ends — it takes the English-in from one and the determinism from the other and drops both failure modes.</p>
+        </aside>
+      </section>
+
+      <!-- 14 · The bigger play -->
+      <section class="slide" data-title="The bigger play" aria-hidden="true">
+        <div class="frame">
+          <span class="eyebrow lbl">Where this goes</span>
+          <h2>Point the same compiler at the public rulebook.</h2>
+          <p class="lede">US wage-and-hour law is a surprisingly finite corpus — roughly 5,000–10,000 documents, ~85–90% public domain, with federal regulations available as one versioned XML file. Compile it once, maintain it centrally, and every customer starts with a rulebook that <b>provably knows every jurisdiction on day one</b> — then their contracts and facility policies compile in as an overlay.</p>
+          <ul class="steps">
+            <li><b>The proof it works:</b> Australia. Tanda and KeyPay ship 30–100+ pre-built award-interpretation packs, vendor-maintained, activated at a click. They won that market. The US equivalent does not exist yet.</li>
+            <li><b>The moat is maintenance.</b> ~49 localities changed minimum wage on one January 1st. The freshness pipeline is the subscription — and precisely what a customer's in-house LLM experiment will never do.</li>
+            <li><b>The demo:</b> "Give me this week's payroll and watch it spot every discrepancy — and every flag points to its clause, as of the shift's date."</li>
+          </ul>
+        </div>
+        <aside class="speaker-notes" data-notes>
+          <p>Answer the "won't they just run ChatGPT" objection here: what backs the demo sentence is a curated, effective-dated corpus, tested rule packs, and per-shift receipts. None of that comes out of a chat window — same reason Neuron7 isn't "ChatGPT with manuals."</p>
+        </aside>
+      </section>
+
+      <!-- 15 · Today and next -->
+      <section class="slide" data-title="Today · next" aria-hidden="true">
+        <div class="frame">
+          <span class="eyebrow lbl">Where it stands</span>
+          <h2>It already runs. Go click it.</h2>
+          <p class="lede">The workbench at <b>closeoutcopilot.com/bench</b> is a working prototype: 22 compiled rules running as a real deterministic engine over a synthetic week of 54 shifts — live decision traces, editable parameters with instant backtests, a 36-rule research catalog behind them, and every rule opening to its source. The engine is real and runs in your browser; the three compile examples are recorded from the ingest flow.</p>
+          <ul class="steps">
+            <li><b>Next 1 —</b> lock the rule format and vocabulary, then compile the full 56-rule research corpus into the engine.</li>
+            <li><b>Next 2 —</b> seed the public rulebook narrow and deep: California first, on the ShopStream citation chassis.</li>
+            <li><b>Next 3 —</b> the real demo: a customer's actual week of payroll, every flag traced to a highlighted clause.</li>
+          </ul>
+          <div class="footline">
+            <a class="btn" href="https://closeoutcopilot.com/bench" target="_blank" rel="noopener">Open the workbench ↗</a>
+            <span class="count">Synthetic data · All names fabricated · Research memo available on request</span>
+          </div>
+        </div>
+        <aside class="speaker-notes" data-notes>
+          <p>End with hands on keyboards: have everyone open /bench, click shift 4821's trace, open CA-MB-01 from a citation, drag a parameter, watch the week recompute. The product argument makes itself once people feel the stepper.</p>
+        </aside>
+      </section>
+
+    </main>
+
+    <nav class="deck-footer" aria-label="Slide navigation">
+      <button id="previousButton" type="button" aria-label="Previous slide">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <div class="progress-track" aria-hidden="true"><span id="progressFill"></span></div>
+      <button id="nextButton" type="button" aria-label="Next slide">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </nav>
+
+    <div class="notes-panel" id="notesPanel" aria-hidden="true">
+      <div class="notes-panel__header">
+        <span>Speaker notes · <strong id="notesSlideLabel">01</strong></span>
+        <button id="closeNotesButton" type="button" aria-label="Close speaker notes">Close</button>
+      </div>
+      <div class="notes-panel__body" id="notesContent"></div>
+    </div>
+
+    <div class="key-hint" id="keyHint" aria-hidden="true">
+      <span><kbd>←</kbd><kbd>→</kbd> Navigate</span>
+      <span><kbd>N</kbd> Notes</span>
+      <span><kbd>F</kbd> Fullscreen</span>
+    </div>
+  </div>
+
+  <script src="deck.js"></script>
+</body>
+</html>
