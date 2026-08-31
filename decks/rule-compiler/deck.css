@@ -225,3 +225,5 @@ h2 { font-size: clamp(1.7rem, 3.2vw, 2.5rem); }
 .slide.dense .trace, .slide.dense .kvmini, .slide.dense .stack, .slide.dense .statstrip { margin-top: 1.1rem; }
 .slide.dense .ask, .slide.dense .tagrow, .slide.dense .body { margin-top: 1rem; }
 .slide.dense .trace li { padding: .55rem 0; }
+.slide.dense .kvmini td { padding: .45rem .75rem .45rem 0; }
+.slide.dense .eyebrow { margin-bottom: 1.1rem; }
