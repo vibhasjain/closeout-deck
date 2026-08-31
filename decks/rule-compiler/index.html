@@ -22,7 +22,13 @@
       <div class="deck-status" aria-live="polite">
         <span id="sectionLabel">Cover</span>
         <span class="deck-status__rule" aria-hidden="true"></span>
-        <span><span id="currentSlide">01</span> / <span id="totalSlides">15</span></span>
+        <div class="mini-nav" aria-label="Slide navigation">
+          <button id="previousButton" type="button" aria-label="Previous slide"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <div class="progress-track" aria-hidden="true"><span id="progressFill"></span></div>
+          <button id="nextButton" type="button" aria-label="Next slide"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+        </div>
+        <span><span id="currentSlide">01</span> / <span id="totalSlides">16</span></span>
+        <span class="keys" aria-hidden="true">←→ Navigate · N Notes · F Fullscreen</span>
       </div>
       <div class="deck-actions">
         <button class="chrome-button" id="notesButton" type="button" aria-pressed="false" aria-label="Toggle speaker notes">
@@ -45,7 +51,7 @@
           <p class="lede">How Closeout Copilot turns plain-English payroll rules into checks a customer can trust with money — what we built, why it exists, and how every piece works.</p>
           <div class="footline">
             <a class="btn" href="https://closeoutcopilot.com/bench" target="_blank" rel="noopener">Open the live workbench ↗</a>
-            <span class="count">15 slides · ~12 minutes · N for notes</span>
+            <span class="count">16 slides · ~12 minutes · N for notes</span>
           </div>
         </div>
         <aside class="speaker-notes" data-notes>
@@ -237,7 +243,18 @@
             <li><b>Generate tests</b> from the rule itself, and <b>backtest</b> it against real history: "this would have flagged 34 of last month's 1,412 shifts."</li>
             <li><b>Activate in shadow.</b> New rules watch for a week without touching money — Draft → Shadow → Live, the same release discipline Stripe and the fraud-ops world use.</li>
           </ul>
-          <div class="bubble" style="margin-top:1.5rem"><span class="who">Ops email</span>"No shift longer than 12 hours at Bayview, and anything over 10 needs the lead's okay."</div>
+        </div>
+        <aside class="speaker-notes" data-notes>
+          <p>Five steps, and note where the review effort goes: the human approves a typed rule with tests and a backtest attached — semantics, not syntax. It can also push back with knowledge: asked to "round everything to the nearest quarter hour," the compiler split the rule by state and attached Camp v. Home Depot to the CA sites, where exact-minute pay is required.</p>
+        </aside>
+      </section>
+
+      <!-- 10 · The compiler, live -->
+      <section class="slide" data-title="Compile, live" aria-hidden="true">
+        <div class="frame">
+          <span class="eyebrow lbl">Word 3 of 4 — in action</span>
+          <h2>One email in. Two rules and a question out.</h2>
+          <div class="bubble"><span class="who">Ops email</span>"No shift longer than 12 hours at Bayview, and anything over 10 needs the lead's okay."</div>
           <p class="ask"><b>The compiler asks —</b> does the 12-hour cap include the unpaid meal break, or worked hours only? The answer becomes a parameter.</p>
           <div class="irblock"><span class="k">rule</span>   FAC-BAYVIEW-04   <span class="k">kind</span> <b>deterministic</b>
 <span class="k">check</span>  <b>hold if</b> shift_h &gt; 12.0
@@ -246,7 +263,7 @@
           <div class="tagrow"><span class="tag">6 Tests · Green</span><span class="tag">Backtest · 2 Of 96 Shifts</span><span class="tag blue">Activates In Shadow</span></div>
         </div>
         <aside class="speaker-notes" data-notes>
-          <p>The Camp v. Home Depot compile is the demo moment — the customer asked for something partially unlawful, and the system knew, with the citation. That's the pre-ingested rulebook earning its keep on day one.</p>
+          <p>The Camp v. Home Depot compile is the other demo moment — the customer asked for something partially unlawful, and the system knew, with the citation. That's the pre-ingested rulebook earning its keep on day one.</p>
         </aside>
       </section>
 
@@ -262,7 +279,7 @@
             <li><span class="tag id">TS-COMPLETE</span><span class="t-note">Dana K. · supervisor: "Confirmed — she left at 5." → clock-out set to 17:01</span><span class="t-stat"><span class="tag">Human</span></span></li>
             <li><span class="tag id">CA-MB-01</span><span class="t-note">Meal 34 min, started 3.20h in</span><span class="t-stat"><span class="tag">Pass</span></span></li>
           </ul>
-          <p class="body">The LLM survives in exactly one runtime place: <b>reading messy evidence</b> — a missing clock-out, a supervisor's text, a crowd-exit pattern. Those rows are always labeled Review, always amber, and always end with a human. The model proposes; it never pays.</p>
+          <p class="body">The LLM survives in one runtime place: <b>reading messy evidence</b>. Those rows are always labeled Review, always amber, always end with a human. The model proposes; it never pays.</p>
         </div>
         <aside class="speaker-notes" data-notes>
           <p>"Dumb on purpose" is the phrase to keep. All the intelligence got spent at compile time, where it's reviewable. What runs on money is arithmetic. This split — deterministic structure, LLM only at the leaves over unstructured evidence — is exactly Norm Ai's architecture for regulatory compliance.</p>
@@ -349,7 +366,7 @@
             <div class="layerrow"><span class="ln">CUSTOMER OVERLAY</span><span class="ld">Their MSAs, facility policies and CBAs — compiled at onboarding from their documents.</span></div>
             <div class="layerrow"><span class="ln">THIS WEEK</span><span class="ld">One-sentence rules from chat that expire on their own.</span></div>
           </div>
-          <p class="body"><b>The proof it works is Australia:</b> Tanda and KeyPay won that market with 30–100+ pre-built, vendor-maintained award packs. The US equivalent doesn't exist. <b>The moat is maintenance</b> — ~49 localities changed minimum wage on one January 1st; the freshness pipeline is the subscription, and precisely what an in-house LLM experiment will never do.</p>
+          <p class="body"><b>The proof is Australia:</b> Tanda and KeyPay won that market with pre-built, vendor-maintained award packs; the US equivalent doesn't exist. <b>The moat is maintenance</b> — ~49 localities changed minimum wage one January 1st. The freshness pipeline is the subscription.</p>
         </div>
         <aside class="speaker-notes" data-notes>
           <p>Answer the "won't they just run ChatGPT" objection here: what backs the demo sentence is a curated, effective-dated corpus, tested rule packs, and per-shift receipts. None of that comes out of a chat window — same reason Neuron7 isn't "ChatGPT with manuals."</p>
@@ -386,16 +403,6 @@
 
     </main>
 
-    <nav class="deck-footer" aria-label="Slide navigation">
-      <button id="previousButton" type="button" aria-label="Previous slide">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
-      </button>
-      <div class="progress-track" aria-hidden="true"><span id="progressFill"></span></div>
-      <button id="nextButton" type="button" aria-label="Next slide">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
-      </button>
-    </nav>
-
     <div class="notes-panel" id="notesPanel" aria-hidden="true">
       <div class="notes-panel__header">
         <span>Speaker notes · <strong id="notesSlideLabel">01</strong></span>
@@ -404,11 +411,6 @@
       <div class="notes-panel__body" id="notesContent"></div>
     </div>
 
-    <div class="key-hint" id="keyHint" aria-hidden="true">
-      <span><kbd>←</kbd><kbd>→</kbd> Navigate</span>
-      <span><kbd>N</kbd> Notes</span>
-      <span><kbd>F</kbd> Fullscreen</span>
-    </div>
   </div>
 
   <script src="deck.js"></script>
