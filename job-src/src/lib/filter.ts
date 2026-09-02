@@ -41,8 +41,12 @@ export function filterCandidates(
 }
 
 /** When the call actually happened; the recording beats the booked slot when they differ. */
+export function callAt(candidate: Candidate): string | undefined {
+  return candidate.meeting?.recordedAt ?? candidate.meetingAt
+}
+
 function talkedAt(candidate: Candidate): number {
-  const at = candidate.meeting?.recordedAt ?? candidate.meetingAt
+  const at = callAt(candidate)
   return at ? new Date(at).getTime() : 0
 }
 

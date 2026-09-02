@@ -9,6 +9,7 @@ import { ListToolbar } from '@/components/ListToolbar'
 import { ThreePaneLayout } from '@/components/ThreePaneLayout'
 import { Badge, CopyButton, Skeleton } from '@/components/ui'
 import {
+  callAt,
   filterCandidates,
   PIPELINE_FILTERS,
   selectionForCandidates,
@@ -403,6 +404,10 @@ export function PipelineTab({
             </div>
           )}
           {filtered.map((candidate) => {
+            // Once there is a call, the tile dates the call rather than the application.
+            const called = candidate.status === 'meeting-scheduled' || candidate.status === 'met'
+              ? callAt(candidate)
+              : undefined
             return (
               <button
                 key={candidate.id}
@@ -420,9 +425,7 @@ export function PipelineTab({
                 </div>
                 <FadeText text={candidate.summary} lines={2} className="mt-0.5 text-[12px] leading-snug text-muted-foreground" />
                 <p className="mt-1 font-mono text-[10.5px] text-muted-foreground/70">
-                  {candidate.status === 'meeting-scheduled' && candidate.meetingAt
-                    ? meetingDateTime(candidate.meetingAt)
-                    : shortDate(candidate.appliedAt)}
+                  {called ? meetingDateTime(called) : shortDate(candidate.appliedAt)}
                 </p>
               </button>
             )
