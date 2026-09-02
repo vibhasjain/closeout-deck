@@ -53,6 +53,14 @@ assert.deepEqual(
   ['meeting-scheduled', 'met'],
 )
 assert.ok(filterCandidates(candidates, 'qualified', '').every((candidate) => candidate.status === 'qualified'))
+// Done is newest call first, on the recording time where there is one, and undated last.
+const met = [
+  { ...candidates[2], id: 'c-old', meetingAt: '2026-02-01T00:00:00.000Z' },
+  { ...candidates[2], id: 'c-undated' },
+  { ...candidates[2], id: 'c-new', meetingAt: '2026-02-02T00:00:00.000Z',
+    meeting: { loomUrl: 'x', loomId: 'x', recordedAt: '2026-03-01T00:00:00.000Z' } },
+]
+assert.deepEqual(filterCandidates(met, 'met', '').map((c) => c.id), ['c-new', 'c-old', 'c-undated'])
 // Segment chips filter on segment, not status, and untagged candidates stay out.
 const segmented = candidates.map((c, i) => (i === 0 ? { ...c, segment: 'agency' } : c))
 assert.deepEqual(filterCandidates(segmented, 'agency', '').map((c) => c.id), ['c-maya'])

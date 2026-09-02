@@ -26,13 +26,24 @@ export function filterCandidates(
     )
   })
 
-  if (status !== 'meeting-scheduled') return filtered
+  if (status === 'meeting-scheduled') {
+    return filtered.sort((a, b) => {
+      if (!a.meetingAt) return b.meetingAt ? 1 : 0
+      if (!b.meetingAt) return -1
+      return new Date(a.meetingAt).getTime() - new Date(b.meetingAt).getTime()
+    })
+  }
 
-  return filtered.sort((a, b) => {
-    if (!a.meetingAt) return b.meetingAt ? 1 : 0
-    if (!b.meetingAt) return -1
-    return new Date(a.meetingAt).getTime() - new Date(b.meetingAt).getTime()
-  })
+  // Done reads newest-first — the call you just had is the one you want to open.
+  if (status === 'met') return filtered.sort((a, b) => talkedAt(b) - talkedAt(a))
+
+  return filtered
+}
+
+/** When the call actually happened; the recording beats the booked slot when they differ. */
+function talkedAt(candidate: Candidate): number {
+  const at = candidate.meeting?.recordedAt ?? candidate.meetingAt
+  return at ? new Date(at).getTime() : 0
 }
 
 export function selectionForCandidates(
