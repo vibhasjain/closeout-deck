@@ -334,3 +334,34 @@ The three files edited in place. Then run `node bench/engine.js` and `node --che
 bench/engine.js bench/catalog.js`; also extract the inline UI script and `node --check`
 it. Report: what you built per tab, anything you deviated on and why, and the
 self-check output tail.
+
+---
+
+# Round 3 — Reports tab (2026-09-08)
+
+**Why.** Kashyap's call: the pitch must open with business value, then segue into the product. The user: "give me on the far right, Reports… like a deck I can scroll through… lots of numbers which support this… cite shit… use our citation buttons to open up the links. Charts, numbers, paragraphs, write-ups while still keeping it simple. Elegant, interactive charts. Follow design language."
+
+**Nav.** Top tabs become **Connect · Reconcile · Rules · Reports** (Reports far right). Reports is the **default tab on load**.
+
+**Data.** `bench/report-data.js` (already written, load it after `catalog.js`) → `window.REPORT = { sources:{id:{key,publisher,title,year,url,quote,confidence}}, sections:[…] }`. Each section has: `id num title sub`, `hero {value caption src}`, optional `chart` / `chart2` (`type: bar | line | stack | grouped`, `labels`, `values` or `series[{name,values}]`, `unit`, `emphasis` index, `src`), optional `tiles[{label value sub src}]`, optional `table {title cols rows note src}`, `paras[]` with inline `[source-id]` markers, and the last section has `live:true` + `cta`. Do not edit the data; render it.
+
+**Layout — three panes like every tab.**
+- Queue (320): the table of contents — one `.case` per section: `num` in mono, `title`, `sub` in `.case .meta`. The active row follows scroll (IntersectionObserver on the section blocks); clicking scrolls the deck to that section (smooth). Toolbar: magnifier search over section titles + text; no chips.
+- Detail: **the deck** — a single scrolling column, max-width ~760px, generous vertical rhythm (each section ≈ one screen). Section anatomy, top to bottom: `.lbl` "01 · Retention" · headline (Inter **18px/600**, sentence case) · sub (13px muted) · **hero figure** (Inter **48px/600**, proportional figures, ink) with its caption (12px muted) and a citation chip · chart (see below) · `tiles` as a KPI row (2–4 per row, each a bordered card: label 11px muted · value 20px/600 · sub `.count` mono · chip) · `table` (when present) as `table.kv`-style with a `.lbl` title and mono numbers · paragraphs (13px, line-height 1.6, muted-foreground for body) with inline citation chips · for the `live` section: three stat tiles computed from the current cycle's engine run (flagged shifts, held shifts, corrections `+$x / −$y`) and a `.btn` CTA that opens the Connect tab. The 18px and 48px sizes are the ONLY additions to the type scale, and only inside Reports.
+- Aux (380) header `Sources`: the sources cited by the **active** section (dedupe by `key`): publisher · title · year, a confidence tag (`Primary` / `Secondary` / `Internal` — neutral tags), and an `Open source document ↗` `.btn` (omit the button when `url` is empty).
+
+**Citation chips.** Every `src` and every `[id]` marker renders as the existing `.tag.click` chip showing the source `key` (e.g. `DOL WHD 2025`). Click → the existing drawer (`#drawer`), body: `key` tag + confidence tag · publisher · title (year) · the verbatim `quote` in `.src-quote` · `Open source document ↗` `.btn` (real `url`, `target=_blank rel=noopener`; omitted for internal) · "Cited in" list of the sections that use it (each a `.btn` that closes the drawer and scrolls there). Reuse `openDrawer`/`closeDrawer`; add a `drawerSource` branch.
+
+**Charts — inline SVG, hand-rolled, no library.** Follow these rules exactly (from the dataviz method):
+- One y-axis, always from zero for bars. Bars ≤ 24px thick, 4px rounded corners on the data end only, square at the baseline, 2px surface gap between adjacent bars/segments. Lines 2px with round joins, end marker r=4 with a 2px white ring, area wash under a single line at 10% opacity is allowed. Gridlines: solid 1px in `hsl(var(--border))`, 3–4 clean ticks, no dashed rules, no chart border. Axis text 11px mono muted (`.count`), tabular-nums.
+- Colors: accent/series-1 **#16a34a**; de-emphasis **#a3a3a3** (used for the non-emphasised bars when `emphasis` is set — the emphasised bar is the accent); series-2 **#2f6fd8** only for the one `grouped` chart. Stack segments: #16a34a, #6cc48b, #b9e0c4, #e5e5e5 (one hue light→dark reversed for the "less electronic / all paper" tail is fine — sequential). No other hues. Text and labels always in text tokens, never the series colour.
+- Direct labels selectively: the emphasised bar's value, the line's last point, the hero of the stack; never a number on every point. A legend (small swatch + name, 11px) only when ≥ 2 series.
+- **Interactive**: hover/focus on any bar, point, or segment shows a tooltip card (white, 1px border, 2px radius-ish `calc(var(--radius) - 2px)`, shadow, 12px; label + value + unit), positioned near the mark; hit targets ≥ 24px (invisible wider rects behind bars, a full-height column band on lines with a crosshair). Marks are keyboard-focusable (`tabindex=0`) and show the same tooltip on focus. Each chart has a `.lnk` "Table" toggle at its top-right that swaps the SVG for a `table.kv` of the same values (and back).
+- Chart title 12px/500 ink above; unit in the axis; `src` chip below-right.
+- Heights: ~200px plot + axis band; width 100% (viewBox with `preserveAspectRatio="none"` is NOT allowed — compute widths from the container with a ResizeObserver or render at a fixed 720 viewBox width and scale uniformly).
+
+**Copy.** Sentence case everywhere; paragraphs are the data file's text verbatim (they already carry the citations).
+
+**Mobile.** Queue = TOC, detail = deck (master/detail like the other tabs); tiles wrap to 2 per row; charts scale to width.
+
+**Verify.** `node --check` the extracted inline script; grep that every `[id]` marker resolves (the data file is already validated); no console errors on load; Reports is the default tab; clicking a chip opens the drawer with a real link.

@@ -19,3 +19,15 @@ Plan: ~/.claude/plans/binary-stargazing-perlis.md
 - Built on the Codex lane (gpt-6-astra, effort ultra, 9 min) from bench/BRIEF.md; one 3-minute fix batch (sheet fit at 1440, proportional logos, cite folded into "Compiled from").
 - Verified headless (dev-browser) at 1440×900 and 390×844: no console errors, connect modal flips status, discrepancy → row + drawer + source link, Send to ADP flips to Sent, Add rule → CUST-01 draft.
 - Not built (by design): real integrations, LLM compile, billing math, business-value intro screen.
+
+## Round 2 (2026-09-08, user feedback)
+- [x] Icon tiles: 21 vendors → logos/tiles/<vendor>.png, 64×64, brand color, uniform (Sonnet)
+- [x] Nav → Connect (Timesheets | Payroll sub-tabs) · Reconcile · Rules; tiles in rows/info-bar/modal; "Pulled this cycle" stats (Codex ultra, resume)
+- [ ] Verify headless, commit, push, confirm live
+
+## Round 3 — Reports tab (2026-09-08)
+- [x] Research: 4 agents (retention/pay accuracy · compliance risk · T&A data quality/manual cost · staffing economics), each stat with primary-source URL + verbatim quote, verified reachable
+- [x] Curate 12–16 stats → bench/report-data.js (stat, number, chart data, source, quote, url)
+- [ ] Load dataviz skill; brief Codex: Reports tab (far right), scrollable deck sections, SVG charts w/ hover, paragraphs, citation chips → drawer → Open source document
+- [ ] Verify headless, commit, push, confirm live
+- [x] Rules composer: "Add rule" → plus icon button; remove label + helper sentence, placeholder only (inline after fix2)

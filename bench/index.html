@@ -224,15 +224,19 @@ button { font-family: var(--sans); font-size: inherit; line-height: inherit; bor
 }
 
 /* Payroll Desk additions use the existing type scale, borders, and pills. */
-.logo-slot { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 20px; flex-shrink: 0; vertical-align: middle; }
-.logo-slot.lg { width: 110px; height: 28px; }
-.logo { display: block; width: auto; height: auto; max-width: 48px; max-height: 20px; object-fit: contain; filter: grayscale(1); opacity: .65; }
-.logo.lg { max-width: 110px; max-height: 28px; }
-.active .logo, .info-bar .logo, .modal .logo { opacity: 1; }
-.badge { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; background: hsl(var(--muted)); border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 2px); font: 10.5px var(--mono); color: hsl(var(--muted-foreground)); flex-shrink: 0; }
-.badge.lg { width: 28px; height: 28px; }
-.source-icon { display: inline-flex; width: 20px; flex-shrink: 0; justify-content: center; color: hsl(var(--muted-foreground)); }
-.source-icon svg { width: 16px; height: 16px; }
+/* One uniform vendor tile — every system reads at the same weight in the list. */
+.tile { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0;
+  border-radius: 8px; border: 1px solid hsl(var(--border)); background: #fff; overflow: hidden; }
+.tile.lg { width: 44px; height: 44px; border-radius: 10px; }
+.tile img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.tile img.mark { width: 60%; height: 60%; object-fit: contain; }
+.tile svg { width: 16px; height: 16px; color: hsl(var(--muted-foreground)); }
+.tile.lg svg { width: 20px; height: 20px; }
+.badge { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;
+  background: hsl(var(--muted)); font: 10.5px var(--mono); color: hsl(var(--muted-foreground)); }
+.tile.lg .badge { font-size: 12px; }
+.case.vrow { display: flex; align-items: center; gap: .625rem; }
+.case.vrow .rowtext { min-width: 0; flex: 1; }
 .ib-text, .row1 .name { min-width: 0; }
 .vendor-title, .actions { display: flex; align-items: center; gap: .625rem; flex-wrap: wrap; }
 .vendor-title { flex-wrap: nowrap; }
@@ -245,7 +249,8 @@ button { font-family: var(--sans); font-size: inherit; line-height: inherit; bor
 .kv.words td:last-child { font-family: var(--sans); font-size: 12px; }
 .case .meta.count { display: block; font-size: 11px; }
 .case .row3 { flex-wrap: wrap; }
-.toolbar .btn { margin-left: auto; flex-shrink: 0; }
+.toolbar .btn, .toolbar [data-addrule] { margin-left: auto; flex-shrink: 0; }
+.toolbar .nav-tabs { margin-right: .125rem; }
 .sheet-wrap { padding: 0 0 2rem; overflow: auto; }
 table.sheet { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .sheet th, .sheet td { text-align: left; padding: .625rem .75rem; border-bottom: 1px solid hsl(var(--border)); }
@@ -304,9 +309,8 @@ button:disabled { cursor: default; opacity: .6; }
     <button class="back-btn" id="backBtn" aria-label="Back to list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg><span>Back</span></button>
     <a class="brand" href="/" aria-label="HyperTrack"><img src="/logo-small.svg" alt="HyperTrack" style="height:22px;width:auto;display:block;filter:grayscale(1)"></a>
     <nav class="nav-tabs" id="navTabs" aria-label="Payroll desk">
-      <button data-tab="sources" class="active" aria-current="page">Timesheets</button>
+      <button data-tab="connect" class="active" aria-current="page">Connect</button>
       <button data-tab="reconcile">Reconcile</button>
-      <button data-tab="payroll">Payroll</button>
       <button data-tab="rules">Rules</button>
     </nav>
     <div class="spacer"></div><div class="topstats" id="topstats"></div>
@@ -382,38 +386,38 @@ const CYCLES = [
 ].map(c => { const week = makeWeek({seed:c.seed, scripted:!!c.scripted, start:c.id}); return {...c, week, run:runEngine(week), days:dayLabels(c.id)}; });
 const TIME_PULLS = ['Punches','Schedules','Meal punches','Timecard edits'];
 const SOURCES = [
-  { id:'ukg-ready', name:'UKG Ready', short:'UKG Ready', logo:'/logos/ukg.svg', status:'connected', method:'API', sites:['Sutter Health'] },
-  { id:'adp-wfn', name:'ADP Workforce Now', short:'ADP WFN', logo:'/logos/adp.jpg', status:'connected', method:'Export · nightly', sites:['Mercy General'] },
-  { id:'ubeya', name:'Ubeya', short:'Ubeya', logo:'/logos/ubeya.svg', status:'connected', method:'API', sites:['Northbank Arena'] },
-  { id:'7shifts', name:'7shifts', short:'7shifts', logo:'/logos/7shifts.png', status:'connected', method:'API', sites:['Wicker Park Kitchen'] },
-  { id:'paylocity', name:'Paylocity', short:'Paylocity', logo:'/logos/paylocity.svg', status:'connected', method:'API', sites:['St. Marks Clinic'] },
-  { id:'ukg-pro', name:'UKG Pro', logo:'/logos/ukg.svg' },
-  { id:'paycom', name:'Paycom', logo:'/logos/paycom.svg' },
-  { id:'deputy', name:'Deputy', logo:'/logos/deputy.svg' },
-  { id:'tempworks', name:'TempWorks', logo:'/logos/tempworks.png' },
-  { id:'avionte', name:'Avionté', logo:'/logos/avionte.svg' },
-  { id:'bullhorn', name:'Bullhorn', logo:'/logos/bullhorn.jpg' },
-  { id:'wheniwork', name:'When I Work', logo:'/logos/when-i-work.svg' },
+  { id:'ukg-ready', name:'UKG Ready', short:'UKG Ready', tile:'ukg', status:'connected', method:'API', sites:['Sutter Health'] },
+  { id:'adp-wfn', name:'ADP Workforce Now', short:'ADP WFN', tile:'adp', status:'connected', method:'Export · nightly', sites:['Mercy General'] },
+  { id:'ubeya', name:'Ubeya', short:'Ubeya', tile:'ubeya', status:'connected', method:'API', sites:['Northbank Arena'] },
+  { id:'7shifts', name:'7shifts', short:'7shifts', tile:'7shifts', status:'connected', method:'API', sites:['Wicker Park Kitchen'] },
+  { id:'paylocity', name:'Paylocity', short:'Paylocity', tile:'paylocity', status:'connected', method:'API', sites:['St. Marks Clinic'] },
+  { id:'ukg-pro', name:'UKG Pro', tile:'ukg' },
+  { id:'paycom', name:'Paycom', tile:'paycom' },
+  { id:'deputy', name:'Deputy', tile:'deputy' },
+  { id:'tempworks', name:'TempWorks', tile:'tempworks' },
+  { id:'avionte', name:'Avionté', tile:'avionte' },
+  { id:'bullhorn', name:'Bullhorn', tile:'bullhorn' },
+  { id:'wheniwork', name:'When I Work', tile:'wheniwork' },
   { id:'wallclock', name:'Facility wall clock', short:'Wall clock', icon:'clock', group:'Facility', status:'connected', method:'Email · xlsx', sites:['Bayview Warehouse'], pulls:['Punches','Badge reader events'] },
   { id:'paper', name:'Paper sign-in sheet', icon:'camera', group:'Facility', method:'Photo', pulls:['Names','Shift dates','Signed hours'] },
   { id:'qr', name:'QR kiosk', icon:'qr', group:'Facility', method:'Browser kiosk', pulls:['Punches','Site check-ins'] },
-  { id:'hypertrack', name:'HyperTrack location', logo:'/logo-small.svg', group:'Location', status:'connected', method:'Built in', builtin:true, sites:Object.values(FACILITIES).map(f=>f.name), pulls:['Geofence enter/exit','Route','Badge reader (Bayview)'] },
+  { id:'hypertrack', name:'HyperTrack location', mark:'/logo-small.svg', group:'Location', status:'connected', method:'Built in', builtin:true, sites:Object.values(FACILITIES).map(f=>f.name), pulls:['Geofence enter/exit','Route','Badge reader (Bayview)'] },
   { id:'upload', name:'Upload a timesheet', icon:'upload', group:'Manual', method:'CSV · PDF · XLSX', pulls:['Names','Sites','Shift dates','Punches'] },
 ].map(s=>({group:'Time & attendance', status:'available', method:'API', sites:[], pulls:TIME_PULLS, short:s.name, ...s, lastSync:s.status==='connected'?'04:10':null}));
 const DESTS = [
-  {id:'adp', name:'ADP', logo:'/logos/adp.jpg', status:'connected', format:'ADP WFN hours import'},
-  {id:'gusto', name:'Gusto', logo:'/logos/gusto.jpg'},
-  {id:'paychex', name:'Paychex', logo:'/logos/paychex.jpg'},
-  {id:'paylocity', name:'Paylocity', logo:'/logos/paylocity.svg'},
-  {id:'rippling', name:'Rippling', logo:'/logos/rippling.svg'},
-  {id:'workday', name:'Workday', logo:'/logos/workday.jpg'},
-  {id:'quickbooks', name:'QuickBooks', logo:'/logos/quickbooks.jpg', group:'Billing', status:'connected', format:'QuickBooks hours export'},
-  {id:'netsuite', name:'NetSuite', logo:'/logos/netsuite.jpg', group:'Billing'},
-  {id:'bullhorn', name:'Bullhorn', logo:'/logos/bullhorn.jpg', group:'Billing'},
-  {id:'sap', name:'SAP', logo:'/logos/sap.jpg', group:'Billing'},
-  {id:'dailypay', name:'DailyPay', logo:'/logos/dailypay.jpg', group:'Earned wage access'},
-  {id:'branch', name:'Branch', logo:'/logos/branch.jpg', group:'Earned wage access'},
-  {id:'zeal', name:'Zeal', logo:'/logos/zeal.svg', group:'Earned wage access'},
+  {id:'adp', name:'ADP', tile:'adp', status:'connected', format:'ADP WFN hours import'},
+  {id:'gusto', name:'Gusto', tile:'gusto'},
+  {id:'paychex', name:'Paychex', tile:'paychex'},
+  {id:'paylocity', name:'Paylocity', tile:'paylocity'},
+  {id:'rippling', name:'Rippling', tile:'rippling'},
+  {id:'workday', name:'Workday', tile:'workday'},
+  {id:'quickbooks', name:'QuickBooks', tile:'quickbooks', group:'Billing', status:'connected', format:'QuickBooks hours export'},
+  {id:'netsuite', name:'NetSuite', tile:'netsuite', group:'Billing'},
+  {id:'bullhorn', name:'Bullhorn', tile:'bullhorn', group:'Billing'},
+  {id:'sap', name:'SAP', tile:'sap', group:'Billing'},
+  {id:'dailypay', name:'DailyPay', tile:'dailypay', group:'Earned wage access'},
+  {id:'branch', name:'Branch', tile:'branch', group:'Earned wage access'},
+  {id:'zeal', name:'Zeal', tile:'zeal', group:'Earned wage access'},
 ].map(d=>({group:'Payroll', status:'available', method:'API', sites:['All sites'], format:'Approved hours import', ...d, lastSync:d.status==='connected'?'04:10':null}));
 const SCOPE_TEXT = {
   'CS-01':'All shifts', 'TS-COMPLETE':'All shifts', 'CS-16H':'All shifts', 'CS-OVLP':'All shifts', 'CS-SPEED':'All shifts', 'CS-EXACT':'All shifts', 'CS-EDIT':'All shifts', 'FED-OT-40':'All shifts',
@@ -425,8 +429,9 @@ const SCOPE_TEXT = {
 const LIVE_RULES = RULES.map(r=>({...r, scopeText:SCOPE_TEXT[r.id]}));
 const CUSTOM = [];
 const BUCKETS = ['Legal','State','Local','Contract','CBA','Facility','Vertical','Time-based','Common sense','This week'];
-let tab='sources', selSource='ukg-ready', selCycle='2026-08-24', selShift='4821', selDest='adp', selRule='CA-MB-01';
-let shiftFilter='all', sourceFilter='all', cycleFilter='all', destFilter='all', bucketFilter='All';
+// 'sources' and 'payroll' are the two Connect sub-tabs; connectSub remembers the last one.
+let tab='sources', connectSub='sources', selSource='ukg-ready', selCycle='2026-08-24', selShift='4821', selDest='adp', selRule='CA-MB-01';
+let shiftFilter='all', cycleFilter='all', bucketFilter='All';
 let drawer=null, connection=null, composer=null, uploadState='idle', toastTimer, overlayReturn=null;
 const Q = {sources:'', reconcile:'', payroll:'', rules:''};
 const searchOpen = {sources:false, reconcile:false, payroll:false, rules:false};
@@ -450,15 +455,17 @@ const shiftTag = (r,c)=>c.status==='paid'?tag('Paid'):r.held?tag('Held','blue'):
 const empty = text=>`<div class="empty">${esc(text)}</div>`;
 const ICO_SEARCH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>';
 const ICO_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18m0-12 12 12"/></svg>';
-function logoImg(src,name,size=20){
-  const letters=name.replace(/[^A-Za-z0-9]/g,'').slice(0,2).toUpperCase();
-  // Existing exact asset first; missing SVGs get one PNG attempt, then the badge.
-  return `<span class="logo-slot${size===28?' lg':''}"><img class="logo${size===28?' lg':''}" src="${esc(src)}" alt="${esc(name)}" onerror="if(!this.dataset.retry &amp;&amp; /\\.svg$/.test(this.getAttribute('src'))){this.dataset.retry='1';this.src=this.getAttribute('src').replace(/\\.svg$/,'.png');}else{this.onerror=null;this.hidden=true;this.nextElementSibling.hidden=false;}"><span class="badge${size===28?' lg':''}" hidden aria-label="${esc(name)}">${esc(letters)}</span></span>`;
-}
-function vendorIcon(v,size=20){
-  if(v.logo) return logoImg(v.logo,v.name,size);
-  const paths={clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',camera:'<path d="M4 6h4l2-3h4l2 3h4v14H4z"/><circle cx="12" cy="13" r="4"/>',qr:'<path d="M3 3h6v6H3zm12 0h6v6h-6zM3 15h6v6H3zm12 0h3v3h3v3h-6z"/>',upload:'<path d="M12 16V3m-5 5 5-5 5 5M4 16v5h16v-5"/>'};
-  return `<span class="logo-slot${size===28?' lg':''}"><span class="source-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">${paths[v.icon]||paths.upload}</svg></span></span>`;
+const ICO_PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>';
+// Every vendor renders in the same square tile, so names align in one column.
+const ICO_VENDOR={clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',camera:'<path d="M4 6h4l2-3h4l2 3h4v14H4z"/><circle cx="12" cy="13" r="4"/>',qr:'<path d="M3 3h6v6H3zm12 0h6v6h-6zM3 15h6v6H3zm12 0h3v3h3v3h-6z"/>',upload:'<path d="M12 16V3m-5 5 5-5 5 5M4 16v5h16v-5"/>'};
+function vendorIcon(v,lg=false){
+  const cls='tile'+(lg?' lg':'');
+  if(v.tile){
+    const letters=v.name.replace(/[^A-Za-z0-9]/g,'').slice(0,2).toUpperCase();
+    return `<span class="${cls}"><img src="/logos/tiles/${esc(v.tile)}.png" alt="${esc(v.name)}" onerror="this.onerror=null;this.hidden=true;this.nextElementSibling.hidden=false;"><span class="badge" hidden aria-label="${esc(v.name)}">${esc(letters)}</span></span>`;
+  }
+  if(v.mark) return `<span class="${cls}"><img class="mark" src="${esc(v.mark)}" alt="${esc(v.name)}"></span>`;
+  return `<span class="${cls}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">${ICO_VENDOR[v.icon]||ICO_VENDOR.upload}</svg></span>`;
 }
 function kv(rows,words=false){return `<table class="kv${words?' words':''}">${rows.map(([k,v])=>`<tr><td class="k">${esc(k)}</td><td>${v}</td></tr>`).join('')}</table>`;}
 function byId(id){for(const c of CYCLES){const r=c.run.shifts.find(r=>r.shift.id===id);if(r)return {c,r};}return null;}
@@ -488,11 +495,19 @@ function renderTop(){const c=cycle();$('topstats').textContent=`${c.label} · ${
 function renderSourceQueue(){
   const q=Q.sources.toLowerCase().trim();let html='';
   for(const group of ['Time & attendance','Facility','Location','Manual']){
-    const rows=SOURCES.filter(s=>s.group===group&&(sourceFilter==='all'||s.status===sourceFilter||(sourceFilter==='connected'&&s.status==='syncing'))&&(!q||(s.name+' '+s.sites.join(' ')).toLowerCase().includes(q)));
+    const rows=SOURCES.filter(s=>s.group===group&&(!q||(s.name+' '+s.sites.join(' ')).toLowerCase().includes(q)));
     if(!rows.length)continue;
-    html+=`<div class="sect lbl">${esc(group)}</div>`+rows.map(s=>`<button class="case${selSource===s.id?' active':''}" data-source="${s.id}"><div class="row1">${vendorIcon(s)}<span class="name fade-trunc">${esc(s.name)}</span>${statusTag(s.status)}</div><div class="meta count">${esc(s.method)} · ${s.sites.length} ${s.sites.length===1?'site':'sites'}${s.lastSync?' · synced '+esc(s.lastSync):''}</div></button>`).join('');
+    html+=`<div class="sect lbl">${esc(group)}</div>`+rows.map(s=>`<button class="case vrow${selSource===s.id?' active':''}" data-source="${s.id}">${vendorIcon(s)}<div class="rowtext"><div class="row1"><span class="name fade-trunc">${esc(s.name)}</span>${statusTag(s.status)}</div><div class="meta count">${esc(s.method)} · ${s.sites.length} ${s.sites.length===1?'site':'sites'}${s.lastSync?' · synced '+esc(s.lastSync):''}</div></div></button>`).join('');
   }
   $('sourceList').innerHTML=html||empty('No sources match.');
+}
+// Counted off the raw shifts this source landed, before the engine touches them.
+function pullStats(rows){
+  const punches=sum(rows,w=>w.punches.length);
+  return [['Shifts',String(rows.length)],['Punches',String(punches)],
+    ['Missing clock-outs',String(sum(rows,w=>w.punches.filter(p=>p.out==null).length))],
+    ['Edits after approval',String(rows.filter(w=>w.editedAfterApproval).length)],
+    ['Meal punches',String(rows.filter(w=>w.meal).length)]];
 }
 function renderSourceDetail(){
   const s=source(),c=cycle(),rows=sourceRows(s,c);
@@ -500,9 +515,9 @@ function renderSourceDetail(){
   if(s.id==='upload'){
     body=`<p class="r-sent">Bring your existing timesheet.</p><p class="r-note">Choose a CSV, PDF or XLSX to preview a synthetic import.</p><div class="drop" id="uploadDrop"><p>${uploadState==='parsing'?tag('Parsing','blue'):uploadState==='done'?tag('Parsed'):esc('Drop a timesheet here')}</p><input id="uploadFile" type="file" accept=".csv,.pdf,.xlsx" hidden><button class="btn" data-choosefile="1" ${uploadState==='parsing'?'disabled':''}>Choose file</button></div>${uploadState==='done'?`<p class="r-note">Parsed ${c.week.length} shifts · 6 sites · sent to Reconcile</p><div class="actions"><button class="btn" data-openreconcile="1">Open in Reconcile →</button></div>`:''}`;
   }else{
-    body=kv([['Method',esc(s.method)],['Sites',esc(s.sites.join(' · ')||'No sites connected')],['Last sync',s.lastSync?esc(s.lastSync):'—'],['Records this cycle',`${rows.length} shifts`]])+`<h3>What we pull</h3><div class="actions">${s.pulls.map(p=>tag(p)).join('')}</div><h3>Field mapping</h3>`+kv(s.builtin?[['geofence.enter','location in'],['geofence.exit','location out'],['route','location evidence'],['badge.out','badge out']]:[['punch_in','clock in'],['punch_out','clock out'],['break_start/end','meal'],['schedule.start','scheduled'],['edit_log','edited after approval']]);
+    body=kv([['Method',esc(s.method)],['Sites',esc(s.sites.join(' · ')||'No sites connected')],['Last sync',s.lastSync?esc(s.lastSync):'—'],['Records this cycle',`${rows.length} shifts`]])+`<h3>What we pull</h3><div class="actions">${s.pulls.map(p=>tag(p)).join('')}</div>`+(rows.length?`<h3>Pulled this cycle</h3>`+kv(pullStats(rows)):'')+`<h3>Field mapping</h3>`+kv(s.builtin?[['geofence.enter','location in'],['geofence.exit','location out'],['route','location evidence'],['badge.out','badge out']]:[['punch_in','clock in'],['punch_out','clock out'],['break_start/end','meal'],['schedule.start','scheduled'],['edit_log','edited after approval']]);
   }
-  $('sourceDetail').innerHTML=`<div class="info-bar"><div class="vendor-title">${vendorIcon(s,28)}<div class="ib-text"><h2>${esc(s.name)}</h2><p class="ib-sub">${esc(c.label)}</p></div></div><div class="ib-right">${statusTag(s.status)}${s.id==='upload'?'':s.status==='available'?`<button class="btn" data-connect="source:${s.id}">Connect</button>`:`<button class="btn" data-sync="${s.id}" ${s.status==='syncing'?'disabled':''}>${s.status==='syncing'?'Syncing…':'Sync now'}</button>`}</div></div><div class="detail-body scroll">${body}</div>`;
+  $('sourceDetail').innerHTML=`<div class="info-bar"><div class="vendor-title">${vendorIcon(s,true)}<div class="ib-text"><h2>${esc(s.name)}</h2><p class="ib-sub">${esc(c.label)}</p></div></div><div class="ib-right">${statusTag(s.status)}${s.id==='upload'?'':s.status==='available'?`<button class="btn" data-connect="source:${s.id}">Connect</button>`:`<button class="btn" data-sync="${s.id}" ${s.status==='syncing'?'disabled':''}>${s.status==='syncing'?'Syncing…':'Sync now'}</button>`}</div></div><div class="detail-body scroll">${body}</div>`;
 }
 function renderSourceAux(){
   const s=source(),c=cycle(),rows=sourceRows(s,c);
@@ -576,16 +591,16 @@ function whatWeSend(d){return d.group==='Billing'?'Approved hours grouped by sit
 function renderPayrollQueue(){
   const q=Q.payroll.toLowerCase().trim();let html='';
   for(const group of ['Payroll','Billing','Earned wage access']){
-    const rows=DESTS.filter(d=>d.group===group&&(destFilter==='all'||d.status===destFilter)&&(!q||d.name.toLowerCase().includes(q)));
+    const rows=DESTS.filter(d=>d.group===group&&(!q||d.name.toLowerCase().includes(q)));
     if(!rows.length)continue;
-    html+=`<div class="sect lbl">${group}</div>`+rows.map(d=>`<button class="case${selDest===d.id?' active':''}" data-dest="${d.id}"><div class="row1">${vendorIcon(d)}<span class="name fade-trunc">${esc(d.name)}</span>${statusTag(d.status)}</div><div class="meta count">${esc(d.method)}${d.lastSync?' · all sites · synced '+esc(d.lastSync):' · not connected'}</div></button>`).join('');
+    html+=`<div class="sect lbl">${group}</div>`+rows.map(d=>`<button class="case vrow${selDest===d.id?' active':''}" data-dest="${d.id}">${vendorIcon(d)}<div class="rowtext"><div class="row1"><span class="name fade-trunc">${esc(d.name)}</span>${statusTag(d.status)}</div><div class="meta count">${esc(d.method)}${d.lastSync?' · all sites · synced '+esc(d.lastSync):' · not connected'}</div></div></button>`).join('');
   }
   $('payrollList').innerHTML=html||empty('No destinations match.');
 }
 function renderPayrollDetail(){
   const d=dest(),c=cycle(),t=payTotals(c),batch=batches.get(d.id+':'+c.id),sent=c.status==='paid'||batch==='sent';
   if(d.status==='available'){
-    $('payrollDetail').innerHTML=`<div class="info-bar"><div class="vendor-title">${vendorIcon(d,28)}<h2>${esc(d.name)}</h2></div><button class="btn" data-connect="dest:${d.id}">Connect</button></div><div class="detail-body scroll"><h3>What we send</h3><p class="r-sent">${esc(whatWeSend(d))}</p><p class="r-note">${esc(c.label)} · ${t.workers.length} workers · ${money(t.gross)}</p></div>`;return;
+    $('payrollDetail').innerHTML=`<div class="info-bar"><div class="vendor-title">${vendorIcon(d,true)}<h2>${esc(d.name)}</h2></div><button class="btn" data-connect="dest:${d.id}">Connect</button></div><div class="detail-body scroll"><h3>What we send</h3><p class="r-sent">${esc(whatWeSend(d))}</p><p class="r-note">${esc(c.label)} · ${t.workers.length} workers · ${money(t.gross)}</p></div>`;return;
   }
   let body;
   if(d.group==='Billing'){
@@ -594,7 +609,7 @@ function renderPayrollDetail(){
   }else{
     body=`<table class="sheet" aria-label="Worker pay run"><thead class="lbl"><tr><th>Worker</th><th>Reg h</th><th>OT h</th><th>Premiums</th><th>Gross</th><th>Status</th></tr></thead><tbody>${t.workers.map(w=>`<tr><td>${esc(w.name)}${w.held.length?`<p class="r-note">${w.held.length} ${w.held.length===1?'shift':'shifts'} held · ${esc(heldReason(w.held))}</p>`:''}</td><td class="mono">${fmtH(w.reg)}</td><td class="mono">${fmtH(w.ot)}</td><td class="mono">${money(w.premiums)}</td><td class="mono">${money(w.gross)}</td><td>${w.held.length?tag('Held','blue'):tag(sent?'Sent':'Ready')}</td></tr>`).join('')}</tbody><tfoot><tr><td>Total</td><td class="mono">${fmtH(t.reg)}</td><td class="mono">${fmtH(t.ot)}</td><td class="mono">${money(t.premiums)}</td><td class="mono">${money(t.gross)}</td><td>${t.held.length?tag(t.held.length+' held','blue'):tag('Ready')}</td></tr></tfoot></table><p class="r-note" style="padding:0 1.25rem">${t.approved.length} approved shifts in this batch. ${t.held.length} held shifts excluded; other approved shifts for those workers are included.</p>`;
   }
-  $('payrollDetail').innerHTML=`<div class="info-bar"><div class="vendor-title">${vendorIcon(d,28)}<div class="ib-text"><h2>${d.group==='Billing'?'Billing hours':'Pay run'} · ${c.label}</h2><p class="ib-sub">${esc(d.name)}</p></div></div><div class="ib-right">${tag(sent?(c.status==='paid'?'Sent '+c.paidOn:'Sent'):batch==='sending'?'Syncing':'Ready',batch==='sending'?'blue':'')}<button class="btn" data-send="1" ${sent||batch==='sending'?'disabled':''}>${batch==='sending'?'Sending…':sent?'Sent':'Send to '+esc(d.name)}</button></div></div><div class="detail-body sheet-wrap scroll">${body}</div>`;
+  $('payrollDetail').innerHTML=`<div class="info-bar"><div class="vendor-title">${vendorIcon(d,true)}<div class="ib-text"><h2>${d.group==='Billing'?'Billing hours':'Pay run'} · ${c.label}</h2><p class="ib-sub">${esc(d.name)}</p></div></div><div class="ib-right">${tag(sent?(c.status==='paid'?'Sent '+c.paidOn:'Sent'):batch==='sending'?'Syncing':'Ready',batch==='sending'?'blue':'')}<button class="btn" data-send="1" ${sent||batch==='sending'?'disabled':''}>${batch==='sending'?'Sending…':sent?'Sent':'Send to '+esc(d.name)}</button></div></div><div class="detail-body sheet-wrap scroll">${body}</div>`;
 }
 function renderPayrollAux(){
   const c=cycle(),d=dest(),t=payTotals(c);
@@ -645,7 +660,7 @@ function renderComposer(){
     const d=c.draft;
     body=`<div class="actions"><span class="tag mono">${esc(d.id)}</span>${tag('Custom')}${kindTag(d.kind)}${tag('Draft')}</div><p class="r-sent" style="margin-top:1rem">${esc(d.sentence)}</p><h3>What it checks</h3><p class="r-note">${esc(d.source.cite)}</p><h3>Applies to</h3><p class="r-note">${esc(d.scopeText)}</p>${c.question?`<div class="ask"><span class="wq">${esc(c.question)}</span><div>${c.options.map(v=>`<button class="wopt${c.answer===v?' active':''}" data-answer="${esc(v)}">${esc(v)}</button>`).join('')}</div></div>`:''}<div class="actions" style="margin-top:1rem"><button class="btn" data-adddraft="1" ${c.question&&!c.answer?'disabled':''}>Add as draft</button><button class="btn" data-editdraft="1">Edit sentence</button></div><p class="r-note">Drafts remain inactive until reviewed.</p>`;
   }else{
-    body=`<label for="ruleSentence" class="r-sent">Write it the way you'd tell a new payroll clerk</label><textarea class="q-input composer" id="ruleSentence" placeholder="Flag a meal break shorter than 30 minutes." ${c.compiling?'disabled':''}>${esc(c.sentence)}</textarea><p class="r-note">A synthetic compile previews the rule as a draft.</p><div class="actions" style="margin-top:1rem"><button class="btn" data-compilecustom="1" ${!c.sentence.trim()||c.compiling?'disabled':''}>${c.compiling?'Compiling…':'Compile'}</button>${c.compiling?tag('Compiling'):''}</div>`;
+    body=`<textarea class="q-input composer" id="ruleSentence" aria-label="Write the rule" placeholder="Flag a meal break shorter than 30 minutes." ${c.compiling?'disabled':''}>${esc(c.sentence)}</textarea><div class="actions" style="margin-top:1rem"><button class="btn" data-compilecustom="1" ${!c.sentence.trim()||c.compiling?'disabled':''}>${c.compiling?'Compiling…':'Compile'}</button>${c.compiling?tag('Compiling'):''}</div>`;
   }
   $('ruleDetail').innerHTML=`<div class="info-bar"><h2>Add a custom rule</h2><button class="btn" data-cancelrule="1">Cancel</button></div><div class="detail-body scroll">${body}</div>`;
 }
@@ -692,7 +707,7 @@ function openConnection(key){
 function renderConnection(){
   const c=connection;if(!c)return;
   const fields=c.method==='api'?[['Client ID','text'],['API key','password'],['Region','text']]:[['Email','email'],['Password','password']];
-  $('modal').innerHTML=`<div class="drawer-head"><div class="vendor-title">${vendorIcon(c.v,28)}<h3 class="drawer-title">Connect ${esc(c.v.name)}</h3></div><button class="icon-btn" data-closeoverlay="1" aria-label="Close connect dialog">${ICO_X}</button></div><div class="drawer-body scroll">${c.step==='form'?`<div class="chips"><button class="chip${c.method==='api'?' active':''}" data-connectmethod="api">API key</button><button class="chip${c.method==='browser'?' active':''}" data-connectmethod="browser">Sign in with browser</button></div><p class="r-note">Demo connection · use placeholder credentials.</p><form id="connectForm" autocomplete="off">${fields.map(([label,type],i)=>`<label for="connect-${i}">${label}</label><input class="q-input" id="connect-${i}" type="${type}" autocomplete="off" placeholder="${label==='Region'?'US':label==='Email'?'demo@example.com':'Demo '+label.toLowerCase()}">`).join('')}<button class="btn" type="submit" style="margin-top:1rem">Continue</button></form>`:c.step==='connecting'?`${tag('Syncing','blue')}<p class="r-note" role="status">Connecting…</p>`:`${tag('Connected')}<p class="r-note" role="status">${c.type==='source'?'Connected · 1 site · 118 punches pulled':'Connected · ready for this pay cycle'}</p>`}</div>`;
+  $('modal').innerHTML=`<div class="drawer-head"><div class="vendor-title">${vendorIcon(c.v,true)}<h3 class="drawer-title">Connect ${esc(c.v.name)}</h3></div><button class="icon-btn" data-closeoverlay="1" aria-label="Close connect dialog">${ICO_X}</button></div><div class="drawer-body scroll">${c.step==='form'?`<div class="chips"><button class="chip${c.method==='api'?' active':''}" data-connectmethod="api">API key</button><button class="chip${c.method==='browser'?' active':''}" data-connectmethod="browser">Sign in with browser</button></div><p class="r-note">Demo connection · use placeholder credentials.</p><form id="connectForm" autocomplete="off">${fields.map(([label,type],i)=>`<label for="connect-${i}">${label}</label><input class="q-input" id="connect-${i}" type="${type}" autocomplete="off" placeholder="${label==='Region'?'US':label==='Email'?'demo@example.com':'Demo '+label.toLowerCase()}">`).join('')}<button class="btn" type="submit" style="margin-top:1rem">Continue</button></form>`:c.step==='connecting'?`${tag('Syncing','blue')}<p class="r-note" role="status">Connecting…</p>`:`${tag('Connected')}<p class="r-note" role="status">${c.type==='source'?'Connected · 1 site · 118 punches pulled':'Connected · ready for this pay cycle'}</p>`}</div>`;
 }
 function continueConnection(){
   const c=connection;if(!c||c.step!=='form')return;c.step='connecting';renderConnection();
@@ -721,19 +736,27 @@ function sendBatch(){
 
 // Shell, single-row search toolbars, and delegated actions.
 function setMobileDetail(on){$('app').classList.toggle('mobile-detail',on);}
+// 'connect' is the nav button; the two connection screens stay separate mains.
+const NAV_OF={sources:'connect',payroll:'connect',reconcile:'reconcile',rules:'rules'};
 function setTab(next){
+  if(next==='connect')next=connectSub;
   if(!['sources','reconcile','payroll','rules'].includes(next))return;
-  tab=next;document.querySelectorAll('#navTabs button').forEach(b=>{b.classList.toggle('active',b.dataset.tab===tab);if(b.dataset.tab===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
+  tab=next;if(NAV_OF[tab]==='connect')connectSub=tab;
+  document.querySelectorAll('#navTabs button').forEach(b=>{const on=b.dataset.tab===NAV_OF[tab];b.classList.toggle('active',on);if(on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
   document.querySelectorAll('.main').forEach(m=>m.classList.toggle('on',m.id==='m-'+tab));setMobileDetail(false);renderAll();
+}
+// Connect's sub-tabs wear the nav pill so the two levels read as one control family.
+function connectSubTabs(){
+  return `<nav class="nav-tabs" aria-label="Connection screens">${[['sources','Timesheets'],['payroll','Payroll']].map(([id,label])=>`<button data-tab="${id}"${tab===id?' class="active" aria-current="page"':''}>${label}</button>`).join('')}</nav>`;
 }
 function toolbarChips(t){
   if(t==='rules')return `<div class="chips">${['All',...ruleBuckets()].map(b=>`<button class="chip${bucketFilter===b?' active':''}" data-bucket="${esc(b)}">${esc(b)}</button>`).join('')}</div>`;
-  const values=t==='reconcile'?['all','open','paid']:['all','connected','available'];
-  const selected=t==='sources'?sourceFilter:t==='reconcile'?cycleFilter:destFilter;
-  return `<div class="chips">${values.map(v=>`<button class="chip${selected===v?' active':''}" data-filter="${t}" data-value="${v}">${title(v)}</button>`).join('')}</div>`;
+  return `<div class="chips">${['all','open','paid'].map(v=>`<button class="chip${cycleFilter===v?' active':''}" data-filter="${t}" data-value="${v}">${title(v)}</button>`).join('')}</div>`;
 }
 function renderToolbar(t){
-  $('tb-'+t).innerHTML=(searchOpen[t]?`<button class="icon-btn sm dim" data-stoggle="${t}" aria-label="Close search">${ICO_X}</button><input class="q-input" data-q="${t}" value="${esc(Q[t])}" placeholder="Search" aria-label="Search ${t}">`:`<button class="icon-btn sm dim" data-stoggle="${t}" aria-label="Search ${t}">${ICO_SEARCH}</button>${toolbarChips(t)}`)+(t==='rules'?'<button class="btn" data-addrule="1">Add rule</button>':'');
+  const connect=t==='sources'||t==='payroll';
+  const search=searchOpen[t]?`<button class="icon-btn sm dim" data-stoggle="${t}" aria-label="Close search">${ICO_X}</button><input class="q-input" data-q="${t}" value="${esc(Q[t])}" placeholder="Search" aria-label="Search ${t}">`:`<button class="icon-btn sm dim" data-stoggle="${t}" aria-label="Search ${t}">${ICO_SEARCH}</button>${connect?'':toolbarChips(t)}`;
+  $('tb-'+t).innerHTML=(connect?connectSubTabs():'')+search+(t==='rules'?`<button class="icon-btn sm dim" data-addrule="1" aria-label="Add rule">${ICO_PLUS}</button>`:'');
 }
 function renderSources(){renderSourceQueue();renderSourceDetail();renderSourceAux();}
 function renderReconcile(){renderCycleQueue();renderCycleDetail();renderCycleAux();}
@@ -769,7 +792,7 @@ document.addEventListener('click',e=>{
   if(!el||el.disabled)return;const d=el.dataset;
   if(d.tab)return setTab(d.tab);
   if(d.stoggle){const t=d.stoggle;searchOpen[t]=!searchOpen[t];if(!searchOpen[t]){Q[t]='';QUEUE_RENDER[t]();}renderToolbar(t);if(searchOpen[t])$('tb-'+t).querySelector('input').focus();return;}
-  if(d.filter){if(d.filter==='sources')sourceFilter=d.value;else if(d.filter==='reconcile')cycleFilter=d.value;else destFilter=d.value;renderToolbar(d.filter);QUEUE_RENDER[d.filter]();return;}
+  if(d.filter){cycleFilter=d.value;renderToolbar(d.filter);QUEUE_RENDER[d.filter]();return;}
   if(d.source){selSource=d.source;setMobileDetail(true);renderSources();return;}
   if(d.cycle){selCycle=d.cycle;if(!cycle().week.some(s=>s.id===selShift))selShift=cycle().week[0].id;setMobileDetail(true);renderAll();return;}
   if(d.dest){selDest=d.dest;setMobileDetail(true);renderPayroll();return;}
