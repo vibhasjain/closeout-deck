@@ -23,11 +23,11 @@ Plan: ~/.claude/plans/binary-stargazing-perlis.md
 ## Round 2 (2026-09-08, user feedback)
 - [x] Icon tiles: 21 vendors → logos/tiles/<vendor>.png, 64×64, brand color, uniform (Sonnet)
 - [x] Nav → Connect (Timesheets | Payroll sub-tabs) · Reconcile · Rules; tiles in rows/info-bar/modal; "Pulled this cycle" stats (Codex ultra, resume)
-- [ ] Verify headless, commit, push, confirm live
+- [x] Verify headless, commit, push, confirm live
 
 ## Round 3 — Reports tab (2026-09-08)
 - [x] Research: 4 agents (retention/pay accuracy · compliance risk · T&A data quality/manual cost · staffing economics), each stat with primary-source URL + verbatim quote, verified reachable
 - [x] Curate 12–16 stats → bench/report-data.js (stat, number, chart data, source, quote, url)
-- [ ] Load dataviz skill; brief Codex: Reports tab (far right), scrollable deck sections, SVG charts w/ hover, paragraphs, citation chips → drawer → Open source document
-- [ ] Verify headless, commit, push, confirm live
+- [x] Load dataviz skill; brief Codex: Reports tab (far right), scrollable deck sections, SVG charts w/ hover, paragraphs, citation chips → drawer → Open source document
+- [x] Verify headless, commit, push, confirm live
 - [x] Rules composer: "Add rule" → plus icon button; remove label + helper sentence, placeholder only (inline after fix2)

@@ -303,20 +303,86 @@ button:disabled { cursor: default; opacity: .6; }
   .info-bar { padding-left: 1rem; padding-right: 1rem; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+/* Reports is the only surface with deck headlines and hero figures. */
+#reportDetail { container-type: inline-size; }
+#reportDeck { padding: 0; overflow-x: hidden; }
+.report-column { width: 100%; max-width: 760px; margin: 0 auto; padding: 0 1.5rem; }
+.report-section { min-height: calc(100dvh - 3rem); padding: 2.5rem 0 3.5rem; border-bottom: 1px solid hsl(var(--border)); scroll-margin-top: 1.5rem; }
+.report-section:last-child { border-bottom: 0; }
+.report-section h2 { margin: .75rem 0 .5rem; font: 600 18px/1.4 var(--sans); }
+.report-sub { margin: 0 0 1.75rem; font-size: 13px; color: hsl(var(--muted-foreground)); }
+.report-hero { margin: 1.5rem 0 2rem; }
+.report-figure { display: block; font: 600 48px/1.15 var(--sans); font-variant-numeric: proportional-nums; letter-spacing: -.025em; overflow-wrap: anywhere; }
+.report-caption { margin: .5rem 0 .625rem; font-size: 12px; color: hsl(var(--muted-foreground)); }
+.report-cite { white-space: normal; max-width: 100%; text-align: left; overflow-wrap: anywhere; }
+.report-tiles { display: grid; grid-template-columns: repeat(var(--report-columns, 3), minmax(0, 1fr)); gap: .75rem; margin: 1.75rem 0; }
+.report-kpi { min-width: 0; border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 2px); padding: .875rem; }
+.report-kpi-label { margin: 0 0 .5rem; font-size: 11px; color: hsl(var(--muted-foreground)); }
+.report-kpi-value { margin: 0 0 .375rem; font: 600 18px/1.4 var(--sans); font-variant-numeric: proportional-nums; overflow-wrap: anywhere; }
+.report-kpi .count { display: block; margin: 0 0 .5rem; }
+.report-paras { margin: 1.75rem 0; }
+.report-paras p { margin: 0 0 1rem; font-size: 13px; line-height: 1.6; color: hsl(var(--muted-foreground)); }
+.report-table-wrap { margin: 1.75rem 0; overflow-x: auto; }
+.report-table-wrap .lbl { display: block; margin-bottom: .625rem; }
+.report-table { table-layout: fixed; }
+.report-table th, .report-table td { padding: .5rem; text-align: left; border-bottom: 1px solid hsl(var(--border)); overflow-wrap: anywhere; }
+.report-table th { font-size: 11px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+.report-table td { font-family: var(--mono); font-size: 11.5px; }
+.report-table-wrap .report-caption { font-size: 11px; }
+.report-table-cite { display: flex; justify-content: flex-end; margin-top: .5rem; }
+#reportList .row1 { align-items: baseline; }
+#reportList .name { white-space: normal; }
+#reportList .meta { margin-left: 1.375rem; }
+#reportAux .src-entry { padding: 1rem 0; border-bottom: 1px solid hsl(var(--border)); }
+#reportAux .src-entry:first-child { padding-top: 0; }
+.report-publisher { margin: 0 0 .375rem; font-size: 11px; color: hsl(var(--muted-foreground)); }
+.report-source-year { display: block; margin: .5rem 0; }
+.report-cited-in { margin-top: 1.5rem; }
+@container (max-width: 600px) {
+  .report-column { padding: 0 1rem; }
+  .report-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .report-kpi { padding: .625rem; }
+}
+/* REPORT_CHART_STYLES */
+.report-chart { margin: 1.75rem 0; min-width: 0; }
+.report-chart-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: .75rem; }
+.report-chart-title { font-size: 12px; font-weight: 500; color: hsl(var(--foreground)); }
+.report-chart-head .lnk { flex-shrink: 0; }
+.report-chart-plot { width: 100%; min-width: 0; }
+.report-chart-svg { display: block; width: 100%; overflow: visible; }
+.report-chart-svg text { fill: hsl(var(--muted-foreground)); font: 11px var(--mono); font-variant-numeric: tabular-nums; }
+.report-chart-svg .report-value { fill: hsl(var(--foreground)); }
+.report-chart-grid { stroke: hsl(var(--border)); stroke-width: 1; }
+.report-chart-hit { fill: transparent; pointer-events: all; }
+.report-chart-mark { cursor: default; outline: none; }
+.report-chart-mark:focus-visible .report-chart-hit { stroke: hsl(var(--foreground)); stroke-width: 1; }
+.report-chart-point { opacity: 0; pointer-events: none; }
+.report-chart-point.end, .report-chart-mark.is-active .report-chart-point { opacity: 1; }
+.report-chart-crosshair { stroke: hsl(var(--foreground) / .35); stroke-width: 1; pointer-events: none; }
+.report-chart-legend { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin-top: .5rem; font-size: 11px; color: hsl(var(--muted-foreground)); }
+.report-chart-legend span { display: inline-flex; align-items: center; gap: .375rem; }
+.report-chart-swatch { width: 8px; height: 8px; flex-shrink: 0; border-radius: 2px; }
+.report-chart-cite { display: flex; justify-content: flex-end; margin-top: .75rem; }
+.report-chart-table { overflow-x: auto; }
+.report-chart-table .kv th { padding: .35rem .5rem .35rem 0; border-bottom: 1px solid hsl(var(--border)); text-align: left; font-size: 11px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+.report-chart-table .kv td:not(:first-child) { font: 11.5px var(--mono); font-variant-numeric: tabular-nums; }
+.report-chart-tooltip { position: fixed; z-index: 45; width: max-content; max-width: min(280px, calc(100vw - 16px)); padding: .5rem .625rem; background: white; border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 2px); box-shadow: 0 4px 12px rgb(0 0 0 / .1); color: hsl(var(--foreground)); font-size: 12px; line-height: 1.5; pointer-events: none; }
+.report-chart-tooltip .count { display: block; margin-top: .125rem; }
 </style>
 <div class="app" id="app">
   <div class="topbar">
     <button class="back-btn" id="backBtn" aria-label="Back to list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg><span>Back</span></button>
     <a class="brand" href="/" aria-label="HyperTrack"><img src="/logo-small.svg" alt="HyperTrack" style="height:22px;width:auto;display:block;filter:grayscale(1)"></a>
     <nav class="nav-tabs" id="navTabs" aria-label="Payroll desk">
-      <button data-tab="connect" class="active" aria-current="page">Connect</button>
+      <button data-tab="connect">Connect</button>
       <button data-tab="reconcile">Reconcile</button>
       <button data-tab="rules">Rules</button>
+      <button data-tab="reports" class="active" aria-current="page">Reports</button>
     </nav>
     <div class="spacer"></div><div class="topstats" id="topstats"></div>
     <a class="memo-link btn" href="/payroll">Payroll ops ↗</a>
   </div>
-  <main class="main on" id="m-sources">
+  <main class="main" id="m-sources">
     <div class="queue"><div class="toolbar" id="tb-sources"></div><div class="case-list scroll" id="sourceList"></div></div>
     <section class="detail" id="sourceDetail" aria-label="Sources detail"></section>
     <aside class="aux" id="sourceAux"></aside>
@@ -336,6 +402,11 @@ button:disabled { cursor: default; opacity: .6; }
     <section class="detail" id="ruleDetail" aria-label="Rules detail"></section>
     <aside class="aux" id="ruleAux"></aside>
   </main>
+  <main class="main on" id="m-reports">
+    <div class="queue"><div class="toolbar" id="tb-reports"></div><div class="case-list scroll" id="reportList"></div></div>
+    <section class="detail" id="reportDetail" aria-label="Reports deck"><div class="detail-body scroll" id="reportDeck"></div></section>
+    <aside class="aux" id="reportAux"></aside>
+  </main>
 </div>
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Rule and source" tabindex="-1"></aside>
@@ -343,11 +414,13 @@ button:disabled { cursor: default; opacity: .6; }
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="engine.js"></script>
 <script src="catalog.js"></script>
+<script src="report-data.js"></script>
 <script>
 (function(){
 'use strict';
 const {FACILITIES, RULES, makeWeek, runEngine, fireCount, dayLabels, fmtT, fmtH, money} = window.BENCH;
 const CATALOG = window.CATALOG;
+const REPORT = window.REPORT;
 const PROV = {
   'CA-MB-01': { doc:'IWC Wage Order 5-2001 §11(A)', url:'https://www.dir.ca.gov/dlse/faq_mealperiods.htm', verbatim:'No employer shall employ any person for a work period of <span class="hl-cite">more than five (5) hours without a meal period of not less than 30 minutes</span>, except that when a work period of not more than six (6) hours will complete the day’s work the meal period may be waived by mutual consent of the employer and the employee.', dates:'Effective 2001 → current' },
   'CA-OT-8': { doc:'California Labor Code §510(a)', url:'https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=LAB&sectionNum=510', verbatim:'Eight hours of labor constitutes a day’s work. <span class="hl-cite">Any work in excess of eight hours in one workday</span> and any work in excess of 40 hours in any one workweek and the first eight hours worked on the seventh day of work in any one workweek <span class="hl-cite">shall be compensated at the rate of no less than one and one-half times the regular rate of pay</span>.', dates:'Effective 2000 → current' },
@@ -430,11 +503,12 @@ const LIVE_RULES = RULES.map(r=>({...r, scopeText:SCOPE_TEXT[r.id]}));
 const CUSTOM = [];
 const BUCKETS = ['Legal','State','Local','Contract','CBA','Facility','Vertical','Time-based','Common sense','This week'];
 // 'sources' and 'payroll' are the two Connect sub-tabs; connectSub remembers the last one.
-let tab='sources', connectSub='sources', selSource='ukg-ready', selCycle='2026-08-24', selShift='4821', selDest='adp', selRule='CA-MB-01';
+let tab='reports', connectSub='sources', selSource='ukg-ready', selCycle='2026-08-24', selShift='4821', selDest='adp', selRule='CA-MB-01';
 let shiftFilter='all', cycleFilter='all', bucketFilter='All';
 let drawer=null, connection=null, composer=null, uploadState='idle', toastTimer, overlayReturn=null;
-const Q = {sources:'', reconcile:'', payroll:'', rules:''};
-const searchOpen = {sources:false, reconcile:false, payroll:false, rules:false};
+let drawerSource=null, selReport=REPORT.sections[0].id, reportReady=false, reportObserver=null, reportScrollFrame=null;
+const Q = {sources:'', reconcile:'', payroll:'', rules:'', reports:''};
+const searchOpen = {sources:false, reconcile:false, payroll:false, rules:false, reports:false};
 const batches = new Map(), sourceDocuments = new Map();
 const $ = id=>document.getElementById(id);
 const esc = s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -683,20 +757,25 @@ function addDraft(){
 }
 
 // One source drawer; discrepancy context stays pinned to the originating shift.
-function openDrawer(ruleId,shiftId,rowIndex){
-  if(!ruleObj(ruleId))return;closeOverlay(false);drawer={rule:ruleId,shift:shiftId||null,rowIndex};renderDrawer();showOverlay('drawer');
+function openDrawer(ruleId,shiftId,rowIndex,sourceId){
+  if(sourceId&&REPORT.sources[sourceId]){
+    closeOverlay(false);drawerSource=sourceId;$('drawer').setAttribute('aria-label','Report source');renderDrawer();showOverlay('drawer');return;
+  }
+  if(!ruleObj(ruleId))return;closeOverlay(false);$('drawer').setAttribute('aria-label','Rule and source');drawer={rule:ruleId,shift:shiftId||null,rowIndex};renderDrawer();showOverlay('drawer');
 }
 function renderDrawer(){
+  if(drawerSource){renderReportSourceDrawer();return;}
   if(!drawer)return;const o=ruleObj(drawer.rule);if(!o)return;
   const r=o.live?o.r:null,c=o.c,found=drawer.shift?byId(drawer.shift):null,runCycle=found?.c||cycle();
   const note=drawer.rowIndex!=null?found?.r.rows[drawer.rowIndex]:found?.r.rows.find(x=>x.ruleId===drawer.rule&&isDiscrepancy(x));
   $('drawer').innerHTML=`<div class="drawer-head"><h3 class="drawer-title" id="drawerTitle">Rule and source</h3><button class="icon-btn" data-closeoverlay="1" aria-label="Close drawer">${ICO_X}</button></div><div class="drawer-body scroll"><div class="actions"><span class="tag mono">${esc(r?r.id:c.id)}</span>${tag(r?r.bucket:c.bucket)}${r?kindTag(r.kind):tag('Pack')}</div><p class="r-sent" style="margin-top:1rem">${esc(r?r.sentence:c.statement)}</p>${found?`<h3 class="lbl">On this shift</h3><div class="src-quote">${esc(note?.note||'No discrepancy for this rule.')}</div><button class="btn" data-goshift="${esc(found.r.shift.id)}">Open shift #${esc(found.r.shift.id)} →</button>`:''}${r?provenance(r):`<div class="actions" style="margin-top:1rem">${packSources(c)}</div>`}<p class="count">Applied ${r&&!r.draft?fireCount(runCycle.run,r.id):0}× this cycle</p><div class="actions"><button class="btn" data-gorule="${esc(r?r.id:c.id)}">Open in Rules →</button></div></div>`;
 }
 function showOverlay(id){
+  hideReportTooltip();
   overlayReturn=document.activeElement;$('app').inert=true;$('scrim').classList.add('open');$(id).classList.add('open');$(id).focus();
 }
 function closeOverlay(restore=true){
-  const open=drawer||connection;drawer=null;connection=null;
+  const open=drawer||drawerSource||connection;drawer=null;drawerSource=null;connection=null;
   $('drawer').classList.remove('open');$('modal').classList.remove('open');$('scrim').classList.remove('open');$('app').inert=false;
   if(restore&&open&&overlayReturn?.isConnected)overlayReturn.focus();
 }
@@ -734,22 +813,265 @@ function sendBatch(){
   setTimeout(()=>{batches.set(key,'sent');renderPayrollDetail();renderPayrollAux();toast(`${t.workers.length} workers · ${money(t.gross)} · batch ${d.id.toUpperCase()}-0901`);},1200);
 }
 
+// REPORT_CHARTS
+const reportChartSpecs=new Map(),reportChartObserved=new WeakSet();
+const REPORT_CHART_ACCENT='#16a34a',REPORT_CHART_GRAY='#a3a3a3';
+const REPORT_CHART_STACK=['#16a34a','#6cc48b','#b9e0c4','#e5e5e5'];
+let reportChartObserver=null,reportChartEventsBound=false,reportTooltipMark=null;
+function reportChartNumber(value){return Number(value).toLocaleString('en-US',{maximumFractionDigits:6});}
+function reportChartValue(value,unit){
+  const n=reportChartNumber(value);
+  return unit.startsWith('$')?'$'+n+unit.slice(1):n+(unit==='%'?'%':unit?' '+unit:'');
+}
+function reportChart(chart,id){
+  reportChartSpecs.set(id,chart);
+  const series=chart.type==='grouped'?chart.series:null;
+  const cols=series?['Reason',...series.map(s=>s.name)]:['Category',chart.unit?'Value ('+chart.unit+')':'Value'];
+  const rows=chart.labels.map((label,i)=>[label,...(series?series.map(s=>reportChartValue(s.values[i],chart.unit)): [reportChartValue(chart.values[i],chart.unit)])]);
+  const legend=series?series.map((s,i)=>({name:s.name,color:i===0?REPORT_CHART_ACCENT:'#2f6fd8'})):chart.type==='stack'?chart.labels.map((name,i)=>({name,color:REPORT_CHART_STACK[i]})):[];
+  return `<figure class="report-chart" data-report-chart="${esc(id)}" aria-labelledby="${esc(id)}-title"><div class="report-chart-head"><figcaption class="report-chart-title" id="${esc(id)}-title">${esc(chart.title)}</figcaption><button class="lnk" data-chart-table="${esc(id)}" aria-controls="${esc(id)}-plot ${esc(id)}-table" aria-pressed="false" aria-label="Show table for ${esc(chart.title)}">Table</button></div><div class="report-chart-plot" id="${esc(id)}-plot"></div><div class="report-chart-table scroll" id="${esc(id)}-table" hidden><table class="kv"><thead><tr>${cols.map(c=>`<th scope="col">${esc(c)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${row.map((v,i)=>i===0?`<th scope="row">${esc(v)}</th>`:`<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>${legend.length>=2?`<div class="report-chart-legend">${legend.map(s=>`<span><i class="report-chart-swatch" style="background:${s.color}" aria-hidden="true"></i>${esc(s.name)}</span>`).join('')}</div>`:''}<div class="report-chart-cite">${reportCite(chart.src)}</div></figure>`;
+}
+function reportChartScale(max){
+  const raw=(max||1)/3,magnitude=10**Math.floor(Math.log10(raw));
+  const step=([1,2,2.5,5,10].find(n=>n>=raw/magnitude)||10)*magnitude;
+  const top=Math.ceil(max/step)*step||step;
+  return {top,ticks:Array.from({length:Math.round(top/step)+1},(_,i)=>i*step)};
+}
+function reportChartWrap(label,maxChars){
+  const lines=[];let line='';
+  for(const original of label.split(' ')){
+    let word=original;
+    if(line&&(line.length+word.length+1)>maxChars){lines.push(line);line='';}
+    while(word.length>maxChars){if(line){lines.push(line);line='';}lines.push(word.slice(0,maxChars));word=word.slice(maxChars);}
+    if(word)line+=(line?' ':'')+word;
+  }
+  if(line)lines.push(line);return lines;
+}
+function reportChartBarPath(x,y,w,h,round=true){
+  const r=round?Math.min(4,w/2,h):0;
+  return `M${x},${y+h}V${y+r}Q${x},${y} ${x+r},${y}H${x+w-r}Q${x+w},${y} ${x+w},${y+r}V${y+h}Z`;
+}
+function reportDrawChart(host,width){
+  const figure=host.closest('[data-report-chart]'),chart=reportChartSpecs.get(figure?.dataset.reportChart);
+  if(!chart||width<=0||host.hidden)return;
+  width=Math.round(width*100)/100;
+  if(host.dataset.width===String(width)&&host.firstElementChild)return;
+  if(reportTooltipMark&&host.contains(reportTooltipMark))hideReportTooltip();
+  host.dataset.width=width;
+  const left=48,right=18,top=22,plotHeight=200,bottom=top+plotHeight,plotWidth=Math.max(1,width-left-right);
+  const isStack=chart.type==='stack',isLine=chart.type==='line',isGrouped=chart.type==='grouped';
+  const values=isGrouped?chart.series.flatMap(s=>s.values):chart.values;
+  const max=isStack?chart.values.reduce((sum,v)=>sum+v,0):Math.max(...values);
+  const scale=reportChartScale(max),y=v=>bottom-v/scale.top*plotHeight;
+  const groupWidth=plotWidth/(isStack?1:chart.labels.length);
+  const step=isLine?plotWidth/Math.max(1,chart.labels.length-1):groupWidth;
+  const x=i=>left+(isLine?i*step:(i+.5)*groupWidth);
+  const labelStride=isLine?Math.max(1,Math.ceil(chart.labels.length/Math.max(1,Math.floor(plotWidth/42)))):1;
+  const xLabels=isStack?[]:chart.labels.map((label,i)=>({i,lines:reportChartWrap(label,Math.max(6,Math.floor((isLine?step*labelStride:groupWidth-4)/6.7)))})).filter(({i})=>i%labelStride===0||i===chart.labels.length-1);
+  const axisBand=Math.max(30,...xLabels.map(label=>label.lines.length*13+14)),height=bottom+axisBand;
+  const tickText=value=>Math.abs(value)>=1000?reportChartNumber(value/1000)+'K':reportChartNumber(value);
+  let svg=`<svg class="report-chart-svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="group" aria-label="${esc(chart.title)}"><text x="${left-8}" y="12" text-anchor="end">${esc(chart.unit)}</text>${scale.ticks.map(value=>`<line class="report-chart-grid" x1="${left}" y1="${y(value)}" x2="${width-right}" y2="${y(value)}"/><text x="${left-8}" y="${y(value)+4}" text-anchor="end">${tickText(value)}</text>`).join('')}`;
+  svg+=xLabels.map(({i,lines})=>`<text x="${x(i)}" y="${bottom+18}" text-anchor="${isLine&&i===0?'start':isLine&&i===chart.labels.length-1?'end':'middle'}">${lines.map((line,j)=>`<tspan x="${x(i)}" dy="${j?13:0}">${esc(line)}</tspan>`).join('')}</text>`).join('');
+  const mark=(label,value,series,anchorX,anchorY,hit,shape)=>`<g class="report-chart-mark" tabindex="0" role="img" aria-label="${esc(label+(series?' · '+series:'')+': '+reportChartValue(value,chart.unit))}" data-chart-label="${esc(label)}" data-chart-value="${value}" data-chart-series="${esc(series||'')}" data-chart-unit="${esc(chart.unit)}" data-chart-x="${anchorX}" data-chart-y="${anchorY}">${hit}${shape}</g>`;
+  const hitRect=(rx,ry,rw,rh)=>`<rect class="report-chart-hit" x="${rx}" y="${ry}" width="${Math.max(24,rw)}" height="${Math.max(24,rh)}"/>`;
+  if(isLine){
+    const path=chart.values.map((value,i)=>`${i?'L':'M'}${x(i)},${y(value)}`).join(' ');
+    svg+=`<path d="${path} L${x(chart.values.length-1)},${bottom} L${x(0)},${bottom} Z" fill="${REPORT_CHART_ACCENT}" opacity=".1"/><path d="${path}" fill="none" stroke="${REPORT_CHART_ACCENT}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><line class="report-chart-crosshair" x1="0" x2="0" y1="${top}" y2="${bottom}" hidden/>`;
+    chart.values.forEach((value,i)=>{
+      const last=i===chart.values.length-1,bandLeft=Math.max(left,x(i)-step/2),bandRight=Math.min(width-right,x(i)+step/2),hitWidth=Math.max(24,bandRight-bandLeft),hitX=Math.max(left,Math.min(bandLeft,width-right-hitWidth));
+      svg+=mark(chart.labels[i],value,'',x(i),y(value),hitRect(hitX,top,hitWidth,plotHeight),`<circle class="report-chart-point${last?' end':''}" cx="${x(i)}" cy="${y(value)}" r="4" fill="${REPORT_CHART_ACCENT}" stroke="white" stroke-width="2"/>`);
+      if(last)svg+=`<text class="report-value" x="${x(i)}" y="${y(value)-10}" text-anchor="end" pointer-events="none">${esc(reportChartValue(value,chart.unit))}</text>`;
+    });
+  }else if(isStack){
+    const barWidth=24,barX=left+plotWidth/2-barWidth/2;let sum=0;
+    chart.values.forEach((value,i)=>{
+      const before=sum;sum+=value;
+      const barY=y(sum),barHeight=y(before)-barY-(i?2:0),centerY=barY+Math.max(0,barHeight)/2;
+      svg+=mark(chart.labels[i],value,'',barX+barWidth,centerY,hitRect(barX-6,centerY-Math.max(24,barHeight)/2,barWidth+12,barHeight),`<path d="${reportChartBarPath(barX,barY,barWidth,Math.max(0,barHeight),i===chart.values.length-1)}" fill="${REPORT_CHART_STACK[i]}" pointer-events="none"/>`);
+      if(i===0)svg+=`<text class="report-value" x="${barX+barWidth+10}" y="${centerY+4}" pointer-events="none">${esc(reportChartValue(value,chart.unit))}</text>`;
+    });
+  }else{
+    const series=isGrouped?chart.series:[{name:'',values:chart.values}],gap=2;
+    const barWidth=Math.min(24,Math.max(1,(groupWidth*.72-gap*(series.length-1))/series.length));
+    chart.labels.forEach((label,i)=>series.forEach((s,j)=>{
+      const value=s.values[i],barX=x(i)-(series.length*barWidth+(series.length-1)*gap)/2+j*(barWidth+gap),barY=y(value),barHeight=bottom-barY;
+      const color=isGrouped?(j===0?REPORT_CHART_ACCENT:'#2f6fd8'):Number.isInteger(chart.emphasis)&&chart.emphasis!==i?REPORT_CHART_GRAY:REPORT_CHART_ACCENT;
+      const hitWidth=Math.max(24,barWidth),hitHeight=Math.max(24,barHeight);
+      svg+=mark(label,value,s.name,barX+barWidth/2,barY,hitRect(barX+(barWidth-hitWidth)/2,bottom-hitHeight,hitWidth,hitHeight),`<path d="${reportChartBarPath(barX,barY,barWidth,barHeight)}" fill="${color}" pointer-events="none"/>`);
+      if(!isGrouped&&chart.emphasis===i)svg+=`<text class="report-value" x="${barX+barWidth/2}" y="${barY-8}" text-anchor="middle" pointer-events="none">${esc(reportChartValue(value,chart.unit))}</text>`;
+    }));
+  }
+  host.innerHTML=svg+'</svg>';
+}
+function hideReportTooltip(){
+  const tip=$('reportChartTooltip');if(tip)tip.hidden=true;
+  if(reportTooltipMark){reportTooltipMark.classList.remove('is-active');reportTooltipMark.removeAttribute('aria-describedby');reportTooltipMark.closest('svg')?.querySelector('.report-chart-crosshair')?.setAttribute('hidden','');}
+  reportTooltipMark=null;
+}
+function showReportTooltip(mark){
+  if(!mark)return;hideReportTooltip();
+  const tip=$('reportChartTooltip');if(!tip)return;
+  reportTooltipMark=mark;mark.classList.add('is-active');mark.setAttribute('aria-describedby',tip.id);
+  const data=mark.dataset;
+  tip.innerHTML=`<div>${esc(data.chartLabel)}</div>${data.chartSeries?`<div class="count">${esc(data.chartSeries)}</div>`:''}<div>${esc(reportChartValue(Number(data.chartValue),data.chartUnit))}</div>`;
+  tip.hidden=false;
+  const svg=mark.closest('svg'),bounds=svg.getBoundingClientRect(),ratio=bounds.width/svg.viewBox.baseVal.width;
+  const anchorX=bounds.left+Number(data.chartX)*ratio,anchorY=bounds.top+Number(data.chartY)*ratio,tipBounds=tip.getBoundingClientRect();
+  let left=anchorX+12,top=anchorY-tipBounds.height-10;
+  if(left+tipBounds.width>window.innerWidth-8)left=anchorX-tipBounds.width-12;
+  if(top<8)top=anchorY+12;
+  tip.style.left=Math.max(8,Math.min(left,window.innerWidth-tipBounds.width-8))+'px';
+  tip.style.top=Math.max(8,Math.min(top,window.innerHeight-tipBounds.height-8))+'px';
+  const crosshair=svg.querySelector('.report-chart-crosshair');
+  if(crosshair){crosshair.setAttribute('x1',data.chartX);crosshair.setAttribute('x2',data.chartX);crosshair.removeAttribute('hidden');}
+}
+function initReportCharts(){
+  const deck=$('reportDeck');if(!deck)return;
+  if(!reportChartEventsBound){
+    reportChartEventsBound=true;
+    const tip=document.createElement('div');tip.id='reportChartTooltip';tip.className='report-chart-tooltip';tip.setAttribute('role','tooltip');tip.hidden=true;document.body.appendChild(tip);
+    deck.addEventListener('pointerover',e=>{const mark=e.target.closest('.report-chart-mark');if(mark&&mark!==reportTooltipMark)showReportTooltip(mark);});
+    deck.addEventListener('pointerout',e=>{const mark=e.target.closest('.report-chart-mark');if(mark&&!mark.contains(e.relatedTarget)&&document.activeElement!==mark)hideReportTooltip();});
+    deck.addEventListener('focusin',e=>{const mark=e.target.closest('.report-chart-mark');if(mark)showReportTooltip(mark);});
+    deck.addEventListener('focusout',e=>{if(e.target.closest('.report-chart-mark'))hideReportTooltip();});
+    deck.addEventListener('keydown',e=>{if(e.key==='Escape')hideReportTooltip();});
+    deck.addEventListener('scroll',hideReportTooltip,true);
+    deck.addEventListener('click',e=>{
+      const toggle=e.target.closest('[data-chart-table]');if(!toggle)return;
+      const id=toggle.dataset.chartTable,plot=$(id+'-plot'),table=$(id+'-table'),showTable=table.hidden;
+      hideReportTooltip();plot.hidden=showTable;table.hidden=!showTable;toggle.textContent=showTable?'Chart':'Table';toggle.setAttribute('aria-pressed',String(showTable));toggle.setAttribute('aria-label',(showTable?'Show chart for ':'Show table for ')+reportChartSpecs.get(id).title);
+      if(!showTable)reportDrawChart(plot,plot.getBoundingClientRect().width);
+    });
+    if(typeof ResizeObserver!=='undefined')reportChartObserver=new ResizeObserver(entries=>entries.forEach(entry=>reportDrawChart(entry.target,entry.contentRect.width)));
+    window.addEventListener('resize',()=>{hideReportTooltip();if(!reportChartObserver)deck.querySelectorAll('.report-chart-plot').forEach(host=>reportDrawChart(host,host.getBoundingClientRect().width));});
+  }
+  deck.querySelectorAll('.report-chart-plot').forEach(host=>{
+    if(reportChartObserver&&!reportChartObserved.has(host)){reportChartObserved.add(host);reportChartObserver.observe(host);}
+    reportDrawChart(host,host.getBoundingClientRect().width);
+  });
+}
+
+// REPORT_SECTIONS
+// Exact source IDs stay on chips; only the aux list deduplicates display keys.
+function reportSourceIds(section){
+  const ids=new Set();
+  function visit(value){
+    if(typeof value==='string'){
+      for(const match of value.matchAll(/\[([a-z0-9-]+)\]/g))ids.add(match[1]);
+    }else if(Array.isArray(value))value.forEach(visit);
+    else if(value&&typeof value==='object'){
+      if(value.src)ids.add(value.src);
+      Object.values(value).forEach(visit);
+    }
+  }
+  visit(section);return [...ids];
+}
+function reportCite(id){
+  const source=REPORT.sources[id];
+  return source?`<button class="tag click report-cite" data-reportcite="${esc(id)}" aria-label="Source: ${esc(source.key)}">${esc(source.key)}</button>`:'';
+}
+function reportText(text){return esc(text).replace(/\[([a-z0-9-]+)\]/g,(_,id)=>reportCite(id));}
+function reportSourceLink(source){return source.url?`<a class="btn" href="${esc(source.url)}" target="_blank" rel="noopener">Open source document ↗</a>`:'';}
+function renderReportQueue(){
+  const query=Q.reports.trim().toLowerCase();
+  $('reportList').innerHTML=REPORT.sections.filter(s=>!query||JSON.stringify(s).toLowerCase().includes(query)).map(s=>`<button class="case${s.id===selReport?' active':''}" data-reportsection="${esc(s.id)}"${s.id===selReport?' aria-current="location"':''}><div class="row1"><span class="count">${esc(s.num)}</span><span class="name">${esc(s.title)}</span></div><div class="meta">${esc(s.sub)}</div></button>`).join('')||empty('No report sections match.');
+}
+function reportTiles(tiles){
+  return `<div class="report-tiles" style="--report-columns:${Math.min(4,tiles.length)}">${tiles.map(t=>`<div class="report-kpi"><p class="report-kpi-label">${esc(t.label)}</p><p class="report-kpi-value">${esc(t.value)}</p>${t.sub?`<p class="count">${esc(t.sub)}</p>`:''}${t.src?reportCite(t.src):''}</div>`).join('')}</div>`;
+}
+function reportDataTable(table){
+  return `<div class="report-table-wrap"><span class="lbl">${esc(table.title)}</span><table class="kv report-table" aria-label="${esc(table.title)}"><thead><tr>${table.cols.map(col=>`<th scope="col">${esc(col)}</th>`).join('')}</tr></thead><tbody>${table.rows.map(row=>`<tr>${row.map(value=>`<td>${esc(value)}</td>`).join('')}</tr>`).join('')}</tbody></table>${table.note?`<p class="report-caption">${esc(table.note)}</p>`:''}<div class="report-table-cite">${table.src?reportCite(table.src):''}</div></div>`;
+}
+function renderReportLive(){
+  const c=cycle();
+  for(const section of REPORT.sections.filter(s=>s.live)){
+    const target=$('report-live-'+section.id);if(!target)continue;
+    target.innerHTML=reportTiles([
+      {label:'Flagged shifts',value:String(c.run.totals.flags),sub:c.label+' · synthetic cycle'},
+      {label:'Held shifts',value:String(c.run.totals.held),sub:'Excluded from the outgoing batch'},
+      {label:'Corrections',value:corrections(c),sub:'Underpay / overpay · held shifts excluded'},
+    ]);
+  }
+}
+function renderReportDeck(){
+  if(reportReady){renderReportLive();return;}
+  const labels={retention:'Retention',cost:'Cost',compliance:'Compliance',timedata:'Time data',economics:'Economics',turnover:'Turnover',reliability:'Reliability',closeout:'Closeout'};
+  $('reportDeck').innerHTML=`<div class="report-column">${REPORT.sections.map(section=>`<section class="report-section" id="report-section-${esc(section.id)}" data-reportblock="${esc(section.id)}" aria-labelledby="report-heading-${esc(section.id)}"><div class="lbl">${esc(section.num)} · ${esc(labels[section.id]||section.id)}</div><h2 id="report-heading-${esc(section.id)}" tabindex="-1">${esc(section.title)}</h2><p class="report-sub">${esc(section.sub)}</p>${section.hero?`<div class="report-hero"><span class="report-figure">${esc(section.hero.value)}</span><p class="report-caption">${esc(section.hero.caption)}</p>${reportCite(section.hero.src)}</div>`:''}${section.chart?reportChart(section.chart,section.id+'-chart'):''}${section.chart2?reportChart(section.chart2,section.id+'-chart2'):''}${section.tiles?reportTiles(section.tiles):''}${section.table?reportDataTable(section.table):''}${section.live?`<div id="report-live-${esc(section.id)}" aria-live="polite"></div>`:''}<div class="report-paras">${(section.paras||[]).map(p=>`<p>${reportText(p)}</p>`).join('')}</div>${section.cta?`<button class="btn" data-tab="${esc(section.cta.tab)}">${esc(section.cta.label)}</button>`:''}</section>`).join('')}</div>`;
+  reportReady=true;renderReportLive();initReportCharts();
+  const deck=$('reportDeck');
+  const scheduleUpdate=()=>{
+    if(reportScrollFrame!==null)return;
+    reportScrollFrame=requestAnimationFrame(()=>{reportScrollFrame=null;updateActiveReport();});
+  };
+  if(typeof IntersectionObserver!=='undefined'){
+    reportObserver=new IntersectionObserver(scheduleUpdate,{root:deck,rootMargin:'0px 0px -60% 0px',threshold:[0,.01,.25]});
+    deck.querySelectorAll('[data-reportblock]').forEach(block=>reportObserver.observe(block));
+  }
+  // Also track the anchor within sections taller than the observer's root band.
+  deck.addEventListener('scroll',scheduleUpdate,{passive:true});
+}
+function setActiveReport(id){
+  if(selReport===id)return;selReport=id;
+  $('reportList').querySelectorAll('[data-reportsection]').forEach(button=>{
+    const on=button.dataset.reportsection===id;button.classList.toggle('active',on);
+    if(on)button.setAttribute('aria-current','location');else button.removeAttribute('aria-current');
+  });
+  renderReportAux();
+}
+function updateActiveReport(){
+  const deck=$('reportDeck');if(tab!=='reports'||!deck.clientHeight)return;
+  const anchor=deck.getBoundingClientRect().top+Math.min(120,deck.clientHeight*.25);
+  let active=REPORT.sections[0].id;
+  for(const block of deck.querySelectorAll('[data-reportblock]')){
+    if(block.getBoundingClientRect().top<=anchor)active=block.dataset.reportblock;else break;
+  }
+  setActiveReport(active);
+}
+function goReportSection(id){
+  if(!REPORT.sections.some(s=>s.id===id))return;
+  closeOverlay();if(tab!=='reports')setTab('reports');setMobileDetail(true);setActiveReport(id);
+  requestAnimationFrame(()=>{
+    initReportCharts();
+    const deck=$('reportDeck'),section=$('report-section-'+id);
+    const top=section.getBoundingClientRect().top-deck.getBoundingClientRect().top+deck.scrollTop;
+    const reduced=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+    deck.scrollTo({top,behavior:reduced?'auto':'smooth'});
+    $('report-heading-'+id).focus({preventScroll:true});
+  });
+}
+function renderReportAux(){
+  const section=REPORT.sections.find(s=>s.id===selReport),keys=new Set();
+  const sources=reportSourceIds(section).map(id=>REPORT.sources[id]).filter(source=>{
+    if(keys.has(source.key))return false;keys.add(source.key);return true;
+  });
+  $('reportAux').innerHTML=`<div class="aux-head lbl">Sources</div><div class="aux-body scroll">${sources.map(source=>`<div class="src-entry"><p class="report-publisher">${esc(source.publisher)}</p><h6>${esc(source.title)}</h6><span class="count report-source-year">${esc(source.year)} · ${esc(source.key)}</span>${tag(source.confidence)}<div class="actions" style="margin-top:.75rem">${reportSourceLink(source)}</div></div>`).join('')||empty('Live figures from this synthetic pay cycle.')}</div>`;
+}
+function renderReportSourceDrawer(){
+  const source=REPORT.sources[drawerSource];if(!source)return;
+  const sections=REPORT.sections.filter(section=>reportSourceIds(section).includes(drawerSource));
+  $('drawer').innerHTML=`<div class="drawer-head"><h3 class="drawer-title">Source</h3><button class="icon-btn" data-closeoverlay="1" aria-label="Close drawer">${ICO_X}</button></div><div class="drawer-body scroll"><div class="actions"><span class="tag report-cite">${esc(source.key)}</span>${tag(source.confidence)}</div><div class="src-entry"><p class="report-publisher">${esc(source.publisher)}</p><h6>${esc(source.title)} (${esc(source.year)})</h6><div class="src-quote">${esc(source.quote)}</div><div class="actions">${reportSourceLink(source)}</div></div><div class="report-cited-in"><h3 class="lbl">Cited in</h3><ul class="fired">${sections.map(section=>`<li><button class="btn" data-reportsection="${esc(section.id)}"><span class="fid">${esc(section.num)}</span><span>${esc(section.title)}</span></button></li>`).join('')}</ul></div></div>`;
+}
+function renderReports(){renderReportQueue();renderReportDeck();renderReportAux();}
+
 // Shell, single-row search toolbars, and delegated actions.
 function setMobileDetail(on){$('app').classList.toggle('mobile-detail',on);}
 // 'connect' is the nav button; the two connection screens stay separate mains.
-const NAV_OF={sources:'connect',payroll:'connect',reconcile:'reconcile',rules:'rules'};
+const NAV_OF={sources:'connect',payroll:'connect',reconcile:'reconcile',rules:'rules',reports:'reports'};
 function setTab(next){
   if(next==='connect')next=connectSub;
-  if(!['sources','reconcile','payroll','rules'].includes(next))return;
+  if(!['sources','reconcile','payroll','rules','reports'].includes(next))return;
+  hideReportTooltip();
   tab=next;if(NAV_OF[tab]==='connect')connectSub=tab;
   document.querySelectorAll('#navTabs button').forEach(b=>{const on=b.dataset.tab===NAV_OF[tab];b.classList.toggle('active',on);if(on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
   document.querySelectorAll('.main').forEach(m=>m.classList.toggle('on',m.id==='m-'+tab));setMobileDetail(false);renderAll();
+  if(tab==='reports')requestAnimationFrame(()=>{initReportCharts();updateActiveReport();});
 }
 // Connect's sub-tabs wear the nav pill so the two levels read as one control family.
 function connectSubTabs(){
   return `<nav class="nav-tabs" aria-label="Connection screens">${[['sources','Timesheets'],['payroll','Payroll']].map(([id,label])=>`<button data-tab="${id}"${tab===id?' class="active" aria-current="page"':''}>${label}</button>`).join('')}</nav>`;
 }
 function toolbarChips(t){
+  if(t==='reports')return '';
   if(t==='rules')return `<div class="chips">${['All',...ruleBuckets()].map(b=>`<button class="chip${bucketFilter===b?' active':''}" data-bucket="${esc(b)}">${esc(b)}</button>`).join('')}</div>`;
   return `<div class="chips">${['all','open','paid'].map(v=>`<button class="chip${cycleFilter===v?' active':''}" data-filter="${t}" data-value="${v}">${title(v)}</button>`).join('')}</div>`;
 }
@@ -762,8 +1084,8 @@ function renderSources(){renderSourceQueue();renderSourceDetail();renderSourceAu
 function renderReconcile(){renderCycleQueue();renderCycleDetail();renderCycleAux();}
 function renderPayroll(){renderPayrollQueue();renderPayrollDetail();renderPayrollAux();}
 function renderRules(){renderRuleQueue();renderRuleDetail();renderRuleAux();}
-const QUEUE_RENDER={sources:renderSourceQueue,reconcile:renderCycleQueue,payroll:renderPayrollQueue,rules:renderRuleQueue};
-function renderAll(){renderTop();Object.keys(QUEUE_RENDER).forEach(renderToolbar);renderSources();renderReconcile();renderPayroll();renderRules();if(drawer)renderDrawer();}
+const QUEUE_RENDER={sources:renderSourceQueue,reconcile:renderCycleQueue,payroll:renderPayrollQueue,rules:renderRuleQueue,reports:renderReportQueue};
+function renderAll(){renderTop();Object.keys(QUEUE_RENDER).forEach(renderToolbar);renderSources();renderReconcile();renderPayroll();renderRules();renderReports();if(drawer||drawerSource)renderDrawer();}
 
 document.addEventListener('input',e=>{
   if(e.target.dataset.q){const k=e.target.dataset.q;Q[k]=e.target.value;QUEUE_RENDER[k]();}
@@ -777,9 +1099,9 @@ document.addEventListener('drop',e=>{const drop=e.target.closest?.('#uploadDrop'
 $('scrim').addEventListener('click',()=>closeOverlay());
 $('backBtn').addEventListener('click',()=>setMobileDetail(false));
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){closeOverlay();return;}
+  if(e.key==='Escape'){hideReportTooltip();closeOverlay();return;}
   if((e.key==='Enter'||e.key===' ')&&e.target.matches('tr[data-shift]')){e.preventDefault();selectShift(e.target.dataset.shift);return;}
-  if(e.key==='Tab'&&(drawer||connection)){
+  if(e.key==='Tab'&&(drawer||drawerSource||connection)){
     const root=$(connection?'modal':'drawer');const focusable=[...root.querySelectorAll('button:not(:disabled),a[href],input,textarea,[tabindex="0"]')].filter(el=>!el.hidden);
     const first=focusable[0],last=focusable[focusable.length-1];
     if(!first){e.preventDefault();root.focus();}
@@ -788,8 +1110,10 @@ document.addEventListener('keydown',e=>{
   }
 });
 document.addEventListener('click',e=>{
-  const el=e.target.closest('[data-tab],[data-stoggle],[data-filter],[data-source],[data-cycle],[data-dest],[data-sfilter],[data-shift],[data-discrepancy],[data-rule],[data-bucket],[data-goshift],[data-gorule],[data-cite],[data-closeoverlay],[data-connect],[data-connectmethod],[data-sync],[data-choosefile],[data-openreconcile],[data-approve],[data-send],[data-addrule],[data-compilecustom],[data-answer],[data-adddraft],[data-editdraft],[data-cancelrule]');
+  const el=e.target.closest('[data-tab],[data-stoggle],[data-filter],[data-source],[data-cycle],[data-dest],[data-sfilter],[data-shift],[data-discrepancy],[data-rule],[data-bucket],[data-goshift],[data-gorule],[data-cite],[data-closeoverlay],[data-connect],[data-connectmethod],[data-sync],[data-choosefile],[data-openreconcile],[data-approve],[data-send],[data-addrule],[data-compilecustom],[data-answer],[data-adddraft],[data-editdraft],[data-cancelrule],[data-reportsection],[data-reportcite]');
   if(!el||el.disabled)return;const d=el.dataset;
+  if(d.reportsection)return goReportSection(d.reportsection);
+  if(d.reportcite)return openDrawer(null,null,null,d.reportcite);
   if(d.tab)return setTab(d.tab);
   if(d.stoggle){const t=d.stoggle;searchOpen[t]=!searchOpen[t];if(!searchOpen[t]){Q[t]='';QUEUE_RENDER[t]();}renderToolbar(t);if(searchOpen[t])$('tb-'+t).querySelector('input').focus();return;}
   if(d.filter){cycleFilter=d.value;renderToolbar(d.filter);QUEUE_RENDER[d.filter]();return;}
