@@ -22,6 +22,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); 
 /* frame: 16:9 storyboard panel, letterboxed above the caption band */
 .frame { margin: 0; flex: 1 1 0; min-height: 0; overflow: hidden; padding: 64px 28px 0; display: flex; align-items: center; justify-content: center; }
 .frame img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; border-radius: 6px; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+.frame--ui img { border: 1px solid #2a2a2e; border-radius: 8px; background: #fff; }
 .frame.is-missing img { display: none; }
 .frame.is-missing::after { content: "GENERATING · " attr(data-label); width: 100%; max-width: calc(100vh * 16/9 - 200px); aspect-ratio: 16/9; display: grid; place-items: center; border: 1px dashed #333; border-radius: 6px; color: var(--muted); font-family: var(--display); letter-spacing: .08em; font-size: 13px; }
 

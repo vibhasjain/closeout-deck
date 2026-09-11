@@ -43,3 +43,26 @@ Boardroom table at night, single hard spotlight. A large coin stands on edge mid
 
 ### 12 · real-time — "Now we can notice exceptions and address them in real time."
 Dawn at a distribution centre parking lot. A worker walks from her car across the asphalt toward the entrance; drawn on the ground around the building is a glowing green geofence ring, rendered as a precise technical overlay with tick marks. Her phone buzzes with an abstract SMS bubble and a check mark. Hovering above her, a semi-transparent isometric holographic panel drawn in green wireframe shows a shift timeline with one exception being resolved into a clean bar. In the far background the middle-office windows are dark, nobody stayed late. Optimistic mood.
+
+## Act 3 — Payroll ops, the AI story
+
+### 13 · two-questions — "Every shift has to answer two questions."
+Night, a payroll clerk's workbench seen from directly above, one desk lamp. In the centre a single completed-shift card, blank and abstract, with a worker's badge photo silhouette. To its left a worker's pay envelope with a cheque peeking out; to its right a customer invoice on a clipboard with a stamp pad. The clerk's two hands hold two different pens, one hovering over each. Around the edges: a calculator, a stapler, coffee ring stains, a stack of other shift cards waiting. The shift card in the centre glows faintly green.
+
+### 14 · three-clocks — "The answer comes from three sources that disagree."
+One frame split into three vertical panels like a comic strip. Left panel: a wall-mounted badge kiosk at a warehouse entrance with a paper sign-in clipboard hanging beside it and a round wall clock above. Middle panel: a worker's hand holding a phone with an abstract clock-in app, a second round clock on the screen. Right panel: a bird's-eye map drawn as a technical overlay, a dotted GPS trail from a car park to a building outline, a third clock drawn in the corner. All three clock faces show visibly different times (hands only, no numerals). Only the GPS trail is green.
+
+### 15 · rulebook-in-heads — "The rulebook lives in people's heads."
+A payroll clerk at a desk drowning in institutional memory: a fat three-ring binder of client contracts propped open, a union agreement booklet, dozens of sticky notes on the monitor bezel and wall, a hand-drawn cheat sheet taped to the desk, a rolodex, a desk phone ringing with its light blinking, two mugs. The clerk has one finger on a binder clause and the other hand on a calculator, eyes closed, reciting from memory. Daylight through blinds. One single sticky note is green.
+
+### 16 · compile — "Compile the rulebook once. Run it on every shift."
+Interior of a clean modern print shop, cinematic side light. On the left, a stack of binders, contracts and handwritten rule sheets is fed into an elegant industrial machine drawn like a cross between a letterpress and a card-punch compiler, all brass rollers and glass panels. Out of the right side rolls a clean continuous strip of punched cards, each one a shift, moving along a conveyor under a stamping head. Gears mesh inside the glass. The stamp head glows green as it marks each card.
+
+### 17 · agent-conversation — "The agent asks the worker, not the clerk."
+A worker on break sitting on the edge of a loading dock at dusk, legs dangling, coffee beside her, phone in hand. Her phone shows an abstract text-message thread: one incoming bubble, one outgoing bubble, no words. Floating beside her, a semi-transparent holographic panel drawn in thin wireframe shows a shift timeline with a single flagged gap; a check mark is replacing the flag. In the background, forklifts and pallets, the warehouse humming. Only the check mark is green.
+
+### 18 · human-queue — "Humans handle only what needs a human."
+Bright morning, a calm operations desk by a window with plants. One ops person, relaxed, coffee in hand, looking at three shift cards laid neatly on the desk, that is the whole queue. Beside the desk a recycling bin overflowing with the paper timesheet mountain from before. On the wall a clock at nine in the morning. Through the window, the parking lot fills with workers arriving. The top card of the three glows green.
+
+### 19 · receipt — "Every decision shows its work."
+Close-up of a detective's evidence board, but for one payout. Pinned in the centre: an abstract pay stub. Connected to it by taut string and pushpins: a photo of a badge kiosk clock, a small map with a GPS trail, a highlighted clause torn from a contract page, a printed text-message bubble, a customer's signed approval slip. Warm lamp light from the side, corkboard texture, a magnifying glass resting on the ledge below. The string connecting the evidence is green.
