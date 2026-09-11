@@ -6,7 +6,7 @@
   --green: #22c55e;
   --display: "Space Grotesk", system-ui, sans-serif;
   --body: "Inter", system-ui, sans-serif;
-  --copy-h: 300px; /* fixed caption band so every frame renders the same size */
+  --block: 1100px; /* text block and frame share this width */
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font-family: var(--body); overflow: hidden; }
@@ -21,12 +21,12 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); 
 .slide.is-active { opacity: 1; visibility: visible; }
 
 /* frame: 16:9 storyboard panel, letterboxed above the caption band */
-.frame { margin: 0; position: relative; flex: 0 0 auto; height: calc(100vh - var(--copy-h)); min-height: 0; overflow: hidden; padding: 64px 28px 0; display: flex; align-items: center; justify-content: center; }
-.frame img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; border-radius: 6px; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+.frame { margin: 0; position: relative; flex: 1 1 0; min-height: 0; overflow: hidden; padding: 64px 28px 0; display: flex; align-items: center; justify-content: center; }
+.frame img { width: 100%; max-width: calc(var(--block) - 56px); height: 100%; object-fit: cover; border-radius: 6px; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
 .frame.is-missing img { display: none; }
 .frame.is-missing::after { content: "GENERATING · " attr(data-label); width: 100%; max-width: calc(100vh * 16/9 - 200px); aspect-ratio: 16/9; display: grid; place-items: center; border: 1px dashed #333; border-radius: 6px; color: var(--muted); font-family: var(--display); letter-spacing: .08em; font-size: 13px; }
 
-.copy { flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 28px 28px 40px; max-width: 1100px; margin: 0 auto; width: 100%; }
+.copy { flex: none; padding: 28px 28px 40px; max-width: var(--block); margin: 0 auto; width: 100%; }
 .eyebrow { margin: 0 0 10px; color: var(--green); font-family: var(--display); font-size: 12px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; }
 .copy h1 { margin: 0 0 12px; font-family: var(--display); font-weight: 700; font-size: clamp(24px, 3.4vw, 42px); line-height: 1.08; letter-spacing: -.01em; }
 .copy p:last-child { margin: 0; color: var(--muted); font-size: clamp(15px, 1.35vw, 19px); line-height: 1.5; max-width: 62ch; }
@@ -45,7 +45,8 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); 
   html, body { overflow: auto; }
   .slide { position: relative; min-height: 100vh; }
   .slide:not(.is-active) { display: none; }
-  .frame { flex: none; height: auto; overflow: visible; }
+  .frame { flex: none; overflow: visible; }
+  .frame img { height: auto; aspect-ratio: 16/9; }
   .frame { padding: 60px 16px 0; }
   .copy { padding: 20px 16px 72px; }
   .nav { bottom: 12px; right: 12px; }
