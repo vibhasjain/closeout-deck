@@ -20,9 +20,8 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); 
 .slide.is-active { opacity: 1; visibility: visible; }
 
 /* frame: 16:9 storyboard panel, letterboxed above the caption band */
-.frame { margin: 0; flex: 1 1 0; min-height: 0; overflow: hidden; padding: 64px 28px 0; display: flex; align-items: center; justify-content: center; }
+.frame { margin: 0; position: relative; flex: 1 1 0; min-height: 0; overflow: hidden; padding: 64px 28px 0; display: flex; align-items: center; justify-content: center; }
 .frame img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; border-radius: 6px; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
-.frame--ui img { border: 1px solid #2a2a2e; border-radius: 8px; background: #fff; }
 .frame.is-missing img { display: none; }
 .frame.is-missing::after { content: "GENERATING · " attr(data-label); width: 100%; max-width: calc(100vh * 16/9 - 200px); aspect-ratio: 16/9; display: grid; place-items: center; border: 1px dashed #333; border-radius: 6px; color: var(--muted); font-family: var(--display); letter-spacing: .08em; font-size: 13px; }
 
@@ -30,14 +29,12 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); 
 .eyebrow { margin: 0 0 10px; color: var(--green); font-family: var(--display); font-size: 12px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; }
 .copy h1 { margin: 0 0 12px; font-family: var(--display); font-weight: 700; font-size: clamp(24px, 3.4vw, 42px); line-height: 1.08; letter-spacing: -.01em; }
 .copy p:last-child { margin: 0; color: var(--muted); font-size: clamp(15px, 1.35vw, 19px); line-height: 1.5; max-width: 62ch; }
-.copy--center { text-align: center; }
-.copy--center p:last-child { margin: 0 auto; }
 
-/* close: house sprite flicker */
-.sprite { flex: 1 1 0; min-height: 0; }
-.sprite { background: url("../hero-sprite-1.jpg") center/cover no-repeat; animation: flicker 1.6s step-end infinite; opacity: .9; }
-@keyframes flicker { 0%, 100% { background-image: url("../hero-sprite-1.jpg"); } 50% { background-image: url("../hero-sprite-2.jpg"); } }
-.slide--close .copy { padding-bottom: 64px; }
+
+/* brand tiles overlaid on the digital-worker frame: the systems it can log into */
+.logos { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; padding: 8px 10px; background: rgba(11,11,12,.78); border: 1px solid #2a2a2e; border-radius: 12px; backdrop-filter: blur(6px); }
+.logos img { width: 32px; height: 32px; border-radius: 8px; display: block; }
+@media (max-width: 700px) { .logos { gap: 5px; padding: 6px; } .logos img { width: 22px; height: 22px; border-radius: 6px; } }
 
 .nav { position: fixed; right: 20px; bottom: 16px; z-index: 5; display: flex; gap: 6px; }
 .nav button { background: var(--panel); color: var(--ink); border: 1px solid #2a2a2e; border-radius: 6px; width: 40px; height: 36px; font-size: 16px; cursor: pointer; }
