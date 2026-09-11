@@ -1,1 +1,0 @@
-FRAME 23 DONE.
