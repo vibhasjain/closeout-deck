@@ -20,8 +20,11 @@
     else if (e.key.toLowerCase() === "f") document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
   });
   let x0 = 0;
+  const flow = matchMedia("(max-width: 700px)").matches; // phone: continuous scroll, no swiping between slides
+  if (!flow) {
   addEventListener("touchstart", (e) => { x0 = e.touches[0].clientX; }, { passive: true });
   addEventListener("touchend", (e) => { const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 50) show(dx < 0 ? i + 1 : i - 1); });
+  }
   addEventListener("hashchange", () => show((parseInt(location.hash.slice(1), 10) || 1) - 1));
 
   // ponytail: missing frame → dashed placeholder, so the deck reads while Codex is still rendering
@@ -30,5 +33,6 @@
     img.addEventListener("error", miss, { once: true });
     if (img.complete && img.naturalWidth === 0) miss();
   });
-  show(i);
+  if (flow) slides[i].scrollIntoView();
+  else show(i);
 })();
