@@ -4,11 +4,12 @@ Read this before touching anything in `story/`. It is the full context for exten
 
 ## What it is
 
-An 18-slide storyboard for staffing C-suite (healthcare and light industrial). Every slide is one illustrated frame plus a caption. No UI screenshots, no logos inside the art, no closing "tagline" slide. Two acts:
+An 18-slide storyboard for staffing C-suite (healthcare and light industrial). Every slide is one illustrated frame plus a caption. No UI screenshots, no logos inside the art, no closing "tagline" slide. Structure:
 
-1. **Business story (slides 01–10).** Tech-enabled staffing firms deploy AI faster; AI already did recruiting and matching, the middle office (pay and bill) is next; workers trust a platform that pays right; pay wrong and the door revolves; every day workers choose you on their phone and customers choose you on the VMS; if you don't pay as well as the new guys the flywheel reverses; revenue protection and worker retention are one coin.
-2. **Bridge (slide 11)** "Here's how HyperTrack solves this end to end, with AI at every step." One assembly line, a wireframe agent at every station.
-3. **Product story (slides 12–18).** Schedules and timesheets auto-ingest (digital worker in a virtual browser) → location tracked in real time → paper timesheets and clock-ins by SMS and phone call → every source collated and compared on one timeline → payroll rules applied (flag → clause → compiled rule) → discrepancies mediated agentically → uploaded to payroll agentically through the browser.
+1. **Business story (slides 01–09).** Tech-enabled staffing firms deploy AI faster; AI already did recruiting and matching, the middle office (pay and bill) is next; workers trust a platform that pays right; pay wrong and the door revolves; every day workers choose you on their phone and customers choose you on the VMS; if you don't pay as well as the new guys the flywheel reverses.
+2. **Bridge (slide 10)** "Here's how HyperTrack solves this end to end, with AI at every step." One assembly line, a wireframe agent at every station.
+3. **Product story (slides 11–17).** Schedules and timesheets auto-ingest (digital worker in a virtual browser) → location tracked in real time → paper timesheets and clock-ins by SMS and phone call → every source collated and compared on one timeline → payroll rules applied (flag → clause → compiled rule) → discrepancies mediated agentically → uploaded to payroll agentically through the browser.
+4. **Close (slide 18).** "Revenue protection and worker retention are two sides of the same coin." The coin frame ends the deck (owner moved it here via Agent Keyboard); it is the only closing slide allowed.
 
 The owner's script for the business story and the product beats is what the captions paraphrase. Keep captions in that voice: short, direct, second person, concrete.
 
@@ -18,9 +19,10 @@ The owner's script for the business story and the product beats is what the capt
 |---|---|
 | `index.html` | The deck. One `<section class="slide">` per slide, in order. Header counter reads `#tot`. |
 | `deck.css` | Layout. `--block: 1100px` is the shared width of the caption text block and the frame. Frames fill that width and crop with `object-fit: cover`; caption heights vary and that is intended. `.logos` is the vendor-tile strip overlaid on a frame. |
-| `deck.js` | Keyboard/hash/touch navigation. Counts slides itself. Marks a frame `.is-missing` (dashed "GENERATING" placeholder) if its image 404s, so a slide can ship before its art exists. |
+| `deck.js` | Keyboard/hash/touch navigation on desktop; on phones (≤700px) the deck is one continuous scroll with no counter or arrows. Counts slides itself. Marks a frame `.is-missing` (dashed "GENERATING" placeholder) if its image 404s, so a slide can ship before its art exists. |
 | `STORYBOARD.md` | The STYLE block and one SCENE paragraph per frame. Every generated frame's prompt is STYLE + SCENE, verbatim. Add new scenes here first. |
 | `assets/NN-slug.jpg` | Deck frames, 1920×1080 JPEG q70, ~400–600 KB. |
+| `assets/m/NN-slug.jpg` | Phone variants, 960×540 JPEG, ~60–85 KB, served via `<picture>` under 700px. `compress.sh` makes both. |
 | `assets/raw/NN-slug.png` | Originals from the image model. Never edit; re-crop from these. |
 | `assets/raw/compress.sh` | raw PNG → `assets/*.jpg`. Run after any new PNG lands. |
 | `assets/raw/manifest.md` | Provenance: frame → original path under `~/.codex/generated_images` → retry note. |
@@ -41,7 +43,7 @@ Writing a new SCENE: one paragraph, 80–140 words, concrete nouns, say where th
 
 ```html
 <section class="slide">
-  <figure class="frame" data-label="NN-slug"><img src="assets/NN-slug.jpg" alt="One-sentence description of the scene"></figure>
+  <figure class="frame" data-label="NN-slug"><picture><source media="(max-width:700px)" srcset="assets/m/NN-slug.jpg"><img src="assets/NN-slug.jpg" alt="One-sentence description of the scene" loading="lazy" decoding="async"></picture></figure>
   <div class="copy">
     <p class="eyebrow">12 · Product</p>
     <h1>Headline, one sentence, ends with a period.</h1>
@@ -50,7 +52,7 @@ Writing a new SCENE: one paragraph, 80–140 words, concrete nouns, say where th
 </section>
 ```
 
-Optional vendor strip inside the figure, after the `<img>`:
+Optional vendor strip inside the figure, after the `</picture>`:
 
 ```html
 <div class="logos"><img src="../logos/tiles/ukg.png" alt="ukg"><img src="../logos/tiles/adp.png" alt="adp"></div>
@@ -77,14 +79,14 @@ Eyebrows are numbered sequentially in document order (`01 · …` through `09 ·
    Then `story/assets/raw/compress.sh` and delete the brief file.
    `codex` is installed on the Agent Keyboard server too (its `~/.codex/config.toml` is seeded with gpt-6-astra / ultra / fast / full access, login lives on the volume), so run the command there exactly as above; one frame takes 2–4 minutes. Run several frames as parallel sessions, never one long session. If `magick` and `sips` are both missing, `compress.sh` falls back to Pillow: `pip3 install --user pillow` once.
    Only if generation genuinely cannot run: still write the SCENE, insert the slide with its `<img src="assets/NN-slug.jpg">`, push. The deck shows a dashed "GENERATING · NN-slug" placeholder for that slide until someone runs the command. Say so plainly in your reply and paste the exact command.
-3. Insert the `<section>` in the right place, renumber eyebrows, update `#tot`, bump the `?v=` on `deck.css`/`deck.js` links if you changed them.
+3. Insert the `<section>` in the right place (a new product beat goes inside slides 11–17 in pipeline order; the coin stays last), renumber eyebrows, update `#tot`, bump the `?v=` on `deck.css`/`deck.js` links if you changed them.
 4. Check before pushing: every `assets/*.jpg` referenced in `index.html` exists (or is knowingly a placeholder), section count equals `#tot`, every eyebrow number is sequential, no slide repeats a point an earlier slide already made.
 
 ## Rules from the owner's reviews (binding)
 
 - **Illustration only.** No product screenshots, no UI crops, even to show the product; abstract the product into the same language (digital worker at a browser, lightbox, stamp, chalkboard).
 - **One point, one frame.** If a headline restates an earlier slide, cut it. The deck was trimmed from 30 to 18 for this reason.
-- **No generic close slide.** No sprite/tagline ending. End on the last real beat.
+- **No generic close slide.** No sprite/tagline ending. The coin frame is the close; nothing goes after it.
 - **Headlines must be picturable.** "Every punch beside every other source" was rejected as meaningless. Say the concrete thing.
 - **Word choices:** "the nature of staffing" (not "flex work"); "pay workers as well as the new guys" (not "excellently"); "Schedules and timesheets auto-ingest" (not "Data auto-ingests").
 - **Frames are full text-block width and crop to fill.** Do not letterbox or shrink frames to equalise heights.
