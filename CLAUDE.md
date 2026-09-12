@@ -9,6 +9,9 @@
 - Compress JPEGs to ~70% quality
 - Use appropriate formats (JPEG for photos, SVG for icons/logos, PNG only when transparency needed)
 
+## /story deck
+- `story/` is the illustrated storyboard deck at closeoutcopilot.com/story. Before editing anything in it, read `story/CLAUDE.md`: it holds the illustration language, the slide anatomy, the Codex image-generation command, and the owner's binding review rules.
+
 ## Project Info
 - Static HTML/CSS/JS presentation deck for HyperTrack Closeout Copilot
 - Dark theme with green (#22c55e) accent colors
