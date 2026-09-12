@@ -11,7 +11,7 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font-family: var(--body); overflow: hidden; }
 
-.chrome { position: fixed; inset: 0 0 auto 0; z-index: 5; display: flex; justify-content: space-between; align-items: center; padding: 18px 28px; font-size: 13px; color: var(--muted); }
+.chrome { position: fixed; inset: 0 0 auto 0; z-index: 5; display: flex; justify-content: space-between; align-items: center; padding: 18px 28px; font-size: 13px; color: var(--ink); text-shadow: 0 1px 2px rgba(0,0,0,.6); }
 .brand { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); text-decoration: none; font-family: var(--display); font-weight: 700; letter-spacing: .01em; }
 .brand img { width: 22px; height: 22px; }
 .counter { font-variant-numeric: tabular-nums; }
@@ -21,9 +21,11 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); 
 .slide.is-active { opacity: 1; visibility: visible; }
 
 /* frame: 16:9 storyboard panel, letterboxed above the caption band */
-.frame { margin: 0; position: relative; flex: 1 1 0; min-height: 0; overflow: hidden; padding: 64px 28px 0; display: flex; align-items: center; justify-content: center; }
+.frame { margin: 0; position: relative; flex: 1 1 0; min-height: 0; overflow: hidden; padding: 0; display: flex; align-items: center; justify-content: center; }
 .frame picture { display: contents; }
-.frame img { width: 100%; max-width: calc(var(--block) - 56px); height: 100%; object-fit: cover; border-radius: 6px; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+.frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* chrome floats over the full-bleed frame; a soft top scrim keeps the logo and counter legible on light art */
+.frame::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 96px; background: linear-gradient(rgba(11,11,12,.55), rgba(11,11,12,0)); pointer-events: none; }
 .frame.is-missing img { display: none; }
 .frame.is-missing::after { content: "GENERATING · " attr(data-label); width: 100%; max-width: calc(100vh * 16/9 - 200px); aspect-ratio: 16/9; display: grid; place-items: center; border: 1px dashed #333; border-radius: 6px; color: var(--muted); font-family: var(--display); letter-spacing: .08em; font-size: 13px; }
 
@@ -47,8 +49,9 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); 
   html, body { overflow: auto; }
   .slide { position: relative; opacity: 1; visibility: visible; }
   .counter, .nav { display: none; }
+  .chrome { position: absolute; } /* logo sits on the first frame only, not over every frame while scrolling */
   .frame { flex: none; overflow: visible; }
   .frame img { height: auto; aspect-ratio: 16/9; }
-  .frame { padding: 60px 16px 0; }
+  .frame { padding: 0; }
   .copy { padding: 20px 16px 48px; }
 }

@@ -18,7 +18,7 @@ The owner's script for the business story and the product beats is what the capt
 | Path | What |
 |---|---|
 | `index.html` | The deck. One `<section class="slide">` per slide, in order. Header counter reads `#tot`. |
-| `deck.css` | Layout. `--block: 1100px` is the shared width of the caption text block and the frame. Frames fill that width and crop with `object-fit: cover`; caption heights vary and that is intended. `.logos` is the vendor-tile strip overlaid on a frame. |
+| `deck.css` | Layout. Frames are full-bleed: edge to edge and from the top of the viewport down to the caption, cropped with `object-fit: cover`; the logo and counter float over the frame under a soft top scrim. `--block: 1100px` is the caption text block width. Caption heights vary and that is intended; never push the caption down to fit art. `.logos` is the vendor-tile strip overlaid on a frame. |
 | `deck.js` | Keyboard/hash/touch navigation on desktop; on phones (≤700px) the deck is one continuous scroll with no counter or arrows. Counts slides itself. Marks a frame `.is-missing` (dashed "GENERATING" placeholder) if its image 404s, so a slide can ship before its art exists. |
 | `STORYBOARD.md` | The STYLE block and one SCENE paragraph per frame. Every generated frame's prompt is STYLE + SCENE, verbatim. Add new scenes here first. |
 | `assets/NN-slug.jpg` | Deck frames, 1920×1080 JPEG q70, ~400–600 KB. |
@@ -89,7 +89,7 @@ Eyebrows are numbered sequentially in document order (`01 · …` through `09 ·
 - **No generic close slide.** No sprite/tagline ending. The coin frame is the close; nothing goes after it.
 - **Headlines must be picturable.** "Every punch beside every other source" was rejected as meaningless. Say the concrete thing.
 - **Word choices:** "the nature of staffing" (not "flex work"); "pay workers as well as the new guys" (not "excellently"); "Schedules and timesheets auto-ingest" (not "Data auto-ingests").
-- **Frames are full text-block width and crop to fill.** Do not letterbox or shrink frames to equalise heights.
+- **Frames are full-bleed and crop to fill.** Do not letterbox, inset, or shrink frames to equalise heights, and do not push the caption down.
 - **Brand marks** are the overlaid `logos/tiles` strip, uniform 32px tiles in full brand colour. Never grayscale, never wordmarks, never model-drawn logos.
 - **Product story order is fixed** (ingest → location → SMS/phone timekeeping → collate and compare → rules → mediation → upload). A new product beat goes where it belongs in that pipeline.
 - **Don't commit unrelated dirty files** in the repo root; stage `story/` only.
