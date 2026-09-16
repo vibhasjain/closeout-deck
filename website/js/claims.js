@@ -4,6 +4,9 @@
   const brief = 'website/BRIEF.md §5; owner to revalidate before publication';
   const synthetic = 'website/BRIEF.md §§4,6; synthetic demonstration data';
   const entry = (value, status, source = brief) => ({ value, status, source });
+  const source = (publisher, year, url) => ({ publisher, year, url });
+  const report = source('HyperTrack', 2026, 'https://hypertrack.com/research');
+  const metric = (value, where, source = report, confidence = 'first-party-draft') => ({ value, where, source, confidence });
   window.CLAIMS = {
     'growth-140': entry('140% median annual growth', 'unconfirmed'),
     'market-925': entry('98.7% vs 92.5% show rate', 'unconfirmed'),
@@ -37,6 +40,20 @@
     'timeline-axis': entry('06:00–18:00; ticks 06, 09, 12, 15, 18', 'synthetic', synthetic),
     'compiled-rules': entry('CA-MB-01: 30-minute meal before end of 5th hour, 1-hour premium, +1.0 h; CON-SUTTER-01: bill $0; TW-1187: hold OT > 40 h, expires Sun Aug 30; ran on 54 shifts, fired 1, #4825', 'synthetic', synthetic),
     'supervisor-messages': entry('14:40; 14:52; floor 06:01–14:31; hour 5; 1-hour premium; CA-MB-01; +$24.50; 3 attachments', 'synthetic', synthetic),
-    'payroll-batch': entry('ADP-0901; 41 workers; $58,420; sent Thu 18:00', 'synthetic', synthetic)
+    'payroll-batch': entry('ADP-0901; 41 workers; $58,420; sent Thu 18:00', 'synthetic', synthetic),
+    'report-locked': metric('Q2 2026; three months; about a million validated shifts/month', '#numbers; #industries'),
+    'report-no-shows': metric('11.5%', '#numbers no-shows'),
+    'report-arrivals': metric({ onTime: '74.2%', late: '21.9%', unverifiable: '3.9%' }, '#numbers arriving workers'),
+    'report-validation': metric('~1M/month; visibility 64% at go-live to 94% by month 11', '#numbers validated shifts'),
+    'report-on-time': metric({ healthcare: { median: '69.3%', best: '75.0%', overall: '72.6%' }, lightIndustrial: { median: '83.3%', best: '85.6%', overall: '76.4%' } }, '#numbers dumbbell; #industries'),
+    'report-late': metric({ series: ['Healthcare', 'Light industrial'], percent: { 'Left too late': [46.7, 41.0], 'Long stop': [16.9, 16.1], Traffic: [8.2, 18.6], 'Last-minute assignment': [13.1, 7.1], 'Drive detour': [10.2, 11.7] } }, '#numbers late arrivals'),
+    'report-visibility': metric({ months: [1, 2, 3, 4, 5, 6, 7, 8], healthcarePercent: [77.4, 84.6, 89.0, 89.9, 91.9, 93.5, 94.9, 95.9], lightIndustrialPercent: [58.4, 74.2, 82.2, 85.9, 88.5, 90.6, 92.1, 92.8] }, '#numbers visibility'),
+    'pay-error-job-search': metric('After one error 24%; after two errors 49%', '#next retention', source('Workforce Institute', 2017, 'https://hrdailyadvisor.hci.org/2017/06/15/payroll-problems-may-undermine-employee-experience-says-survey/'), 'secondary'),
+    'pay-error-cost': metric('$291; direct and indirect', '#next retention', source('EY', 2022, 'https://eyquest.com/files/Cost_and_Risks_Due_to_Payroll_Errors_2022_Final.pdf'), 'primary'),
+    'time-submission-errors': metric('1 in 6; 83.35% error-free', '#next retention', source('Bloomberg Tax', 2019, 'https://data.bloomberglp.com/bna/sites/9/2019/10/BTAX-Payroll-Benchmarks-Survey-Report_Final.pdf'), 'primary'),
+    'timesheet-corrections': metric('80%; employer-reported', '#next retention', source('QuickBooks Time', 2017, 'https://quickbooks.intuit.com/time-tracking/resources/time-attendance-stats/'), 'primary'),
+    'worker-replacement-cost': metric('16% of annual pay; worker earning under $30K', '#next retention', source('Center for American Progress', 2012, 'https://www.americanprogress.org/article/there-are-significant-business-costs-to-replacing-employees/'), 'primary'),
+    'rn-turnover-cost': metric('$60,090 per bedside RN', '#industries healthcare', source('NSI', 2026, 'https://www.nsinursingsolutions.com/documents/library/nsi_national_health_care_retention_report.pdf'), 'primary'),
+    'traditional-staffing': metric('Fill rate 46%; worker turnover 75–95%', '#industries light industrial', source('Contrary Research', 2024, 'https://research.contrary.com/company/traba'), 'secondary')
   };
 })();

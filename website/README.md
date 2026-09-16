@@ -21,11 +21,11 @@ node --check website/js/site.js
 
 ## Design system
 
-The page uses hypertrack.com's system: self-hosted Satoshi, Google Fonts JetBrains Mono, the supplied neutral and green tokens, hand-written CSS, and the repository's Edgework rails, dividers, markers, and content zones in place. There are no shadows or dark theme. To meet the brief's minimum text contrast, small muted text uses `--n600`, the primary CTA fill uses `--green700` (`--green900` on hover), and held-label text uses `--n700` with amber accents; the supplied base token values and type scales remain intact. CTA borders stay neutral to honor the green allowlist. Animation is limited to the specified marquee and synthetic vignettes, with reduced-motion support. The exact supplied loop driver is retained; the three rules map their three beats onto absolute phases 0–2, 3–5, and 6–8 so each footer appears before its group changes. Without JavaScript, all vignette content is visible.
+The page uses hypertrack.com's system: self-hosted Satoshi, Google Fonts JetBrains Mono, the supplied neutral and green tokens, hand-written CSS, and the repository's Edgework rails, dividers, markers, and content zones in place. There are no shadows or dark theme. To meet the original brief's minimum text contrast, small muted text uses `--n600`, the primary CTA fill uses `--green700` (`--green900` on hover), and held-label text uses `--n700` with amber accents; the supplied base token values and type scales remain intact. CTA borders stay neutral to honor the original green allowlist. The second change batch explicitly adds green comparison icons and chart marks, including indigo for light industrial; SVG labels and citation chips use its specified `--n500`, and values use `--n900`. Charts are inline SVG with native mark tooltips, direct values, legends, and expandable data tables. Animation is limited to the specified marquee and synthetic vignettes, with reduced-motion support. The exact supplied loop driver is retained; the three rules map their three beats onto absolute phases 0–2, 3–5, and 6–8 so each footer appears before its group changes. Without JavaScript, vignette content remains readable with only the default rule group and its matching header ID visible. Reduced motion selects only the final rule group.
 
 ## Art
 
-The direction is Green Risograph Monumentalism, generated from `assets/art/ART.md`. Art and asset files are supplied separately and are not edited by this implementation. Each slot references a 1920×1080 JPEG at `assets/art/<slug>.jpg` and a 960×540 phone variant at `assets/art/m/<slug>.jpg`. Missing images show a dashed placeholder with the slot slug.
+The direction is Green Risograph Monumentalism, generated from `assets/art/ART.md`. Art and asset files are supplied separately and are not edited by this implementation. Slots 01–07 reference a 1920×1080 JPEG at `assets/art/<slug>.jpg` and a 960×540 phone variant at `assets/art/m/<slug>.jpg`. Slot 08 uses a 1600×900 desktop JPEG and the same phone-variant path convention. Missing images show a dashed placeholder with the slot slug.
 
 | Slot | Placement |
 | --- | --- |
@@ -36,6 +36,7 @@ The direction is Green Risograph Monumentalism, generated from `assets/art/ART.m
 | `05-hospital-5am` | Healthcare |
 | `06-data-center` | Light industrial |
 | `07-coin-plaza` | Closing call to action |
+| `08-before-after` | The same middle office, before and after |
 
 ## Claims to verify
 
@@ -57,8 +58,38 @@ Statuses below come from the supplied brief. “Verified” records the brief's 
 | quote-competitive-advantage | Review-only reserved proof slot | Customer quote pending verbatim confirmation and approval | unconfirmed | Supply approved quotation and attribution before showing publicly. |
 | connectors-live | Connectors section | Listed timekeeping, payroll, and billing systems are supported | unconfirmed | Confirm live capability and scope for every listed system. |
 | call-expectations | Closing call expectations | Real-shift sample, discrepancy settlements, and show-rate comparison on the call | unconfirmed | Confirm the demo team can deliver each expectation. |
+| report-locked | Numbers section and industry on-time lines | HyperTrack Shift Reliability Report, Q2 2026 figures | unconfirmed | All HyperTrack report figures are from the draft report; confirm against the locked Q2 2026 version. |
 | sia-growth-1 | The shift heading and forecast stat | 1% US staffing growth, 2026 forecast (SIA) | verified | Verified per supplied brief; retain the underlying SIA source and revalidate before publication. |
 | monthly-shifts-1000000 | Hero proof | Over 1,000,000 shifts a month run on HyperTrack | verified | Verified per supplied brief; retain the internal measurement and revalidate before publication. |
+
+## Data sources
+
+Figures, source URLs, publication years, and confidence classifications below were supplied in the second change batch. They are recorded as supplied, without independent web or document verification. `first-party-draft` identifies HyperTrack report data requiring confirmation against the locked Q2 2026 report. `primary` and `secondary` describe the supplied source classification, not a completed fact check. `js/claims.js` stores each new figure with `value`, `where`, a structured source (`publisher`, `year`, `url`), and `confidence`; related series retain all observations in labeled arrays or objects. Tables in the page repeat the chart data without requiring JavaScript.
+
+| Figure | Where on the page | Publisher | Year | Confidence | URL |
+| --- | --- | --- | --- | --- | --- |
+| Q2 2026; three months observed; about a million validated shifts a month | Numbers source description | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
+| No-shows 11.5%, healthcare and light industrial | Numbers tile | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
+| Arriving workers: on time 74.2%, late 21.9%, unverifiable 3.9% | Numbers stacked bar | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
+| ~1M shifts validated per month; visibility 64% at go-live to 94% by month 11 | Numbers tile | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
+| Healthcare on time: median 69.3%, best 75.0%, market overall 72.6% | Numbers dumbbell; Industries healthcare line (median and best) | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
+| Light industrial on time: median 83.3%, best 85.6%, market overall 76.4% | Numbers dumbbell; Industries light industrial line (median and best) | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
+| Left too late: healthcare 46.7%, light industrial 41.0% | Numbers late-arrival bars | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
+| Long stop: healthcare 16.9%, light industrial 16.1% | Numbers late-arrival bars | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
+| Traffic: healthcare 8.2%, light industrial 18.6% | Numbers late-arrival bars | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
+| Last-minute assignment: healthcare 13.1%, light industrial 7.1% | Numbers late-arrival bars | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
+| Drive detour: healthcare 10.2%, light industrial 11.7% | Numbers late-arrival bars | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
+| Healthcare visibility, months 1–8 respectively: 77.4%, 84.6%, 89.0%, 89.9%, 91.9%, 93.5%, 94.9%, 95.9% | Numbers visibility lines | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
+| Light industrial visibility, months 1–8 respectively: 58.4%, 74.2%, 82.2%, 85.9%, 88.5%, 90.6%, 92.1%, 92.8% | Numbers visibility lines | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
+| Start a job search after one paycheck error 24%, after two errors 49% | Next retention bars | Workforce Institute | 2017 | secondary | https://hrdailyadvisor.hci.org/2017/06/15/payroll-problems-may-undermine-employee-experience-says-survey/ |
+| Average cost to fix one payroll error $291, direct and indirect | Next retention tile | EY | 2022 | primary | https://eyquest.com/files/Cost_and_Risks_Due_to_Payroll_Errors_2022_Final.pdf |
+| Time submissions with an error 1 in 6; 83.35% arrive error-free | Next retention tile | Bloomberg Tax | 2019 | primary | https://data.bloomberglp.com/bna/sites/9/2019/10/BTAX-Payroll-Benchmarks-Survey-Report_Final.pdf |
+| Timesheets corrected 80%, employer-reported | Next retention tile | QuickBooks Time | 2017 | primary | https://quickbooks.intuit.com/time-tracking/resources/time-attendance-stats/ |
+| Cost to replace a worker earning under $30K: 16% of annual pay | Next retention tile | Center for American Progress | 2012 | primary | https://www.americanprogress.org/article/there-are-significant-business-costs-to-replacing-employees/ |
+| Turnover cost per bedside RN $60,090 | Industries healthcare line | NSI | 2026 | primary | https://www.nsinursingsolutions.com/documents/library/nsi_national_health_care_retention_report.pdf |
+| Traditional staffing fill rate 46%; worker turnover 75–95% | Industries light industrial line | Contrary Research | 2024 | secondary | https://research.contrary.com/company/traba |
+
+Chart axis ranges are presentation scales, not additional observations: the on-time dumbbell spans 60–90%, visibility spans months 1–8 and 50–100%, and job-search bars span 0–60%. The supplied late-arrival categories are shown as given, without an invented remainder or renormalization.
 
 ## Synthetic data
 
@@ -80,12 +111,12 @@ Every product vignette is a synthetic demonstration and has a “synthetic data�
 
 | File | Purpose |
 | --- | --- |
-| `index.html` | Page, inline copy, seven vignettes, metadata, and claim tags |
+| `index.html` | Page, inline copy, comparison grid, SVG charts and data tables, seven vignettes, metadata, and claim tags |
 | `css/tokens.css` | Satoshi faces, exact tokens, typography, buttons, and primitives |
 | `css/site.css` | Layout, responsive behavior, vignettes, fallbacks, and review styling |
 | `js/site.js` | Navigation, scroll-spy, vignette loops, missing-image fallback, review mode |
-| `js/claims.js` | Numeric claim documentation and replacement reference |
+| `js/claims.js` | Numeric claim documentation, structured data sources, and replacement reference |
 | `check.js` | Dependency-free static checks for assets, anchors, claims, copy, alt text, and widget placement |
-| `README.md` | Setup, design notes, art slots, claim register, and synthetic dataset |
+| `README.md` | Setup, design notes, art slots, claim register, data-source table, and synthetic dataset |
 
 Existing `BRIEF.md`, `assets/**`, repository-root fonts, Edgework CSS, wordmark, favicon, and connector tiles remain supplied dependencies.
