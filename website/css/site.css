@@ -250,7 +250,14 @@ section.bleed { position:relative; width:100%; min-height:min(78vh,820px); displ
 .industry-data .cite { margin-top:8px; }
 
 /* Industry proof and testimonial */
-#industries .art { border-radius:12px; margin-bottom:32px; }
+#industries .industry { position:relative; padding:0; overflow:hidden; background:#efe9dc; }
+#industries .art { position:absolute; inset:0 0 auto 0; height:560px; border:0; border-radius:0; margin:0; aspect-ratio:auto; }
+#industries .art img { object-position:50% 62%; }
+#industries .art[data-art="06-data-center"] img { object-position:50% 55%; }
+#industries .ind-copy { position:relative; padding:430px 32px 40px; background:linear-gradient(180deg, rgba(239,233,220,0) 0px, rgba(239,233,220,0) 330px, rgba(239,233,220,.92) 440px, #efe9dc 520px); }
+#industries .ind-copy .muted { color:var(--n700); }
+@media (max-width:1024px) { #industries .art { height:420px; } #industries .ind-copy { padding-top:300px; background:linear-gradient(180deg, rgba(239,233,220,0) 0px, rgba(239,233,220,0) 210px, rgba(239,233,220,.9) 300px, #efe9dc 360px); } }
+@media (max-width:700px) { #industries .art { height:340px; } #industries .ind-copy { padding:240px 24px 32px; background:linear-gradient(180deg, rgba(239,233,220,0) 0px, rgba(239,233,220,0) 160px, rgba(239,233,220,.9) 240px, #efe9dc 300px); } }
 #industries .stat { margin-top:32px; }
 .testimonial { text-align:center; }
 .quote { max-width:720px; margin:0 auto; font-size:24px; line-height:1.4; font-weight:500; }

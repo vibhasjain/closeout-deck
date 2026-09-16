@@ -5,7 +5,7 @@
   const synthetic = 'website/BRIEF.md §§4,6; synthetic demonstration data';
   const entry = (value, status, source = brief) => ({ value, status, source });
   const source = (publisher, year, url) => ({ publisher, year, url });
-  const report = source('HyperTrack', 2026, 'https://hypertrack.com/research');
+  const report = source('HyperTrack', 2026, 'unpublished — Shift Reliability Report, coming soon');
   const metric = (value, where, source = report, confidence = 'first-party-draft') => ({ value, where, source, confidence });
   window.CLAIMS = {
     'growth-140': entry('140% median annual growth', 'unconfirmed'),

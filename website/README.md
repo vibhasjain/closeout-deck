@@ -92,19 +92,19 @@ Figures, source URLs, publication years, and confidence classifications below we
 
 | Figure | Where on the page | Publisher | Year | Confidence | URL |
 | --- | --- | --- | --- | --- | --- |
-| Q2 2026; three months observed; about a million validated shifts a month | Numbers source description | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
-| No-shows 11.5%, healthcare and light industrial | Numbers tile | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
-| Arriving workers: on time 74.2%, late 21.9%, unverifiable 3.9% | Numbers stacked bar | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
-| ~1M shifts validated per month; visibility 64% at go-live to 94% by month 11 | Numbers tile | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
-| Healthcare on time: median 69.3%, best 75.0%, market overall 72.6% | Numbers dumbbell; Industries healthcare line (median and best) | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
-| Light industrial on time: median 83.3%, best 85.6%, market overall 76.4% | Numbers dumbbell; Industries light industrial line (median and best) | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
-| Left too late: healthcare 46.7%, light industrial 41.0% | Numbers late-arrival bars | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
-| Long stop: healthcare 16.9%, light industrial 16.1% | Numbers late-arrival bars | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
-| Traffic: healthcare 8.2%, light industrial 18.6% | Numbers late-arrival bars | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
-| Last-minute assignment: healthcare 13.1%, light industrial 7.1% | Numbers late-arrival bars | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
-| Drive detour: healthcare 10.2%, light industrial 11.7% | Numbers late-arrival bars | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
-| Healthcare visibility, months 1–8 respectively: 77.4%, 84.6%, 89.0%, 89.9%, 91.9%, 93.5%, 94.9%, 95.9% | Numbers visibility lines | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
-| Light industrial visibility, months 1–8 respectively: 58.4%, 74.2%, 82.2%, 85.9%, 88.5%, 90.6%, 92.1%, 92.8% | Numbers visibility lines | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
+| Q2 2026; three months observed; about a million validated shifts a month | Numbers source description | HyperTrack | 2026 | first-party-draft | (unpublished; report coming soon, no public link yet) |
+| No-shows 11.5%, healthcare and light industrial | Numbers tile | HyperTrack | 2026 | first-party-draft | (unpublished; report coming soon, no public link yet) |
+| Arriving workers: on time 74.2%, late 21.9%, unverifiable 3.9% | Numbers stacked bar | HyperTrack | 2026 | first-party-draft | (unpublished; report coming soon, no public link yet) |
+| ~1M shifts validated per month; visibility 64% at go-live to 94% by month 11 | Numbers tile | HyperTrack | 2026 | first-party-draft | (unpublished; report coming soon, no public link yet) |
+| Healthcare on time: median 69.3%, best 75.0%, market overall 72.6% | Numbers dumbbell; Industries healthcare line (median and best) | HyperTrack | 2026 | first-party-draft | (unpublished; report coming soon, no public link yet) |
+| Light industrial on time: median 83.3%, best 85.6%, market overall 76.4% | Numbers dumbbell; Industries light industrial line (median and best) | HyperTrack | 2026 | first-party-draft | (unpublished; report coming soon, no public link yet) |
+| Left too late: healthcare 46.7%, light industrial 41.0% | Numbers late-arrival bars | HyperTrack | 2026 | first-party-draft | (unpublished; report coming soon, no public link yet) |
+| Long stop: healthcare 16.9%, light industrial 16.1% | Numbers late-arrival bars | HyperTrack | 2026 | first-party-draft | (unpublished; report coming soon, no public link yet) |
+| Traffic: healthcare 8.2%, light industrial 18.6% | Numbers late-arrival bars | HyperTrack | 2026 | first-party-draft | (unpublished; report coming soon, no public link yet) |
+| Last-minute assignment: healthcare 13.1%, light industrial 7.1% | Numbers late-arrival bars | HyperTrack | 2026 | first-party-draft | (unpublished; report coming soon, no public link yet) |
+| Drive detour: healthcare 10.2%, light industrial 11.7% | Numbers late-arrival bars | HyperTrack | 2026 | first-party-draft | (unpublished; report coming soon, no public link yet) |
+| Healthcare visibility, months 1–8 respectively: 77.4%, 84.6%, 89.0%, 89.9%, 91.9%, 93.5%, 94.9%, 95.9% | Numbers visibility lines | HyperTrack | 2026 | first-party-draft | (unpublished; report coming soon, no public link yet) |
+| Light industrial visibility, months 1–8 respectively: 58.4%, 74.2%, 82.2%, 85.9%, 88.5%, 90.6%, 92.1%, 92.8% | Numbers visibility lines | HyperTrack | 2026 | first-party-draft | (unpublished; report coming soon, no public link yet) |
 | Start a job search after one paycheck error 24%, after two errors 49% | Retention band bars | Workforce Institute | 2017 | secondary | https://hrdailyadvisor.hci.org/2017/06/15/payroll-problems-may-undermine-employee-experience-says-survey/ |
 | Average cost to fix one payroll error $291, direct and indirect | Retention band tile | EY | 2022 | primary | https://eyquest.com/files/Cost_and_Risks_Due_to_Payroll_Errors_2022_Final.pdf |
 | Time submissions with an error 1 in 6; 83.35% arrive error-free | Retention band tile | Bloomberg Tax | 2019 | primary | https://data.bloomberglp.com/bna/sites/9/2019/10/BTAX-Payroll-Benchmarks-Survey-Report_Final.pdf |
