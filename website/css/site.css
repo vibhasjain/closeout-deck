@@ -48,9 +48,9 @@ section.bleed { position:relative; width:100%; min-height:min(78vh,820px); displ
 .bleed .bleed-art { position:absolute; inset:0; border:0; border-radius:0; background:transparent; aspect-ratio:auto; }
 .bleed-art picture { display:block; width:100%; height:100%; }
 .bleed .bleed-art img { width:100%; height:100%; object-fit:cover; object-position:var(--art-pos,62% 50%); display:block; }
-.bleed--right-open { --art-pos:40% 50%; }
+.bleed--right-open { --art-pos:18% 50%; }
 .bleed .bleed-scrim { position:absolute; inset:0; background:linear-gradient(90deg,rgba(239,233,220,.92) 0%,rgba(239,233,220,.75) 32%,rgba(239,233,220,0) 58%); pointer-events:none; }
-.bleed--right-open .bleed-scrim { background:linear-gradient(270deg,rgba(239,233,220,.92) 0%,rgba(239,233,220,.75) 32%,rgba(239,233,220,0) 58%); }
+.bleed--right-open .bleed-scrim { background:linear-gradient(270deg,rgba(239,233,220,.97) 0%,rgba(239,233,220,.94) 38%,rgba(239,233,220,.6) 52%,rgba(239,233,220,0) 66%); }
 .bleed .over { position:relative; z-index:1; width:100%; max-width:1200px; margin:0 auto; padding:96px 24px; color:var(--n900); }
 .bleed .over-copy { max-width:560px; }
 .bleed--right-open .over-copy { margin-left:auto; }
@@ -401,3 +401,11 @@ button.cite-ht { font:inherit; background:#fff; cursor:pointer; }
 .site-footer .muted { color:var(--n700); }
 .bleed--hero::before { content:""; position:absolute; left:0; right:0; top:0; height:140px; z-index:1; pointer-events:none; background:linear-gradient(180deg, rgba(239,233,220,.9), rgba(239,233,220,0)); }
 @media (max-width:700px) { #cta .over { padding-bottom:40px; } #cta .site-footer { position:static; background:#fff; } }
+
+/* before/after art: viewport edge to edge */
+#before-after .art { width:100vw; margin-left:calc(50% - 50vw); border:0; border-radius:0; position:relative; z-index:3; }
+/* industries: the two cells run viewport edge to edge */
+#industries .ew-grid-2 { width:100vw; margin-left:calc(50% - 50vw); position:relative; z-index:3; background:#efe9dc; }
+#industries .ind-copy { padding-left:max(32px, calc(50vw - 600px + 48px)); padding-right:48px; }
+#industries .industry:last-child .ind-copy { padding-left:48px; padding-right:max(32px, calc(50vw - 600px + 48px)); }
+@media (max-width:1024px) { #industries .ind-copy, #industries .industry:last-child .ind-copy { padding-left:32px; padding-right:32px; } }
