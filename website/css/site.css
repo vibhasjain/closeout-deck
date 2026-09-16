@@ -371,3 +371,12 @@ html.review .marquee { padding-top:6px; padding-bottom:6px; mask-image:none; }
   .marquee-group { flex-wrap:wrap; justify-content:center; flex:1; gap:32px; padding:0; }
   .marquee-group[aria-hidden="true"] { display:none; }
 }
+
+/* HyperTrack report chip: logo mark, arrow nudge to invite the click */
+.cite-ht { display:inline-flex; align-items:center; gap:6px; color:var(--n900); border-color:var(--n300); }
+.cite-ht img { width:14px; height:14px; display:block; }
+.cite-ht .cite-arrow { display:inline-block; animation: cite-nudge 1.8s ease-in-out infinite; }
+.cite-ht:hover { border-color:var(--n900); }
+.cite-ht:hover .cite-arrow { animation:none; transform:translateX(3px); }
+@keyframes cite-nudge { 0%,100% { transform:translateX(0); } 50% { transform:translateX(3px); } }
+@media (prefers-reduced-motion: reduce) { .cite-ht .cite-arrow { animation:none; } }
