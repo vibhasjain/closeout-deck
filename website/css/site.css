@@ -137,44 +137,65 @@ section.bleed { position:relative; width:100%; min-height:min(78vh,820px); displ
 #vig-ingest[data-phase="2"] .t-ubeya,
 #vig-ingest[data-phase="3"] .t-7shifts { border-color:var(--n900); }
 
-/* Locate: the map and event evidence share the same shift. */
-.loc-layout { display:grid; grid-template-columns:minmax(0,1fr) 96px; gap:12px; align-items:center; }
-.loc-map { width:100%; height:auto; display:block; background:#fff; border-radius:8px; }
+/* Locate: full-width tracking map, worker card and event strip. */
+#vig-locate { container-type:inline-size; }
+.loc-map-stage { position:relative; }
+.loc-map { width:100%; height:auto; display:block; aspect-ratio:448/260; background:#fff; border-radius:8px; }
 .loc-blocks { fill:var(--n100); }
 .loc-park { fill:#e8efe9; }
-.loc-lots { fill:none; stroke:var(--n200); stroke-width:1; }
-.loc-avenues { fill:none; stroke:#fff; stroke-width:16; }
+.loc-river { fill:#e6ebe8; }
+.loc-lots { fill:none; stroke:var(--n200); stroke-width:.65; }
+.loc-footprints { fill:var(--n200); }
+.loc-road, .loc-avenues, .loc-bridge { fill:none; stroke:#fff; stroke-width:8; }
+.loc-avenues, .loc-bridge { stroke-width:14; }
+.loc-bridge-edge { fill:none; stroke:var(--n300); stroke-width:18; }
+.loc-park-path { fill:none; stroke:var(--n200); stroke-width:1.5; }
 .loc-building { fill:var(--n300); stroke:var(--n400); stroke-width:1; }
 .loc-pin { fill:var(--n900); }
 .geofence { fill:rgba(34,197,94,.10); stroke:var(--green500); stroke-width:1.5; }
 .loc-fence-ticks { stroke:var(--green500); stroke-width:1; }
-.loc-route, .loc-loop { fill:none; stroke:var(--green600); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.loc-route, .loc-loop { fill:none; stroke:var(--green600); stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
 .loc-loop { stroke-dasharray:3 4; }
 .loc-loop-reveal { fill:none; stroke:#fff; stroke-width:4; }
 .loc-square { fill:var(--green600); }
 .loc-arrow { fill:none; stroke:#fff; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
-.loc-chip rect { fill:#fff; stroke:var(--n200); stroke-width:1; }
+.loc-chip rect { fill:#fff; stroke:var(--n200); stroke-width:1; filter:drop-shadow(0 1px 2px rgba(28,27,24,.12)); }
 .loc-chip text { fill:var(--n900); font:400 10px var(--font-mono); }
 .loc-dot { fill:var(--green500); stroke:#fff; stroke-width:2; offset-distance:100%; offset-rotate:0deg; }
-.loc-in { offset-path:path('M0 204 L194 94 L194 156 L238 156'); opacity:0; }
-.loc-out { offset-path:path('M238 156 L234 156 L234 186 L278 186 L278 206 L360 206'); }
+.loc-in { offset-path:path('M0 236 L224 148 L356 148 L356 108'); opacity:0; }
+.loc-out { offset-path:path('M356 108 L356 120 L388 120 L388 148 L436 148'); }
 #vig-locate .loc-map [data-step] { transform:none; }
-#vig-locate[data-phase] .loc-route, #vig-locate[data-phase] .loc-loop-reveal { opacity:1; stroke-dasharray:1; stroke-dashoffset:1; transition:stroke-dashoffset 2.2s linear; }
+#vig-locate[data-phase] .loc-route, #vig-locate[data-phase] .loc-loop-reveal { opacity:1; stroke-dasharray:1; stroke-dashoffset:1; transition:stroke-dashoffset 2.4s linear; }
 #vig-locate[data-phase] .loc-loop-reveal { transition-duration:2s; }
 #vig-locate[data-phase] .loc-route.on, #vig-locate[data-phase] .loc-loop-reveal.on { stroke-dashoffset:0; }
 #vig-locate[data-phase="0"] .loc-route, #vig-locate[data-phase="0"] .loc-loop-reveal { transition:none; }
-#vig-locate[data-phase] .loc-dot { offset-distance:0; transition:offset-distance 2.2s linear; }
+#vig-locate[data-phase] .loc-dot { offset-distance:0; transition:offset-distance 2.4s linear; }
 #vig-locate[data-phase] .loc-dot.on { offset-distance:100%; }
 #vig-locate[data-phase="0"] .loc-dot { transition:none; }
 #vig-locate[data-phase="4"] .loc-in { opacity:0; }
 #vig-locate[data-phase] .loc-entry-marker, #vig-locate[data-phase] .loc-exit-marker { transition:none; }
-#vig-locate[data-phase] .loc-entry-marker.on { transition:opacity .2s linear 2.2s; }
-#vig-locate[data-phase] .loc-exit-marker.on { transition:opacity .2s linear 1.1s; }
-.loc-events { display:grid; gap:10px; margin:0; padding:0; list-style:none; font:400 11px/1.5 var(--font-mono); }
-.loc-events li { display:flex; align-items:flex-start; gap:6px; }
-.loc-events .dot { margin-top:5px; }
+#vig-locate[data-phase] .loc-entry-marker.on { transition:opacity .2s linear 2.27s; }
+#vig-locate[data-phase] .loc-exit-marker.on { transition:opacity .2s linear 1.08s; }
+.loc-worker { position:absolute; top:12px; left:12px; width:150px; height:54px; padding:7px 8px; background:#fff; border:1px solid var(--n200); border-radius:8px; box-shadow:0 4px 12px rgba(28,27,24,.12); }
+.loc-worker-top { display:flex; align-items:center; justify-content:space-between; gap:4px; }
+.loc-worker-name { font:600 13px/1.4 var(--font-sans); white-space:nowrap; }
+.loc-worker .tag { font-size:9px; padding:3px 4px; white-space:nowrap; }
+.loc-worker p { margin-top:4px; color:var(--n600); font:400 10px/1.4 var(--font-mono); white-space:nowrap; }
+.loc-worker-status { display:none; }
+#vig-locate[data-phase="1"] .loc-worker-onsite, #vig-locate[data-phase="3"] .loc-worker-onsite,
+#vig-locate[data-phase="2"] .loc-worker-off, #vig-locate[data-phase="4"] .loc-worker-departed,
+#vig-locate:not([data-phase]) .loc-worker-departed { display:inline-block; }
+.loc-events { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; margin:14px 0 0; padding:0; list-style:none; font:400 11px/1.5 var(--font-mono); }
+.loc-events li { position:relative; min-width:0; }
+.loc-events .dot { position:absolute; top:5px; left:0; }
+.loc-events time { padding-left:11px; }
 .loc-event-label { display:block; }
 #vig-locate .vig-bd > .muted { margin-top:16px; }
+@container (min-width:440px) {
+  .loc-map { min-height:240px; }
+  .loc-events { grid-template-columns:repeat(4,max-content); justify-content:space-between; }
+  .loc-event-label { display:inline; }
+}
 
 /* Agent conversations */
 .chip-row { display:flex; flex-wrap:wrap; gap:6px; }

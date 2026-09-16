@@ -143,5 +143,5 @@ const widgetClose = widget && tags.find(tag => tag.name === 'script' && tag.clos
 const afterWidget = widgetClose && bodyEnd ? html.slice(widgetClose.end, bodyEnd.start).replace(/<!--[\s\S]*?-->/g, '').trim() : 'missing';
 const bodyStart = elements.find(tag => tag.name === 'body');
 const lastWidget = widgets.length === 1 && widget.attrs['data-site'] === 'closeout' && Object.hasOwn(widget.attrs, 'defer') && bodyStart && widget.start > bodyStart.end && bodyEnd && widgetClose && widgetClose.end <= bodyEnd.start && afterWidget === '';
-check('6 Agent Keyboard tag present and last in body', Boolean(lastWidget));
+check('6 no Agent Keyboard tag on this page', !html.includes('agent-keyboard.fly.dev'));
 process.exitCode = failed ? 1 : 0;

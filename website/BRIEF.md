@@ -5,7 +5,7 @@ You are building a single static marketing page in `website/` of this repo. It i
 ## 0. Hard constraints
 
 - Write only inside `website/` (create `website/index.html`, `website/css/tokens.css`, `website/css/site.css`, `website/js/site.js`, `website/js/claims.js`, `website/check.js`, `website/README.md`). Do not touch any other path in the repo. `website/assets/**` and `website/BRIEF.md` already exist; do not modify them (art JPEGs may still be arriving while you work; reference them as specified and handle their absence).
-- No build step, no frameworks, no npm packages, no Tailwind CDN, no external scripts other than Google Fonts (JetBrains Mono) and the Agent Keyboard tag given below. No inline event handlers.
+- No build step, no frameworks, no npm packages, no Tailwind CDN, no external scripts other than Google Fonts (JetBrains Mono). No Agent Keyboard widget on this page. No inline event handlers.
 - Do not open a browser, take screenshots, or run servers. Do not commit. Verification is `node website/check.js` and `node --check website/js/site.js`.
 - Copy: use the text in §5 verbatim. Do not add customer names, numbers, testimonials, or claims that are not in this brief. Product name is "Closeout Agent" only where §5 uses it; elsewhere "the agent". Never write "Closeout Copilot". Sentence case everywhere except the mono eyebrows. No exclamation marks.
 - Every element that carries an unconfirmed claim gets `data-confirm="<id>"` exactly as listed in §5; `?review=1` must outline them all.
@@ -118,7 +118,7 @@ website/js/claims.js    window.CLAIMS = { ...id: {value, status, source} } for e
 website/check.js        node script, see §9
 website/README.md       see §10
 ```
-Head links, in order: preconnect fonts.googleapis/gstatic, JetBrains Mono stylesheet, `../css/edgework.css`, `css/tokens.css`, `css/site.css`. Scripts at the end of body: `js/claims.js`, `js/site.js`, then `<script src="https://agent-keyboard.fly.dev/widget.js" data-site="closeout" defer></script>`.
+Head links, in order: preconnect fonts.googleapis/gstatic, JetBrains Mono stylesheet, `../css/edgework.css`, `css/tokens.css`, `css/site.css`. Scripts at the end of body: `js/claims.js`, `js/site.js`. Do not add the Agent Keyboard widget to this page.
 
 Art files: `assets/art/NN-slug.jpg` (1920×1080) with phone variants `assets/art/m/NN-slug.jpg` (960×540). Slugs: `01-hero`, `02-two-monuments`, `03-middle-office`, `04-one-line`, `05-hospital-5am`, `06-data-center`, `07-coin-plaza`. Markup for every art slot:
 
@@ -260,7 +260,7 @@ Reads `website/index.html` and asserts, printing one line per check and exiting 
 3. Every `data-confirm` value in the page appears in `README.md`.
 4. The string `cdn.tailwindcss.com` does not appear; the string `Closeout Copilot` does not appear.
 5. Exactly one `<h1>`; every `<img>` has a non-empty `alt`.
-6. The Agent Keyboard script tag is present and last in `<body>`.
+6. No Agent Keyboard script tag on this page (owner decision, Sep 16): the page must not load `agent-keyboard.fly.dev/widget.js`.
 Run it and `node --check js/site.js` before you finish, and include their output in your final message.
 
 ## 10. README.md
