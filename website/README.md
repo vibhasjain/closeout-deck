@@ -50,7 +50,9 @@ The five full-bleed sections use new 1600×900 desktop compositions and phone va
 | Agent overview | `assets/art/04-one-line-b.jpg` | `assets/art/m/04-one-line-b.jpg` | `assets/art/04-one-line.jpg` |
 | Closing call to action | `assets/art/07-coin-plaza-b.jpg` | `assets/art/m/07-coin-plaza-b.jpg` | `assets/art/07-coin-plaza.jpg` |
 
-The seven 480×480 station emblems come from the STYLE-B block in `assets/art/ART.md`. Each object floats on pure white without a frame, border, radius, or background, above its station copy and as a thumbnail in the sticky station menu. Emblems are 132px on desktop and 96px below 1024px; menu thumbnails are 22px. Missing emblem images use a dashed circle without a label.
+The eight stations run in this order: 1 Ingest, 2 Locate, 3 Collect, 4 Collate, 5 Apply the rules, 6 Spot discrepancies, 7 Pay, 8 Mediate. Mediate follows Pay because disputes happen after pay.
+
+The original seven station emblems come from the STYLE-B block in `assets/art/ART.md`. Each object sits without a frame, border, radius, or background, above its station copy and as a thumbnail in the sticky station menu. The new Spot discrepancies emblem is a 400×400 transparent WebP. Emblems are 240px on desktop and 160px below 1024px; menu thumbnails are 28px. Missing emblem images use a dashed circle without a label. Asset filenames are retained when stations move.
 
 | File | Station | Description |
 | --- | --- | --- |
@@ -59,8 +61,9 @@ The seven 480×480 station emblems come from the STYLE-B block in `assets/art/AR
 | `assets/art/st/3-collect.webp` | Collect | Telephone with a cord that becomes a timesheet |
 | `assets/art/st/4-collate.webp` | Collate | Lightbox with four sheets |
 | `assets/art/st/5-rules.webp` | Apply the rules | Letterpress stamp |
-| `assets/art/st/6-mediate.webp` | Mediate | Balance scale |
+| `assets/art/st/8-discrepancies.webp` | Spot discrepancies | Loupe over a flagged shift card |
 | `assets/art/st/7-pay.webp` | Pay | Pay envelope with teller's grille |
+| `assets/art/st/6-mediate.webp` | Mediate | Balance scale |
 
 ## Claims to verify
 
@@ -128,6 +131,7 @@ Every product vignette is a synthetic demonstration and has a “synthetic data�
 - Collection: 4 clipboard rows read; agent message 17:06; Maria reply 17:09 (“5:01, we ran late on the east wing”); agent confirmation 17:09 records 17:01.
 - Timeline: 06:00–18:00, with ticks 06, 09, 12, 15, 18. Paper, worker reply, phone, and ADP sources retain their respective times; the missing ADP clock-out is an exception.
 - Rule examples: CA-MB-01 requires a 30-minute unpaid meal before the end of the 5th hour, with a 1-hour premium (+1.0 h at regular rate) when missed, short, or late. CON-SUTTER-01 sets orientation billing to $0 and pay to training rate. TW-1187 holds OT > 40 h, expiring Sun Aug 30. The supplied rule footer reads “Ran on 54 shifts · fired 1 · #4825 Priya S.”
+- Discrepancies: 54 checked · 3 flagged · 51 clean. #4821 Maria R. · Mercy General · No clock-out, location shows 17:01 · Flagged; #4826 Luis M. · Mercy General · No meal break before hour 5 (CA-MB-01) · Flagged; #4830 Aisha B. · Mercy General · 3.0 h over 40 (TW-1187) · Held; #4833 Tom K. · Bayview Warehouse · Punches match schedule and location · Clean. The supplied five phase durations and summary's `data-step="5"` are retained; CSS reveals the summary in the final phase (4), including reduced motion.
 - Mediation: agent 14:40; Dana and agent 14:52; Luis on floor 06:01–14:31; settled +$24.50 with 3 attachments.
 - Payroll batch: ADP-0901 · 41 workers · $58,420 · sent Thu 18:00. The batch's worker count is distinct from the demonstration pay-cycle subset.
 
@@ -135,7 +139,7 @@ Every product vignette is a synthetic demonstration and has a “synthetic data�
 
 | File | Purpose |
 | --- | --- |
-| `index.html` | Page, inline copy, comparison grid, SVG charts and data tables, seven vignettes, metadata, and claim tags |
+| `index.html` | Page, inline copy, comparison grid, SVG charts and data tables, eight vignettes, metadata, and claim tags |
 | `css/tokens.css` | Satoshi faces, exact tokens, typography, buttons, and primitives |
 | `css/site.css` | Layout, responsive behavior, vignettes, fallbacks, and review styling |
 | `js/site.js` | Navigation, scroll-spy, vignette loops, missing-image fallback, review mode |

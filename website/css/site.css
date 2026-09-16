@@ -72,7 +72,7 @@ section.bleed { position:relative; width:100%; min-height:min(78vh,820px); displ
 .marquee [data-confirm="naming-rights-clipboard-health"] img { height:32px; width:auto; }
 @keyframes marquee { to { transform:translateX(-50%); } }
 
-/* Seven-station walkthrough */
+/* Eight-station walkthrough */
 .hiw-grid { display:grid; grid-template-columns:20% minmax(0,1fr); position:relative; }
 .marker-menu { left:20%; top:100%; }
 .marker-station { left:56%; top:100%; }
@@ -125,6 +125,13 @@ section.bleed { position:relative; width:100%; min-height:min(78vh,820px); displ
 .tile-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:16px; }
 .tile img { filter:none; }
 .vig-summary { margin-top:16px; }
+.disc-list { list-style:none; margin:0; padding:0; }
+.disc-list li { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 12px; padding:12px 0; align-items:start; }
+.disc-list li + li { border-top:1px solid var(--n200); }
+.disc-list p { grid-column:1; }
+.disc-list .tag { grid-column:2; grid-row:1; }
+/* Five durations end at phase 4; show the requested step-5 summary with the last row. */
+#vig-discrepancies[data-phase="4"] [data-step="5"] { opacity:1; transform:none; }
 #vig-ingest[data-phase="0"] .t-ukg,
 #vig-ingest[data-phase="1"] .t-adp,
 #vig-ingest[data-phase="2"] .t-ubeya,
@@ -254,7 +261,7 @@ section.bleed { position:relative; width:100%; min-height:min(78vh,820px); displ
 /* Industry proof and testimonial */
 #industries .industry { position:relative; padding:0; overflow:hidden; background:#efe9dc; }
 #industries .art { position:absolute; inset:0 0 auto 0; height:560px; border:0; border-radius:0; margin:0; aspect-ratio:auto; }
-#industries .art img { object-position:26% 50%; }
+#industries .art img { object-position:40% 50%; }
 #industries .art[data-art="06-data-center"] img { object-position:58% 50%; }
 #industries .ind-copy { position:relative; padding:430px 32px 40px; background:linear-gradient(180deg, rgba(239,233,220,0) 0px, rgba(239,233,220,0) 330px, rgba(239,233,220,.92) 440px, #efe9dc 520px); }
 #industries .ind-copy .muted { color:var(--n700); }
@@ -409,3 +416,7 @@ button.cite-ht { font:inherit; background:#fff; cursor:pointer; }
 #industries .ind-copy { padding-left:max(32px, calc(50vw - 600px + 48px)); padding-right:48px; }
 #industries .industry:last-child .ind-copy { padding-left:48px; padding-right:max(32px, calc(50vw - 600px + 48px)); }
 @media (max-width:1024px) { #industries .ind-copy, #industries .industry:last-child .ind-copy { padding-left:32px; padding-right:32px; } }
+
+/* parallax: art drifts a little with scroll; images are scaled so no edge shows */
+.px-art { will-change:transform; transform:translate3d(0,var(--px,0px),0) scale(1.08); transition:none; }
+@media (prefers-reduced-motion: reduce), (max-width:700px) { .px-art { transform:none; } }

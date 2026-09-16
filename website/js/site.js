@@ -62,3 +62,13 @@ document.querySelectorAll('button.cite-ht').forEach(b => {
 
 // nav is transparent over the hero and turns white once the page scrolls
 (() => { const nav = document.querySelector('.site-nav'); if (!nav) return; const upd = () => nav.classList.toggle('is-scrolled', window.scrollY > 24); upd(); addEventListener('scroll', upd, { passive: true }); })();
+
+// parallax on the big art: ±24px over each image's scroll range
+(() => {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || matchMedia('(max-width: 700px)').matches) return;
+  const imgs = [...document.querySelectorAll('.bleed .bleed-art img, #before-after .art img, #industries .art img')];
+  imgs.forEach(i => i.classList.add('px-art'));
+  let ticking = false;
+  const update = () => { ticking = false; const vh = innerHeight; for (const img of imgs) { const r = (img.closest('.bleed, .art') || img).getBoundingClientRect(); if (r.bottom < 0 || r.top > vh) continue; const p = (r.top + r.height / 2 - vh / 2) / (vh / 2 + r.height / 2); img.style.setProperty('--px', (Math.max(-1, Math.min(1, p)) * -24).toFixed(1) + 'px'); } };
+  addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true }); update();
+})();
