@@ -81,8 +81,8 @@ section.bleed { position:relative; width:100%; min-height:min(78vh,820px); displ
 .hiw-link { color:var(--n600); }
 .hiw-link.is-active { color:var(--n900); font-weight:500; }
 .hiw-link:hover { color:var(--n900); }
-.st-emblem { width:132px; height:132px; display:block; margin:0 0 16px -8px; }
-.st-thumb { width:22px; height:22px; flex:none; opacity:.6; }
+.st-emblem { width:240px; height:240px; display:block; margin:0 0 20px -16px; }
+.st-thumb { width:28px; height:28px; flex:none; opacity:.6; }
 .hiw-link.is-active .st-thumb { opacity:1; }
 .st-emblem.is-missing, .st-thumb.is-missing { border:1px dashed var(--n300); border-radius:50%; background:transparent; content:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E"); }
 .hiw-stations { min-width:0; }
@@ -318,7 +318,7 @@ html.review .marquee { padding-top:6px; padding-bottom:6px; mask-image:none; }
   .mobile-nav .btn { align-self:flex-start; margin-top:8px; }
   .hiw-grid { grid-template-columns:minmax(0,1fr); }
   .hiw-menu-wrap { display:none; }
-  .st-emblem { width:96px; height:96px; }
+  .st-emblem { width:160px; height:160px; margin-left:-10px; }
   .hiw-grid > .ew-marker, .hiw-sub > .ew-marker { display:none; }
   .hiw-split { grid-template-columns:minmax(0,1fr); }
   .hiw-copy { padding-bottom:24px; }
