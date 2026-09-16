@@ -59,3 +59,6 @@ document.querySelectorAll('button.cite-ht').forEach(b => {
   let t;
   b.addEventListener('click', () => { b.classList.add('is-soon'); text.textContent = 'Coming soon'; clearTimeout(t); t = setTimeout(() => { b.classList.remove('is-soon'); text.textContent = b.dataset.label; }, 2200); });
 });
+
+// nav is transparent over the hero and turns white once the page scrolls
+(() => { const nav = document.querySelector('.site-nav'); if (!nav) return; const upd = () => nav.classList.toggle('is-scrolled', window.scrollY > 24); upd(); addEventListener('scroll', upd, { passive: true }); })();
