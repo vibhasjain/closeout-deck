@@ -1,1 +1,0 @@
-IMAGE 01-hero-b DONE.
