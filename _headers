@@ -27,3 +27,9 @@
 
 /decks/rule-compiler/*
   Cache-Control: no-cache
+
+/website/
+  Cache-Control: no-cache
+
+/website/index.html
+  Cache-Control: no-cache
