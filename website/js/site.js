@@ -1,45 +1,43 @@
 'use strict';
 
 if (new URLSearchParams(location.search).has('review')) document.documentElement.classList.add('review');
+const header=document.querySelector('.site-nav'), toggle=document.querySelector('.nav-toggle');
+const closeMenu=()=>{ header.classList.remove('is-open'); toggle.setAttribute('aria-expanded','false'); };
+toggle.addEventListener('click',()=>toggle.setAttribute('aria-expanded',String(header.classList.toggle('is-open'))));
+document.querySelectorAll('.mobile-nav a').forEach(a=>a.addEventListener('click',closeMenu));
+matchMedia('(min-width: 1024px)').addEventListener('change',e=>{ if(e.matches) closeMenu(); });
 
-const header = document.querySelector('.site-nav');
-const toggle = document.querySelector('.nav-toggle');
-const closeMenu = () => {
-  header.classList.remove('is-open');
-  toggle.setAttribute('aria-expanded', 'false');
-};
-toggle.addEventListener('click', () => {
-  const open = header.classList.toggle('is-open');
-  toggle.setAttribute('aria-expanded', String(open));
-});
-document.querySelectorAll('.mobile-nav a').forEach(link => link.addEventListener('click', closeMenu));
-matchMedia('(min-width: 1024px)').addEventListener('change', event => { if (event.matches) closeMenu(); });
-
-const links = [...document.querySelectorAll('.hiw-link')];
-const stations = [...document.querySelectorAll('.hiw-sub')];
-let spyPending = false;
-function updateSpy() {
-  let active = stations[0];
-  stations.forEach(station => { if (station.getBoundingClientRect().top <= 140) active = station; });
-  links.forEach(link => {
-    const selected = link.getAttribute('href') === '#' + active.id;
-    link.classList.toggle('is-active', selected);
-    if (selected) link.setAttribute('aria-current', 'step');
-    else link.removeAttribute('aria-current');
+const links=[...document.querySelectorAll('.hiw-link')], stations=[...document.querySelectorAll('.hiw-sub')];
+let spyPending=false;
+function updateSpy(){
+  let active=stations[0];
+  stations.forEach(s=>{ if(s.getBoundingClientRect().top<=140) active=s; });
+  links.forEach(a=>{
+    const selected=a.getAttribute('href')==='#'+active.id;
+    a.classList.toggle('is-active',selected);
+    if(selected) a.setAttribute('aria-current','step'); else a.removeAttribute('aria-current');
   });
-  spyPending = false;
+  spyPending=false;
 }
-function scheduleSpy() {
-  if (!spyPending) { spyPending = true; requestAnimationFrame(updateSpy); }
-}
-addEventListener('scroll', scheduleSpy, { passive:true });
-addEventListener('resize', scheduleSpy, { passive:true });
+function scheduleSpy(){ if(!spyPending){ spyPending=true; requestAnimationFrame(updateSpy); } }
+addEventListener('scroll',scheduleSpy,{passive:true});
+addEventListener('resize',scheduleSpy,{passive:true});
 updateSpy();
 
-document.querySelectorAll('.art img, .tile img').forEach(img => {
-  const mark = () => img.closest('.art, .tile').classList.add('is-missing');
-  img.addEventListener('error', mark, { once:true });
-  if (img.complete && img.naturalWidth === 0) mark();
+document.querySelectorAll('.art img, .tile img, .st-emblem, .st-thumb').forEach(img=>{
+  const frame=img.closest('.art, .tile')||img;
+  const fail=()=>{
+    if(!img.complete||img.naturalWidth) return;
+    const fallback=img.dataset.fallback;
+    if(fallback&&!img.dataset.fallbackTried){
+      img.dataset.fallbackTried='1';
+      img.closest('picture')?.querySelectorAll('source').forEach(s=>{ s.srcset=fallback; });
+      img.src=fallback;
+    } else frame.classList.add('is-missing');
+  };
+  img.addEventListener('error',fail);
+  img.addEventListener('load',()=>frame.classList.remove('is-missing'));
+  fail();
 });
 
 function loop(el){

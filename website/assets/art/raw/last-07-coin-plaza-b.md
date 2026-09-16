@@ -1,0 +1,1 @@
+IMAGE 07-coin-plaza-b DONE.

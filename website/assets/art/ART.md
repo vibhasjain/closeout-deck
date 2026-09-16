@@ -31,3 +31,46 @@ Dawn in a vast empty plaza between two monumental buildings. In the centre stand
 
 ### 08 · before-after — "Same workers. Same sites. A different firm."
 One wide interior of a staffing company's middle office, drawn twice in a single frame and split exactly down the centre by a thin vertical seam of bare paper, so the left half and the right half are the same room in two states. Left half, night: a dozen clerks hunched over desks buried in paper timesheets, filing cabinets spilling folders, three desk phones off the hook, sticky notes on every monitor, a wall clock reading eleven, a coffee pot on a hot plate, harsh overhead tubes. Right half, morning: the identical room with the same desks, now clear, two people standing and talking with coffee, sunlight through the same windows, the wall clock reading nine, and one thin green line of light running along the floor through the desks and out of the far door. Only that line is green. The camera is straight-on at desk height so both halves share one vanishing point; heavy grain on both, the left denser and darker.
+
+## Station emblems — the suite of agents
+
+Seven square emblems, one per station, used inside the "How it works" boxes and the station menu. They are objects that stand for the agent at that station: instruments and machines, not people. Each prompt is STYLE-B verbatim, a blank line, then the EMBLEM paragraph verbatim.
+
+### STYLE-B (prefix for every emblem — do not vary)
+
+A risograph print of a single object, square 1:1. Pure flat white background (#ffffff) with no grain, texture, gradient or vignette anywhere outside the object; the object floats centred with generous air around it and casts no shadow. The object itself is printed in two spot inks: deep charcoal-green (#0f1f17) for shadow and mass and HyperTrack green (#22c55e) for exactly one lit accent, with bare white paper as the highlight; heavy stochastic grain and halftone stipple inside the object only, slight misregistration of the two inks at its edges. The object reads like a monumental machine or scientific instrument in miniature, three-quarter view, dawn light from the upper left, serious and precise. No text, letters, numbers, logos, screens or UI. No cartoon, no clay, no photoreal, no glossy 3D render, no third colour.
+
+### st-1 · ingest — Ingest
+A brass intake hopper the size of a mailbox standing on four short legs: a wide funnel mouth on top into which a fanned stack of punched timecards is sliding, and a short conveyor tongue at its base from which a neat row of cards emerges. A single round indicator lamp on its face is lit green. Rivets, a small crank on the side, a hinged inspection door.
+
+### st-2 · locate — Locate
+A surveyor's beacon: a slender iron tripod carrying a lantern with a domed cap, planted on a small round ground plate. From the plate, three concentric geofence rings spread outward on the ground as thin arcs with tick marks around their circumference; the rings and the lantern's flame are green. A small compass rose engraved on the plate, no letters.
+
+### st-3 · collect — Collect
+A vintage desk telephone with a rotary dial and a heavy handset resting off the cradle, its coiled cord unspooling across the base and flattening out into a single paper timesheet with a ruled grid and no writing. A small clipboard leans against the phone's side. The one round lamp on the phone's base is lit green.
+
+### st-4 · collate — Collate
+A tabletop lightbox on short legs, seen from above and to the side, with four translucent sheets fanned across its surface at slight angles, each sheet carrying a different faint ruled pattern, and a thin steel ruler laid straight across all four. The lightbox glows green through the sheets; nothing else is green.
+
+### st-5 · rules — Apply the rules
+A cast-iron letterpress hand stamp with a wooden handle raised, poised over a single blank card on a small anvil block. The stamp face carries an abstract circular seal made of concentric lines and notches, no letters. The fresh impression already pressed into the card is green.
+
+### st-6 · mediate — Mediate
+A brass balance scale in perfect equilibrium on a stepped stone base, with a blank speech-bubble-shaped tablet resting on each pan, and a folded note with a wax seal tucked at the foot of the column. Only the wax seal is green.
+
+### st-7 · pay — Pay
+A sealed pay envelope standing upright, slightly fanned open at the top with the edge of a cheque visible inside, beside a short neat stack of coins, in front of a small brass teller's grille with an arched window. The envelope's wax seal is green.
+
+## Overlay compositions (full-bleed sections with typography on the art)
+
+Same STYLE block, same scenes, recomposed so one side is open for text. Each prompt is STYLE verbatim, a blank line, the base SCENE verbatim, a blank line, then the COMPOSITION clause verbatim.
+
+COMPOSITION-RIGHT: Composition for text overlay: the entire subject and every figure sit inside the right 55% of the frame; the left 45% is open, quiet space (sky, fog, an empty plain or an empty floor) that dissolves smoothly into bare cream paper with no detail, no figures, no lines and no grain build-up, reserved for typography. The subject still reads at full monumental scale.
+
+COMPOSITION-LEFT: Composition for text overlay: the entire subject and every figure sit inside the left 55% of the frame; the right 45% is open, quiet space (sky, fog, an empty plain or an empty floor) that dissolves smoothly into bare cream paper with no detail, no figures, no lines and no grain build-up, reserved for typography. The subject still reads at full monumental scale.
+
+### 01-hero-b — base scene "01 · hero" + COMPOSITION-RIGHT
+### 02-two-monuments-b — base scene "02 · two-monuments" + COMPOSITION-RIGHT
+### 03-middle-office-b — base scene "03 · middle-office" + COMPOSITION-LEFT
+### 04-one-line-b — base scene "04 · one-line" + COMPOSITION-RIGHT (the conveyor may begin in the open area only as a faint line entering the subject)
+### 07-coin-plaza-b — base scene "07 · coin-plaza" + COMPOSITION-RIGHT

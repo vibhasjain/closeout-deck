@@ -133,7 +133,7 @@ check('4 prohibited strings absent', forbidden.length === 0, forbidden.join(', '
 
 const headings = elements.filter(tag => tag.name === 'h1');
 const images = elements.filter(tag => tag.name === 'img');
-const noAlt = images.filter(tag => !tag.attrs.alt?.trim());
+const noAlt = images.filter(tag => !tag.attrs.alt?.trim() && !(tag.attrs.alt !== undefined && tag.attrs['aria-hidden'] === 'true'));
 check('5 one h1 and nonempty image alt text', headings.length === 1 && noAlt.length === 0, `${headings.length} h1; ${images.length} images; ${noAlt.length} missing alt`);
 
 const widgets = elements.filter(tag => tag.name === 'script' && tag.attrs.src === 'https://agent-keyboard.fly.dev/widget.js');

@@ -23,9 +23,11 @@ node --check website/js/site.js
 
 The page uses hypertrack.com's system: self-hosted Satoshi, Google Fonts JetBrains Mono, the supplied neutral and green tokens, hand-written CSS, and the repository's Edgework rails, dividers, markers, and content zones in place. There are no shadows or dark theme. To meet the original brief's minimum text contrast, small muted text uses `--n600`, the primary CTA fill uses `--green700` (`--green900` on hover), and held-label text uses `--n700` with amber accents; the supplied base token values and type scales remain intact. CTA borders stay neutral to honor the original green allowlist. The second change batch explicitly adds green comparison icons and chart marks, including indigo for light industrial; SVG labels and citation chips use its specified `--n500`, and values use `--n900`. Charts are inline SVG with native mark tooltips, direct values, legends, and expandable data tables. Animation is limited to the specified marquee and synthetic vignettes, with reduced-motion support. The exact supplied loop driver is retained; the three rules map their three beats onto absolute phases 0–2, 3–5, and 6–8 so each footer appears before its group changes. Without JavaScript, vignette content remains readable with only the default rule group and its matching header ID visible. Reduced motion selects only the final rule group.
 
+The hero, the shift, the middle office, the agent overview, and the closing call to action use art across the full viewport width, with copy overlaid on cream scrims. At widths up to 700px, each image becomes a static 16:9 block above the copy on white. The growth stat trio, retention band, and “You write the rules” row retain their own Edgework frames. Industry cards retain their existing layout, and the navigation remains white and sticky.
+
 ## Art
 
-The direction is Green Risograph Monumentalism, generated from `assets/art/ART.md`. Art and asset files are supplied separately and are not edited by this implementation. Slots 01–07 reference a 1920×1080 JPEG at `assets/art/<slug>.jpg` and a 960×540 phone variant at `assets/art/m/<slug>.jpg`. Slot 08 uses a 1600×900 desktop JPEG and the same phone-variant path convention. Missing images show a dashed placeholder with the slot slug.
+The direction is Green Risograph Monumentalism, generated from `assets/art/ART.md`. Art and asset files are supplied separately and are not edited by this implementation. Original slots 01–07 have a 1920×1080 JPEG at `assets/art/<slug>.jpg` and a 960×540 phone variant at `assets/art/m/<slug>.jpg`. Slot 08 uses a 1600×900 desktop JPEG and the same phone-variant path convention. Framed art that cannot load shows a dashed placeholder with the slot slug.
 
 | Slot | Placement |
 | --- | --- |
@@ -38,6 +40,28 @@ The direction is Green Risograph Monumentalism, generated from `assets/art/ART.m
 | `07-coin-plaza` | Closing call to action |
 | `08-before-after` | The same middle office, before and after |
 
+The five full-bleed sections use new 1600×900 desktop compositions and phone variants. Each image carries its original desktop path in `data-fallback`; on failure, the image and picture source switch to the original art before showing the missing-art state. The original compositions remain fallback assets.
+
+| Section | Desktop composition | Phone composition | Original fallback |
+| --- | --- | --- | --- |
+| Hero | `assets/art/01-hero-b.jpg` | `assets/art/m/01-hero-b.jpg` | `assets/art/01-hero.jpg` |
+| The shift | `assets/art/02-two-monuments-b.jpg` | `assets/art/m/02-two-monuments-b.jpg` | `assets/art/02-two-monuments.jpg` |
+| The middle office | `assets/art/03-middle-office-b.jpg` | `assets/art/m/03-middle-office-b.jpg` | `assets/art/03-middle-office.jpg` |
+| Agent overview | `assets/art/04-one-line-b.jpg` | `assets/art/m/04-one-line-b.jpg` | `assets/art/04-one-line.jpg` |
+| Closing call to action | `assets/art/07-coin-plaza-b.jpg` | `assets/art/m/07-coin-plaza-b.jpg` | `assets/art/07-coin-plaza.jpg` |
+
+The seven 480×480 station emblems come from the STYLE-B block in `assets/art/ART.md`. Each object floats on pure white without a frame, border, radius, or background, above its station copy and as a thumbnail in the sticky station menu. Emblems are 132px on desktop and 96px below 1024px; menu thumbnails are 22px. Missing emblem images use a dashed circle without a label.
+
+| File | Station | Description |
+| --- | --- | --- |
+| `assets/art/st/1-ingest.webp` | Ingest | Intake hopper |
+| `assets/art/st/2-locate.webp` | Locate | Surveyor's beacon with geofence rings |
+| `assets/art/st/3-collect.webp` | Collect | Telephone with a cord that becomes a timesheet |
+| `assets/art/st/4-collate.webp` | Collate | Lightbox with four sheets |
+| `assets/art/st/5-rules.webp` | Apply the rules | Letterpress stamp |
+| `assets/art/st/6-mediate.webp` | Mediate | Balance scale |
+| `assets/art/st/7-pay.webp` | Pay | Pay envelope with teller's grille |
+
 ## Claims to verify
 
 Statuses below come from the supplied brief. “Verified” records the brief's classification of the SIA and monthly-shift figures; it does not imply independent source verification during implementation. The owner should revalidate all publication claims. `js/claims.js` also documents supplied pricing, attributed quote figures, dates, station counts, and synthetic numbers. Its `provided` status means the brief supplied the copy; it is not a verification claim. The Traba quotation and case-study URL are supplied by the brief and were not independently researched.
@@ -48,14 +72,14 @@ Statuses below come from the supplied brief. “Verified” records the brief's 
 | market-925 | The shift comparison stat | Best operators' 98.7% show rate versus 92.5% market | unconfirmed | Confirm the Shift Reliability Report comparison and common denominator. |
 | show-rate-987 | Healthcare copy and stat | 98.7% show rate, best operators, healthcare | unconfirmed | Confirm industry cohort, period, and definition. |
 | show-rate-974 | Light industrial copy and stat | 97.4% show rate, best operators, light industrial | unconfirmed | Confirm industry cohort, period, and definition. |
-| wonolo-15-80 | Proof card | Closeout Agent on 10,000 shifts a month; break confirmations from 15% to 80% | unconfirmed | Confirm deployment volume, comparison period, and customer approval. |
+| wonolo-15-80 | Wonolo testimonial block | Closeout Agent on 10,000 shifts a month; break confirmations from 15% to 80% | unconfirmed | Attribution: Carlos Ganoza, VP of Product, Wonolo; photo from hypertrack.com's Top 50 Leaders page. This is a result line, not a quotation, until a verbatim quote is approved. Confirm deployment volume, comparison period, and customer approval. |
 | naming-rights-shiftkey | Logo marquee | Permission to display ShiftKey's mark | unconfirmed | Obtain naming and logo permission. |
 | naming-rights-nursa | Logo marquee | Permission to display Nursa's mark | unconfirmed | Obtain naming and logo permission. |
 | naming-rights-wonolo | Logo marquee and proof | Permission to display Wonolo's mark | unconfirmed | Obtain naming and logo permission. |
 | naming-rights-traba | Logo marquee | Permission to display Traba's mark | unconfirmed | Obtain naming and logo permission. |
 | naming-rights-instawork | Logo marquee | Permission to display Instawork's mark | unconfirmed | Obtain naming and logo permission. |
 | naming-rights-clipboard-health | Logo marquee | Permission to display Clipboard Health's mark | unconfirmed | Obtain naming and logo permission. |
-| quote-competitive-advantage | Review-only reserved proof slot | Customer quote pending verbatim confirmation and approval | unconfirmed | Supply approved quotation and attribution before showing publicly. |
+| quote-competitive-advantage | Review-only line beneath the Wonolo statement | "HyperTrack is my competitive advantage." — pending verbatim confirmation and approval | unconfirmed | Supply approved quotation and attribution before showing publicly. |
 | connectors-live | Connectors section | Listed timekeeping, payroll, and billing systems are supported | unconfirmed | Confirm live capability and scope for every listed system. |
 | call-expectations | Closing call expectations | Real-shift sample, discrepancy settlements, and show-rate comparison on the call | unconfirmed | Confirm the demo team can deliver each expectation. |
 | report-locked | Numbers section and industry on-time lines | HyperTrack Shift Reliability Report, Q2 2026 figures | unconfirmed | All HyperTrack report figures are from the draft report; confirm against the locked Q2 2026 version. |
@@ -81,11 +105,11 @@ Figures, source URLs, publication years, and confidence classifications below we
 | Drive detour: healthcare 10.2%, light industrial 11.7% | Numbers late-arrival bars | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
 | Healthcare visibility, months 1–8 respectively: 77.4%, 84.6%, 89.0%, 89.9%, 91.9%, 93.5%, 94.9%, 95.9% | Numbers visibility lines | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
 | Light industrial visibility, months 1–8 respectively: 58.4%, 74.2%, 82.2%, 85.9%, 88.5%, 90.6%, 92.1%, 92.8% | Numbers visibility lines | HyperTrack | 2026 | first-party-draft | https://hypertrack.com/research |
-| Start a job search after one paycheck error 24%, after two errors 49% | Next retention bars | Workforce Institute | 2017 | secondary | https://hrdailyadvisor.hci.org/2017/06/15/payroll-problems-may-undermine-employee-experience-says-survey/ |
-| Average cost to fix one payroll error $291, direct and indirect | Next retention tile | EY | 2022 | primary | https://eyquest.com/files/Cost_and_Risks_Due_to_Payroll_Errors_2022_Final.pdf |
-| Time submissions with an error 1 in 6; 83.35% arrive error-free | Next retention tile | Bloomberg Tax | 2019 | primary | https://data.bloomberglp.com/bna/sites/9/2019/10/BTAX-Payroll-Benchmarks-Survey-Report_Final.pdf |
-| Timesheets corrected 80%, employer-reported | Next retention tile | QuickBooks Time | 2017 | primary | https://quickbooks.intuit.com/time-tracking/resources/time-attendance-stats/ |
-| Cost to replace a worker earning under $30K: 16% of annual pay | Next retention tile | Center for American Progress | 2012 | primary | https://www.americanprogress.org/article/there-are-significant-business-costs-to-replacing-employees/ |
+| Start a job search after one paycheck error 24%, after two errors 49% | Retention band bars | Workforce Institute | 2017 | secondary | https://hrdailyadvisor.hci.org/2017/06/15/payroll-problems-may-undermine-employee-experience-says-survey/ |
+| Average cost to fix one payroll error $291, direct and indirect | Retention band tile | EY | 2022 | primary | https://eyquest.com/files/Cost_and_Risks_Due_to_Payroll_Errors_2022_Final.pdf |
+| Time submissions with an error 1 in 6; 83.35% arrive error-free | Retention band tile | Bloomberg Tax | 2019 | primary | https://data.bloomberglp.com/bna/sites/9/2019/10/BTAX-Payroll-Benchmarks-Survey-Report_Final.pdf |
+| Timesheets corrected 80%, employer-reported | Retention band tile | QuickBooks Time | 2017 | primary | https://quickbooks.intuit.com/time-tracking/resources/time-attendance-stats/ |
+| Cost to replace a worker earning under $30K: 16% of annual pay | Retention band tile | Center for American Progress | 2012 | primary | https://www.americanprogress.org/article/there-are-significant-business-costs-to-replacing-employees/ |
 | Turnover cost per bedside RN $60,090 | Industries healthcare line | NSI | 2026 | primary | https://www.nsinursingsolutions.com/documents/library/nsi_national_health_care_retention_report.pdf |
 | Traditional staffing fill rate 46%; worker turnover 75–95% | Industries light industrial line | Contrary Research | 2024 | secondary | https://research.contrary.com/company/traba |
 
