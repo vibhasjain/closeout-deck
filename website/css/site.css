@@ -121,7 +121,7 @@ section.bleed { position:relative; width:100%; min-height:min(78vh,820px); displ
 .browser-dots { display:flex; gap:3px; flex:none; }
 .browser-dots span { width:8px; height:8px; border-radius:50%; background:var(--n300); }
 .tile-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:16px; }
-.tile img { filter:grayscale(1); }
+.tile img { filter:none; }
 .vig-summary { margin-top:16px; }
 #vig-ingest[data-phase="0"] .t-ukg,
 #vig-ingest[data-phase="1"] .t-adp,
