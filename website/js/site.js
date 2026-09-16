@@ -49,3 +49,13 @@ function loop(el){
   new IntersectionObserver(([e]) => { if (e.isIntersecting && !on) { on = true; tick(); } else if (!e.isIntersecting && on) { on = false; clearTimeout(t); } }, { threshold: .25 }).observe(el);
 }
 document.querySelectorAll('.vig[data-steps]').forEach(loop);
+
+// HyperTrack report chips: not linked yet; a click says "Coming soon" for a moment.
+document.querySelectorAll('button.cite-ht').forEach(b => {
+  const arrow = b.querySelector('.cite-arrow');
+  const text = document.createTextNode('');
+  for (const n of [...b.childNodes]) if (n.nodeType === 3 && n.textContent.trim()) { b.replaceChild(text, n); }
+  text.textContent = b.dataset.label;
+  let t;
+  b.addEventListener('click', () => { b.classList.add('is-soon'); text.textContent = 'Coming soon'; clearTimeout(t); t = setTimeout(() => { b.classList.remove('is-soon'); text.textContent = b.dataset.label; }, 2200); });
+});

@@ -380,3 +380,8 @@ html.review .marquee { padding-top:6px; padding-bottom:6px; mask-image:none; }
 .cite-ht:hover .cite-arrow { animation:none; transform:translateX(3px); }
 @keyframes cite-nudge { 0%,100% { transform:translateX(0); } 50% { transform:translateX(3px); } }
 @media (prefers-reduced-motion: reduce) { .cite-ht .cite-arrow { animation:none; } }
+
+button.cite-ht { font:inherit; background:#fff; cursor:pointer; }
+.cite-ht .cite-text { display:inline-block; }
+.cite-ht.is-soon { color:var(--n500); border-style:dashed; }
+.cite-ht.is-soon .cite-arrow { animation:none; transform:none; opacity:.5; }
