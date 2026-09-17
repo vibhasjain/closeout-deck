@@ -9,8 +9,8 @@ This is revision r5 (Sep 17 2026), built from `PLAN-r5.md` after the CEO review.
 1. Nav: hypertrack.com's primary nav plus a Shift Work Summit dropdown by year (2025, 2024, 2023, 2022).
 2. Hero carousel, three slides, copy on the open paper at the top: fastest growing (H1, with the 140% vs 7% proof line and sourced fine print), Fortune 1000, the middle office.
 3. Shift Work Summit speakers: nine cards in Jared's order, each with a headshot and a YouTube replay. Labelled as summit speakers, not customers.
-4. What we do: one line, three columns (Validate, Reconcile, Pay), the Shift Reliability Report chip, and a link to the product page.
-5. Customers: Traba quote, Wonolo result line, ShiftKey and Wonolo marks.
+4. What we do, as a mini product page: one line, then three rows (Validate, Reconcile, Pay), each a station emblem and copy beside a live product vignette (location map, agent and supervisor thread, pay table; synthetic data, lifted from the parked walkthrough with `css/vignettes.css`), the eight station emblems as a team strip, a primary link to the product page, and the Shift Reliability Report chip.
+5. Customers: the two tiles only (Traba quote, Wonolo result line). No header and no logo line, by owner decision Sep 17; the ShiftKey mark is therefore not on the page.
 6. Connectors, 7. pricing ("Priced per pay."), 8. a plain Book a demo block, footer.
 
 Cut from the homepage in r5: the stat row, the logo marquee, retention, numbers, the eight-agent walkthrough, the compiler stage, before/after, industries, the closing coin banner and the in-page subnav. The eight-agent walkthrough and the compiler stage are parked, unlinked, in `product-sections.html` for the product page; their CSS and JS are in git history (`css/site.css` and `js/site.js` at commit a7523b9).
@@ -40,7 +40,7 @@ Prompts live in `assets/art/ART.md`. The current set is "v7 — human, from the 
 
 | Slot | Slide | Emotion | Files |
 | --- | --- | --- | --- |
-| v7-01-hero | The fastest growing staffing companies run on HyperTrack. | Relief: it arrived, it was fast, it was right | `assets/art/v7-01-hero.jpg`, `-p.jpg`, `m/` |
+| v7-01-hero | The fastest growing staffing companies run on HyperTrack. | Momentum: paid right, up early, going places (r2; r1 showed workers dozing and was rejected) | `assets/art/v7-01-hero.jpg`, `-p.jpg`, `m/` |
 | v7-02-fortune | Fortune 1000 companies prefer HyperTrack customers. | Pride: the big client chose this crew and they showed up | `assets/art/v7-02-fortune.jpg`, `-p.jpg`, `m/` |
 | v7-03-middle-office | AI already runs recruiting. The middle office is next. | Anticipation: help is on its way down the stairs | `assets/art/v7-03-middle-office.jpg`, `-p.jpg`, `m/` |
 
@@ -91,6 +91,7 @@ Two deliberate differences from the CSVs: the 2025 CSV lists Jarah Euston as CEO
 | `index.html` | The seven sections, metadata and claim tags |
 | `product-sections.html` | Parked, unlinked: the eight-agent walkthrough and the compiler stage, for the product page |
 | `css/tokens.css` | Satoshi faces, exact tokens, typography, buttons and primitives |
+| `css/vignettes.css` | The product vignettes' styles, lifted unchanged from the pre-r5 walkthrough so the product page can reuse them |
 | `css/site.css` | Layout, carousel, nav dropdown, speaker cards, responsive behavior, fallbacks, review styling |
 | `js/site.js` | Carousel, nav scroll state and dropdown, speaker row arrows, parallax, report chip, missing-image fallback, review mode |
 | `js/claims.js` | Claim register and the speaker list with sources |

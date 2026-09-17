@@ -75,7 +75,7 @@ matchMedia('(min-width: 1024px)').addEventListener('change',e=>{ if(e.matches) c
   if(document.readyState==='complete') warm(); else addEventListener('load',warm);
 })();
 
-document.querySelectorAll('.art img, .tile img').forEach(img=>{
+document.querySelectorAll('.art img, .tile img, .what-emblem').forEach(img=>{
   const frame=img.closest('.art, .tile')||img;
   const landscape=img.getAttribute('src');
   const sources=[...(img.closest('picture')?.querySelectorAll('source')||[])];
@@ -164,3 +164,13 @@ document.querySelectorAll('button.cite-ht').forEach(b => {
   prev.addEventListener('click',()=>page(-1)); next.addEventListener('click',()=>page(1));
   row.addEventListener('scroll',upd,{passive:true}); addEventListener('resize',upd,{passive:true}); upd();
 })();
+
+// product vignettes: step through data-steps while in view (lifted from the pre-r5 walkthrough)
+document.querySelectorAll('.vig[data-steps]').forEach(el => {
+  const steps = el.dataset.steps.split(',').map(Number), items = el.querySelectorAll('[data-step]');
+  const apply = p => { el.dataset.phase = p; items.forEach(n => n.classList.toggle('on', +n.dataset.step <= p)); };
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) { apply(steps.length - 1); return; }
+  let p = 0, t, on = false;
+  const tick = () => { apply(p); const last = p === steps.length - 1; t = setTimeout(() => { p = last ? 0 : p + 1; tick(); }, steps[p] + (last ? 1400 : 0)); };
+  new IntersectionObserver(([e]) => { if (e.isIntersecting && !on) { on = true; tick(); } else if (!e.isIntersecting && on) { on = false; clearTimeout(t); } }, { threshold: .25 }).observe(el);
+});

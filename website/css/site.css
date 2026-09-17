@@ -119,6 +119,18 @@ section.bleed { --art-top:max(0px, calc(440px - 18.5vw)); }
 #what .display { font-size:clamp(34px,4.6vw,56px); }
 #what .sub { margin-top:20px; }
 #what .eyebrow + p { margin-top:12px; }
+/* a mini product page: emblem + copy beside a live vignette, then the whole team */
+.what-row { align-items:stretch; }
+.what-copy { align-self:center; }
+.what-copy .h3 { margin-top:12px; }
+.what-copy .h3 + p { margin-top:12px; color:var(--n700); }
+.what-visual { display:flex; align-items:center; justify-content:center; padding-top:40px; padding-bottom:40px; background:var(--n50); container-type:inline-size; }
+.what-emblem { display:block; width:160px; height:160px; margin:-8px 0 12px -16px; }
+.what-emblem.is-missing { visibility:hidden; }
+.team-strip { display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:8px; margin:24px 0 8px; padding:0; list-style:none; }
+.team-strip li { display:flex; flex-direction:column; align-items:center; gap:4px; font-size:13px; color:var(--n700); }
+.team-strip img { width:96px; height:96px; }
+@media (min-width:768px) { .what-row--flip > .what-copy { order:2; } }
 .impact { display:flex; flex-direction:column; align-items:center; }
 .impact > .muted { margin-top:12px; }
 .cite { display:inline-flex; width:fit-content; max-width:100%; padding:2px 8px; border:1px solid var(--n200); border-radius:999px; color:var(--n500); font:400 11px/1.6 var(--font-mono); text-decoration:none; }
@@ -133,9 +145,6 @@ button.cite-ht { background:#fff; cursor:pointer; }
 .cite-ht.is-soon .cite-arrow { animation:none; transform:none; opacity:.5; }
 
 /* Customers */
-.customers-line { display:flex; align-items:center; justify-content:center; gap:28px; margin-top:20px; }
-.customers-line .logo-mono { display:inline-flex; }
-.customers-line img { width:auto; }
 .testimonial { text-align:center; }
 .quote { max-width:720px; margin:0 auto; font-size:24px; line-height:1.4; font-weight:500; }
 .quote-author { display:flex; align-items:center; justify-content:center; gap:16px; margin-top:32px; }
@@ -201,7 +210,7 @@ html.review .review-only { display:block; }
   .connector-grid { gap:24px; }
 }
 @media (max-width:700px) {
-  section.bleed { --art-top:max(150px, calc(100svh - 177.8vw)); }
+  section.bleed { --art-top:max(180px, calc(100svh - 170vw)); }
   .bleed .over { padding:80px 20px 108px; }
   .over-copy { max-width:none; padding:0; text-align:left; }
   .over-copy::before { display:none; }
@@ -214,9 +223,12 @@ html.review .review-only { display:block; }
   .hero-actions { justify-content:flex-start; }
   .carousel-arrow, .spk-arrow { display:none; }
   .px-art { transform:none; }
+  .what-emblem { width:120px; height:120px; margin-left:-12px; }
+  .team-strip { grid-template-columns:repeat(4,minmax(0,1fr)); }
+  .team-strip img { width:72px; height:72px; }
+  .what-visual { padding:24px 16px; }
   .spk-row { padding:24px 20px; scroll-padding:0 20px; }
-  .customers-line { flex-wrap:wrap; gap:16px 24px; }
-  #demo .zone-box { padding-top:64px; padding-bottom:64px; }
+    #demo .zone-box { padding-top:64px; padding-bottom:64px; }
   .site-footer .container { grid-template-columns:1fr; }
   .footer-links { grid-column:1; grid-row:auto; margin-top:16px; }
 }

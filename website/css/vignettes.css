@@ -1,0 +1,110 @@
+/* Product vignettes on the homepage "what" block: lifted unchanged from the pre-r5 walkthrough (site.css at a7523b9) so the product page can reuse this file. */
+/* Shared product vignette */
+.vig { width:100%; max-width:480px; min-width:0; border:1px solid var(--n200); border-radius:16px; overflow:hidden; background:#fff; font-size:13px; line-height:1.5; }
+.vig-hd { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:4px 12px; padding:12px 16px; border-bottom:1px solid var(--n200); font-size:14px; font-weight:600; }
+.vig-meta { font:400 10px/1.6 var(--font-mono); color:var(--n600); overflow-wrap:anywhere; }
+.vig-bd { padding:16px; min-width:0; }
+.vig-ft { padding:8px 16px; border-top:1px solid var(--n200); background:var(--n50); font:400 10px/1.5 var(--font-mono); color:var(--n600); }
+.vig .mono { font-size:11px; overflow-wrap:anywhere; }
+.vig .muted { font-size:11px; }
+.vig [data-step] { min-width:0; }
+.vig[data-phase] [data-step] { opacity:0; transform:translateY(4px); transition:opacity .4s cubic-bezier(.16,1,.3,1),transform .4s cubic-bezier(.16,1,.3,1); }
+.vig[data-phase] [data-step].on { opacity:1; transform:none; }
+.type { display:inline-block; overflow:hidden; white-space:nowrap; max-width:100%; vertical-align:bottom; }
+.vig[data-phase] .type { max-width:0; transition:max-width .6s steps(24); }
+.vig[data-phase] .on .type { max-width:100%; }
+.vig-table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:12px; font-variant-numeric:tabular-nums; }
+.vig-table th { text-align:left; font-size:10px; color:var(--n600); font-weight:500; }
+.vig-table tbody th { font-size:inherit; color:var(--n900); font-weight:400; }
+.vig-table th, .vig-table td { padding:10px 4px; vertical-align:top; border-bottom:1px solid var(--n100); }
+.vig-table th:first-child, .vig-table td:first-child { padding-left:0; }
+.vig-table th:last-child, .vig-table td:last-child { padding-right:0; }
+.vig-table tr:last-child td { border-bottom:0; }
+.tile-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:16px; }
+.tile img { filter:none; }
+.vig-summary { margin-top:16px; }
+/* Locate: full-width tracking map, worker card and event strip. */
+#vig-locate { container-type:inline-size; }
+.loc-map-stage { position:relative; }
+.loc-map { width:100%; height:auto; display:block; aspect-ratio:448/260; background:#fff; border-radius:8px; }
+.loc-blocks { fill:var(--n100); }
+.loc-park { fill:#e8efe9; }
+.loc-river { fill:#e6ebe8; }
+.loc-lots { fill:none; stroke:var(--n200); stroke-width:.65; }
+.loc-footprints { fill:var(--n200); }
+.loc-road, .loc-avenues, .loc-bridge { fill:none; stroke:#fff; stroke-width:8; }
+.loc-avenues, .loc-bridge { stroke-width:14; }
+.loc-bridge-edge { fill:none; stroke:var(--n300); stroke-width:18; }
+.loc-park-path { fill:none; stroke:var(--n200); stroke-width:1.5; }
+.loc-building { fill:var(--n300); stroke:var(--n400); stroke-width:1; }
+.loc-pin { fill:var(--n900); }
+.geofence { fill:rgba(34,197,94,.10); stroke:var(--green500); stroke-width:1.5; }
+.loc-fence-ticks { stroke:var(--green500); stroke-width:1; }
+.loc-route, .loc-loop { fill:none; stroke:var(--green600); stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
+.loc-loop { stroke-dasharray:3 4; }
+.loc-loop-reveal { fill:none; stroke:#fff; stroke-width:4; }
+.loc-square { fill:var(--green600); }
+.loc-arrow { fill:none; stroke:#fff; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+.loc-chip rect { fill:#fff; stroke:var(--n200); stroke-width:1; filter:drop-shadow(0 1px 2px rgba(28,27,24,.12)); }
+.loc-chip text { fill:var(--n900); font:400 10px var(--font-mono); }
+.loc-dot { fill:var(--green500); stroke:#fff; stroke-width:2; offset-distance:100%; offset-rotate:0deg; }
+.loc-in { offset-path:path('M0 236 L224 148 L356 148 L356 108'); opacity:0; }
+.loc-out { offset-path:path('M356 108 L356 120 L388 120 L388 148 L436 148'); }
+#vig-locate .loc-map [data-step] { transform:none; }
+#vig-locate[data-phase] .loc-route, #vig-locate[data-phase] .loc-loop-reveal { opacity:1; stroke-dasharray:1; stroke-dashoffset:1; transition:stroke-dashoffset 2.4s linear; }
+#vig-locate[data-phase] .loc-loop-reveal { transition-duration:2s; }
+#vig-locate[data-phase] .loc-route.on, #vig-locate[data-phase] .loc-loop-reveal.on { stroke-dashoffset:0; }
+#vig-locate[data-phase="0"] .loc-route, #vig-locate[data-phase="0"] .loc-loop-reveal { transition:none; }
+#vig-locate[data-phase] .loc-dot { offset-distance:0; transition:offset-distance 2.4s linear; }
+#vig-locate[data-phase] .loc-dot.on { offset-distance:100%; }
+#vig-locate[data-phase="0"] .loc-dot { transition:none; }
+#vig-locate[data-phase="4"] .loc-in { opacity:0; }
+#vig-locate[data-phase] .loc-entry-marker, #vig-locate[data-phase] .loc-exit-marker { transition:none; }
+#vig-locate[data-phase] .loc-entry-marker.on { transition:opacity .2s linear 2.27s; }
+#vig-locate[data-phase] .loc-exit-marker.on { transition:opacity .2s linear 1.08s; }
+.loc-worker { position:absolute; top:12px; left:12px; width:150px; height:54px; padding:7px 8px; background:#fff; border:1px solid var(--n200); border-radius:8px; box-shadow:0 4px 12px rgba(28,27,24,.12); }
+.loc-worker-top { display:flex; align-items:center; justify-content:space-between; gap:4px; }
+.loc-worker-name { font:600 13px/1.4 var(--font-sans); white-space:nowrap; }
+.loc-worker .tag { font-size:9px; padding:3px 4px; white-space:nowrap; }
+.loc-worker p { margin-top:4px; color:var(--n600); font:400 10px/1.4 var(--font-mono); white-space:nowrap; }
+.loc-worker-status { display:none; }
+#vig-locate[data-phase="1"] .loc-worker-onsite, #vig-locate[data-phase="3"] .loc-worker-onsite,
+#vig-locate[data-phase="2"] .loc-worker-off, #vig-locate[data-phase="4"] .loc-worker-departed,
+#vig-locate:not([data-phase]) .loc-worker-departed { display:inline-block; }
+.loc-events { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; margin:14px 0 0; padding:0; list-style:none; font:400 11px/1.5 var(--font-mono); }
+.loc-events li { position:relative; min-width:0; }
+.loc-events .dot { position:absolute; top:5px; left:0; }
+.loc-events time { padding-left:11px; }
+.loc-event-label { display:block; }
+#vig-locate .vig-bd > .muted { margin-top:16px; }
+@container (min-width:440px) {
+  .loc-map { min-height:240px; }
+  .loc-events { grid-template-columns:repeat(4,max-content); justify-content:space-between; }
+  .loc-event-label { display:inline; }
+}
+
+/* Agent conversations */
+.chip-row { display:flex; flex-wrap:wrap; gap:6px; }
+.dm-thread { display:grid; gap:16px; }
+.chip-row + .dm-thread { margin-top:20px; }
+.dm-msg { display:flex; align-items:flex-start; gap:8px; }
+.dm-avatar { width:28px; height:28px; flex:none; display:grid; place-items:center; border:1px solid var(--n200); border-radius:50%; font-size:9px; font-weight:500; }
+.dm-bubble { min-width:0; flex:1; padding:10px 12px; background:var(--n50); border:1px solid transparent; border-radius:10px; overflow-wrap:anywhere; }
+.dm-worker .dm-bubble { background:#fff; border-color:var(--n200); }
+.dm-meta { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px; margin-bottom:6px; font:400 10px/1.5 var(--font-mono); color:var(--n600); }
+.dm-recon { margin-top:20px; padding:4px 0 4px 10px; border-left:2px solid var(--green500); color:var(--green700); font-size:12px; }
+/* Pay */
+#vig-pay .vig-table { font-size:11px; }
+#vig-pay .vig-table th:first-child { width:29%; }
+#vig-pay .vig-table th:nth-child(2) { width:20%; }
+#vig-pay .vig-table th:nth-child(3) { width:27%; }
+#vig-pay .vig-table .tag { padding:3px 5px; font-size:10px; }
+#vig-pay .vig-table .muted { font-size:10px; margin-top:5px; }
+#vig-pay[data-phase="4"] .t-adp, #vig-pay[data-phase="5"] .t-adp { border-color:var(--n900); }
+.pay-progress { height:4px; margin-top:16px; border-radius:2px; overflow:hidden; background:var(--n100); }
+.pay-progress > span { display:block; width:100%; height:100%; background:var(--green500); }
+.vig[data-phase] .pay-progress > span { width:0; transition:width 1.2s; }
+.vig[data-phase] .pay-progress.on > span { width:100%; }
+
+.tag-hold { color:var(--n700); }
+@media (max-width:400px) { .vig-table th, .vig-table td { padding-left:3px; padding-right:3px; } .vig-hd, .vig-bd { padding-left:12px; padding-right:12px; } .dm-bubble { padding:8px; } }
