@@ -639,3 +639,19 @@ button.cite-ht { font:inherit; background:#fff; cursor:pointer; }
 .carousel-arrow svg { width:18px; height:18px; stroke:currentColor; stroke-width:1.75; fill:none; }
 .carousel-arrow--prev { left:24px; } .carousel-arrow--next { right:24px; }
 @media (max-width:700px) { .carousel-arrow { display:none; } }
+/* compiler: compact */
+@media (min-width:1024px) {
+  #rulebook .compiler-body { min-height:0; }
+  #rulebook .compiler-pane { padding:16px 18px; }
+  #rulebook .compiler-pane > .eyebrow { margin-bottom:12px; }
+  #rulebook .source-text, #rulebook .compiler-pane p.doc { font-size:13px; line-height:1.55; }
+  #rulebook .fact { padding-bottom:10px; font-size:11px; line-height:1.5; }
+  #rulebook .fact .tag { margin-bottom:2px; }
+  #rulebook .vocabulary { margin-top:4px; padding-top:12px; }
+  #rulebook .vocabulary-chips { gap:4px; margin-top:8px; }
+  #rulebook .vocabulary-chips > * { padding:2px 5px; font-size:10px; }
+  #rulebook .compiler-code { font-size:11px; }
+  #rulebook .compiler-code .ln { min-height:1.45em; line-height:1.45; }
+  #rulebook .compile-status { gap:6px; margin-top:12px; padding-top:12px; font-size:10.5px; }
+}
+@media (min-width:1024px) { #rulebook .compiler-source p { font-size:13.5px; line-height:1.6; } #rulebook .source-caption + p { margin-top:10px; } #rulebook .compiler-source p + .source-caption { margin-top:12px; } }
