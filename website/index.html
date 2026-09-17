@@ -381,16 +381,91 @@
       <section id="rulebook" class="ew-section" aria-labelledby="rulebook-title">
         <div class="zone-box zone-y-tight center"><h2 class="h2" id="rulebook-title">Your rulebook, compiled.</h2><p class="sub-sm">Compliance is not a feature bolted on at the end. It is the rules the agent runs on every pay run, written in plain English and compiled once.</p></div>
         <div class="ew-h-divider" aria-hidden="true"><span class="ew-marker marker-left"></span><span class="ew-marker marker-right"></span></div>
-        <div class="grid ew-grid-3 zone-divided"><span class="ew-marker marker-third marker-top" aria-hidden="true"></span><span class="ew-marker marker-third" aria-hidden="true"></span><span class="ew-marker marker-two-thirds marker-top" aria-hidden="true"></span><span class="ew-marker marker-two-thirds" aria-hidden="true"></span>
-          <div class="zone-box"><p class="eyebrow">State and city</p><h3 class="h4">Wage orders and labor rules</h3><p>Meal and rest breaks, overtime, minimum wage by jurisdiction, predictive scheduling. Updated when the law changes, not when someone remembers.</p></div>
-          <div class="zone-box"><p class="eyebrow">Your contracts</p><h3 class="h4">Client agreements and SLAs</h3><p>Bill rates, orientation and training rates, approved overtime, site-specific rules. Every clause becomes a check.</p></div>
-          <div class="zone-box"><p class="eyebrow">This week</p><h3 class="h4">Exceptions that expire</h3><p>No overtime at one site this week. A holiday rate for one client. Rules that switch themselves off on the date you set.</p></div>
+        <div class="zone-box compiler-stage">
+          <div class="compiler" data-steps="500,500,500,500,500,500,800,110,110,110,110,110,110,110,110,110,110,110,110,110,110,900,900,900,2600" data-resettable>
+            <div class="compiler-bar">
+              <div class="compiler-tabs" role="tablist" aria-label="Rule source">
+                <button class="compiler-tab" id="compiler-tab-law" type="button" role="tab" aria-controls="compiler-law" aria-selected="true" tabindex="0">IWC Wage Order 5 · §11</button>
+                <button class="compiler-tab" id="compiler-tab-contract" type="button" role="tab" aria-controls="compiler-contract" aria-selected="false" tabindex="-1">Client contract · Sutter</button>
+                <button class="compiler-tab" id="compiler-tab-week" type="button" role="tab" aria-controls="compiler-week" aria-selected="false" tabindex="-1">This week · Mercy General</button>
+              </div>
+              <div class="lifecycle" aria-label="Rule lifecycle"><span class="tag" data-life="draft">Draft</span><span aria-hidden="true">→</span><span class="tag" data-life="shadow">Shadow</span><span aria-hidden="true">→</span><span class="tag tag-ok" data-life="live">Live</span></div>
+            </div>
+            <div class="compiler-panel" id="compiler-law" role="tabpanel" aria-labelledby="compiler-tab-law" tabindex="0">
+              <div class="compiler-body">
+                <div class="compiler-pane compiler-source"><p class="eyebrow">SOURCE</p>
+                  <p class="source-caption">Industrial Welfare Commission · Wage Order 5-2001 · Section 11</p>
+                  <p class="source-document"><strong>11. Meal Periods.</strong> (A) No employer shall employ any person for a work period of <mark class="ex ex-threshold" data-ref="A1" data-step="1">more than five (5) hours</mark> without a meal period of <mark class="ex ex-duration" data-ref="A2" data-step="2">not less than 30 minutes</mark>, except that when a work period of <mark class="ex ex-exception" data-ref="A3" data-step="3">not more than six (6) hours will complete the day's work the meal period may be waived by mutual consent</mark> of the employer and the employee. (B) If an employer <mark class="ex ex-condition" data-ref="B1" data-step="4">fails to provide an employee a meal period</mark> in accordance with the applicable provisions of this order, the employer shall pay the employee <mark class="ex ex-remedy" data-ref="B2" data-step="5">one (1) hour of pay at the employee's regular rate</mark> of compensation for each workday that the meal period is not provided.</p>
+                  <p class="source-caption">Labor Code §226.7 · §512(a)</p>
+                </div>
+                <div class="compiler-pane compiler-extracted"><p class="eyebrow">EXTRACTED</p>
+                  <div class="compiler-facts"><div class="fact" data-step="1"><span class="tag">THRESHOLD</span><p>work_period &gt; 5.0 h → meal required</p><p class="prov">§11(A) · A1</p></div><div class="fact" data-step="2"><span class="tag">DURATION</span><p>meal ≥ 30 min</p><p class="prov">§11(A) · A2</p></div><div class="fact" data-step="3"><span class="tag">EXCEPTION</span><p>waivable if shift ≤ 6.0 h and waiver on file</p><p class="prov">§11(A) · A3 · §512(a)</p></div><div class="fact" data-step="4"><span class="tag">CONDITION</span><p>meal missing, short, or late</p><p class="prov">§11(B) · B1</p></div><div class="fact" data-step="5"><span class="tag">REMEDY</span><p>+1.0 h at regular rate, per workday</p><p class="prov">§11(B) · B2 · §226.7</p></div></div>
+                  <div class="vocabulary" data-step="6"><p class="eyebrow">Grounded in the shift vocabulary</p><div class="vocabulary-chips"><span>shift.worked_minutes</span><span>shift.meal.start</span><span>shift.meal.length</span><span>facility.state</span><span>worker.waiver_on_file</span><span>facility.auto_deduct</span><span>location.break_gap</span></div></div>
+                </div>
+                <div class="compiler-pane compiler-compiled"><p class="eyebrow">COMPILED</p>
+                  <pre class="compiler-code" tabindex="0" aria-label="Compiled rule"><code><span class="ln" data-step="7"><span class="type"><span class="kw">rule</span> CA-MB-01                       // IWC WO5 §<span class="lit">11</span> · LC §<span class="lit">226.7</span></span></span>
+<span class="ln" data-step="8"><span class="type">  <span class="kw">scope</span>    facility.state == <span class="lit">&quot;CA&quot;</span></span></span>
+<span class="ln" data-step="9"><span class="type">  <span class="kw">params</span>   deadline_h   = <span class="lit">5.0</span>   [<span class="lit">3.0</span> .. <span class="lit">6.0</span>]</span></span>
+<span class="ln" data-step="10"><span class="type">           min_len_min  = <span class="lit">30</span>    [<span class="lit">20</span> .. <span class="lit">45</span>]</span></span>
+<span class="ln" data-step="11"><span class="type">           waiver_cap_h = <span class="lit">6.0</span>   [<span class="lit">5.0</span> .. <span class="lit">8.0</span>]</span></span>
+<span class="ln" data-step="12"><span class="type"></span></span>
+<span class="ln" data-step="12"><span class="type">  <span class="kw">when</span>  shift.meal == <span class="lit">none</span></span></span>
+<span class="ln" data-step="13"><span class="type">    if  facility.auto_deduct &amp;&amp; location.break_gap   → pass  <span class="lit">&quot;auto-deducted, gap visible&quot;</span></span></span>
+<span class="ln" data-step="14"><span class="type">    if  worked_h &lt;= waiver_cap_h &amp;&amp; worker.waiver_on_file → pass <span class="lit">&quot;valid waiver on file&quot;</span></span></span>
+<span class="ln" data-step="15"><span class="type">    if  worked_h &lt;= deadline_h                        → pass  <span class="lit">&quot;shorter than deadline&quot;</span></span></span>
+<span class="ln" data-step="16"><span class="type">    else                                              → flag  <span class="lit">&quot;no meal in {worked_h}h&quot;</span>  +<span class="lit">1.0h</span> premium</span></span>
+<span class="ln" data-step="17"><span class="type"></span></span>
+<span class="ln" data-step="18"><span class="type">  <span class="kw">when</span>  shift.meal.start_h &gt; deadline_h              → flag  <span class="lit">&quot;meal started late&quot;</span>       +<span class="lit">1.0h</span> premium</span></span>
+<span class="ln" data-step="19"><span class="type">  <span class="kw">when</span>  shift.meal.length_min &lt; min_len_min          → flag  <span class="lit">&quot;meal {len} &lt; {min}&quot;</span>      +<span class="lit">1.0h</span> premium</span></span>
+<span class="ln" data-step="20"><span class="type">  else                                               → pass  <span class="lit">&quot;meal {len} min, started {start}h in&quot;</span></span></span></code></pre>
+                  <div class="compile-status"><p data-step="21"><span class="check compile-check" aria-hidden="true">✓</span> type-checked against 60-term shift vocabulary</p><p data-step="22"><span class="check compile-check" aria-hidden="true">✓</span> backtest · 1,284 shifts · 41 flagged · 0 disagreements with payroll history</p><p data-step="23"><span class="check compile-check" aria-hidden="true">✓</span> promoted · Draft → Shadow → Live</p></div>
+                </div>
+              </div>
+            </div>
+            <div class="compiler-panel" id="compiler-contract" role="tabpanel" aria-labelledby="compiler-tab-contract" tabindex="0" hidden>
+              <div class="compiler-body">
+                <div class="compiler-pane compiler-source"><p class="eyebrow">SOURCE</p>
+                  <p class="source-document"><strong>3.4 Orientation.</strong> Orientation shifts are <mark class="ex ex-billing" data-ref="C1" data-step="1">not billable</mark>. Contractor shall pay Worker the <mark class="ex ex-rate" data-ref="C2" data-step="2">Training Rate</mark> set out in Schedule B for <mark class="ex ex-scope" data-ref="C3" data-step="3">orientation hours</mark>.</p>
+                </div>
+                <div class="compiler-pane compiler-extracted"><p class="eyebrow">EXTRACTED</p>
+                  <div class="compiler-facts"><div class="fact" data-step="3"><span class="tag">SCOPE</span><p>shift.type == orientation</p><p class="prov">§3.4 · C3</p></div><div class="fact" data-step="1"><span class="tag">BILLING</span><p>bill_rate = 0</p><p class="prov">§3.4 · C1</p></div><div class="fact" data-step="2"><span class="tag">RATE</span><p>pay_rate = schedule_b.training</p><p class="prov">§3.4 · C2</p></div></div>
+                  <div class="vocabulary" data-step="6"><p class="eyebrow">Grounded in the shift vocabulary</p><div class="vocabulary-chips"><span>shift.worked_minutes</span><span>shift.meal.start</span><span>shift.meal.length</span><span>facility.state</span><span>worker.waiver_on_file</span><span>facility.auto_deduct</span><span>location.break_gap</span></div></div>
+                </div>
+                <div class="compiler-pane compiler-compiled"><p class="eyebrow">COMPILED</p>
+                  <pre class="compiler-code" tabindex="0" aria-label="Compiled rule"><code><span class="ln" data-step="7"><span class="type"><span class="kw">rule</span> CON-SUTTER-01</span></span>
+<span class="ln" data-step="8"><span class="type">  <span class="kw">scope</span> client == <span class="lit">&quot;Sutter Health&quot;</span> &amp;&amp; shift.type == <span class="lit">&quot;orientation&quot;</span></span></span>
+<span class="ln" data-step="9"><span class="type">  <span class="kw">then</span> bill <span class="lit">0.0</span></span></span>
+<span class="ln" data-step="10"><span class="type">  <span class="kw">then</span> pay schedule_b.training_rate</span></span></code></pre>
+                  <div class="compile-status"><p data-step="21"><span class="check compile-check" aria-hidden="true">✓</span> type-checked</p><p data-step="22"><span class="check compile-check" aria-hidden="true">✓</span> backtest · 96 shifts · 12 applied</p><p data-step="23"><span class="check compile-check" aria-hidden="true">✓</span> promoted Live</p></div>
+                </div>
+              </div>
+            </div>
+            <div class="compiler-panel" id="compiler-week" role="tabpanel" aria-labelledby="compiler-tab-week" tabindex="0" hidden>
+              <div class="compiler-body">
+                <div class="compiler-pane compiler-source"><p class="eyebrow">SOURCE</p>
+                  <div class="source-note ops-note"><p class="source-caption">Ops manager</p><p class="source-document"><mark class="ex ex-effect" data-ref="W1" data-step="1">No overtime</mark> at <mark class="ex ex-scope" data-ref="W2" data-step="2">Mercy General</mark> this week, we're over budget. <mark class="ex ex-expiry" data-ref="W3" data-step="3">Expires Sunday</mark>.</p></div>
+                </div>
+                <div class="compiler-pane compiler-extracted"><p class="eyebrow">EXTRACTED</p>
+                  <div class="compiler-facts"><div class="fact" data-step="2"><span class="tag">SCOPE</span><p>facility == Mercy General</p><p class="prov">W2</p></div><div class="fact" data-step="1"><span class="tag">EFFECT</span><p>hold hours &gt; 40/week</p><p class="prov">W1</p></div><div class="fact" data-step="3"><span class="tag">EXPIRES</span><p>2026-08-30 23:59 (auto-off)</p><p class="prov">W3</p></div></div>
+                  <div class="vocabulary" data-step="6"><p class="eyebrow">Grounded in the shift vocabulary</p><div class="vocabulary-chips"><span>shift.worked_minutes</span><span>shift.meal.start</span><span>shift.meal.length</span><span>facility.state</span><span>worker.waiver_on_file</span><span>facility.auto_deduct</span><span>location.break_gap</span></div></div>
+                </div>
+                <div class="compiler-pane compiler-compiled"><p class="eyebrow">COMPILED</p>
+                  <pre class="compiler-code" tabindex="0" aria-label="Compiled rule"><code><span class="ln" data-step="7"><span class="type"><span class="kw">rule</span> TW-1187 expires <span class="lit">2026-08-30T23:59</span></span></span>
+<span class="ln" data-step="8"><span class="type">  <span class="kw">when</span> weekly_hours &gt; <span class="lit">40</span> → hold <span class="lit">&quot;OT under review · TW-1187&quot;</span></span></span></code></pre>
+                  <div class="compile-status"><p data-step="21"><span class="check compile-check" aria-hidden="true">✓</span> type-checked</p><p data-step="22"><span class="check compile-check" aria-hidden="true">✓</span> shadow run · 54 shifts · 1 held (Aisha B.)</p><p data-step="23"><span class="check compile-check" aria-hidden="true">✓</span> Live until Sunday</p></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="ew-h-divider" aria-hidden="true"><span class="ew-marker marker-left"></span><span class="ew-marker marker-right"></span></div>
-        <div class="zone-box rulebook-example">
-          <div class="rule-pair"><div class="rule-source"><p class="eyebrow">Source</p><p class="rule-clause mono">a 30-minute unpaid meal break must start before the end of the <span class="hl">5th hour</span>; missed, short or late → <span class="hl">1-hour premium</span></p></div><span class="rule-arrow" aria-hidden="true">→</span><div class="rule-compiled"><p class="eyebrow">Compiled</p><dl class="rule-fields"><dt>id</dt><dd>CA-MB-01</dd><dt>scope</dt><dd>California</dd><dt>condition</dt><dd>meal break missing or after 5.0 h</dd><dt>effect</dt><dd>+1.0 h at regular rate</dd></dl><span class="tag tag-ok">Active</span></div></div>
-          <p class="muted">Compiled from the California Wage Order. Synthetic example.</p>
+        <div class="grid ew-grid-3 zone-divided rulebook-notes"><span class="ew-marker marker-third marker-top" aria-hidden="true"></span><span class="ew-marker marker-third" aria-hidden="true"></span><span class="ew-marker marker-two-thirds marker-top" aria-hidden="true"></span><span class="ew-marker marker-two-thirds" aria-hidden="true"></span>
+          <div class="zone-box zone-y-tight"><p class="eyebrow">State and city</p><h3 class="h4">Wage orders and labor rules</h3><p>Meal and rest breaks, overtime, minimum wage by jurisdiction, predictive scheduling. Updated when the law changes, not when someone remembers.</p></div>
+          <div class="zone-box zone-y-tight"><p class="eyebrow">Your contracts</p><h3 class="h4">Client agreements and SLAs</h3><p>Bill rates, orientation and training rates, approved overtime, site-specific rules. Every clause becomes a check.</p></div>
+          <div class="zone-box zone-y-tight"><p class="eyebrow">This week</p><h3 class="h4">Exceptions that expire</h3><p>No overtime at one site this week. A holiday rate for one client. Rules that switch themselves off on the date you set.</p></div>
         </div>
+        <div class="ew-h-divider" aria-hidden="true"><span class="ew-marker marker-left"></span><span class="ew-marker marker-right"></span></div>
+        <div class="zone-box zone-y-tight center"><p class="muted">Rules compile once and run on every pay run. Backtest before you activate; shadow before you trust. Synthetic example.</p></div>
         <div class="ew-divider" aria-hidden="true"></div><span class="ew-marker marker-left" aria-hidden="true"></span><span class="ew-marker marker-right" aria-hidden="true"></span>
       </section>
       <section id="before-after" class="ew-section" aria-labelledby="ba-title">

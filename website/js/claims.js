@@ -39,7 +39,7 @@
     'worker-messages': entry('Photo 16:58; agent 16:59; reply and confirmation 17:02; worker reply 5:01; recorded 17:01', 'synthetic', 'Sixth website change batch; synthetic demonstration data'),
     'timeline-axis': entry('06:00–18:00; ticks 06, 09, 12, 15, 18', 'synthetic', synthetic),
     'compiled-rules': entry('CA-MB-01: 30-minute meal before end of 5th hour, 1-hour premium, +1.0 h; CON-SUTTER-01: bill $0; TW-1187: hold OT > 40 h, expires Sun Aug 30; ran on 54 shifts, fired 1, #4825', 'synthetic', synthetic),
-    'rulebook-example': entry('CA-MB-01; California; 30-minute unpaid meal before end of 5th hour; 1-hour premium; meal break missing or after 5.0 h; +1.0 h at regular rate', 'synthetic', 'Eighth website change batch; supplied California Wage Order example, not independently verified legal guidance'),
+    'rulebook-example': entry('IWC Wage Order 5-2001 §11; Labor Code §226.7 and §512(a); CA-MB-01: deadline 5.0 h [3.0 .. 6.0], meal 30 min [20 .. 45], waiver cap 6.0 h [5.0 .. 8.0], +1.0 h premium; 60-term vocabulary; backtest 1,284 shifts, 41 flagged, 0 disagreements; CON-SUTTER-01 §3.4: bill 0.0, backtest 96 shifts, 12 applied; TW-1187: >40 h/week, 54 shifts, 1 held, expires 2026-08-30 23:59', 'synthetic', 'Tenth website change batch; supplied compiler demonstrations and source excerpts, not independently verified legal guidance'),
     'supervisor-messages': entry('14:40; 14:52; floor 06:01–14:31; hour 5; 1-hour premium; CA-MB-01; +$24.50; 3 attachments', 'synthetic', synthetic),
     'payroll-batch': entry('ADP-0901; 41 workers; $58,420; sent Thu 18:00', 'synthetic', synthetic),
     'report-locked': metric('Q2 2026; three months of ground-truth attendance', '#numbers; #industries'),
