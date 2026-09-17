@@ -167,3 +167,6 @@ document.querySelectorAll('button.cite-ht').forEach(b => {
   mobile.addEventListener('change',schedule);
   update();
 })();
+
+// carousel arrows: step and pause autoplay like a dot click
+(() => { const c = document.querySelector('.carousel'); if (!c) return; const dots = [...c.querySelectorAll('.carousel-dot')]; const step = d => { const i = dots.findIndex(b => b.classList.contains('is-active')); dots[(i + d + dots.length) % dots.length].click(); }; c.querySelector('.carousel-arrow--prev')?.addEventListener('click', () => step(-1)); c.querySelector('.carousel-arrow--next')?.addEventListener('click', () => step(1)); })();

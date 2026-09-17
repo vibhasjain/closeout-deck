@@ -572,3 +572,13 @@ button.cite-ht { font:inherit; background:#fff; cursor:pointer; }
 .carousel-dot::after, .carousel-progress { display:none !important; }
 .carousel-counter { display:none; }
 @media (min-width:701px) { .slide--text-top .hero-actions { justify-content:center; } }
+/* softer local fade; no focus rings on carousel controls; prev/next arrows */
+@media (min-width:701px) {
+  .slide--text-top .over-copy::before { inset:-80px -200px; background:radial-gradient(ellipse at center, rgba(239,233,220,.94) 0%, rgba(239,233,220,.86) 35%, rgba(239,233,220,.5) 62%, rgba(239,233,220,.15) 82%, rgba(239,233,220,0) 100%); filter:blur(18px); }
+}
+.carousel-dot:focus, .carousel-dot:focus-visible, .carousel .btn:focus, .carousel .btn:focus-visible, .carousel-arrow:focus, .carousel-arrow:focus-visible { outline:none; box-shadow:none; }
+.carousel-arrow { position:absolute; top:50%; transform:translateY(-50%); z-index:4; width:44px; height:44px; border-radius:50%; border:1px solid rgba(28,27,24,.15); background:rgba(239,233,220,.85); color:var(--n900); display:grid; place-items:center; cursor:pointer; padding:0; transition:background-color .15s; }
+.carousel-arrow:hover { background:rgba(239,233,220,1); }
+.carousel-arrow svg { width:18px; height:18px; stroke:currentColor; stroke-width:1.75; fill:none; }
+.carousel-arrow--prev { left:24px; } .carousel-arrow--next { right:24px; }
+@media (max-width:700px) { .carousel-arrow { display:none; } }
