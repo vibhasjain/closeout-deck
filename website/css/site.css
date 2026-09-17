@@ -655,3 +655,9 @@ button.cite-ht { font:inherit; background:#fff; cursor:pointer; }
   #rulebook .compile-status { gap:6px; margin-top:12px; padding-top:12px; font-size:10.5px; }
 }
 @media (min-width:1024px) { #rulebook .compiler-source p { font-size:13.5px; line-height:1.6; } #rulebook .source-caption + p { margin-top:10px; } #rulebook .compiler-source p + .source-caption { margin-top:12px; } }
+/* footer: logo + copyright left, links bottom-right on the same baseline */
+.site-footer .container { display:grid; grid-template-columns:1fr auto; column-gap:24px; align-items:end; }
+.site-footer .footer-top { grid-column:1; }
+.site-footer p { grid-column:1; }
+.site-footer .footer-links { grid-column:2; grid-row:1 / span 2; align-self:end; }
+@media (max-width:700px) { .site-footer .container { grid-template-columns:1fr; } .site-footer .footer-links { grid-column:1; grid-row:auto; margin-top:16px; } }
