@@ -2,7 +2,7 @@
 
 ## What this is
 
-A single static proposal for the next HyperTrack homepage at https://closeoutcopilot.com/website/: proposal, noindex. The page follows the supplied brief, with copy kept inline and numeric claims documented in `js/claims.js`. It has no build step, framework, package dependencies, or form submission.
+A single static proposal for the next HyperTrack homepage at https://closeoutcopilot.com/website/: proposal, noindex. The page follows the supplied brief, with copy kept inline and numeric claims documented in `js/claims.js`. It has no build step, framework, package dependencies, form submission, or Agent Keyboard widget. The current copy presents the eight-agent team as closing out every pay run, with pricing per pay run pending confirmation.
 
 ## How to view locally
 
@@ -21,9 +21,9 @@ node --check website/js/site.js
 
 ## Design system
 
-The page uses hypertrack.com's system: self-hosted Satoshi, Google Fonts JetBrains Mono, the supplied neutral and green tokens, hand-written CSS, and the repository's Edgework rails, dividers, markers, and content zones in place. There are no shadows or dark theme. To meet the original brief's minimum text contrast, small muted text uses `--n600`, the primary CTA fill uses `--green700` (`--green900` on hover), and held-label text uses `--n700` with amber accents; the supplied base token values and type scales remain intact. CTA borders stay neutral to honor the original green allowlist. The second change batch explicitly adds green comparison icons and chart marks, including indigo for light industrial; SVG labels and citation chips use its specified `--n500`, and values use `--n900`. Charts are inline SVG with native mark tooltips, direct values, legends, and expandable data tables. Animation is limited to the specified marquee and synthetic vignettes, with reduced-motion support. The exact supplied loop driver is retained; the three rules map their three beats onto absolute phases 0–2, 3–5, and 6–8 so each footer appears before its group changes. Without JavaScript, vignette content remains readable with only the default rule group and its matching header ID visible. Reduced motion selects only the final rule group.
+The page uses hypertrack.com's system: self-hosted Satoshi, Google Fonts JetBrains Mono, the supplied neutral and green tokens, hand-written CSS, and the repository's Edgework rails, dividers, markers, and content zones in place. The page has no dark theme; the tracking map uses the requested subtle label and worker-card shadows. To meet the original brief's minimum text contrast, small muted text uses `--n600`, the primary CTA fill uses `--green700` (`--green900` on hover), and held-label text uses `--n700` with amber accents; the supplied base token values and type scales remain intact. CTA borders stay neutral to honor the original green allowlist. The second change batch explicitly adds green comparison icons and chart marks, including indigo for light industrial; SVG labels and citation chips use its specified `--n500`, and values use `--n900`. Charts are inline SVG with native mark tooltips, direct values, legends, and expandable data tables. Motion covers the hero carousel, active-slide art parallax, marquee, and synthetic vignettes, with reduced-motion support. The exact supplied loop driver is retained; the three rules map their three beats onto absolute phases 0–2, 3–5, and 6–8 so each footer appears before its group changes. Without JavaScript, vignette content remains readable with only the default rule group and its matching header ID visible. Reduced motion selects only the final rule group.
 
-The hero, the shift, the middle office, the agent overview, and the closing call to action use art across the full viewport width, with copy overlaid on cream scrims. At widths up to 700px, each image becomes a static 16:9 block above the copy on white. The growth stat trio, retention band, and “You write the rules” row retain their own Edgework frames. Industry cards retain their existing layout, and the navigation remains white and sticky.
+The hero is a four-slide carousel: the fastest-growing staffing companies, the staffing growth comparison, the middle office, then the agent overview. Each slide retains its landscape and portrait art, cream scrim, copy, and a primary Book a demo CTA. The first slide has the sole H1; the other three use H2 elements with the same display type. The middle-office slide places its copy on the right. The closing call to action remains a separate full-width bleed. At widths up to 700px, the carousel and closing bleed use 1080×1920 portrait art across a minimum-height 100svh section, with copy overlaid on a bottom cream scrim and 34px carousel headings. The growth stat trio follows the carousel, then the logo bar, retention, Numbers, and “You write the rules” row; the supporting rows retain their Edgework frames. Industry cards retain their existing layout. Four dots and a counter select and identify slides, with a five-second progress line on the active dot. Autoplay pauses on hover, focus within, or a hidden tab; clicking a dot or swiping stops autoplay for the session. Arrow keys work while the carousel has focus, and horizontal swipes of at least 50px switch slides. Reduced motion disables autoplay and fades. The main navigation links to HyperTrack’s Product, Solutions, Customers, Pricing, Docs, and Blog pages; the Book a demo CTA is retained. A 40px sticky section navigation row appears below it after the hero on desktop, linking to How it works, Numbers, Proof, Connectors, Pricing, and Rulebook. The secondary row is hidden below 1024px.
 
 ## Art
 
@@ -40,15 +40,15 @@ The direction is Green Risograph Monumentalism, generated from `assets/art/ART.m
 | `07-coin-plaza` | Closing call to action |
 | `08-before-after` | The same middle office, before and after |
 
-The five full-bleed sections use new 1600×900 desktop compositions and phone variants. Each image carries its original desktop path in `data-fallback`; on failure, the image and picture source switch to the original art before showing the missing-art state. The original compositions remain fallback assets.
+The four hero carousel slides and the closing full-bleed section use the v3 human-first set: landscape compositions for desktop and 1080×1920 portrait variants for widths up to 700px. Each image keeps its current landscape path in `data-fallback`: v2 for the first four, and the prior `07-coin-plaza-b.jpg` composition for the closing call to action, whose v2 asset is not present. If a portrait fails, the image and picture source first try the v3 landscape, then the existing fallback before showing the missing-art state. Art may be pending while it is generated. The existing industry and comparison art remains unchanged.
 
-| Section | Desktop composition | Phone composition | Original fallback |
+| Placement | Landscape composition | Portrait composition | Fallback |
 | --- | --- | --- | --- |
-| Hero | `assets/art/01-hero-b.jpg` | `assets/art/m/01-hero-b.jpg` | `assets/art/01-hero.jpg` |
-| The shift | `assets/art/02-two-monuments-b.jpg` | `assets/art/m/02-two-monuments-b.jpg` | `assets/art/02-two-monuments.jpg` |
-| The middle office | `assets/art/03-middle-office-b.jpg` | `assets/art/m/03-middle-office-b.jpg` | `assets/art/03-middle-office.jpg` |
-| Agent overview | `assets/art/04-one-line-b.jpg` | `assets/art/m/04-one-line-b.jpg` | `assets/art/04-one-line.jpg` |
-| Closing call to action | `assets/art/07-coin-plaza-b.jpg` | `assets/art/m/07-coin-plaza-b.jpg` | `assets/art/07-coin-plaza.jpg` |
+| Hero slide 1 | `assets/art/v3-01-hero.jpg` | `assets/art/v3-01-hero-p.jpg` | `assets/art/v2-01-hero.jpg` |
+| Hero slide 2 · The shift | `assets/art/v3-02-shift.jpg` | `assets/art/v3-02-shift-p.jpg` | `assets/art/v2-02-shift.jpg` |
+| Hero slide 3 · The middle office | `assets/art/v3-03-middle-office.jpg` | `assets/art/v3-03-middle-office-p.jpg` | `assets/art/v2-03-middle-office.jpg` |
+| Hero slide 4 · Agent overview | `assets/art/v3-04-one-line.jpg` | `assets/art/v3-04-one-line-p.jpg` | `assets/art/v2-04-one-line.jpg` |
+| Closing call to action | `assets/art/v3-07-coin.jpg` | `assets/art/v3-07-coin-p.jpg` | `assets/art/07-coin-plaza-b.jpg` |
 
 The eight stations run in this order: 1 Ingest, 2 Locate, 3 Collect, 4 Collate, 5 Apply the rules, 6 Spot discrepancies, 7 Pay, 8 Mediate. Mediate follows Pay because disputes happen after pay.
 
@@ -80,11 +80,10 @@ Statuses below come from the supplied brief. “Verified” records the brief's 
 | naming-rights-nursa | Logo marquee | Permission to display Nursa's mark | unconfirmed | Obtain naming and logo permission. |
 | naming-rights-wonolo | Logo marquee and proof | Permission to display Wonolo's mark | unconfirmed | Obtain naming and logo permission. |
 | naming-rights-traba | Logo marquee | Permission to display Traba's mark | unconfirmed | Obtain naming and logo permission. |
-| naming-rights-instawork | Logo marquee | Permission to display Instawork's mark | unconfirmed | Obtain naming and logo permission. |
-| naming-rights-clipboard-health | Logo marquee | Permission to display Clipboard Health's mark | unconfirmed | Obtain naming and logo permission. |
 | quote-competitive-advantage | Review-only line beneath the Wonolo statement | "HyperTrack is my competitive advantage." — pending verbatim confirmation and approval | unconfirmed | Supply approved quotation and attribution before showing publicly. |
 | connectors-live | Connectors section | Listed timekeeping, payroll, and billing systems are supported | unconfirmed | Confirm live capability and scope for every listed system. |
 | call-expectations | Closing call expectations | Real-shift sample, discrepancy settlements, and show-rate comparison on the call | unconfirmed | Confirm the demo team can deliver each expectation. |
+| pricing-per-pay | Pricing heading | Priced per pay run, not per shift. | unconfirmed | Confirm the pay-run pricing unit and publication approval; contracts from $10k a year and paid pilots remain supplied terms. |
 | report-locked | Numbers section and industry on-time lines | HyperTrack Shift Reliability Report, Q2 2026 figures | unconfirmed | All HyperTrack report figures are from the draft report; confirm against the locked Q2 2026 version. |
 | sia-growth-1 | The shift heading and forecast stat | 1% US staffing growth, 2026 forecast (SIA) | verified | Verified per supplied brief; retain the underlying SIA source and revalidate before publication. |
 | monthly-shifts-1000000 | Hero proof | Over 1,000,000 shifts a month run on HyperTrack | verified | Verified per supplied brief; retain the internal measurement and revalidate before publication. |
@@ -95,10 +94,10 @@ Figures, source URLs, publication years, and confidence classifications below we
 
 | Figure | Where on the page | Publisher | Year | Confidence | URL |
 | --- | --- | --- | --- | --- | --- |
-| Q2 2026; three months observed; about a million validated shifts a month | Numbers source description | HyperTrack | 2026 | first-party-draft | (unpublished; report coming soon, no public link yet) |
+| Q2 2026; three months of ground-truth attendance | Numbers source description | HyperTrack | 2026 | first-party-draft | (unpublished; report coming soon, no public link yet) |
 | No-shows 11.5%, healthcare and light industrial | Numbers tile | HyperTrack | 2026 | first-party-draft | (unpublished; report coming soon, no public link yet) |
 | Arriving workers: on time 74.2%, late 21.9%, unverifiable 3.9% | Numbers stacked bar | HyperTrack | 2026 | first-party-draft | (unpublished; report coming soon, no public link yet) |
-| ~1M shifts validated per month; visibility 64% at go-live to 94% by month 11 | Numbers tile | HyperTrack | 2026 | first-party-draft | (unpublished; report coming soon, no public link yet) |
+| Visibility after go-live: 94% by month 11, from 64% at go-live | Numbers tile | HyperTrack | 2026 | first-party-draft | (unpublished; report coming soon, no public link yet) |
 | Healthcare on time: median 69.3%, best 75.0%, market overall 72.6% | Numbers dumbbell; Industries healthcare line (median and best) | HyperTrack | 2026 | first-party-draft | (unpublished; report coming soon, no public link yet) |
 | Light industrial on time: median 83.3%, best 85.6%, market overall 76.4% | Numbers dumbbell; Industries light industrial line (median and best) | HyperTrack | 2026 | first-party-draft | (unpublished; report coming soon, no public link yet) |
 | Left too late: healthcare 46.7%, light industrial 41.0% | Numbers late-arrival bars | HyperTrack | 2026 | first-party-draft | (unpublished; report coming soon, no public link yet) |
@@ -131,20 +130,31 @@ Every product vignette is a synthetic demonstration and has a “synthetic data�
 - Collection: 4 clipboard rows read; agent message 17:06; Maria reply 17:09 (“5:01, we ran late on the east wing”); agent confirmation 17:09 records 17:01.
 - Timeline: 06:00–18:00, with ticks 06, 09, 12, 15, 18. Paper, worker reply, phone, and ADP sources retain their respective times; the missing ADP clock-out is an exception.
 - Rule examples: CA-MB-01 requires a 30-minute unpaid meal before the end of the 5th hour, with a 1-hour premium (+1.0 h at regular rate) when missed, short, or late. CON-SUTTER-01 sets orientation billing to $0 and pay to training rate. TW-1187 holds OT > 40 h, expiring Sun Aug 30. The supplied rule footer reads “Ran on 54 shifts · fired 1 · #4825 Priya S.”
+- Rulebook section: the static CA-MB-01 example has scope California, condition “meal break missing or after 5.0 h,” effect “+1.0 h at regular rate,” and Active status. Its note reads “Compiled from the California Wage Order. Synthetic example.” This is supplied illustrative copy, not independently verified legal guidance.
 - Discrepancies: 54 checked · 3 flagged · 51 clean. #4821 Maria R. · Mercy General · No clock-out, location shows 17:01 · Flagged; #4826 Luis M. · Mercy General · No meal break before hour 5 (CA-MB-01) · Flagged; #4830 Aisha B. · Mercy General · 3.0 h over 40 (TW-1187) · Held; #4833 Tom K. · Bayview Warehouse · Punches match schedule and location · Clean. The supplied five phase durations and summary's `data-step="5"` are retained; CSS reveals the summary in the final phase (4), including reduced motion.
 - Mediation: agent 14:40; Dana and agent 14:52; Luis on floor 06:01–14:31; settled +$24.50 with 3 attachments.
 - Payroll batch: ADP-0901 · 41 workers · $58,420 · sent Thu 18:00. The batch's worker count is distinct from the demonstration pay-cycle subset.
+
+## Changes, Sep 17
+
+- Hero and metadata now say “close out every pay run”; the overview and Apply the rules/Pay copy use the pay-run unit, and the pricing heading is “Priced per pay run, not per shift.”
+- The logo headline is “The staffing platforms gaining market share are powered by HyperTrack.” Only ShiftKey, Nursa, Wonolo, and Traba remain in the repeating marquee.
+- The monthly-volume claim appears only in the hero; Numbers now introduces ground-truth attendance and shows visibility of 94% by month 11, from 64% at go-live.
+- Before/after compares “A good middle office today” with “Running on HyperTrack,” reflecting capable manual export, reconciliation, evidence, and payroll workflows.
+- Added “Your rulebook, compiled.” with state/city, contract, and expiring exception categories and a static synthetic compiled-rule example.
+- Restored HyperTrack’s primary navigation, added desktop section links after the hero, and switched the art to the v3 human-first set with portrait copy overlays and existing landscape fallbacks.
+- Combined the hero, growth comparison, middle office, and agent overview into one four-slide carousel, with a demo CTA on every slide, timed progress, dots, keyboard and swipe controls, and reduced-motion support.
 
 ## Files
 
 | File | Purpose |
 | --- | --- |
-| `index.html` | Page, inline copy, comparison grid, SVG charts and data tables, eight vignettes, metadata, and claim tags |
+| `index.html` | Four-slide hero, page copy, comparison grid, rulebook, SVG charts and data tables, eight vignettes, metadata, and claim tags |
 | `css/tokens.css` | Satoshi faces, exact tokens, typography, buttons, and primitives |
 | `css/site.css` | Layout, responsive behavior, vignettes, fallbacks, and review styling |
-| `js/site.js` | Navigation, scroll-spy, vignette loops, missing-image fallback, review mode |
+| `js/site.js` | Carousel controls and autoplay, navigation, scroll-spy, vignette loops, missing-image fallback, review mode |
 | `js/claims.js` | Numeric claim documentation, structured data sources, and replacement reference |
-| `check.js` | Dependency-free static checks for assets, anchors, claims, copy, alt text, and widget placement |
+| `check.js` | Dependency-free static checks for assets, anchors, claims, copy, alt text, and absence of the Agent Keyboard widget |
 | `README.md` | Setup, design notes, art slots, claim register, data-source table, and synthetic dataset |
 
 Existing `BRIEF.md`, `assets/**`, repository-root fonts, Edgework CSS, wordmark, favicon, and connector tiles remain supplied dependencies.
