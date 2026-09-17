@@ -553,3 +553,22 @@ button.cite-ht { font:inherit; background:#fff; cursor:pointer; }
 .carousel-dot::before { background:var(--n500); }
 .carousel-dot.is-active::before { background:var(--n900); }
 .carousel:has(.slide--text-top.is-active) .carousel-controls { margin:0 auto; }
+/* one layout for every splash: text on top, fade only behind the copy, dots fixed bottom-centre */
+@media (min-width:701px) {
+  .slide--text-top .bleed-scrim { background:linear-gradient(180deg,rgba(239,233,220,.55) 0%,rgba(239,233,220,.15) 22%,rgba(239,233,220,0) 40%); }
+  .slide--text-top .over-copy { position:relative; padding:24px 40px; }
+  .slide--text-top .over-copy::before { content:""; position:absolute; inset:-48px -120px; z-index:-1; border-radius:50%; background:radial-gradient(ellipse at center, rgba(239,233,220,.97) 0%, rgba(239,233,220,.94) 45%, rgba(239,233,220,.6) 70%, rgba(239,233,220,0) 100%); filter:blur(6px); }
+  .slide--text-top .over-copy > .btn { display:inline-flex; margin-left:auto; margin-right:auto; }
+  .slide--text-top .over-copy .btn { position:relative; }
+  .slide--text-top .bleed-art img { object-position:50% 100%; }
+
+
+}
+.carousel .over.carousel-control-wrap { display:flex; justify-content:center; padding:0 24px 20px; }
+.carousel-controls, .carousel:has(.slide--text-top.is-active) .carousel-controls, .carousel:has(#next.is-active) .carousel-controls { margin:0; background:transparent; border:0; padding:0; gap:8px; }
+.carousel-dot { width:28px; height:28px; }
+.carousel-dot::before { width:6px; height:6px; background:rgba(28,27,24,.35); }
+.carousel-dot.is-active::before { background:var(--n900); }
+.carousel-dot::after, .carousel-progress { display:none !important; }
+.carousel-counter { display:none; }
+@media (min-width:701px) { .slide--text-top .hero-actions { justify-content:center; } }

@@ -169,3 +169,6 @@ Dawn, seen from high above a whole city of work. In the foreground, cantilevered
 
 ### v5-02-shift — "Staffing is forecast to grow 1% this year. The platforms that run on HyperTrack grew 140%."
 Dawn, a wide aerial view of two staffing companies' yards side by side on the same road. On the left, a modest lot: a small brick office, two vans idling, a short flat line of workers waiting at a door, a thin trickle of tail-lights heading out along a flat road that runs level to the horizon. On the right, the HyperTrack-powered platform: a bright glass operations building, its lot laid out like a runway, and from it dozens of white vans and shuttles full of workers streaming out along green light-lanes that leave the ground and arc steeply up and to the right across the sky, the arc itself reading as a growth curve, carrying the fleet toward a skyline of hospitals, warehouses and arenas glowing on the horizon. The flat road and the rising arc are the comparison. Only the light-lanes, tail-lights and the building's glow are green.
+
+### v5-03-middle-office — same SCENE as v4-03-middle-office, COMPOSITION-TOP (the cut-away building sits in the bottom 55%, wide dawn sky above)
+### v5-04-one-line — same SCENE as v4-04-one-line, COMPOSITION-TOP (the operations floor seen from slightly above so its ceiling line sits at 55%, open sky/ceiling glow above)
