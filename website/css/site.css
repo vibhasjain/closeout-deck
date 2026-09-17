@@ -520,5 +520,21 @@ button.cite-ht { font:inherit; background:#fff; cursor:pointer; }
 /* carousel slide 2: push the huddle right so the headline sits on clean paper */
 
 /* carousel: hero art sits further right so the headline clears the building; controls follow the copy side */
-#hero-1 .bleed-art img { object-position:84% 50%; }
+
 .carousel .slide.bleed--right-open .carousel-controls, .carousel:has(#next.is-active) .carousel-controls { margin-left:auto; }
+/* text-on-top slides: open sky above, epic scene below */
+.slide--text-top .bleed-art img { object-position:50% 100%; }
+.slide--text-top .bleed-scrim { background:linear-gradient(180deg,rgba(239,233,220,.98) 0%,rgba(239,233,220,.96) 30%,rgba(239,233,220,.6) 44%,rgba(239,233,220,0) 56%); }
+.slide--text-top .over { align-self:flex-start; padding-top:72px; }
+.slide--text-top .over-copy { max-width:760px; }
+.slide--text-top .display { font-size:clamp(34px,4.6vw,60px); }
+@media (max-width:700px) {
+  .slide--text-top { align-items:flex-start; }
+  .slide--text-top .bleed-art img { object-position:50% 100%; }
+  .slide--text-top .bleed-scrim { background:linear-gradient(180deg,#efe9dc 0%,rgba(239,233,220,.96) 42%,rgba(239,233,220,0) 60%); }
+  .slide--text-top .over { padding:88px 20px 0; }
+}
+.slide--text-top .bleed-scrim { background:linear-gradient(180deg,rgba(239,233,220,.98) 0%,rgba(239,233,220,.97) 46%,rgba(239,233,220,.75) 56%,rgba(239,233,220,0) 68%); }
+.slide--text-top .over { padding-top:56px; }
+#hero-1 .bleed-art img { object-position:50% 100%; transform:scale(1.04); transform-origin:50% 100%; }
+.carousel:has(.slide--text-top.is-active) .carousel-controls { background:rgba(239,233,220,.85); border-radius:999px; padding:2px 12px 2px 4px; }
