@@ -122,13 +122,25 @@ for (const reference of [...pending].sort()) console.log(`pending art: ${referen
 const ids = new Set(elements.map(tag => tag.attrs.id).filter(Boolean));
 const anchors = elements.filter(tag => tag.name === 'a' && tag.attrs.href?.startsWith('#'));
 const broken = anchors.map(tag => decodeURIComponent(tag.attrs.href.slice(1))).filter(id => !ids.has(id));
-check('2 nav and station anchors resolve', broken.length === 0, broken.length ? broken.join(', ') : `${anchors.length} fragment links checked`);
+// Nav dropdown: a button that controls an existing menu holding four absolute links.
+const has = (tag, cls) => (tag.attrs.class || '').split(/\s+/).includes(cls);
+const within = (open, closeName) => { const end = tags.find(tag => tag.closing && tag.name === closeName && tag.start > open.start); return elements.filter(tag => tag.start > open.start && tag.start < end.start); };
+const ddBtn = elements.find(tag => has(tag, 'nav-dd-btn'));
+const ddMenu = elements.find(tag => has(tag, 'nav-dd-menu'));
+const ddLinks = ddMenu ? within(ddMenu, 'div').filter(tag => tag.name === 'a') : [];
+if (!ddBtn || !ddMenu || ddBtn.attrs['aria-controls'] !== ddMenu.attrs.id || ddBtn.attrs['aria-expanded'] !== 'false') broken.push('nav dropdown wiring');
+if (ddLinks.length !== 4 || ddLinks.some(tag => !/^https:\/\/hypertrack\.com\//.test(tag.attrs.href || ''))) broken.push('nav dropdown links');
+// Every speaker card carries a local headshot and a YouTube replay.
+const cards = elements.filter(tag => tag.name === 'li' && has(tag, 'spk'));
+const badCards = cards.filter(card => { const inner = within(card, 'li'); return !inner.some(tag => tag.name === 'img' && /^assets\/speakers\/[\w-]+\.jpg$/.test(tag.attrs.src || '')) || !inner.some(tag => tag.name === 'a' && /^https:\/\/(youtu\.be\/|www\.youtube\.com\/watch\?v=)[\w-]+$/.test(tag.attrs.href || '')); });
+if (cards.length !== 9 || badCards.length) broken.push(`speaker cards (${cards.length} found, ${badCards.length} incomplete)`);
+check('2 anchors, nav dropdown and speaker cards resolve', broken.length === 0, broken.length ? broken.join(', ') : `${anchors.length} fragment links, ${ddLinks.length} dropdown links, ${cards.length} speaker cards`);
 
 const claims = [...new Set(elements.map(tag => tag.attrs['data-confirm']).filter(value => value !== undefined))];
 const undocumented = claims.filter(id => !id || !readme.includes(`| ${id} |`));
 check('3 claim IDs documented in README', undocumented.length === 0, undocumented.length ? undocumented.join(', ') : `${claims.length} IDs checked`);
 
-const forbidden = ['cdn.tailwindcss.com', 'Closeout Copilot'].filter(value => html.includes(value));
+const forbidden = ['cdn.tailwindcss.com', 'Closeout Copilot', 'pay run', 'shift work', 'hypertrack.com/research'].filter(value => html.includes(value));
 check('4 prohibited strings absent', forbidden.length === 0, forbidden.join(', '));
 
 const headings = elements.filter(tag => tag.name === 'h1');
@@ -136,12 +148,5 @@ const images = elements.filter(tag => tag.name === 'img');
 const noAlt = images.filter(tag => !tag.attrs.alt?.trim() && !(tag.attrs.alt !== undefined && tag.attrs['aria-hidden'] === 'true'));
 check('5 one h1 and nonempty image alt text', headings.length === 1 && noAlt.length === 0, `${headings.length} h1; ${images.length} images; ${noAlt.length} missing alt`);
 
-const widgets = elements.filter(tag => tag.name === 'script' && tag.attrs.src === 'https://agent-keyboard.fly.dev/widget.js');
-const bodyEnd = tags.find(tag => tag.name === 'body' && tag.closing);
-const widget = widgets[0];
-const widgetClose = widget && tags.find(tag => tag.name === 'script' && tag.closing && tag.start >= widget.end);
-const afterWidget = widgetClose && bodyEnd ? html.slice(widgetClose.end, bodyEnd.start).replace(/<!--[\s\S]*?-->/g, '').trim() : 'missing';
-const bodyStart = elements.find(tag => tag.name === 'body');
-const lastWidget = widgets.length === 1 && widget.attrs['data-site'] === 'closeout' && Object.hasOwn(widget.attrs, 'defer') && bodyStart && widget.start > bodyStart.end && bodyEnd && widgetClose && widgetClose.end <= bodyEnd.start && afterWidget === '';
 check('6 no Agent Keyboard tag on this page', !html.includes('agent-keyboard.fly.dev'));
 process.exitCode = failed ? 1 : 0;

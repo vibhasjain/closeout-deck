@@ -7,28 +7,6 @@ toggle.addEventListener('click',()=>toggle.setAttribute('aria-expanded',String(h
 document.querySelectorAll('.mobile-nav a').forEach(a=>a.addEventListener('click',closeMenu));
 matchMedia('(min-width: 1024px)').addEventListener('change',e=>{ if(e.matches) closeMenu(); });
 
-const links=[...document.querySelectorAll('.hiw-link')], stations=[...document.querySelectorAll('.hiw-sub')];
-const subnav=document.querySelector('.subnav'), hero=document.querySelector('#hero');
-const desktopNav=matchMedia('(min-width: 1024px)');
-let spyPending=false;
-function updateSpy(){
-  const pastHero=desktopNav.matches&&hero.getBoundingClientRect().bottom<=header.getBoundingClientRect().height;
-  subnav.hidden=!pastHero;
-  document.documentElement.classList.toggle('has-subnav',pastHero);
-  let active=stations[0];
-  stations.forEach(s=>{ if(s.getBoundingClientRect().top<=140) active=s; });
-  links.forEach(a=>{
-    const selected=a.getAttribute('href')==='#'+active.id;
-    a.classList.toggle('is-active',selected);
-    if(selected) a.setAttribute('aria-current','step'); else a.removeAttribute('aria-current');
-  });
-  spyPending=false;
-}
-function scheduleSpy(){ if(!spyPending){ spyPending=true; requestAnimationFrame(updateSpy); } }
-addEventListener('scroll',scheduleSpy,{passive:true});
-addEventListener('resize',scheduleSpy,{passive:true});
-updateSpy();
-
 // Hero carousel: one animation clocks both the progress line and the next slide.
 (() => {
   const carousel=document.querySelector('.carousel');
@@ -63,7 +41,6 @@ updateSpy();
     progress.pause();
     progress.onfinish=()=>{ if(!paused()) show(index+1); };
     sync();
-    scheduleSpy();
     carousel.dispatchEvent(new Event('slidechange'));
   };
   dots.forEach((dot,i)=>dot.addEventListener('click',()=>show(i,true)));
@@ -93,9 +70,12 @@ updateSpy();
   show(0);
   fromHash();
   requestAnimationFrame(()=>carousel.classList.add('is-ready'));
+  // the other slides' art loads only after the first view has finished loading
+  const warm=()=>carousel.classList.add('is-warm');
+  if(document.readyState==='complete') warm(); else addEventListener('load',warm);
 })();
 
-document.querySelectorAll('.art img, .tile img, .st-emblem, .st-thumb').forEach(img=>{
+document.querySelectorAll('.art img, .tile img').forEach(img=>{
   const frame=img.closest('.art, .tile')||img;
   const landscape=img.getAttribute('src');
   const sources=[...(img.closest('picture')?.querySelectorAll('source')||[])];
@@ -119,69 +99,6 @@ document.querySelectorAll('.art img, .tile img, .st-emblem, .st-thumb').forEach(
   fail();
 });
 
-function loop(el){
-  const steps = el.dataset.steps.split(',').map(Number), items = el.querySelectorAll('[data-step]');
-  const apply = p => { el.dataset.phase = p; items.forEach(n => n.classList.toggle('on', +n.dataset.step <= p)); };
-  const reduced=matchMedia('(prefers-reduced-motion: reduce)'), resettable=el.hasAttribute('data-resettable');
-  if (reduced.matches&&!resettable) { apply(steps.length - 1); el.classList.add('is-done'); return; }
-  let p = 0, t, on = false;
-  const tick = () => { apply(p); const last = p === steps.length - 1; t = setTimeout(() => { p = last ? 0 : p + 1; tick(); }, steps[p] + (last ? 1400 : 0)); };
-  new IntersectionObserver(([e]) => { if (e.isIntersecting && !on) { on = true; if(!resettable||!reduced.matches) tick(); } else if (!e.isIntersecting && on) { on = false; clearTimeout(t); } }, { threshold: .25 }).observe(el);
-  if(resettable){
-    const restart=()=>{
-      clearTimeout(t);
-      p=reduced.matches?steps.length-1:0;
-      el.classList.toggle('is-done',reduced.matches);
-      apply(p);
-      if(on&&!reduced.matches) tick();
-    };
-    reduced.addEventListener('change',restart);
-    restart();
-    return restart;
-  }
-}
-document.querySelectorAll('.vig[data-steps]').forEach(loop);
-
-// The compiler opts into resetting the same phase driver when its source changes.
-(() => {
-  const compiler=document.querySelector('#rulebook .compiler');
-  if(!compiler) return;
-  const tabs=[...compiler.querySelectorAll('.compiler-tab')], panels=[...compiler.querySelectorAll('.compiler-panel')];
-  const lifecycle=[...compiler.querySelectorAll('[data-life]')];
-  const updateLifecycle=()=>{
-    const phase=Number(compiler.dataset.phase??24), active=phase>=23?'live':phase>=22?'shadow':'draft';
-    lifecycle.forEach(chip=>{
-      const current=chip.dataset.life===active;
-      chip.classList.toggle('tag-ok',current);
-      if(current) chip.setAttribute('aria-current','step'); else chip.removeAttribute('aria-current');
-    });
-  };
-  new MutationObserver(updateLifecycle).observe(compiler,{attributes:true,attributeFilter:['data-phase']});
-  const restart=loop(compiler);
-  const select=(index,focus=false)=>{
-    tabs.forEach((tab,i)=>{
-      const selected=i===index;
-      tab.setAttribute('aria-selected',String(selected));
-      tab.tabIndex=selected?0:-1;
-      panels[i].hidden=!selected;
-    });
-    compiler.classList.add('is-resetting');
-    restart();
-    updateLifecycle();
-    requestAnimationFrame(()=>compiler.classList.remove('is-resetting'));
-    if(focus) tabs[index].focus();
-  };
-  tabs.forEach((tab,i)=>{
-    tab.addEventListener('click',()=>select(i));
-    tab.addEventListener('keydown',e=>{
-      if(e.altKey||e.ctrlKey||e.metaKey) return;
-      const next=e.key==='ArrowRight'?(i+1)%tabs.length:e.key==='ArrowLeft'?(i+tabs.length-1)%tabs.length:e.key==='Home'?0:e.key==='End'?tabs.length-1:-1;
-      if(next>=0){ e.preventDefault(); select(next,true); }
-    });
-  });
-  updateLifecycle();
-})();
-
 // HyperTrack report chips: not linked yet; a click says "Coming soon" for a moment.
 document.querySelectorAll('button.cite-ht').forEach(b => {
   const arrow = b.querySelector('.cite-arrow');
@@ -198,7 +115,7 @@ document.querySelectorAll('button.cite-ht').forEach(b => {
 // parallax on the big art: ±24px over each image's scroll range
 (() => {
   const reduced=matchMedia('(prefers-reduced-motion: reduce)'), mobile=matchMedia('(max-width: 700px)');
-  const imgs = [...document.querySelectorAll('.bleed .bleed-art img, #before-after .art img, #industries .art img')];
+  const imgs = [...document.querySelectorAll('.bleed .bleed-art img')];
   let ticking = false;
   const update = () => {
     ticking=false;
@@ -223,3 +140,27 @@ document.querySelectorAll('button.cite-ht').forEach(b => {
 
 // carousel arrows: step and pause autoplay like a dot click
 (() => { const c = document.querySelector('.carousel'); if (!c) return; const dots = [...c.querySelectorAll('.carousel-dot')]; const step = d => { const i = dots.findIndex(b => b.classList.contains('is-active')); dots[(i + d + dots.length) % dots.length].click(); }; c.querySelector('.carousel-arrow--prev')?.addEventListener('click', () => step(-1)); c.querySelector('.carousel-arrow--next')?.addEventListener('click', () => step(1)); })();
+
+// Shift Work Summit dropdown: opens on hover and on click; Escape and outside clicks close it
+(() => {
+  const dd=document.querySelector('.nav-dd'); if(!dd) return;
+  const btn=dd.querySelector('.nav-dd-btn');
+  const set=open=>{ dd.classList.toggle('is-open',open); btn.setAttribute('aria-expanded',String(open)); };
+  // a mouse click never closes what hover just opened
+  btn.addEventListener('click',e=>set(e.pointerType==='mouse'||btn.getAttribute('aria-expanded')!=='true'));
+  dd.addEventListener('pointerenter',e=>{ if(e.pointerType==='mouse') set(true); });
+  dd.addEventListener('pointerleave',e=>{ if(e.pointerType==='mouse') set(false); });
+  dd.addEventListener('focusout',e=>{ if(!dd.contains(e.relatedTarget)) set(false); });
+  dd.addEventListener('keydown',e=>{ if(e.key==='Escape'){ set(false); btn.focus(); } });
+  document.addEventListener('click',e=>{ if(!dd.contains(e.target)) set(false); });
+})();
+
+// speaker row: arrows page the native scroller; no auto-scroll
+(() => {
+  const row=document.querySelector('.spk-row'); if(!row) return;
+  const prev=document.querySelector('.spk-arrow--prev'), next=document.querySelector('.spk-arrow--next');
+  const upd=()=>{ prev.disabled=row.scrollLeft<=4; next.disabled=row.scrollLeft>=row.scrollWidth-row.clientWidth-4; };
+  const page=d=>row.scrollBy({left:d*Math.max(276,row.clientWidth-276),behavior:'smooth'});
+  prev.addEventListener('click',()=>page(-1)); next.addEventListener('click',()=>page(1));
+  row.addEventListener('scroll',upd,{passive:true}); addEventListener('resize',upd,{passive:true}); upd();
+})();

@@ -1,0 +1,1 @@
+IMAGE v7-02-fortune-p DONE.
