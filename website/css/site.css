@@ -538,3 +538,18 @@ button.cite-ht { font:inherit; background:#fff; cursor:pointer; }
 .slide--text-top .over { padding-top:56px; }
 #hero-1 .bleed-art img { object-position:50% 100%; transform:scale(1.04); transform-origin:50% 100%; }
 .carousel:has(.slide--text-top.is-active) .carousel-controls { background:rgba(239,233,220,.85); border-radius:999px; padding:2px 12px 2px 4px; }
+/* full-height splash; text-on-top slides centered, dots visible */
+@media (min-width:701px) {
+  section.bleed.carousel, .carousel .slide { min-height:100svh; }
+  .slide--text-top .over { align-self:flex-start; padding-top:120px; }
+  .slide--text-top .over-copy { max-width:860px; margin:0 auto; text-align:center; }
+  .slide--text-top .over-copy .proof { justify-content:center; }
+  .slide--text-top .over-copy > .btn { margin-top:28px; }
+  .slide--text-top .bleed-scrim { background:linear-gradient(180deg,rgba(239,233,220,.99) 0%,rgba(239,233,220,.98) 50%,rgba(239,233,220,.8) 58%,rgba(239,233,220,0) 70%); }
+  .slide--text-top .bleed-art img { object-position:50% 100%; transform:none; }
+  .slide--text-top .sub, .slide--text-top .muted { color:var(--n800); }
+}
+.carousel-controls { background:rgba(239,233,220,.96); border:1px solid rgba(28,27,24,.12); border-radius:999px; padding:2px 14px 2px 6px; }
+.carousel-dot::before { background:var(--n500); }
+.carousel-dot.is-active::before { background:var(--n900); }
+.carousel:has(.slide--text-top.is-active) .carousel-controls { margin:0 auto; }
