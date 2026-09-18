@@ -165,12 +165,12 @@ document.querySelectorAll('button.cite-ht').forEach(b => {
   row.addEventListener('scroll',upd,{passive:true}); addEventListener('resize',upd,{passive:true}); upd();
 })();
 
-// product vignettes: step through data-steps while in view (lifted from the pre-r5 walkthrough)
+// product vignettes: start on page load and loop, so they are already mid-run when scrolled to
 document.querySelectorAll('.vig[data-steps]').forEach(el => {
   const steps = el.dataset.steps.split(',').map(Number), items = el.querySelectorAll('[data-step]');
   const apply = p => { el.dataset.phase = p; items.forEach(n => n.classList.toggle('on', +n.dataset.step <= p)); };
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) { apply(steps.length - 1); return; }
-  let p = 0, t, on = false;
-  const tick = () => { apply(p); const last = p === steps.length - 1; t = setTimeout(() => { p = last ? 0 : p + 1; tick(); }, steps[p] + (last ? 1400 : 0)); };
-  new IntersectionObserver(([e]) => { if (e.isIntersecting && !on) { on = true; tick(); } else if (!e.isIntersecting && on) { on = false; clearTimeout(t); } }, { threshold: .25 }).observe(el);
+  let p = 0;
+  const tick = () => { apply(p); const last = p === steps.length - 1; setTimeout(() => { p = last ? 0 : p + 1; tick(); }, steps[p] + (last ? 1400 : 0)); };
+  tick();
 });
