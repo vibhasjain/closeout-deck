@@ -10,10 +10,10 @@ This is revision r5 (Sep 17 2026), built from `PLAN-r5.md` after the CEO review.
 2. Hero carousel, three slides, copy on the open paper at the top: fastest growing (H1, with the 140% vs 7% proof line and sourced fine print), Fortune 1000, the middle office.
 3. Shift Work Summit speakers: nine cards in Jared's order, each with a headshot and a YouTube replay. Labelled as summit speakers, not customers.
 4. What we do, as a mini product page: one line, then three rows (Validate, Reconcile, Pay), each a station emblem and copy beside a live product vignette (location map, agent and supervisor thread, pay table; synthetic data, lifted from the parked walkthrough with `css/vignettes.css`), the eight station emblems as a team strip, a primary link to the product page, and the Shift Reliability Report chip.
-5. Customers: the two tiles only (Traba quote, Wonolo result line). No header and no logo line, by owner decision Sep 17; the ShiftKey mark is therefore not on the page.
+5. Customers: the two tiles only (Traba quote and case study, Nursa quote and case study; both link to the real case-study pages). No header and no logo line, by owner decision Sep 17; the ShiftKey mark is therefore not on the page.
 6. Connectors, 7. pricing ("Priced per pay."), 8. a plain Book a demo block, footer.
 
-Cut from the homepage in r5: the stat row, the logo marquee, retention, numbers, the eight-agent walkthrough, the compiler stage, before/after, industries, the closing coin banner and the in-page subnav. The eight-agent walkthrough and the compiler stage are parked, unlinked, in `product-sections.html` for the product page; their CSS and JS are in git history (`css/site.css` and `js/site.js` at commit a7523b9).
+Cut from the homepage in r5: the stat row, the logo marquee, retention, numbers, the eight-agent walkthrough, the compiler stage, before/after, industries, the closing coin banner and the in-page subnav. The eight-agent walkthrough and the compiler stage now live on `product.html` (the proposal's product page, linked from the nav and from "See the product"); `product-sections.html` keeps the raw parked markup it was assembled from.
 
 ## How to view locally
 
@@ -57,10 +57,9 @@ The owner should revalidate every publication claim. `approved` records the Sep 
 | fortune-1000 | Hero slide 2 | Fortune 1000 companies prefer HyperTrack customers. *Based on our customers' live client lists. | unconfirmed | Jared to sign off on wording and fine print. Never name the end clients above the fold. |
 | pricing-per-pay | Pricing heading | Priced per pay. | unconfirmed | Confirm the pricing unit; contracts from $10k a year and paid pilots are supplied terms. |
 | report-locked | Shift Reliability Report chip under "what we do" | Shift Reliability Report 2026; a million validated shifts a month | unconfirmed | No public URL yet; the chip says "Coming soon" on click until one is supplied. |
-| wonolo-15-80 | Wonolo testimonial block | Closeout Agent on 10,000 shifts a month; break confirmations from 15% to 80% | unconfirmed | Attribution: Carlos Ganoza, VP of Product, Wonolo. A result line, not a quotation, until a verbatim quote is approved. |
+| nursa-case-study | Second customer tile | Ben Chapman (Product Leader, Nursa) quote, shortened from hypertrack.com/nursa-case-study, and the case-study link | unconfirmed | Owner asked for Nursa here on Sep 17; the meeting had the Nursa case study as pending approval. Confirm before publishing. Replaced the Wonolo result line, which had no real case study to link to. |
+| naming-rights-nursa | Second customer tile | Permission to display Nursa's mark | unconfirmed | Confirm with the case-study approval. |
 | naming-rights-shiftkey | Customers line | Permission to display ShiftKey's mark | unconfirmed | Approved in the meeting; logo rights still to be confirmed in writing. |
-| naming-rights-wonolo | Customers line and Wonolo block | Permission to display Wonolo's mark | approved | Approved Sep 17. |
-| quote-competitive-advantage | Review-only line beneath the Wonolo statement | "HyperTrack is my competitive advantage." | unconfirmed | Supply approved quotation and attribution before showing publicly. |
 | connectors-live | Connectors section | Listed timekeeping, payroll and billing systems are supported | unconfirmed | Confirm live capability and scope for every listed system. |
 | call-expectations | Book a demo block | We close out a sample of your real shifts and show every discrepancy the agent finds | unconfirmed | Confirm the demo team can deliver this on every call. |
 
@@ -89,11 +88,13 @@ Two deliberate differences from the CSVs: the 2025 CSV lists Jarah Euston as CEO
 | File | Purpose |
 | --- | --- |
 | `index.html` | The seven sections, metadata and claim tags |
-| `product-sections.html` | Parked, unlinked: the eight-agent walkthrough and the compiler stage, for the product page |
+| `product.html` | Product page: hero with the eight-agent team strip, the eight-station walkthrough with live vignettes, the rulebook compiler, connectors, Book a demo |
+| `product-sections.html` | The raw parked markup `product.html` was assembled from (unlinked) |
+| `css/product.css`, `js/product.js` | Product page only: walkthrough layout and compiler styles; station scroll-spy and the compiler's phase loop and tabs |
 | `css/tokens.css` | Satoshi faces, exact tokens, typography, buttons and primitives |
-| `css/vignettes.css` | The product vignettes' styles, lifted unchanged from the pre-r5 walkthrough so the product page can reuse them |
+| `css/vignettes.css` | All eight product vignettes' styles, lifted unchanged from the pre-r5 walkthrough; the homepage uses three, the product page all eight. Every vignette autostarts on page load (site.js) |
 | `css/site.css` | Layout, carousel, nav dropdown, speaker cards, responsive behavior, fallbacks, review styling |
 | `js/site.js` | Carousel, nav scroll state and dropdown, speaker row arrows, parallax, report chip, missing-image fallback, review mode |
 | `js/claims.js` | Claim register and the speaker list with sources |
-| `check.js` | Dependency-free static checks: assets, anchors + nav dropdown + speaker cards, claims, copy, alt text, no Agent Keyboard widget |
+| `check.js` | Dependency-free static checks: assets, anchors + nav dropdown + speaker cards, claims, copy, alt text, no Agent Keyboard widget, plus structural checks on `product.html` |
 | `PLAN-r5.md` | The plan this revision was built from |

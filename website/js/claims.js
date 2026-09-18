@@ -10,10 +10,9 @@
     'fortune-1000': entry("Fortune 1000 companies prefer HyperTrack customers. *Based on our customers' live client lists.", 'unconfirmed'),
     'pricing-per-pay': entry('Priced per pay. Contracts from $10k a year; paid pilots available.', 'unconfirmed'),
     'report-locked': entry('Shift Reliability Report 2026; a million validated shifts a month across healthcare and light industrial; no public URL yet', 'unconfirmed'),
-    'wonolo-15-80': entry('10,000 shifts/month; break confirmations 15% → 80%', 'unconfirmed'),
     'naming-rights-shiftkey': entry('ShiftKey mark', 'unconfirmed'),
-    'naming-rights-wonolo': entry('Wonolo mark', 'approved'),
-    'quote-competitive-advantage': entry('Reserved customer quotation', 'unconfirmed'),
+    'nursa-case-study': entry('Ben Chapman, Product Leader, Nursa; quote shortened from https://hypertrack.com/nursa-case-study', 'unconfirmed'),
+    'naming-rights-nursa': entry('Nursa mark', 'unconfirmed'),
     'connectors-live': entry('UKG, ADP, Ubeya, 7shifts, Paylocity, Gusto, QuickBooks, Bullhorn, SAP, NetSuite, Workday', 'unconfirmed'),
     'call-expectations': entry('A sample of real shifts closed out; every discrepancy the agent finds', 'unconfirmed'),
     'traba-quote': entry('100% of shifts; 98.3% fulfillment rate', 'approved', 'Akshay Buddiga, Traba; https://hypertrack.com/traba-case-study')

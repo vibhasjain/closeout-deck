@@ -149,4 +149,24 @@ const noAlt = images.filter(tag => !tag.attrs.alt?.trim() && !(tag.attrs.alt !==
 check('5 one h1 and nonempty image alt text', headings.length === 1 && noAlt.length === 0, `${headings.length} h1; ${images.length} images; ${noAlt.length} missing alt`);
 
 check('6 no Agent Keyboard tag on this page', !html.includes('agent-keyboard.fly.dev'));
+
+// product.html gets the structural checks only: local paths, fragment anchors, copy bans, one h1, alt text, no widget.
+{
+  const page = fs.readFileSync(path.join(base, 'product.html'), 'utf8');
+  const els = tagsOf(page).filter(tag => !tag.closing);
+  const problems = [];
+  for (const { attrs } of els) for (const key of ['src', 'href']) {
+    const value = attrs[key];
+    if (!value || /^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(value)) continue;
+    const file = decodeURIComponent(value.split(/[?#]/)[0]);
+    if (file && !fs.existsSync(path.resolve(base, file))) problems.push(`missing ${file}`);
+  }
+  const pageIds = new Set(els.map(tag => tag.attrs.id).filter(Boolean));
+  for (const tag of els) if (tag.name === 'a' && tag.attrs.href?.startsWith('#') && !pageIds.has(tag.attrs.href.slice(1))) problems.push(`anchor ${tag.attrs.href}`);
+  for (const word of ['cdn.tailwindcss.com', 'Closeout Copilot', 'pay run', 'Pay run', 'shift work', 'agent-keyboard.fly.dev']) if (page.includes(word)) problems.push(`banned "${word}"`);
+  if (els.filter(tag => tag.name === 'h1').length !== 1) problems.push('h1 count');
+  const bare = els.filter(tag => tag.name === 'img' && !tag.attrs.alt?.trim() && !(tag.attrs.alt !== undefined && tag.attrs['aria-hidden'] === 'true'));
+  if (bare.length) problems.push(`${bare.length} images without alt`);
+  check('7 product.html paths, anchors, copy, h1, alt', problems.length === 0, problems.slice(0, 8).join(', '));
+}
 process.exitCode = failed ? 1 : 0;

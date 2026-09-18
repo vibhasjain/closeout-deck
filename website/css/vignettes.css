@@ -1,4 +1,4 @@
-/* Product vignettes on the homepage "what" block: lifted unchanged from the pre-r5 walkthrough (site.css at a7523b9) so the product page can reuse this file. */
+/* Product vignettes, lifted unchanged from the pre-r5 walkthrough (site.css at a7523b9). Used by index.html (three) and product.html (all eight). */
 /* Shared product vignette */
 .vig { width:100%; max-width:480px; min-width:0; border:1px solid var(--n200); border-radius:16px; overflow:hidden; background:#fff; font-size:13px; line-height:1.5; }
 .vig-hd { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:4px 12px; padding:12px 16px; border-bottom:1px solid var(--n200); font-size:14px; font-weight:600; }
@@ -20,9 +20,26 @@
 .vig-table th:first-child, .vig-table td:first-child { padding-left:0; }
 .vig-table th:last-child, .vig-table td:last-child { padding-right:0; }
 .vig-table tr:last-child td { border-bottom:0; }
+#vig-ingest .vig-table th:first-child { width:42%; }
+.browser-bar { display:flex; align-items:center; gap:10px; padding:8px; margin-bottom:8px; background:var(--n50); border:1px solid var(--n200); border-radius:6px; }
+.browser-bar .mono { font-size:9px; }
+.browser-dots { display:flex; gap:3px; flex:none; }
+.browser-dots span { width:8px; height:8px; border-radius:50%; background:var(--n300); }
 .tile-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:16px; }
 .tile img { filter:none; }
 .vig-summary { margin-top:16px; }
+.disc-list { list-style:none; margin:0; padding:0; }
+.disc-list li { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 12px; padding:12px 0; align-items:start; }
+.disc-list li + li { border-top:1px solid var(--n200); }
+.disc-list p { grid-column:1; }
+.disc-list .tag { grid-column:2; grid-row:1; }
+/* Five durations end at phase 4; show the requested step-5 summary with the last row. */
+#vig-discrepancies[data-phase="4"] [data-step="5"] { opacity:1; transform:none; }
+#vig-ingest[data-phase="0"] .t-ukg,
+#vig-ingest[data-phase="1"] .t-adp,
+#vig-ingest[data-phase="2"] .t-ubeya,
+#vig-ingest[data-phase="3"] .t-7shifts { border-color:var(--n900); }
+
 /* Locate: full-width tracking map, worker card and event strip. */
 #vig-locate { container-type:inline-size; }
 .loc-map-stage { position:relative; }
@@ -93,6 +110,44 @@
 .dm-worker .dm-bubble { background:#fff; border-color:var(--n200); }
 .dm-meta { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px; margin-bottom:6px; font:400 10px/1.5 var(--font-mono); color:var(--n600); }
 .dm-recon { margin-top:20px; padding:4px 0 4px 10px; border-left:2px solid var(--green500); color:var(--green700); font-size:12px; }
+.photo-attachment { width:150px; height:112px; max-width:100%; margin:8px 0 10px; border:1px solid var(--n200); border-radius:6px; overflow:hidden; transform:rotate(-2deg); }
+.photo-attachment svg { display:block; width:100%; height:100%; }
+.photo-caption { font:400 10px/1.5 var(--font-mono); color:var(--n500); }
+/* Six durations end at phase 5; keep the final reconciliation visible with the confirmation. */
+#vig-collect[data-phase="5"] [data-step="6"] { opacity:1; transform:none; }
+#vig-mediate .chip-row { margin-top:20px; }
+
+/* Four sources, one timeline */
+.ts-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.ts-card { border:1px solid var(--n200); border-radius:8px; padding:10px; min-width:0; }
+.ts-card > p + p { margin-top:6px; }
+.ts-card .mono { font-size:10px; }
+.ts-timeline { margin-top:20px; padding:0 3px; }
+.ts-axis { display:flex; justify-content:space-between; padding-bottom:8px; color:var(--n600); font:400 10px/1.5 var(--font-mono); }
+.ts-track { position:relative; height:22px; border-top:1px solid var(--n200); }
+.ts-mark { position:absolute; top:-4px; width:6px; height:6px; border-radius:50%; background:var(--n600); }
+.ts-mark.ok { background:var(--green500); }
+.ts-track .tag-hold { position:absolute; right:0; top:-10px; font-size:9px; padding:3px 5px; }
+.ts-final { margin-top:16px; border-color:var(--n900); }
+
+/* Rule compilation; absolute phases retain the specified loop driver. */
+#vig-rules .rule-group { display:none; margin-top:0; }
+#vig-rules:not([data-phase]) .rule-a,
+#vig-rules[data-phase="0"] .rule-a, #vig-rules[data-phase="1"] .rule-a, #vig-rules[data-phase="2"] .rule-a,
+#vig-rules[data-phase="3"] .rule-b, #vig-rules[data-phase="4"] .rule-b, #vig-rules[data-phase="5"] .rule-b,
+#vig-rules[data-phase="6"] .rule-c, #vig-rules[data-phase="7"] .rule-c, #vig-rules[data-phase="8"] .rule-c { display:block; }
+.rule-pair { display:grid; grid-template-columns:minmax(0,1fr) 12px minmax(0,1fr); align-items:stretch; gap:8px; }
+.rule-source, .rule-compiled { min-width:0; padding:12px; border:1px solid var(--n200); border-radius:8px; }
+.rule-arrow { align-self:center; text-align:center; color:var(--n600); }
+.rule-clause { margin-top:12px; font:400 12px/1.7 var(--font-mono); overflow-wrap:anywhere; }
+.hl { background:linear-gradient(90deg,#dcfce7 0 100%) no-repeat 0 0 / 100% 100%; }
+.vig[data-phase] .hl { background-size:0 100%; transition:background-size .6s; }
+.vig[data-phase] .on .hl { background-size:100% 100%; }
+.rule-fields { display:grid; grid-template-columns:auto minmax(0,1fr); gap:6px 8px; margin:12px 0; font:400 10px/1.5 var(--font-mono); overflow-wrap:anywhere; }
+.rule-fields dt { color:var(--n600); }
+.rule-fields dd { margin:0; }
+.rule-group > .mono { margin-top:16px; }
+
 /* Pay */
 #vig-pay .vig-table { font-size:11px; }
 #vig-pay .vig-table th:first-child { width:29%; }
@@ -107,4 +162,5 @@
 .vig[data-phase] .pay-progress.on > span { width:100%; }
 
 .tag-hold { color:var(--n700); }
-@media (max-width:400px) { .vig-table th, .vig-table td { padding-left:3px; padding-right:3px; } .vig-hd, .vig-bd { padding-left:12px; padding-right:12px; } .dm-bubble { padding:8px; } }
+@container (max-width:400px) { .rule-pair { grid-template-columns:minmax(0,1fr); } .rule-arrow { transform:rotate(90deg); } }
+@media (max-width:400px) { .rule-pair { grid-template-columns:minmax(0,1fr); } .rule-arrow { transform:rotate(90deg); } .vig-table th, .vig-table td { padding-left:3px; padding-right:3px; } .vig-hd, .vig-bd { padding-left:12px; padding-right:12px; } .dm-bubble { padding:8px; } }
