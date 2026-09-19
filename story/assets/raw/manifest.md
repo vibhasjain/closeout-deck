@@ -27,3 +27,4 @@
 23-paper-to-sms.png | /Users/vibes/.codex/generated_images/01a091a8-d66d-7c70-9b8b-079e3f26672c/exec-90bf32f2-5acc-4759-890e-223d600d39d5.png | retry once: logo-like lettering on vending packaging; strengthened no text of any kind; accepted second attempt
 25-collate.png | /Users/vibes/.codex/generated_images/01a091e4-531e-7740-b4c0-241d94f91c91/exec-538e267f-125d-41b9-a37a-8e539561e00b.png | retried once: handwriting in first attempt; strengthened no text of any kind; accepted second attempt
 26-end-to-end.png | /Users/vibes/.codex/generated_images/01a0921c-9fdb-7123-8eec-cd41dff7b8e2/exec-f18e1538-3ac7-4868-899a-ea99cffd4d4a.png | retried once: lettering-like marks on paperwork; strengthened no text of any kind; accepted second attempt
+27-collate-invoice.png | /Users/vibes/.codex/generated_images/01a0baf9-a392-7b10-9348-1345a1553bf1/exec-74596266-e245-4108-8bd1-1e51c40b152f.png | none
