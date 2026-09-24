@@ -38,7 +38,9 @@ body { font-family: var(--sans); font-size: 13px; line-height: 1.5; color: hsl(v
 .app { display: flex; flex-direction: column; height: 100%; }
 .top { display: flex; align-items: center; gap: .75rem; height: 3rem; flex-shrink: 0; padding: 0 16px; border-bottom: 1px solid hsl(var(--border)); }
 .top img { height: 18px; }
-.top #meta { margin-left: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.top #meta .st { display: inline-flex; align-items: center; gap: .3rem; }
+.top #meta .st svg { width: 13px; height: 13px; flex-shrink: 0; }
+.top #meta { display: flex; align-items: center; gap: .9rem; margin-left: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 640px) { .top #meta { display: none; } }
 .bar { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .75rem; padding: .75rem 16px; border-bottom: 1px solid hsl(var(--border)); }
 .bar h1 { margin: 0; font-size: 14px; font-weight: 600; }
@@ -46,8 +48,8 @@ body { font-family: var(--sans); font-size: 13px; line-height: 1.5; color: hsl(v
 table { border-collapse: separate; border-spacing: 0; }
 th, td { border-right: 1px solid hsl(var(--border)); border-bottom: 1px solid hsl(var(--border)); padding: .6rem .75rem; vertical-align: top; text-align: left; width: 220px; min-width: 220px; }
 thead th { position: sticky; top: 0; z-index: 2; background: hsl(var(--background)); font-weight: 600; }
-.co { display: flex; align-items: center; gap: .5rem; }
-.co img, .co .ph { width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; object-fit: contain; }
+.co { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; }
+.co img, .co .ph { width: 28px; height: 28px; border-radius: 6px; flex-shrink: 0; object-fit: contain; }
 .co .ph { background: hsl(var(--muted)); border: 1px solid hsl(var(--border)); }
 .who { display: block; margin-top: .2rem; font-family: var(--mono); font-size: 10.5px; font-weight: 400; color: hsl(var(--muted-foreground)); line-height: 1.35; }
 th.q, td.q { position: sticky; left: 0; z-index: 1; background: hsl(var(--muted)); width: 150px; min-width: 150px; color: hsl(var(--foreground)); font-weight: 500; font-size: 12px; }
@@ -55,9 +57,9 @@ thead th.q { z-index: 3; }
 td.sec { position: sticky; left: 0; background: hsl(var(--background)); border-right: 0; padding-top: 1rem; }
 .cell { display: flex; flex-direction: column; }
 .ans { display: flex; flex-direction: column; align-items: flex-start; }
-.ans > span:first-child { padding-bottom: .6rem; }
+.ans > span:first-child { padding-bottom: .85rem; }
 .ans .tag { margin: 0; }
-.foot { display: flex; align-items: center; justify-content: space-between; gap: .5rem; width: 100%; }
+.foot { display: flex; align-items: center; gap: .5rem; }
 .foot .dt { font-family: var(--mono); font-size: 10.5px; color: hsl(var(--muted-foreground)); white-space: nowrap; }
 
 .ans + .ans { margin-top: .75rem; padding-top: .75rem; border-top: 1px dashed hsl(var(--border)); }
@@ -140,15 +142,22 @@ function signIn() {
 const people = p => { const a = p.split(' · '); return a.slice(0, 3).map(esc).join('<br>') + (a.length > 3 ? `<br>+${a.length - 3} more` : '') }
 // One unit only: "12 minutes ago", "3 hours ago", "2 days ago".
 const ago = d => { const m = Math.max(1, Math.round((Date.now() - d) / 60000)); const [n, u] = m < 60 ? [m, 'minute'] : m < 1440 ? [Math.round(m / 60), 'hour'] : [Math.round(m / 1440), 'day']; return `${n} ${u}${n === 1 ? '' : 's'} ago` }
+// lucide: building-2, circle-help, message-square-quote
+const svg = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`
+const ICON = {
+  co: svg('<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4M10 10h4M10 14h4M10 18h4"/>'),
+  q: svg('<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>'),
+  a: svg('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 12a2 2 0 0 0 2-2V8H8"/><path d="M14 12a2 2 0 0 0 2-2V8h-2"/>'),
+}
 const SRC = { gong: 'Gong', hubspot: 'HubSpot', slack: 'Slack', interview: 'Interview' }
 function render() {
   $('gate').hidden = true; $('app').hidden = false
   const cos = DATA.companies
   const n = cos.reduce((t, c) => t + Object.values(c.cells).reduce((u, v) => u + v.length, 0), 0)
   const up = new Date(DATA.updatedAt)
-  $('meta').textContent = `${cos.length} companies · ${DATA.questions.length} questions · ${n} answers · updated ${ago(up)}`
+  $('meta').innerHTML = [[ICON.co, cos.length, 'Companies'], [ICON.q, DATA.questions.length, 'Questions'], [ICON.a, n, 'Answers']].map(([i, v, t]) => `<span class="st" title="${t}">${i}${v}</span>`).join('') + `<span>Updated ${ago(up)}</span>`
   const logo = c => c.logo ? `<img src="${esc(c.logo)}" alt="" loading="lazy" onerror="this.outerHTML='<span class=ph></span>'">` : '<span class="ph"></span>'
-  const head = `<thead><tr><th class="q lbl">Question</th>${cos.map(c => `<th><div class="co">${logo(c)}<span>${esc(c.company)}</span></div>${c.people ? `<span class="who" title="${esc(c.people)}">${people(c.people)}</span>` : ''}</th>`).join('')}</tr></thead>`
+  const head = `<thead><tr><th class="q"></th>${cos.map(c => `<th><div class="co"><span>${esc(c.company)}</span>${logo(c)}</div>${c.people ? `<span class="who" title="${esc(c.people)}">${people(c.people)}</span>` : ''}</th>`).join('')}</tr></thead>`
   const body = DATA.questions.map((q, i) => `<tr><td class="q">${esc(q)}</td>${cos.map((c, ci) => `<td>${(c.cells['Q' + (i + 1)] || []).length ? '<div class="cell">' + (c.cells['Q' + (i + 1)]).map((a, ai) =>
     `<div class="ans"><span>${esc(a.a)}</span><div class="foot"><span class="tag click" data-c="${ci}" data-q="${i + 1}" data-a="${ai}">${esc(a.cite.label)}</span><span class="dt">${esc(a.cite.date || '')}</span></div></div>`).join('') + '</div>' : ''}</td>`).join('')}</tr>`).join('')
   $('t').innerHTML = head + '<tbody>' + body + '</tbody>'
