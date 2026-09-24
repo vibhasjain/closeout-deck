@@ -272,11 +272,13 @@ $('t').addEventListener('click', e => {
     const co = h.dataset.co
     ROW_SORT = ROW_SORT.co !== co ? { co, mode: 'answered' } : ROW_SORT.mode === 'answered' ? { co, mode: 'unanswered' } : { co: '', mode: '' }
     render()
-    // Sorting by a company = start reading it: back to the top, its column right after the questions.
+    // Sorting by a company = start reading it: first question under the header, its column right after the questions.
     if (ROW_SORT.co) {
       const col = [...document.querySelectorAll('th.coh')].find(x => x.dataset.co === co)
       const wrap = document.querySelector('.wrap')
-      if (col) wrap.scrollTo({ top: 0, left: col.offsetLeft - document.querySelector('th.q').offsetWidth })
+      const firstQ = document.querySelector('tbody tr:not(.prow)')
+      const top = firstQ ? firstQ.getBoundingClientRect().top - document.querySelector('thead').getBoundingClientRect().bottom : 0  // = height of the summary rows
+      if (col) wrap.scrollTo({ top, left: col.offsetLeft - document.querySelector('th.q').offsetWidth })
     }
     return
   } const t = e.target.closest('.tag.click'); if (t) openDrawer(+t.dataset.c, +t.dataset.q, +t.dataset.a) })
