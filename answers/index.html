@@ -15,6 +15,7 @@
   --border: 0 0% 90%; --sans: 'Inter', ui-sans-serif, system-ui, sans-serif; --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; }
 body { font-family: var(--sans); font-size: 13px; line-height: 1.5; color: hsl(var(--foreground)); background: hsl(var(--background)); -webkit-font-smoothing: antialiased; }
 .lbl { font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: hsl(var(--muted-foreground)); }
@@ -114,13 +115,14 @@ function signIn() {
   const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.onload = go; document.head.appendChild(sc)
 }
 
+const short = p => { const a = p.split(' · '); return a.slice(0, 2).join(' · ') + (a.length > 2 ? ` +${a.length - 2}` : '') }
 const SRC = { gong: 'Gong', hubspot: 'HubSpot', slack: 'Slack', interview: 'Interview' }
 function render() {
   $('gate').hidden = true; $('app').hidden = false
   const cos = DATA.companies
   $('meta').textContent = `${cos.length} companies · ${DATA.questions.length} questions · updated ${new Date(DATA.updatedAt).toLocaleDateString()}`
   const logo = c => c.logo ? `<img src="${esc(c.logo)}" alt="" loading="lazy" onerror="this.outerHTML='<span class=ph></span>'">` : '<span class="ph"></span>'
-  const head = `<thead><tr><th class="q lbl">Question</th>${cos.map(c => `<th><div class="co">${logo(c)}<span>${esc(c.company)}</span></div>${c.people ? `<span class="who">${esc(c.people)}</span>` : ''}</th>`).join('')}</tr></thead>`
+  const head = `<thead><tr><th class="q lbl">Question</th>${cos.map(c => `<th><div class="co">${logo(c)}<span>${esc(c.company)}</span></div>${c.people ? `<span class="who" title="${esc(c.people)}">${esc(short(c.people))}</span>` : ''}</th>`).join('')}</tr></thead>`
   const body = DATA.questions.map((q, i) => `<tr><td class="q">${esc(q)}</td>${cos.map((c, ci) => `<td>${(c.cells['Q' + (i + 1)] || []).map((a, ai) =>
     `<div class="ans">${esc(a.a)} <span class="tag click" data-c="${ci}" data-q="${i + 1}" data-a="${ai}">${esc(a.cite.label)}</span></div>`).join('')}</td>`).join('')}</tr>`).join('')
   $('t').innerHTML = head + '<tbody>' + body + '</tbody>'
