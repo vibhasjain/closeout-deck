@@ -38,6 +38,8 @@ body { font-family: var(--sans); font-size: 13px; line-height: 1.5; color: hsl(v
 .app { display: flex; flex-direction: column; height: 100%; }
 .top { display: flex; align-items: center; gap: .75rem; height: 3rem; flex-shrink: 0; padding: 0 16px; border-bottom: 1px solid hsl(var(--border)); }
 .top img { height: 18px; }
+.logout { all: unset; cursor: pointer; margin-left: 1rem; }
+.logout:hover { color: hsl(var(--foreground)); }
 .top #meta .st { display: inline-flex; align-items: center; gap: .3rem; }
 .top #meta .st svg { width: 13px; height: 13px; flex-shrink: 0; }
 .top #meta { display: flex; align-items: center; gap: .9rem; margin-left: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -76,7 +78,7 @@ td.sec { position: sticky; left: 0; background: hsl(var(--background)); border-r
 .ans > span:first-child { padding-bottom: .85rem; }
 .ans .tag { margin: 0; }
 .foot { display: flex; align-items: center; gap: .5rem; }
-.foot .dt { font-family: var(--mono); font-size: 10.5px; color: hsl(var(--muted-foreground)); white-space: nowrap; }
+.foot .dt { font-family: var(--mono); font-size: 10.5px; word-spacing: -.3em; color: hsl(var(--muted-foreground)); white-space: nowrap; }
 
 .ans + .ans { margin-top: .75rem; padding-top: .75rem; border-top: 1px dashed hsl(var(--border)); }
 .tag { display: inline-flex; align-items: center; gap: .3rem; border-radius: 9999px; border: 1px solid hsl(var(--border)); background: hsl(var(--muted)); padding: 0 .45rem; font-size: 10px; line-height: 1.6; color: hsl(var(--muted-foreground)); white-space: nowrap; vertical-align: 1px; margin-left: .25rem; }
@@ -110,7 +112,7 @@ td.sec { position: sticky; left: 0; background: hsl(var(--background)); border-r
   <div id="gateErr" class="err"></div>
 </div>
 <div id="app" class="app" hidden>
-  <div class="top"><img src="/logo-small.svg" alt="HyperTrack"><span class="lbl" id="meta"></span></div>
+  <div class="top"><img src="/logo-small.svg" alt="HyperTrack"><span class="lbl" id="meta"></span><button class="logout lbl" id="logout">Log out</button></div>
   <div class="wrap"><table id="t"></table></div>
 </div>
 <div class="scrim" id="scrim"></div>
@@ -226,6 +228,8 @@ async function showTranscript(s) {
 function closeDrawer() { $('drawer').classList.remove('open'); $('scrim').classList.remove('open') }
 
 $('t').addEventListener('click', e => { const t = e.target.closest('.tag.click'); if (t) openDrawer(+t.dataset.c, +t.dataset.q, +t.dataset.a) })
+// One-click log out: drop the viewer session (not the Agent Keyboard owner login) and stop Google auto sign-in.
+$('logout').onclick = () => { try { localStorage.removeItem(KEY) } catch {} window.google?.accounts?.id?.disableAutoSelect(); location.reload() }
 $('scrim').onclick = closeDrawer; $('dClose').onclick = closeDrawer
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer() })
 
