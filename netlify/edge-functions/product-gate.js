@@ -119,6 +119,7 @@ export default async (request, context) => {
     res.headers.set('x-robots-tag', 'noindex')
     return res
   }
-  if (request.method === 'GET' && (request.headers.get('accept') || '').includes('text/html')) return form()
+  // Page requests (browsers, and link-preview bots that don't send Accept: text/html) get the sign-in page with its share tags.
+  if (request.method === 'GET' && ((request.headers.get('accept') || '').includes('text/html') || !/\.[a-z0-9]+$/i.test(path))) return form()
   return new Response('Sign in required', { status: 401, headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } })
 }
