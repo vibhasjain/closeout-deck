@@ -334,7 +334,7 @@ $('t').addEventListener('click', e => {
   const h = e.target.closest('th.coh')
   if (h) {
     const co = h.dataset.co
-    ROW_SORT = { co, mode: ROW_SORT.co === co && ROW_SORT.mode === 'answered' ? 'unanswered' : 'answered' }  // alternate; Reset clears
+    ROW_SORT = { co, mode: 'answered' }  // answered questions first; Reset clears
     render()
     // Sorting by a company = start reading it: first question under the header, its column right after the questions.
     if (ROW_SORT.co) {
