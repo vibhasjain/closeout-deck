@@ -38,7 +38,17 @@ button, select, input, a, .tag { -webkit-user-select: none; user-select: none; }
 body { font-family: var(--sans); font-size: 13px; line-height: 1.5; color: hsl(var(--foreground)); background: hsl(var(--background)); -webkit-font-smoothing: antialiased; }
 .lbl { font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: hsl(var(--muted-foreground)); }
 .gate { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; text-align: center; color: hsl(var(--muted-foreground)); font-size: 12px; }
-.err { color: hsl(0 70% 45%); }
+.err { color: hsl(0 70% 45%); font-size: 12.5px; margin: 0; min-height: 1em; }
+.gate { background: hsl(var(--muted)); }
+.card { width: 100%; max-width: 360px; background: hsl(var(--background)); border: 1px solid hsl(var(--border)); border-radius: .75rem; box-shadow: 0 1px 3px rgb(0 0 0 / .06); padding: 2rem 1.75rem 1.5rem; display: flex; flex-direction: column; align-items: center; gap: .5rem; text-align: center; }
+.card-logo { height: 32px; margin-bottom: .5rem; }
+.card-title { margin: 0; font-size: 18px; font-weight: 600; color: hsl(var(--foreground)); }
+.card-sub { margin: 0 0 1rem; font-size: 13px; color: hsl(var(--muted-foreground)); }
+.card-btn { min-height: 44px; display: flex; justify-content: center; }
+/* loading skeleton */
+.sk { display: block; height: 12px; border-radius: 4px; background: linear-gradient(90deg, hsl(var(--muted)) 0%, hsl(0 0% 91%) 50%, hsl(var(--muted)) 100%); background-size: 200% 100%; animation: sk 1.2s ease-in-out infinite; }
+.sk + .sk { margin-top: 8px; }
+@keyframes sk { from { background-position: 200% 0 } to { background-position: -200% 0 } }
 .app { display: flex; flex-direction: column; height: 100%; }
 .top { display: flex; align-items: center; gap: .75rem; height: 3rem; flex-shrink: 0; padding: 0 16px; border-bottom: 1px solid hsl(var(--border)); }
 .top img { height: 26px; }
@@ -124,12 +134,16 @@ td.sec { position: sticky; left: 0; background: hsl(var(--background)); border-r
 </style>
 </head>
 <body>
-<div id="gate" class="gate">
-  <div>Internal — hypertrack.io accounts</div>
-  <div id="btn"></div>
-  <div id="gateErr" class="err"></div>
+<div id="gate" class="gate" hidden>
+  <div class="card">
+    <img src="/logo-small.svg" alt="HyperTrack" class="card-logo">
+    <h1 class="card-title">Answers</h1>
+    <p class="card-sub">Sign in with your hypertrack.io Google account.</p>
+    <div id="btn" class="card-btn"></div>
+    <p id="gateErr" class="err"></p>
+  </div>
 </div>
-<div id="app" class="app" hidden>
+<div id="app" class="app">
   <div class="top"><img src="/logo-small.svg" alt="HyperTrack">
     <input id="q" class="ctl search" type="search" placeholder="Search" autocomplete="off" aria-label="Search companies, people and answers">
     <select id="fStatus" class="ctl" aria-label="Filter by status"><option value="">All Customers</option><option>Contracted</option><option>Churned</option><option value="none">No Status</option></select>
@@ -154,11 +168,18 @@ function session() {
 }
 const authed = path => fetch(`${API}/files/${path}`, { headers: { Authorization: `Bearer ${TOKEN}` } })
 
+function skeleton() {
+  $('gate').hidden = true; $('app').hidden = false
+  const cols = 8, w = ['70%', '90%', '55%', '80%', '65%']
+  const cell = (i, n) => Array.from({ length: n }, (_, k) => `<span class="sk" style="width:${w[(i + k) % w.length]}"></span>`).join('')
+  $('t').innerHTML = `<thead><tr><th class="q"></th>${Array.from({ length: cols }, (_, i) => `<th><span class="sk" style="width:60%"></span></th>`).join('')}</tr></thead><tbody>${Array.from({ length: 12 }, (_, r) => `<tr><td class="q">${cell(r, 2)}</td>${Array.from({ length: cols }, (_, c) => `<td>${cell(r + c, 3)}</td>`).join('')}</tr>`).join('')}</tbody>`
+}
+
 async function load(token) {
   TOKEN = token
   const res = await authed('answers/answers.json')
   if (res.status === 401 || res.status === 403) { try { localStorage.removeItem(KEY) } catch {} return signIn() }
-  if (!res.ok) { $('gateErr').textContent = `Could not load answers (${res.status}).`; return }
+  if (!res.ok) { $('t').innerHTML = `<tbody><tr><td class="q">Could not load answers (${res.status}). Refresh to try again.</td></tr></tbody>`; return }
   DATA = await res.json(); render()
 }
 
@@ -171,7 +192,7 @@ function signIn() {
         const res = await fetch(`${API}/session`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: credential }) })
         if (!res.ok) { $('gateErr').textContent = 'hypertrack.io accounts only.'; return }
         const s = await res.json(); try { localStorage.setItem(KEY, JSON.stringify(s)) } catch {}
-        load(s.sessionToken)
+        skeleton(); load(s.sessionToken)
       },
     })
     google.accounts.id.renderButton($('btn'), { theme: 'outline', size: 'large', text: 'signin_with' })
@@ -294,8 +315,9 @@ document.addEventListener('dblclick', e => e.preventDefault(), { passive: false 
 $('scrim').onclick = closeDrawer; $('dClose').onclick = closeDrawer
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer() })
 
+// Signed in: straight to the table (skeleton while data loads). Otherwise the sign-in card.
 const s = session()
-s ? load(s.sessionToken) : signIn()
+if (s) { skeleton(); load(s.sessionToken) } else signIn()
 </script>
 <script src="https://agent-keyboard.fly.dev/widget.js" data-site="closeout-jobs" defer></script>
 </body>
