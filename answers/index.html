@@ -38,12 +38,16 @@ body { font-family: var(--sans); font-size: 13px; line-height: 1.5; color: hsl(v
 .app { display: flex; flex-direction: column; height: 100%; }
 .top { display: flex; align-items: center; gap: .75rem; height: 3rem; flex-shrink: 0; padding: 0 16px; border-bottom: 1px solid hsl(var(--border)); }
 .top img { height: 18px; }
-.ctl { height: 28px; border: 1px solid hsl(var(--border)); border-radius: .4rem; background: hsl(var(--background)); color: hsl(var(--foreground)); font: 12px var(--sans); padding: 0 .5rem; }
-.ctl:focus { outline: none; border-color: hsl(var(--foreground) / .4); }
+.ctl { height: 32px; border: 1px solid hsl(var(--input)); border-radius: .5rem; background: hsl(var(--background)); color: hsl(var(--foreground)); font: 13px var(--sans); padding: 0 .75rem; box-shadow: 0 1px 2px rgb(0 0 0 / .05); transition: box-shadow .15s, border-color .15s; }
+.ctl::placeholder { color: hsl(var(--muted-foreground)); }
+.ctl:focus-visible { outline: none; border-color: hsl(var(--foreground) / .35); box-shadow: 0 0 0 3px hsl(var(--foreground) / .08); }
+/* shadcn native-select: own chevron, room after it */
+select.ctl { appearance: none; -webkit-appearance: none; cursor: pointer; padding-right: 2rem; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b6b6b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right .6rem center; background-size: 14px; }
+select.ctl:hover { background-color: hsl(var(--muted)); }
 .search { width: 220px; margin-left: 1rem; }
 .top { gap: .5rem; }
 mark { background: hsl(48 100% 70% / .7); color: inherit; border-radius: 2px; padding: 0 1px; }
-@media (max-width: 640px) { .search { width: auto; flex: 1; min-width: 0; margin-left: .5rem; } .top select { width: 34px; padding: 0 2px; } }
+@media (max-width: 640px) { .search { width: auto; flex: 1; min-width: 0; margin-left: .5rem; } .top select { width: 32px; padding: 0; color: transparent; background-position: center; } }
 .logout { all: unset; cursor: pointer; margin-left: .75rem; display: inline-flex; color: hsl(var(--muted-foreground)); }
 .logout svg { width: 15px; height: 15px; }
 .logout:hover { color: hsl(var(--foreground)); }
@@ -123,8 +127,8 @@ td.sec { position: sticky; left: 0; background: hsl(var(--background)); border-r
 <div id="app" class="app" hidden>
   <div class="top"><img src="/logo-small.svg" alt="HyperTrack">
     <input id="q" class="ctl search" type="search" placeholder="Search" autocomplete="off" aria-label="Search companies, people and answers">
-    <select id="fStatus" class="ctl" aria-label="Filter by status"><option value="">All statuses</option><option>Contracted</option><option>Churned</option><option value="none">No status</option></select>
-    <select id="fSort" class="ctl" aria-label="Sort"><option value="">Default order</option><option value="new">Last talked: newest</option><option value="old">Last talked: oldest</option></select><span class="lbl" id="meta"></span><button class="logout" id="logout" title="Log out" aria-label="Log out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></button></div>
+    <select id="fStatus" class="ctl" aria-label="Filter by status"><option value="">All Statuses</option><option>Contracted</option><option>Churned</option><option value="none">No Status</option></select>
+    <select id="fSort" class="ctl" aria-label="Sort"><option value="">Default Order</option><option value="new">Last Talked: Newest</option><option value="old">Last Talked: Oldest</option></select><span class="lbl" id="meta"></span><button class="logout" id="logout" title="Log out" aria-label="Log out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></button></div>
   <div class="wrap"><table id="t"></table></div>
 </div>
 <div class="scrim" id="scrim"></div>
