@@ -220,6 +220,8 @@ const ICON = {
   co: svg('<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4M10 10h4M10 14h4M10 18h4"/>'),
   q: svg('<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>'),
   clock: svg('<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>'),
+  right: svg('<path d="m9 18 6-6-6-6"/>'),
+  left: svg('<path d="m15 18-6-6 6-6"/>'),
   up: svg('<path d="m18 15-6-6-6 6"/>'),
   down: svg('<path d="m6 9 6 6 6-6"/>'),
   ok: svg('<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>'),
@@ -265,7 +267,8 @@ function render() {
   const cites = c => Object.values(c.cells).flat().map(a => a.cite)
   const last = c => cites(c).map(x => x.iso || '').sort().pop()
   const srcTags = c => { const seen = new Map(); cites(c).forEach(x => seen.has(x.label) || seen.set(x.label, x)); return [...seen.values()].sort((a, b) => a.label.localeCompare(b.label)).map(x => chip(x)).join('') }
-  const arrow = k => COL_SORT.key === k ? `<i class="arr">${COL_SORT.dir === 'desc' ? ICON.down : ICON.up}</i>` : ''
+  // column sorts reorder sideways: right = highest first, left = lowest first
+  const arrow = k => COL_SORT.key === k ? `<i class="arr">${COL_SORT.dir === 'desc' ? ICON.right : ICON.left}</i>` : ''
   const row = (label, f, k) => `<tr class="prow"><td class="q${k ? ' rs' : ''}"${k ? ` data-sort="${k}"` : ''}><span class="rl">${label}${k === 'status' ? (F_STATUS ? `<span class="fv">${F_STATUS}</span>` : '') : arrow(k)}</span></td>${cos.map(c => `<td>${f(c)}</td>`).join('')}</tr>`
   const pplRow = row('Status', c => c.status ? `<span class="status ${c.status.toLowerCase()}">${hl(c.status)}</span>` : '', 'status')
     + row('Last conversation', c => { const d = last(c); return d ? `<span class="dt">${ago(new Date(d + 'T12:00:00'))}</span>` : '' }, 'last')
