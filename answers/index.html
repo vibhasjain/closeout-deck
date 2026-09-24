@@ -24,7 +24,7 @@ body { font-family: var(--sans); font-size: 13px; line-height: 1.5; color: hsl(v
 .app { display: flex; flex-direction: column; height: 100%; }
 .top { display: flex; align-items: center; gap: .75rem; height: 3rem; flex-shrink: 0; padding: 0 16px; border-bottom: 1px solid hsl(var(--border)); }
 .top img { height: 18px; }
-.top #meta { margin-left: auto; padding-right: 236px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.top #meta { margin-left: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 640px) { .top #meta { display: none; } }
 .bar { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .75rem; padding: .75rem 16px; border-bottom: 1px solid hsl(var(--border)); }
 .bar h1 { margin: 0; font-size: 14px; font-weight: 600; }
@@ -49,8 +49,6 @@ td { height: 1px; } /* lets .cell fill the row so the chip can sit at the bottom
 .foot .dt { font-family: var(--mono); font-size: 10.5px; color: hsl(var(--muted-foreground)); white-space: nowrap; }
 .ans:only-child .foot { margin-top: auto; }
 .ans + .ans { margin-top: .75rem; padding-top: .75rem; border-top: 1px dashed hsl(var(--border)); }
-/* Agent Keyboard pill docked right in the top bar instead of the bottom corner */
-#agent-keyboard-host { top: 2px !important; bottom: auto !important; }
 .tag { display: inline-flex; align-items: center; gap: .3rem; border-radius: 9999px; border: 1px solid hsl(var(--border)); background: hsl(var(--muted)); padding: 0 .45rem; font-size: 10px; line-height: 1.6; color: hsl(var(--muted-foreground)); white-space: nowrap; vertical-align: 1px; margin-left: .25rem; }
 .tag.click { font-family: var(--mono); font-weight: 500; cursor: pointer; transition: background-color .12s, color .12s, border-color .12s; }
 .tag.click:hover { background: hsl(var(--foreground)); color: hsl(var(--background)); border-color: hsl(var(--foreground) / .4); }
