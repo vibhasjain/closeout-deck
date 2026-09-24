@@ -185,6 +185,7 @@ const svg = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" str
 const ICON = {
   co: svg('<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4M10 10h4M10 14h4M10 18h4"/>'),
   q: svg('<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>'),
+  clock: svg('<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>'),
   ok: svg('<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>'),
   no: svg('<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>'),
   person: svg('<circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/>'),
@@ -213,7 +214,7 @@ function render() {
   VIEW = cos
   const n = DATA.companies.reduce((t, c) => t + Object.values(c.cells).reduce((u, v) => u + v.length, 0), 0)
   const up = new Date(DATA.updatedAt)
-  $('meta').innerHTML = [[ICON.co, DATA.companies.length, 'Companies'], [ICON.q, DATA.questions.length, 'Questions'], [ICON.a, n, 'Answers']].map(([i, v, t]) => `<span class="st" title="${t}">${i}${v}</span>`).join('') + `<span>Updated ${ago(up)}</span>`
+  $('meta').innerHTML = [[ICON.co, DATA.companies.length, 'Companies'], [ICON.q, DATA.questions.length, 'Questions'], [ICON.a, n, 'Answers']].map(([i, v, t]) => `<span class="st" title="${t}">${i}${v}</span>`).join('') + `<span class="st" title="Updated">${ICON.clock}${ago(up)}</span>`
   const logo = c => c.logo ? `<img src="${esc(c.logo)}" alt="" loading="lazy" onerror="this.outerHTML='<span class=ph></span>'">` : '<span class="ph"></span>'
   const head = `<thead><tr><th class="q"></th>${cos.map(c => `<th><div class="co">${logo(c)}<span>${hl(c.company)}</span></div></th>`).join('')}</tr></thead>`
   const cites = c => Object.values(c.cells).flat().map(a => a.cite)
