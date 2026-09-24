@@ -18,7 +18,7 @@ function Time({ at }: { at: string }) {
 }
 
 function MessageBubble({ entry, name }: { entry: ThreadEntry; name: string }) {
-  const label = entry.dir === 'internal' ? 'Payroll Agent' : entry.dir === 'in' ? name : 'You'
+  const label = entry.dir === 'internal' ? 'Closeout Agent' : entry.dir === 'in' ? name : 'You'
   return <article className={`thread-bubble ${entry.dir}`}>
     <div className="thread-label">{label} · <Time at={entry.at} /></div>
     {entry.subject && <p className="thread-subject">{entry.subject}</p>}

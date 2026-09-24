@@ -18,7 +18,7 @@ export function formatRuleDate(date: string | null): string {
 /** Keep rule sentences consistent without changing their stored or compiled meaning. */
 export function formatRuleText(text: string): string {
   const sentence = text.replace(/["“”]/g, '')
-    .replace(/\bpayroll agent\b/gi, 'Payroll Agent').replace(/\bpayroll\b/gi, 'Payroll')
+    .replace(/\bpayroll agent\b/gi, 'Closeout Agent').replace(/\bpayroll\b/gi, 'Payroll')
     .trim().replace(/\.+$/, '').trimEnd()
   return sentence.charAt(0).toUpperCase() + sentence.slice(1)
 }

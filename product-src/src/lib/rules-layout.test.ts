@@ -237,7 +237,7 @@ describe('rule activity and display', () => {
 
   it('normalizes sentence copy while preserving decimal values and full text', () => {
     expect(formatRuleText('  pay $21.50 through the “payroll agent”.  '))
-      .toBe('Pay $21.50 through the Payroll Agent')
+      .toBe('Pay $21.50 through the Closeout Agent')
     expect(formatRuleText('Review "payroll" entries.')).toBe('Review Payroll entries')
     const sentence = 'Pay the documented night differential to every eligible worker at every site covered by the current contract.'
     expect(formatRuleText(sentence)).toBe(sentence.slice(0, -1))

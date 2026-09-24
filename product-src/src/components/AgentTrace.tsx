@@ -17,7 +17,7 @@ const actions: Record<TraceEntry['action'], { label: string; icon: LucideIcon }>
 
 export function AgentTrace({ entries }: { entries: readonly TraceEntry[] }) {
   const ordered = [...entries].sort((a, b) => (Date.parse(a.at) || 0) - (Date.parse(b.at) || 0))
-  return <ol className="agent-trace" aria-label="Payroll Agent activity">
+  return <ol className="agent-trace" aria-label="Closeout Agent activity">
     {ordered.map((entry, index) => {
       const skipped = entry.action === 'status' && entry.detail === 'Draft marked not needed'
       const { label, icon: Icon } = actions[skipped ? 'skipped' : entry.action]

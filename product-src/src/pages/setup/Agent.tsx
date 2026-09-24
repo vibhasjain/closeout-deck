@@ -362,7 +362,7 @@ export function Agent() {
   /** Each turn: what the agent says, what it shows once said, how the user answers, and the bubble that answer becomes. */
   const turns: { say: string; body?: ReactNode; thread?: ReactNode; options?: Option[]; primary?: { label: string; run(): void }; extra?: ReactNode; belowOptions?: ReactNode; said: string
     typed?: { placeholder: string; save(text: string): void } }[] = [
-    { say: 'Hi, I\'m your Payroll Agent. A few quick questions about your Payroll, then what I\'d catch on a sample week. Estimates and not sure are fine, and no Payroll data is needed. About 3 minutes.',
+    { say: 'Hi, I\'m your Closeout Agent. A few quick questions about your Payroll, then what I\'d catch on a sample week. Estimates and not sure are fine, and no Payroll data is needed. About 3 minutes.',
       primary: { label: 'Let\'s start', run: () => advance() }, said: 'Let\'s start' },
     { say: 'What pay period covers most of your volume?',
       options: one([...PAY_PERIODS, 'Not sure'], d.period, (period) => update({ discovery: { ...d, period }, ...(FREQUENCY[period] ? { frequency: FREQUENCY[period] } : {}) }), []),
