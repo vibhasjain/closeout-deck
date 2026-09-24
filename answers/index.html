@@ -174,7 +174,7 @@ function signIn() {
 const person = (p, li = {}) => { const m = p.match(/^(.*?)\s*\((.*)\)\s*$/); const [n, t] = m ? [m[1], m[2]] : [p, '']; const u = li[n]; return `<li><div><span class="pn">${u ? `<a href="${esc(u)}" target="_blank" rel="noopener">${hl(n)}</a>` : hl(n)}</span>${t ? `<span class="pt">${hl(t[0].toUpperCase() + t.slice(1))}</span>` : ''}</div></li>` }
 const people = (p, li) => { const a = (p || '').split(' · ').filter(Boolean); return a.length ? `<ul class="ppl">${a.map(x => person(x, li)).join('')}</ul>` : '' }
 // One unit only: "12 minutes ago", "3 hours ago", "2 days ago".
-const ago = d => { const m = Math.max(1, Math.round((Date.now() - d) / 60000)); if (m >= 525600) return `${(m / 525600).toFixed(1)} years ago`; const [n, u] = m < 60 ? [m, 'minute'] : m < 1440 ? [Math.round(m / 60), 'hour'] : [Math.round(m / 1440), 'day']; return `${n} ${u}${n === 1 ? '' : 's'} ago` }
+const ago = d => { const m = Math.max(1, Math.round((Date.now() - d) / 60000)); if (m >= 525600) { const y = +(m / 525600).toFixed(1); return `${y} year${y === 1 ? '' : 's'} ago` }; const [n, u] = m < 60 ? [m, 'minute'] : m < 1440 ? [Math.round(m / 60), 'hour'] : [Math.round(m / 1440), 'day']; return `${n} ${u}${n === 1 ? '' : 's'} ago` }
 // lucide: building-2, circle-help, message-square-quote
 const svg = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`
 const ICON = {
