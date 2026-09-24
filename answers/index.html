@@ -24,6 +24,8 @@ body { font-family: var(--sans); font-size: 13px; line-height: 1.5; color: hsl(v
 .app { display: flex; flex-direction: column; height: 100%; }
 .top { display: flex; align-items: center; gap: .75rem; height: 3rem; flex-shrink: 0; padding: 0 16px; border-bottom: 1px solid hsl(var(--border)); }
 .top img { height: 18px; }
+.top #meta { margin-left: auto; padding-right: 236px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 640px) { .top #meta { display: none; } }
 .bar { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .75rem; padding: .75rem 16px; border-bottom: 1px solid hsl(var(--border)); }
 .bar h1 { margin: 0; font-size: 14px; font-weight: 600; }
 .wrap { flex: 1; min-height: 0; overflow: auto; -webkit-overflow-scrolling: touch; }
@@ -43,7 +45,9 @@ td { height: 1px; } /* lets .cell fill the row so the chip can sit at the bottom
 .ans:only-child { flex: 1; }
 .ans > span:first-child { padding-bottom: .6rem; }
 .ans .tag { margin: 0; }
-.ans:only-child .tag { margin-top: auto; }
+.foot { display: flex; align-items: center; justify-content: space-between; gap: .5rem; width: 100%; }
+.foot .dt { font-family: var(--mono); font-size: 10.5px; color: hsl(var(--muted-foreground)); white-space: nowrap; }
+.ans:only-child .foot { margin-top: auto; }
 .ans + .ans { margin-top: .75rem; padding-top: .75rem; border-top: 1px dashed hsl(var(--border)); }
 /* Agent Keyboard pill docked right in the top bar instead of the bottom corner */
 #agent-keyboard-host { top: 2px !important; bottom: auto !important; }
@@ -75,8 +79,7 @@ td { height: 1px; } /* lets .cell fill the row so the chip can sit at the bottom
   <div id="gateErr" class="err"></div>
 </div>
 <div id="app" class="app" hidden>
-  <div class="top"><img src="/logo-small.svg" alt="HyperTrack"></div>
-  <div class="bar"><h1>Dispute resolution, by company</h1><span class="lbl" id="meta"></span></div>
+  <div class="top"><img src="/logo-small.svg" alt="HyperTrack"><span class="lbl" id="meta"></span></div>
   <div class="wrap"><table id="t"></table></div>
 </div>
 <div class="scrim" id="scrim"></div>
@@ -129,11 +132,11 @@ const SRC = { gong: 'Gong', hubspot: 'HubSpot', slack: 'Slack', interview: 'Inte
 function render() {
   $('gate').hidden = true; $('app').hidden = false
   const cos = DATA.companies
-  $('meta').textContent = `${cos.length} companies · ${DATA.questions.length} questions · updated ${new Date(DATA.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}`
+  $('meta').textContent = `${cos.length} companies · ${DATA.questions.length} questions · updated ${(d => `${d.getDate()} ${d.toLocaleString('en-US', { month: 'short' })} ${String(d.getFullYear()).slice(2)}`)(new Date(DATA.updatedAt))}`
   const logo = c => c.logo ? `<img src="${esc(c.logo)}" alt="" loading="lazy" onerror="this.outerHTML='<span class=ph></span>'">` : '<span class="ph"></span>'
   const head = `<thead><tr><th class="q lbl">Question</th>${cos.map(c => `<th><div class="co">${logo(c)}<span>${esc(c.company)}</span></div>${c.people ? `<span class="who" title="${esc(c.people)}">${people(c.people)}</span>` : ''}</th>`).join('')}</tr></thead>`
   const body = DATA.questions.map((q, i) => `<tr><td class="q">${esc(q)}</td>${cos.map((c, ci) => `<td>${(c.cells['Q' + (i + 1)] || []).length ? '<div class="cell">' + (c.cells['Q' + (i + 1)]).map((a, ai) =>
-    `<div class="ans"><span>${esc(a.a)}</span><span class="tag click" data-c="${ci}" data-q="${i + 1}" data-a="${ai}">${esc(a.cite.label)}</span></div>`).join('') + '</div>' : ''}</td>`).join('')}</tr>`).join('')
+    `<div class="ans"><span>${esc(a.a)}</span><div class="foot"><span class="tag click" data-c="${ci}" data-q="${i + 1}" data-a="${ai}">${esc(a.cite.label)}</span><span class="dt">${esc(a.cite.date || '')}</span></div></div>`).join('') + '</div>' : ''}</td>`).join('')}</tr>`).join('')
   $('t').innerHTML = head + '<tbody>' + body + '</tbody>'
 }
 
