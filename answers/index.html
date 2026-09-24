@@ -61,6 +61,8 @@ select.ctl:hover { background-color: hsl(var(--muted)); }
 .top { gap: .5rem; }
 mark { background: hsl(48 100% 70% / .7); color: inherit; border-radius: 2px; padding: 0 1px; }
 @media (max-width: 640px) { .search { width: auto; flex: 1; min-width: 0; margin-left: .5rem; } .top select { width: 32px; padding: 0; color: transparent; background-position: center; } }
+.top { position: relative; }
+@media (min-width: 760px) { .tabs { position: absolute; left: 50%; transform: translateX(-50%); margin-left: 0 !important; } }
 .tabs { display: inline-flex; gap: 2px; margin-left: 1rem; padding: 3px; background: hsl(var(--muted)); border-radius: .55rem; }
 .tab { all: unset; cursor: pointer; font-size: 12.5px; font-weight: 500; padding: 4px 12px; border-radius: .4rem; color: hsl(var(--muted-foreground)); }
 .tab.on { background: hsl(var(--background)); color: hsl(var(--foreground)); box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
