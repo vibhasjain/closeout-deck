@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { currentUserEmail } from '@/lib/auth'
+import { currentUserEmail } from '@/lib/viewerSession'
 import { inboxAddress } from '@/lib/onboarding'
 
 export function useInboxAddress() {

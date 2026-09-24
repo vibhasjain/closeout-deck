@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { currentUserEmail } from '@/lib/auth'
+import { currentUserEmail } from '@/lib/viewerSession'
 
 /** Who is signed in, for attributing what they write on a review. */
 export function useCurrentEmail() {

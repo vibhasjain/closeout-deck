@@ -1,7 +1,6 @@
 import { useSearchParams } from 'react-router-dom'
 import { LayoutDashboard, List } from 'lucide-react'
 import { StatRow } from '@/components/StatRow'
-import { money } from '@/bench/engine.js'
 import type { cycleStats, DeskCycle } from '@/lib/desk'
 
 type Stats = ReturnType<typeof cycleStats>
@@ -27,7 +26,6 @@ export function CycleKpis({ cycle, stats, summary = false, listing, onView }: { 
 
   return <StatRow label="Cycle summary" stats={[
     { label: 'Payments', value: stats.payments.toLocaleString(), ...pick('all') },
-    { label: 'Gross', value: money(stats.gross) },
     { label: 'Discrepancies', value: stats.total.toLocaleString(), ...pick('total'), accessory: <div className="stat-view-switch" role="group" aria-label="Time entry view">
       <button type="button" aria-label="Show summary" title="Show summary" aria-pressed={!listing} onClick={() => onView(false)}><LayoutDashboard size={14} aria-hidden="true" /></button>
       <button type="button" aria-label="Show all time entries" title="Show all time entries" aria-pressed={listing} onClick={() => onView(true)}><List size={14} aria-hidden="true" /></button>

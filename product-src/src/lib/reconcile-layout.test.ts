@@ -377,14 +377,13 @@ describe('payroll and settings separation', () => {
     expect(selectedMetrics(html)).toEqual(['Payments'])
   })
 
-  it('shows engine-derived KPIs with resolved Gross and Review as the bucket entry point', () => {
+  it('shows engine-derived KPIs without Gross and with Review as the bucket entry point', () => {
     vi.useFakeTimers().setSystemTime(today)
     const cycle = buildCycles(DEFAULTS, today)[0]
-    const { payments, gross, total, agentResolved, needsReview } = cycleStats(cycle)
+    const { payments, total, agentResolved, needsReview } = cycleStats(cycle)
     const html = render(`/payroll?cycle=${cycle.id}&agent=1&filter=all`)
     expect(metrics(html).map(({ element, label, value, tone, pressed, disabled }) => [element, label, value, tone, pressed, disabled])).toEqual([
       ['button', 'Payments', payments.toLocaleString(), undefined, 'true', false],
-      ['div', 'Gross', money(gross), undefined, undefined, false],
       ['button', 'Discrepancies', total.toLocaleString(), undefined, 'false', false],
       ['button', 'Resolved', agentResolved.toLocaleString(), undefined, 'false', false],
       ['button', 'Review', needsReview.toLocaleString(), 'flagged', 'false', false],
@@ -398,13 +397,14 @@ describe('payroll and settings separation', () => {
     expect(html).not.toContain('class="toolbar reconcile-toolbar"')
   })
 
-  it('makes Payments the all-payments filter and keeps Gross a plain value', () => {
+  it('makes Payments the all-payments filter and omits Gross from every filtered summary', () => {
     vi.useFakeTimers().setSystemTime(today)
     for (const filter of ['all', 'total', 'agent-resolved', 'needs-review']) {
       const html = render(`/payroll?filter=${filter}`)
-      expect.soft(metrics(html).slice(0, 2).map(({ label, element, pressed }) => [label, element, pressed]), filter).toEqual([
-        ['Payments', 'button', String(filter === 'all')], ['Gross', 'div', undefined],
+      expect.soft(metrics(html).slice(0, 1).map(({ label, element, pressed }) => [label, element, pressed]), filter).toEqual([
+        ['Payments', 'button', String(filter === 'all')],
       ])
+      expect(metrics(html).map(({ label }) => label)).not.toContain('Gross')
     }
     // Without a filter the cycle opens on its discrepancies.
     expect(selectedMetrics(render('/payroll?view=list'))).toEqual(['Discrepancies'])
@@ -445,7 +445,7 @@ describe('payroll and settings separation', () => {
     vi.spyOn(onboarding, 'useOnboarding').mockReturnValue([{ ...DEFAULTS, resolutions }, vi.fn()])
     const { total, agentResolved: resolved, needsReview: unresolved } = cycleStats(cycle, resolutions)
     const html = render(`/payroll?cycle=${cycle.id}&filter=needs-review`)
-    expect(metrics(html).slice(2, 5).map(({ label, value }) => [label, value])).toEqual([
+    expect(metrics(html).slice(1, 4).map(({ label, value }) => [label, value])).toEqual([
       ['Discrepancies', total.toLocaleString()], ['Resolved', resolved.toLocaleString()], ['Review', unresolved.toLocaleString()],
     ])
     const remaining = kinds(cycle, resolutions)

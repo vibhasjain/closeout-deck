@@ -6,7 +6,7 @@ import { VendorTile, vendorMethod } from '@/components/SourcesTable'
 import { useOverlay } from '@/components/shell/Overlay'
 import { Btn, Chip } from '@/components/ui'
 import type { DeskCycle } from '@/lib/desk'
-import { ago, dayTime, dueAt, dueTone, gapKey, hour, initial, usually, type Gap, type Intake as IntakeData, type SourceIntake } from '@/lib/intake'
+import { ago, dayTime, gapKey, initial, usually, type Gap, type Intake as IntakeData, type SourceIntake } from '@/lib/intake'
 import { addNote, useOnboarding } from '@/lib/onboarding'
 import { CLIENTS } from '@/lib/sample'
 import { useInboxAddress } from '@/lib/useInboxAddress'
@@ -26,10 +26,8 @@ export function Intake({ cycle, intake }: { cycle: DeskCycle; intake: IntakeData
   const upload = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState<SourceIntake | null>(null)
   const now = new Date()
-  const tone = intake.open ? dueTone(cycle, now) : undefined
   const waiting = intake.clients.filter((client) => client.open > 0)
   const complete = intake.clients.filter((client) => client.open === 0)
-  const dates = cycle.label.replace(' to ', '–')
 
   /** The newest agent note on this gap, or the sample's first reminder for the late wall clock. */
   function activity(id: string, source?: SourceIntake): string | null {
@@ -110,10 +108,6 @@ export function Intake({ cycle, intake }: { cycle: DeskCycle; intake: IntakeData
   }
 
   return <div className="intake scroll">
-    <p className="intake-line">
-      {dates} · <span className={tone}>hours due {md(cycle.cutoff)} {hour(dueAt(cycle).getHours() * 60)}</span> · <b>{intake.received.toLocaleString()} of {intake.expected.toLocaleString()}</b> time entries in
-    </p>
-
     {waiting.length > 0 ? <section aria-labelledby="intake-waiting">
       <h3 id="intake-waiting" className="lbl intake-title">Still waiting on</h3>
       {waiting.map((client) => <div key={client.name} className="intake-client">

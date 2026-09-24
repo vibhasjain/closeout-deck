@@ -485,8 +485,8 @@ export function Agent() {
 
   return <div className="convo">
     <header className="convo-head">
-      {state.forwarded && <Btn className="ghost convo-exit" onClick={() => navigate('/settings')}><X size={14} aria-hidden />Exit setup</Btn>}
       <span>{step} of {TURNS}</span>
+      {state.forwarded && <Btn className="ghost convo-exit" onClick={() => navigate('/settings')}><X size={14} aria-hidden />Exit setup</Btn>}
       <Btn className="ghost convo-skip" onClick={() => { update({ forwarded: true }); navigate('/timesheets') }}>Skip</Btn>
     </header>
     <div className="convo-progress" style={{ '--progress': step / TURNS } as CSSProperties}><span /></div>

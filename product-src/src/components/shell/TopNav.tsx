@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import { MessageSquare, Settings, User } from 'lucide-react'
 import { NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Btn } from '@/components/ui'
-import { signOut } from '@/lib/auth'
+import { signOut } from '@/lib/viewerSession'
 import { useOnboarding } from '@/lib/onboarding'
 import { useCurrentEmail } from '@/lib/useCurrentEmail'
 import { useOverlay } from './Overlay'
@@ -95,7 +95,6 @@ export function TopNav() {
     setSigningOut(true)
     try {
       await signOut()
-      navigate('/login', { replace: true })
     } catch {
       setSigningOut(false)
       toast('Could not sign out. Try again.')

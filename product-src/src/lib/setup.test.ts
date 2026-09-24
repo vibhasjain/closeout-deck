@@ -4,8 +4,6 @@ import { MemoryRouter, type To } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { DEFAULTS, useOnboarding } from '@/lib/onboarding'
 
-// RequireAuth reads the QA bypass at import, so it must be set before the app loads.
-vi.hoisted(() => { vi.stubEnv('VITE_QA_BYPASS_AUTH', '1') })
 vi.mock('react-router-dom', async (importOriginal) => ({
   ...await importOriginal<typeof import('react-router-dom')>(),
   Navigate: ({ to }: { to: To }) => h('a', { 'data-navigate': to }),

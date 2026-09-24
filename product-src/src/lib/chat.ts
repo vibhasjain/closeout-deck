@@ -1,4 +1,4 @@
-import { getJwtToken } from '@/lib/auth'
+import { viewerSession } from '@/lib/viewerSession'
 import type { Onboarding } from '@/lib/onboarding'
 
 export type Action =
@@ -35,7 +35,7 @@ export function systemPrompt(ctx: ChatContext): string {
 }
 
 export async function* stream(message: string, system: string, sessionId: string | null, history: { role: 'user' | 'assistant'; text: string }[] = []): AsyncGenerator<{ text?: string; done?: boolean; sessionId?: string; error?: string }> {
-  const token = await getJwtToken().catch(() => null)
+  const token = viewerSession()?.sessionToken
   const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ message, system, sessionId, history }) })
   if (!res.ok || !res.body) { yield { done: true, error: 'Chat is unavailable right now' }; return }
   const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = ''

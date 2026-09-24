@@ -1,8 +1,7 @@
 import { useLayoutEffect, useRef } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate, useNavigationType, useParams } from 'react-router-dom'
-import { RequireAuth } from '@/components/RequireAuth'
+import { OnboardingLayout } from '@/components/OnboardingLayout'
 import { RailLayout } from '@/components/shell/RailLayout'
-import { Login } from '@/pages/Login'
 import { Agent } from '@/pages/setup/Agent'
 import { Payroll } from '@/pages/Payroll'
 import { ShiftPage } from '@/pages/ShiftPage'
@@ -46,13 +45,12 @@ function LegacyNavigation() {
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
       {['/onboarding/*', '/setup', '/setup/calendar', '/setup/check', '/setup/forward'].map((path) =>
         <Route key={path} path={path} element={<Navigate to="/setup/agent" replace />} />)}
       <Route path="/home" element={<Navigate to="/payroll" replace />} />
       <Route path="/setup/done" element={<Navigate to="/payroll" replace />} />
       <Route path="/cycles/:id" element={<LegacyCycle />} />
-      <Route element={<RequireAuth />}>
+      <Route element={<OnboardingLayout />}>
         <Route path="/setup/agent" element={<Agent />} />
         <Route path="/connect" element={<LegacyNavigation />} />
         <Route path="/reconcile" element={<LegacyNavigation />} />
