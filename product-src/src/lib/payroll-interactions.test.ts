@@ -192,17 +192,14 @@ describe('Payroll review actions', () => {
     expect(router.params.get('filter')).toBe('needs-review')
   })
 
-  it('offers a correction to the agent under an approval group\'s cases, not in its row', () => {
+  it('has no Tell the Agent button, collapsed or expanded', () => {
     const { groups, render } = atReview()
     const group = groups.find((item) => item.state === 'proposed')!
     const row = () => elements(render()).find((element) => element.props.className === 'decision' && element.props['data-rule'] === group.ruleId)!
     expect(content(row())).not.toContain('Tell the Agent')
     const toggle = elements(row()).find((element) => element.props['aria-label'] === 'Show cases')!
     ;(toggle.props.onClick as () => void)()
-    vi.stubGlobal('requestAnimationFrame', (callback: () => void) => callback())
-    click(row(), "Tell the Agent What's Wrong")
-    expect(router.params.get('agent')).toBe('1')
-    expect(router.params.get('filter')).toBe('needs-review')
+    expect(content(row())).not.toContain('Tell the Agent')
   })
 
   it('keeps bulk review on the summary rows without an individual review action', () => {

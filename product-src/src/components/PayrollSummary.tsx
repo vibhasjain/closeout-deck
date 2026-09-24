@@ -1,6 +1,5 @@
 import { useState, type CSSProperties } from 'react'
 import { RULES } from '@/bench/engine.js'
-import { focusChatComposer } from '@/components/chat/ChatPane'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronDown, ChevronRight, Mail } from 'lucide-react'
 import { EmailIssue } from '@/components/EmailIssue'
@@ -37,7 +36,7 @@ const HEADINGS: Record<ResolutionState, { title: string; empty: string }> = {
 export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; review?: boolean }) {
   const [state, update] = useOnboarding()
   const { toast } = useOverlay()
-  const [params, setParams] = useSearchParams()
+  const [params] = useSearchParams()
   const navigate = useNavigate()
   const [open, setOpen] = useState<string[]>([])
   const [emailing, setEmailing] = useState<string[]>([])
@@ -56,12 +55,6 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
     update({ resolutions: { ...latest.resolutions, [cycle.id]: decisions }, decisionTimes: times })
     toast(`Approved ${ids.length.toLocaleString()} · ${kindLabel(group.ruleId)}`)
     if (RULES.some((rule) => rule.id === group.ruleId)) setLearning({ cycleId: cycle.id, ruleId: group.ruleId, count: ids.length })
-  }
-
-  function correct(group: ResolutionGroup) {
-    setParams((previous) => { const next = new URLSearchParams(previous); next.set('agent', '1'); return next })
-    // Let the panel become visible before the existing composer handles focus.
-    requestAnimationFrame(() => focusChatComposer(`The agent has this wrong. Change rule ${group.ruleId}: `))
   }
 
   function undo(group: ResolutionGroup) {
@@ -156,7 +149,6 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
             {expanded && <div className="decision-correct">
               <EmailIssue email={groupEmail(group, cycle)} open={emailing.includes(key(group))}
                 onOpenChange={(next) => setEmailing([...emailing.filter((item) => item !== key(group)), ...(next ? [key(group)] : [])])} />
-              {group.state === 'proposed' && <Btn onClick={() => correct(group)}>Tell the Agent What's Wrong</Btn>}
             </div>}
           </div>
         })}
