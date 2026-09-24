@@ -89,7 +89,7 @@ export function Intake({ cycle, intake }: { cycle: DeskCycle; intake: IntakeData
           {note && <span className="intake-agent">{note}</span>}
         </div>
         <div className="intake-gap-actions">
-          <Btn onClick={() => { addNote(threadKey(cycle.id, row.source.id), 'agent', 'Nudged the site'); toast(`Nudged ${client}`) }}>Ask Site</Btn>
+          <Btn onClick={() => { addNote(threadKey(cycle.id, row.source.id), 'agent', 'Asked the site'); toast(`Asked ${client}`) }}>Ask Site</Btn>
           <Btn onClick={() => { setUploading(row); upload.current?.click() }}>Upload</Btn>
         </div>
       </li>}
