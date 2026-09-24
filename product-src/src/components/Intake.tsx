@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react'
 import { Check, ChevronRight } from 'lucide-react'
 import { fmtHM } from '@/bench/engine.js'
-import { InboxAddress } from '@/components/InboxAddress'
 import { VendorTile, vendorMethod } from '@/components/SourcesTable'
 import { useOverlay } from '@/components/shell/Overlay'
 import { Btn, Chip } from '@/components/ui'
@@ -10,7 +9,6 @@ import type { DeskCycle } from '@/lib/desk'
 import { ago, dayTime, gapKey, initial, usually, type Gap, type Intake as IntakeData, type SourceIntake } from '@/lib/intake'
 import { addNote, useOnboarding } from '@/lib/onboarding'
 import { CLIENTS } from '@/lib/sample'
-import { useInboxAddress } from '@/lib/useInboxAddress'
 import './intake.css'
 
 const REASONS = ['No-show', 'Shift cancelled', 'Other']
@@ -22,7 +20,6 @@ const threadKey = (cycleId: string, id: string) => `intake:${cycleId}:${id}`
 export function Intake({ cycle, intake }: { cycle: DeskCycle; intake: IntakeData }) {
   const [state, update] = useOnboarding()
   const { toast } = useOverlay()
-  const address = useInboxAddress()
   const [closing, setClosing] = useState<{ id: string; chip: string; text: string } | null>(null)
   const upload = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState<SourceIntake | null>(null)
@@ -135,10 +132,6 @@ export function Intake({ cycle, intake }: { cycle: DeskCycle; intake: IntakeData
       </li>))}</ul>
     </details>}
 
-    {waiting.length > 0 && <div className="intake-forward">
-      <p>Late exports can be forwarded to</p>
-      <InboxAddress address={address} />
-    </div>}
     <input ref={upload} hidden type="file" accept=".csv,.xlsx,.xls,.pdf" aria-label="Upload a time export"
       onChange={(event) => { received(event.target.files); event.target.value = '' }} />
   </div>

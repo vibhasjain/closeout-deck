@@ -47,8 +47,6 @@
 .intake-fold .btn.ghost { height: 1.75rem; padding: 0 .5rem; border-color: transparent; background: none; box-shadow: none; color: hsl(var(--muted-foreground)); }
 .intake-fold .btn.ghost:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
 
-.intake-forward p { margin: 0 0 .375rem; color: hsl(var(--muted-foreground)); }
-.intake-forward .inbox-address { max-width: 32rem; }
 
 @media (max-width: 760px) {
   .intake-gap { grid-template-columns: 1fr; padding-left: .875rem; }
