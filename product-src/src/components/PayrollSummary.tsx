@@ -104,6 +104,7 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
   const learned = learning?.cycleId === cycle.id ? learning : null
 
   return <div className="payroll-summary scroll">
+    {/* Email all: the catch-all send of an issue's time entries, in a panel that slides out on the right. Single cases open the shift view's conversation. */}
     <Sheet open={!!emailing} onOpenChange={(next) => { if (!next) setEmailing(null) }}>
       <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
         <SheetHeader><SheetTitle>Email This Issue</SheetTitle></SheetHeader>
