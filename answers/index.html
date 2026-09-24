@@ -275,7 +275,7 @@ function render() {
   const srcTags = c => { const seen = new Map(); cites(c).forEach(x => seen.has(x.label) || seen.set(x.label, x)); return [...seen.values()].sort((a, b) => a.label.localeCompare(b.label)).map(x => chip(x)).join('') }
   // column sorts reorder sideways: right = highest first, left = lowest first
   const arrow = k => COL_SORT.key === k ? `<i class="arr">${COL_SORT.dir === 'desc' ? ICON.right : ICON.left}</i>` : ''
-  const row = (label, f, k) => `<tr class="prow${k === 'people' ? ' ppl-row' : ''}"><td class="q${k ? ' rs' : ''}"${k ? ` data-sort="${k}"` : ''}><span class="rl"><span class="rt">${label}</span>${k === 'status' ? (F_STATUS ? `<span class="fv">${F_STATUS}</span>` : '') : arrow(k)}</span></td>${cos.map(c => `<td>${f(c)}</td>`).join('')}</tr>`
+  const row = (label, f, k) => `<tr class="prow${k === 'people' ? ' ppl-row' : ''}"><td class="q${k ? ' rs' : ''}"${k ? ` data-sort="${k}"` : ''}><span class="rl"><span class="rt">${label}</span>${k === 'status' ? '' : arrow(k)}</span></td>${cos.map(c => `<td>${f(c)}</td>`).join('')}</tr>`
   const pplRow = row('Status', c => c.status ? `<span class="tag st-${c.status.toLowerCase()}">${c.status === 'Contracted' ? ICON.ok : ICON.no}${hl(c.status)}</span>` : '', 'status')
     + row('Last conversation', c => { const d = last(c); return d ? `<span class="dt">${ago(new Date(d + 'T12:00:00'))}</span>` : '' }, 'last')
     + row('Answers', c => `<span class="num">${nAns(c)}</span>`, 'answers')
