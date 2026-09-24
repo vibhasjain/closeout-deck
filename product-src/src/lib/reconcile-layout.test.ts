@@ -47,13 +47,13 @@ const shiftTable = (html: string) => html.match(/<table\b[^>]*aria-label="Time e
 const textHtml = (value: string) => renderToStaticMarkup(h('span', null, value)).slice(6, -7)
 const payAmounts = (html: string) => [...html.matchAll(/<span class="pay-amounts-(current|resolved)"><span class="pay-amounts-value">([^<]*)<\/span><span class="pay-amounts-caption">([^<]*)<\/span><\/span>/g)]
   .map((match) => [match[1], match[2], match[3]])
-// Review is the summary's own rows, limited to Approve, Waiting on a reply and Needs judgment.
+// Review is the summary's own rows, limited to Approve, Waiting on a Reply and Needs Judgment.
 const bucketCards = (html: string) => [...html.matchAll(/<div class="decision" data-rule="[^"]+">[\s\S]*?(?=<div class="decision" |<\/section>)/g)].map((match) => match[0])
 const bucketRules = (html: string) => [...new Set(bucketCards(html).map((card) => card.match(/data-rule="([^"]+)"/)![1]))].sort()
 const ruleIds = (items: { ruleId: string }[]) => [...new Set(items.map((item) => item.ruleId))].sort()
 // The cycle summary is one StatRow: `.stat` cells, label over value; selectable cells are pressed buttons.
-// Disputes is the final cell; earlier cells can contain accessory wrappers.
-const summary = (html: string) => html.match(/<div class="result-summary" aria-label="Cycle summary">[\s\S]*?<div class="lbl">Disputes<\/div>[\s\S]*?<\/button><\/div>/)![0]
+// Disputes is the final cell, a plain inert tile; earlier cells can contain accessory wrappers.
+const summary = (html: string) => html.match(/<div class="result-summary" aria-label="Cycle summary">[\s\S]*?<div class="lbl">Disputes<\/div><div class="stat-value">[\s\S]*?<\/div>/)![0]
 const metrics = (html: string) => [...summary(html).matchAll(/<(button|div)\b([^>]*class="stat(?: [^"]*)?"[^>]*)><div class="lbl">(.*?)<\/div><div class="stat-value">(.*?)<\/div>/g)].map((match) => ({
   element: match[1],
   label: match[3],
@@ -177,8 +177,8 @@ describe('Payroll review composition', () => {
       .filter((row) => row.status === 'flag' || row.status === 'held').map((row) => row.ruleId)))].sort()
     const html = render(`/payroll?cycle=${cycle.id}&filter=needs-review`)
     expect(bucketRules(html)).toEqual(pendingRules)
-    expect([...html.matchAll(/<h3 id="summary-[^"]+">([^<·]+) ·/g)].map((match) => match[1].trim())).toEqual(['Approve', 'Waiting on a reply', 'Needs judgment'])
-    expect(html).not.toContain('By client')
+    expect([...html.matchAll(/<h3 id="summary-[^"]+">([^<·]+) ·/g)].map((match) => match[1].trim())).toEqual(['Approve', 'Waiting on a Reply', 'Needs Judgment'])
+    expect(html).not.toContain('By Client')
     const groups = resolutionGroups(cycle, {}).filter((group) => group.state !== 'fixed')
     const cards = bucketCards(html)
     expect(cards).toHaveLength(groups.length)
@@ -253,7 +253,7 @@ describe('Payroll review composition', () => {
     expect([...html.matchAll(/class="shift-page-column(?: shift-conversation)?"/g)]).toHaveLength(2)
   })
 
-  it('lists each fired rule once, as the rule and its source, only in the Rules applied column', () => {
+  it('lists each fired rule once, as the rule and its source, only in the Rules Applied column', () => {
     vi.useFakeTimers().setSystemTime(today)
     const cycle = buildCycles(DEFAULTS, today)[0]
     const rs = cycle.run.shifts.find((row) => row.rows.some((rule) => rule.status === 'flag') && row.rows.some((rule) => rule.status === 'applied'))!
@@ -266,8 +266,8 @@ describe('Payroll review composition', () => {
     expect(evidence).toContain(`<h2>${textHtml(rs.shift.worker)} · ${textHtml(cycle.days[rs.shift.day])}</h2>`)
     expect(evidence).not.toContain('class="rule-applied"')
     expect(evidence).not.toContain('class="fired"')
-    expect(evidence).not.toMatch(/>Fired<|>Rules applied</)
-    expect(rules).toContain('<div class="aux-head">Rules applied</div>')
+    expect(evidence).not.toMatch(/>Fired<|>Rules applied<|>Rules Applied</)
+    expect(rules).toContain('<div class="aux-head">Rules Applied</div>')
     const entries = [...rules.matchAll(/<div class="rule-applied">[\s\S]*?<\/div>/g)].map((match) => match[0])
     expect(entries).toHaveLength(fired.length)
     const ordered = [...fired].sort((a, b) => Number(b.ruleId === primaryRuleId) - Number(a.ruleId === primaryRuleId))
@@ -372,7 +372,7 @@ describe('payroll and settings separation', () => {
     expect(html).not.toContain('<tfoot>')
     expect(bucketCards(html)).toEqual([])
     expect(metrics(html).find((metric) => metric.label === 'Disputes')).toMatchObject({
-      element: 'button', value: '—', disabled: true, title: 'Dispute data is not available for this cycle',
+      element: 'div', value: '\u00a0', disabled: false, title: undefined, pressed: undefined,
     })
     expect(selectedMetrics(html)).toEqual(['Payments'])
   })
@@ -387,9 +387,9 @@ describe('payroll and settings separation', () => {
       ['button', 'Discrepancies', total.toLocaleString(), undefined, 'false', false],
       ['button', 'Resolved', agentResolved.toLocaleString(), undefined, 'false', false],
       ['button', 'Review', needsReview.toLocaleString(), 'flagged', 'false', false],
-      ['button', 'Disputes', '—', undefined, undefined, true],
+      ['div', 'Disputes', '\u00a0', undefined, undefined, false],
     ])
-    expect(metrics(html).find((metric) => metric.label === 'Disputes')!.title).toBe('Payroll has not run yet')
+    expect(metrics(html).find((metric) => metric.label === 'Disputes')!.title).toBeUndefined()
     expect(html).not.toContain('cycle-kpi')
     expect(html).not.toMatch(/Review \d+ discrepancies/)
     expect(html.indexOf('class="result-summary"')).toBeLessThan(html.indexOf('aria-label="Time entries by worker"'))
@@ -411,7 +411,7 @@ describe('payroll and settings separation', () => {
     // Review without a filter lands on Discrepancies: the grouped summary, not a table.
     const landing = render('/payroll?step=review')
     expect(selectedMetrics(landing)).toEqual(['Discrepancies'])
-    expect(landing).toMatch(/Approve ·[\s\S]*Waiting on a reply ·[\s\S]*Needs judgment ·[\s\S]*Fixed ·[\s\S]*By client/)
+    expect(landing).toMatch(/Approve ·[\s\S]*Waiting on a Reply ·[\s\S]*Needs Judgment ·[\s\S]*Fixed ·[\s\S]*By Client/)
     expect(shiftTable(landing)).toBeUndefined()
     // A bare visit opens on Collect, so no stats row yet.
     expect(render('/payroll')).not.toContain('aria-label="Cycle summary"')
@@ -564,7 +564,7 @@ describe('payroll and settings separation', () => {
     expect(tiles).toEqual(groups.flatMap((group) => SOURCES.filter((item) => item.group === group).map((item) => textHtml(item.name))))
     expect([...grid.matchAll(/class="source-grid-group"><div class="lbl">(.*?)<\/div>/g)].map((match) => match[1])).toEqual(groups.map(textHtml))
     const side = html.match(/<aside\b[^>]*class="settings-side[\s\S]*?<\/aside>/)![0]
-    expect(side).toContain('>Payroll calendar</h3>')
+    expect(side).toContain('>Payroll Calendar</h3>')
     expect(html.indexOf('source-grid-wrap')).toBeLessThan(html.indexOf('settings-side'))
     for (const gone of ['aria-label="Time sources"', '>Sources</button>', '>Destinations</button>', 'aria-label="Payroll destinations"', 'What we know']) expect(html).not.toContain(gone)
   })

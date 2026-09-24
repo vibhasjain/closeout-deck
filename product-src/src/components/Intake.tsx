@@ -58,7 +58,7 @@ export function Intake({ cycle, intake }: { cycle: DeskCycle; intake: IntakeData
     const reason = form ? (form.chip === 'Other' ? form.text.trim() : [form.chip, form.text.trim()].filter(Boolean).join(' · ')) : ''
     return <li key={gap.id} className="intake-gap">
       <div className="intake-gap-text">
-        <span>{initial(gap.worker)} · {md(dayOf(gap.day))} · no time entry</span>
+        <span>{initial(gap.worker)} · {md(dayOf(gap.day))} · No Time Entry</span>
         <span className="r-note">{gap.onSite ? `HyperTrack location shows ${fmtHM(gap.onSite)} on site` : 'Scheduled, no punches'}</span>
         {note && <span className="intake-agent">{note}</span>}
       </div>

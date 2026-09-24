@@ -29,8 +29,9 @@ describe('Payroll Agent draft presentation', () => {
   it('identifies the agent draft and keeps Skip separate from the primary actions', () => {
     const html = render()
     const draft = html.match(/<section class="thread-draft"[\s\S]*?<\/section>/)![0]
-    expect(draft).toContain('<div class="thread-draft-origin"><span class="tag">Draft</span><span>Payroll Agent</span></div>')
-    expect(draft).toContain('>Pending</span>')
+    // No origin header: Pending sits on the subject line.
+    expect(draft).not.toContain('thread-draft-origin')
+    expect(draft).toMatch(/<div class="thread-draft-subject"><p class="thread-subject">[^<]+<\/p><span class="tag[^"]*">Pending<\/span><\/div>/)
     expect(draft).toMatch(/<div class="thread-draft-primary-actions"><button[^>]*>Send<\/button><button[^>]*>Edit<\/button><\/div><button type="button" class="btn thread-draft-skip">Skip<\/button>/)
     expect(draft).not.toContain('Not needed')
   })

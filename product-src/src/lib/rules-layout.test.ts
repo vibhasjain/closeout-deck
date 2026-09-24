@@ -50,7 +50,7 @@ describe('rules table', () => {
     expect(RULES).toHaveLength(30)
     expect(rowIds(table).sort()).toEqual(RULES.map((rule) => rule.id).sort())
     expect([...table.matchAll(/<th scope="col"[^>]*>(.*?)<\/th>/g)].map((match) => match[1]))
-      .toEqual(['Bucket', 'Rule', 'Created', 'Last used', 'Uses'])
+      .toEqual(['Bucket', 'Rule', 'Created', 'Last Used', 'Uses'])
     // The bucket is the rule's only classification, and rows sit together by bucket.
     const buckets = [...table.matchAll(/<span class="bucket-tag"[^>]*>(.*?)<\/span>/g)].map((match) => match[1])
     expect(buckets).toEqual(RULES.map((rule) => titleCase(kindLabel(rule.id))).sort((a, b) => a.localeCompare(b)))

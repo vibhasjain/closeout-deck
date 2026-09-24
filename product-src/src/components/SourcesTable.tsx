@@ -41,7 +41,7 @@ export function VendorTile({ vendor, large = false }: { vendor: Vendor; large?: 
 }
 
 export function vendorMethod(method: string): string {
-  return method === 'Export · nightly' ? 'Nightly export' : method === 'Email · xlsx' ? 'Email xlsx' : method
+  return method === 'Export · nightly' ? 'Nightly Export' : method === 'Email · xlsx' ? 'Email XLSX' : method
 }
 
 export function SourcesTable({ group, selected, onSelect, onConnect, vendors: suppliedVendors, sectionLabels = false, actionFor }: {
