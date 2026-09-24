@@ -37,7 +37,16 @@ thead th { position: sticky; top: 0; z-index: 2; background: hsl(var(--backgroun
 th.q, td.q { position: sticky; left: 0; z-index: 1; background: hsl(var(--muted)); width: 150px; min-width: 150px; color: hsl(var(--foreground)); font-weight: 500; font-size: 12px; }
 thead th.q { z-index: 3; }
 td.sec { position: sticky; left: 0; background: hsl(var(--background)); border-right: 0; padding-top: 1rem; }
-.ans + .ans { margin-top: .5rem; padding-top: .5rem; border-top: 1px dashed hsl(var(--border)); }
+.cell { display: flex; flex-direction: column; height: 100%; }
+td { height: 1px; } /* lets .cell fill the row so the chip can sit at the bottom */
+.ans { display: flex; flex-direction: column; align-items: flex-start; }
+.ans:only-child { flex: 1; }
+.ans > span:first-child { padding-bottom: .6rem; }
+.ans .tag { margin: 0; }
+.ans:only-child .tag { margin-top: auto; }
+.ans + .ans { margin-top: .75rem; padding-top: .75rem; border-top: 1px dashed hsl(var(--border)); }
+/* Agent Keyboard pill docked right in the top bar instead of the bottom corner */
+#agent-keyboard-host { top: 2px !important; bottom: auto !important; }
 .tag { display: inline-flex; align-items: center; gap: .3rem; border-radius: 9999px; border: 1px solid hsl(var(--border)); background: hsl(var(--muted)); padding: 0 .45rem; font-size: 10px; line-height: 1.6; color: hsl(var(--muted-foreground)); white-space: nowrap; vertical-align: 1px; margin-left: .25rem; }
 .tag.click { font-family: var(--mono); font-weight: 500; cursor: pointer; transition: background-color .12s, color .12s, border-color .12s; }
 .tag.click:hover { background: hsl(var(--foreground)); color: hsl(var(--background)); border-color: hsl(var(--foreground) / .4); }
@@ -115,16 +124,16 @@ function signIn() {
   const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.onload = go; document.head.appendChild(sc)
 }
 
-const short = p => { const a = p.split(' · '); return a.slice(0, 2).join(' · ') + (a.length > 2 ? ` +${a.length - 2}` : '') }
+const people = p => { const a = p.split(' · '); return a.slice(0, 3).map(esc).join('<br>') + (a.length > 3 ? `<br>+${a.length - 3} more` : '') }
 const SRC = { gong: 'Gong', hubspot: 'HubSpot', slack: 'Slack', interview: 'Interview' }
 function render() {
   $('gate').hidden = true; $('app').hidden = false
   const cos = DATA.companies
   $('meta').textContent = `${cos.length} companies · ${DATA.questions.length} questions · updated ${new Date(DATA.updatedAt).toLocaleDateString()}`
   const logo = c => c.logo ? `<img src="${esc(c.logo)}" alt="" loading="lazy" onerror="this.outerHTML='<span class=ph></span>'">` : '<span class="ph"></span>'
-  const head = `<thead><tr><th class="q lbl">Question</th>${cos.map(c => `<th><div class="co">${logo(c)}<span>${esc(c.company)}</span></div>${c.people ? `<span class="who" title="${esc(c.people)}">${esc(short(c.people))}</span>` : ''}</th>`).join('')}</tr></thead>`
-  const body = DATA.questions.map((q, i) => `<tr><td class="q">${esc(q)}</td>${cos.map((c, ci) => `<td>${(c.cells['Q' + (i + 1)] || []).map((a, ai) =>
-    `<div class="ans">${esc(a.a)} <span class="tag click" data-c="${ci}" data-q="${i + 1}" data-a="${ai}">${esc(a.cite.label)}</span></div>`).join('')}</td>`).join('')}</tr>`).join('')
+  const head = `<thead><tr><th class="q lbl">Question</th>${cos.map(c => `<th><div class="co">${logo(c)}<span>${esc(c.company)}</span></div>${c.people ? `<span class="who" title="${esc(c.people)}">${people(c.people)}</span>` : ''}</th>`).join('')}</tr></thead>`
+  const body = DATA.questions.map((q, i) => `<tr><td class="q">${esc(q)}</td>${cos.map((c, ci) => `<td>${(c.cells['Q' + (i + 1)] || []).length ? '<div class="cell">' + (c.cells['Q' + (i + 1)]).map((a, ai) =>
+    `<div class="ans"><span>${esc(a.a)}</span><span class="tag click" data-c="${ci}" data-q="${i + 1}" data-a="${ai}">${esc(a.cite.label)}</span></div>`).join('') + '</div>' : ''}</td>`).join('')}</tr>`).join('')
   $('t').innerHTML = head + '<tbody>' + body + '</tbody>'
 }
 
