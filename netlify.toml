@@ -14,6 +14,14 @@
   path = "/api/chat"
 
 [[edge_functions]]
+  function = "product-gate"
+  path = "/product"
+
+[[edge_functions]]
+  function = "product-gate"
+  path = "/product/*"
+
+[[edge_functions]]
   function = "report-gate"
   path = "/report"
 
