@@ -1,3 +1,4 @@
-.payments-sheet .sheet-group-row { align-items: center; }
-.payments-sheet .sheet-group-meta { display: inline-flex; align-items: center; gap: .75rem; }
-.payments-sheet td > .pay-amounts { text-align: left; }
+.payments-sheet td > .pay-amounts,
+.payments-sheet tr.grp th > .pay-amounts { text-align: left; }
+.sheet.payments-sheet .sheet-hours,
+.sheet.payroll-summary-clients .sheet-hours { padding-right: 1.25rem; }

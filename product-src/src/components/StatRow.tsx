@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Lbl } from '@/components/ui'
+import './StatRow.css'
 
 export interface Stat {
   label: string
@@ -10,6 +11,7 @@ export interface Stat {
   tone?: 'flagged'
   title?: string
   disabled?: boolean
+  accessory?: ReactNode
 }
 
 /** The one stats row: equal columns split by hairlines, label over value. */
@@ -18,9 +20,12 @@ export function StatRow({ stats, label }: { stats: Stat[]; label?: string }) {
     {stats.map((stat) => {
       const className = `stat${stat.tone ? ` ${stat.tone}` : ''}`
       const body = <><Lbl>{stat.label}</Lbl><div className="stat-value">{stat.value}</div></>
-      return stat.onSelect || stat.disabled
+      const tile = stat.onSelect || stat.disabled
         ? <button key={stat.label} type="button" className={className} aria-pressed={stat.pressed} title={stat.title} disabled={stat.disabled} onClick={stat.onSelect}>{body}</button>
         : <div key={stat.label} className={className} title={stat.title}>{body}</div>
+      return stat.accessory
+        ? <div key={stat.label} className="stat stat-with-accessory">{tile}<div className="stat-accessory">{stat.accessory}</div></div>
+        : tile
     })}
   </div>
 }

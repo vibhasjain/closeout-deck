@@ -58,6 +58,10 @@ describe('agent setup turns', () => {
     expect(['ADP', 'Clerical', '', 'no'].map((text) => typedPick(text, ['ADP Workforce Now', 'ADP Vantage HCM / Enterprise', 'Not sure']))).toEqual([-1, -1, -1, -1])
   })
 
+  it.each(['Show Me the Magic', 'show me the magic', 'SHOW ME THE MAGIC', 'yes', 'Yep, looks right.'])('starts the demo from a typed reply: %s', (text) => {
+    expect(typedPick(text, ['Show Me the Magic'])).toBe(0)
+  })
+
   it('opens the demo with the user\'s first real time sources', () => {
     expect(sourcesLine({ workerChannels: ['Text / SMS', 'Our own mobile app'], approved: ['VMS export or VMS approval feed'] }))
       .toBe('You get time from texts and approved time from the VMS.')

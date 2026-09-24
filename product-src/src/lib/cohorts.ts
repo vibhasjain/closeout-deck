@@ -23,6 +23,12 @@ export const withPeriodEnd = (cohorts: Partial<Cohort>[], periodEndDay: Onboardi
 const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
 export const cycleNamed = (cohorts: Cohort[], name: string) => cohorts.find((cohort) => same(cohort.name, name))
 
+export function nextCycleName(cohorts: Cohort[]) {
+  let number = 2
+  while (cycleNamed(cohorts, `Cycle ${number}`)) number += 1
+  return `Cycle ${number}`
+}
+
 /** Why a pay cycle can't be saved under this name, or '' when it can. `id` is the cycle being edited. */
 export function cycleError(cohorts: Cohort[], name: string, id?: string) {
   if (!name.trim()) return 'Name who is on this cycle'

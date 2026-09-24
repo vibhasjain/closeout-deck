@@ -33,6 +33,11 @@ describe('setup routes', () => {
   it('sends an unfinished account from the desk to the agent setup', () => {
     expect(redirect('/payroll')).toBe('/setup/agent')
     expect(redirect('/settings')).toBe('/setup/agent')
+    expect(redirect('/timesheets')).toBe('/setup/agent')
+  })
+
+  it('lets a finished account reach the main app through Timesheets', () => {
+    expect(redirect('/timesheets', true)).toBe('/payroll')
   })
 
   it.each([false, true])('allows agent setup for an account with forwarded %s', (forwarded) => {

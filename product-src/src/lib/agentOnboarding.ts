@@ -46,7 +46,7 @@ export const TURNS = STAGES.length
 export const turnOf = (value: string | null) => Math.min(Math.max(Math.trunc(Number(value)) || 1, 1), TURNS)
 const words = (text: string) => text.toLowerCase().replace(/[-'’]/g, '').replace(/[^a-z0-9]+/g, ' ').trim()
 const YES = /^(yes|yep|yeah|yup|correct|right|sure|ok|okay|looks good|sounds good)\b/, NO = /^(no|nope|nah|none|not really)\b/
-const AGREE = ["That's right", 'Makes sense', 'Add another', "Let's start", 'Show me the magic'], DECLINE = ['Change', 'No, just this one', "That's all", 'Not applicable']
+const AGREE = ["That's right", 'Makes sense', 'Add another', "Let's start", 'Show Me the Magic'], DECLINE = ['Change', 'No, just this one', "That's all", 'Not applicable']
 /** The answer a typed reply names: a label, a label it starts or is started by, or a plain yes or no. -1 when none or several do. */
 export function typedPick(text: string, labels: string[]) {
   const said = words(text)

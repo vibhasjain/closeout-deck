@@ -1,4 +1,5 @@
 import { Children, isValidElement, type ReactElement, type ReactNode } from 'react'
+import { Banknote } from 'lucide-react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { money } from '@/bench/engine.js'
 import { ClusterList } from '@/components/ClusterList'
@@ -9,9 +10,7 @@ import { ShiftDetail } from '@/components/ShiftDetail'
 import { ShiftTable } from '@/components/ShiftTable'
 import { StatRow } from '@/components/StatRow'
 import { Btn } from '@/components/ui'
-import { shortDate } from '@/lib/cycles'
 import { buildCycles, cycleStats, kinds } from '@/lib/desk'
-import { cycleIntake } from '@/lib/intake'
 import { DEFAULTS, getOnboarding, updateOnboarding } from '@/lib/onboarding'
 import { payTotals } from '@/lib/payroll'
 import { resolutionGroups } from '@/lib/resolution'
@@ -125,6 +124,41 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals() })
 
 describe('Payroll review actions', () => {
+  it('switches views inside Discrepancies without selecting the tile and clears list filters on returning to summary', () => {
+    const cycle = buildCycles(getOnboarding())[0]
+    router.params = new URLSearchParams({ cycle: cycle.id, step: 'review', agent: '1', filter: 'needs-review',
+      q: 'Maria', page: '2', flag: 'CS-16H', review: 'done', cases: 'one,two' })
+    const views = () => {
+      const row = kpiRow(component(Payroll(), CycleKpis).props)
+      const tile = elements(row).find((element) => element.props.className === 'stat stat-with-accessory')!
+      expect(content(tile)).toContain('Discrepancies')
+      const controls = elements(tile).filter((element) => element.type === 'button')
+      for (const control of controls) expect(elements(control.props.children).some((element) => element.type === 'button')).toBe(false)
+      const summary = controls.find((element) => element.props['aria-label'] === 'Show summary')!
+      const list = controls.find((element) => element.props['aria-label'] === 'Show all time entries')!
+      expect(summary).toBeDefined()
+      expect(list).toBeDefined()
+      return { summary, list }
+    }
+    let controls = views()
+    expect(controls.summary.props['aria-pressed']).toBe(false)
+    expect(controls.list.props['aria-pressed']).toBe(true)
+    ;(controls.summary.props.onClick as () => void)()
+    expect(router.setParams).toHaveBeenCalledTimes(1)
+    expect(Object.fromEntries(router.params)).toEqual({ cycle: cycle.id, step: 'review', agent: '1' })
+    expect(component(Payroll(), PayrollSummary).props.review).not.toBe(true)
+    controls = views()
+    expect(controls.summary.props['aria-pressed']).toBe(true)
+    expect(controls.list.props['aria-pressed']).toBe(false)
+    ;(controls.list.props.onClick as () => void)()
+    expect(router.setParams).toHaveBeenCalledTimes(2)
+    expect(Object.fromEntries(router.params)).toEqual({ cycle: cycle.id, step: 'review', agent: '1', view: 'list' })
+    expect(component(Payroll(), ShiftTable).props.cycle.id).toBe(cycle.id)
+    controls = views()
+    expect(controls.summary.props['aria-pressed']).toBe(false)
+    expect(controls.list.props['aria-pressed']).toBe(true)
+  })
+
   it('moves the selected stat between the payments table and the summary rows that need a person', () => {
     router.params.set('page', '2')
     router.params.set('agent', '1')
@@ -241,18 +275,46 @@ describe('Payroll review actions', () => {
 })
 
 describe('Payroll cycle steps', () => {
+  it('keeps the title and status, plain step buttons, and dates together in the header', () => {
+    const payroll = Payroll()
+    const head = elements(payroll).find((element) => element.props.className === 'payroll-head')!
+    const children = Children.toArray(head.props.children).filter(isValidElement<ElementProps>)
+    expect(children.map((element) => element.props.className)).toEqual(['payroll-head-title', 'cycle-steps', 'r-note payroll-dates'])
+    expect(elements(children[0]).some((element) => element.props.className === 'payroll-date')).toBe(false)
+    const steps = children[1]
+    expect(steps.type).toBe('nav')
+    expect(elements(payroll).filter((element) => element.props.className === 'cycle-steps')).toEqual([steps])
+    const buttons = Children.toArray(steps.props.children).filter(isValidElement<ElementProps>)
+    expect(buttons.map((element) => element.type)).toEqual(['button', 'button'])
+    expect(buttons.map((element) => element.props.children)).toEqual(['Intake', 'Review'])
+  })
+
   it('opens the week awaiting review on the step in the URL and clears it when the cycle or period changes', () => {
     const cycles = buildCycles(getOnboarding())
     const pending = cycles.find((cycle) => cycle.status === 'needs-review')!
     router.params = new URLSearchParams({ cycle: pending.id, step: 'intake' })
-    const payroll = Payroll()
+    let payroll = Payroll()
     expect(component(payroll, Intake).props.cycle.id).toBe(pending.id)
     expect(elements(payroll).some((element) => element.type === CycleKpis)).toBe(false)
-    const next = button(payroll, 'Next')
-    expect(next.props.title).toBe(`Go to Review · ${cycleStats(pending, {}).needsReview} flags ready. You can review before everything is in.`)
-    const intake = cycleIntake(pending, getOnboarding())
-    expect(component(payroll, ClusterList).props.items.find((item) => item.id === pending.id)!.sentence)
-      .toBe(`${money(payTotals(pending).gross)} · pays ${shortDate(pending.payDate)} · ${intake.expected - intake.received} missing`)
+    expect(button(payroll, 'Intake').props['aria-current']).toBe('step')
+    expect(button(payroll, 'Review').props['aria-current']).toBeUndefined()
+    click(payroll, 'Review')
+    expect(router.params.get('step')).toBe('review')
+    payroll = Payroll()
+    expect(component(payroll, CycleKpis).props.cycle.id).toBe(pending.id)
+    expect(button(payroll, 'Intake').props['aria-current']).toBeUndefined()
+    expect(button(payroll, 'Review').props['aria-current']).toBe('step')
+    click(payroll, 'Intake')
+    expect(router.params.get('step')).toBe('intake')
+    payroll = Payroll()
+    expect(component(payroll, Intake).props.cycle.id).toBe(pending.id)
+    expect(button(payroll, 'Intake').props['aria-current']).toBe('step')
+    expect(button(payroll, 'Review').props['aria-current']).toBeUndefined()
+    const totals = payTotals(pending)
+    const sentence = component(payroll, ClusterList).props.items.find((item) => item.id === pending.id)!.sentence
+    expect(content(sentence)).toBe(`${totals.workers.length.toLocaleString()} · ${money(totals.gross)}`)
+    expect(elements(sentence)[0].props).toMatchObject({ role: 'img', 'aria-label': `${totals.workers.length.toLocaleString()} payouts, ${money(totals.gross)}` })
+    expect(elements(sentence)[1].type).toBe(Banknote)
     component(payroll, ClusterList).props.onSelect(cycles[0].id)
     expect(router.params.has('step')).toBe(false)
     router.params = new URLSearchParams({ cycle: pending.id, step: 'intake' })
@@ -264,4 +326,3 @@ describe('Payroll cycle steps', () => {
     expect(elements(Payroll()).some((element) => element.type === Intake)).toBe(false)
   })
 })
-

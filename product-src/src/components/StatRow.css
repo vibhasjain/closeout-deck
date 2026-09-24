@@ -1,0 +1,8 @@
+.result-summary > .stat.stat-with-accessory { position: relative; padding: 0; }
+.stat-with-accessory > .stat { width: 100%; height: 100%; padding: .875rem 2.25rem .875rem 1.25rem; }
+.stat-accessory { position: absolute; right: .375rem; top: 50%; transform: translateY(-50%); }
+.stat-view-switch { display: flex; flex-direction: column; border: 1px solid hsl(var(--border)); border-radius: 9999px; background: hsl(var(--background)); }
+.stat-view-switch > button { display: flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; border-radius: 9999px; color: hsl(var(--muted-foreground)); }
+.stat-view-switch > button:hover { background: hsl(var(--muted)); }
+.stat-view-switch > button[aria-pressed="true"] { background: hsl(var(--foreground)); color: hsl(var(--background)); }
+.stat-view-switch > button:focus-visible { outline: 1px solid hsl(var(--foreground)); outline-offset: 2px; }

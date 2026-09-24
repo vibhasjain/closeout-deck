@@ -2,10 +2,11 @@ import { Children, isValidElement, type EffectCallback, type ReactElement, type 
 import { X } from 'lucide-react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { PayCycleForm } from '@/components/PayCycles'
+import { CycleFields } from '@/components/PayrollCalendar'
 import { TopNav } from '@/components/shell/TopNav'
 import { Settings } from '@/pages/Settings'
 import { Agent } from '@/pages/setup/Agent'
-import { sourcesLine } from '@/lib/agentOnboarding'
+import { sourcesLine, STAGES, TURNS } from '@/lib/agentOnboarding'
 import { buildCycles } from '@/lib/desk'
 import { HANDOFF_LINE, intakeHref } from '@/lib/intake'
 import { DEFAULTS, getOnboarding, updateOnboarding, type Onboarding } from '@/lib/onboarding'
@@ -63,6 +64,7 @@ type ElementProps = {
   disabled?: boolean
   tabIndex?: number
   onClick?: () => void
+  onSubmit?: (event: { preventDefault(): void }) => void
   onDone?: () => void
   text?: string
   'aria-label'?: string
@@ -108,6 +110,87 @@ beforeEach(() => {
   store.update.mockImplementation((patch: Partial<Onboarding>) => updateOnboarding(patch))
 })
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals() })
+
+describe('skipping onboarding', () => {
+  it.each(Array.from({ length: TURNS }, (_, index) => index + 1))('completes setup from step %i and preserves saved answers', (step) => {
+    updateOnboarding({ forwarded: false, payDay: 'Thursday', discovery: { ...DEFAULTS.discovery, payroll: 'ADP' } })
+    router.params = new URLSearchParams(`step=${step}`)
+    const before = getOnboarding()
+    const header = elements(mount(Agent)()).find(({ props }) => props.className === 'convo-head')!
+    const progress = elements(header).find((element) => element.type === 'span')!
+    expect(label(progress.props.children)).toBe(`${step} of ${TURNS}`)
+    const skip = button(header, 'Skip')!
+    expect(skip.props.className?.split(' ')).toContain('ghost')
+    expect(skip.props.disabled).not.toBe(true)
+    router.navigate.mockImplementationOnce(() => { expect(getOnboarding().forwarded).toBe(true) })
+    skip.props.onClick!()
+    expect(store.update).toHaveBeenCalledExactlyOnceWith({ forwarded: true })
+    expect(router.navigate).toHaveBeenCalledExactlyOnceWith('/timesheets')
+    expect(getOnboarding()).toEqual({ ...before, forwarded: true })
+    expect(JSON.parse(vi.mocked(localStorage.setItem).mock.calls.at(-1)![1])).toEqual(getOnboarding())
+  })
+
+  it('keeps the demo available when skipped before any answers', () => {
+    updateOnboarding(structuredClone(DEFAULTS))
+    button(mount(Agent)(), 'Skip')!.props.onClick!()
+    const cycles = buildCycles(getOnboarding())
+    expect(cycles).toHaveLength(26)
+    expect(cycles.every((cycle) => cycle.week.length > 0 && cycle.run.shifts.length > 0)).toBe(true)
+    const nav = mount(TopNav)()
+    expect(elements(nav).filter(({ props }) => props.to).every(({ props }) => !props['aria-disabled'])).toBe(true)
+  })
+
+  it('cancels an answer animation when Skip unmounts setup', () => {
+    updateOnboarding({ forwarded: false })
+    router.params = new URLSearchParams('step=2')
+    const render = mount(Agent)
+    const tree = render()
+    const cleanups = hooks.effects.map((effect) => effect())
+    button(tree, 'Monthly')!.props.onClick!()
+    const typing = render()
+    button(typing, 'Skip')!.props.onClick!()
+    cleanups.forEach((cleanup) => { if (cleanup) cleanup() })
+    vi.runAllTimers()
+    expect(router.navigate).toHaveBeenCalledExactlyOnceWith('/timesheets')
+    expect(router.setParams).not.toHaveBeenCalled()
+    expect(getOnboarding()).toMatchObject({ forwarded: true, frequency: 'Monthly' })
+  })
+})
+
+describe('pay cycle form', () => {
+  const submit = (tree: ReactNode) => elements(tree).find(({ props }) => props.onSubmit)!.props.onSubmit!({ preventDefault() {} })
+
+  it.each(['', '  '])('starts at pay frequency and saves an unnamed cycle (%j)', (name) => {
+    const onClose = vi.fn()
+    const tree = mount(() => PayCycleForm({ id: null, name, onClose }))()
+    expect(label(tree)).not.toContain("Who's on it")
+    expect(elements(tree).some((element) => element.type === 'input')).toBe(false)
+    const fields = elements(tree).find((element) => element.type === CycleFields) as ReactElement<Parameters<typeof CycleFields>[0]>
+    expect(label(CycleFields(fields.props))).toMatch(/^Pay frequency/)
+    submit(tree)
+    expect(getOnboarding().cohorts).toMatchObject([{ name: 'Cycle 2', frequency: DEFAULTS.frequency }])
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it('uses the latest saved cycles to name a form that was already open', () => {
+    const render = mount(() => PayCycleForm({ id: null, onClose: vi.fn() }))
+    render()
+    updateOnboarding({ cohorts: [{ id: 'cohort-cycle-2', name: 'Cycle 2', frequency: DEFAULTS.frequency,
+      periodEndDay: DEFAULTS.periodEndDay, payDay: DEFAULTS.payDay, payDatesOfMonth: [...DEFAULTS.payDatesOfMonth] }] })
+    submit(render())
+    expect(getOnboarding().cohorts.map((cycle) => cycle.name)).toEqual(['Cycle 2', 'Cycle 3'])
+  })
+
+  it('preserves supplied and edited cycle names', () => {
+    submit(mount(() => PayCycleForm({ id: null, name: 'Clerical', onClose: vi.fn() }))())
+    const saved = getOnboarding().cohorts[0]
+    const render = mount(() => PayCycleForm({ id: saved.id, onClose: vi.fn() }))
+    const fields = elements(render()).find((element) => element.type === CycleFields) as ReactElement<Parameters<typeof CycleFields>[0]>
+    fields.props.onChange({ frequency: 'Monthly' })
+    submit(render())
+    expect(getOnboarding().cohorts).toEqual([{ ...saved, frequency: 'Monthly' }])
+  })
+})
 
 describe('revisiting onboarding', () => {
   it('reopens setup from Settings without changing completion or saved answers', () => {
@@ -277,6 +360,16 @@ describe('revisiting onboarding', () => {
     say(render, 'Mercy General')
     const form = elements(render()).find((element) => element.type === PayCycleForm) as ReactElement<{ name: string }>
     expect(form.props.name).toBe('Mercy General')
+  })
+
+  it('uses Show Me the Magic for the demo button and recorded reply', () => {
+    router.params = new URLSearchParams(`step=${STAGES.indexOf('See it work') + 1}`)
+    const render = mount(Agent)
+    button(render(), 'Show Me the Magic')!.props.onClick!()
+    const reply = elements(render()).find(({ props }) => props.className === 'convo-user' && label(props.children) === 'Show Me the Magic')
+    expect(reply).toBeDefined()
+    vi.runAllTimers()
+    expect(router.params.get('step')).toBe(String(STAGES.indexOf('See it work') + 2))
   })
 
   it('cancels the final Payroll redirect when a returning user exits before it fires', () => {

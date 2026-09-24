@@ -12,6 +12,7 @@ import { shiftHref } from '@/lib/navigation'
 import { groupEmail } from '@/lib/issueEmail'
 import { getOnboarding, useOnboarding } from '@/lib/onboarding'
 import { actionFor, proposalFor, resolutionGroups, STATES, type ResolutionGroup, type ResolutionState } from '@/lib/resolution'
+import './sheet.css'
 
 const pill = (ruleId: string, count: number) => {
   const label = kindLabel(ruleId)
@@ -144,10 +145,10 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
     {!review && <section aria-labelledby="summary-clients">
       <div className="payroll-summary-head"><h3 id="summary-clients">By client</h3></div>
       <table className="sheet payroll-summary-clients">
-        <thead><tr><th scope="col">Client</th><th scope="col" className="num">Workers</th><th scope="col" className="num">Time entries</th><th scope="col" className="num">Hours</th><th scope="col" className="num">Gross</th></tr></thead>
+        <thead><tr><th scope="col">Client</th><th scope="col" className="num">Workers</th><th scope="col" className="num">Time entries</th><th scope="col" className="num sheet-hours">Hours</th><th scope="col" className="num">Gross</th></tr></thead>
         <tbody>{[...clients].sort((a, b) => b[1].resolved - a[1].resolved).map(([name, item]) => <tr key={name}>
           <td>{name}</td><td className="num">{item.workers.size.toLocaleString()}</td><td className="num">{item.entries.toLocaleString()}</td>
-          <td className="num">{hours(item.minutes)}</td><td className="num"><PayDelta current={item.current} resolved={item.resolved} size="sm" /></td>
+          <td className="num sheet-hours">{hours(item.minutes)}</td><td className="num"><PayDelta current={item.current} resolved={item.resolved} size="sm" /></td>
         </tr>)}</tbody>
       </table>
     </section>}

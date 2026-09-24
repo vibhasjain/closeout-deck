@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowRight, Banknote, ChevronRight, CircleCheck, LayoutDashboard, List, Lock } from 'lucide-react'
+import { Banknote, CircleCheck, Lock } from 'lucide-react'
 import { money } from '@/bench/engine.js'
 import { DESTS } from '@/bench/vendors'
 import { ClusterList } from '@/components/ClusterList'
@@ -10,7 +10,7 @@ import { PayrollSummary } from '@/components/PayrollSummary'
 import { ShiftTable } from '@/components/ShiftTable'
 import { useSetChatContext, useSetChatSuggestions } from '@/components/chat/ChatPane'
 import { useOverlay } from '@/components/shell/Overlay'
-import { Btn, Chip, Tag } from '@/components/ui'
+import { Chip, Tag } from '@/components/ui'
 import { shortDate } from '@/lib/cycles'
 import { cycleStats, useDesk } from '@/lib/desk'
 import { cycleIntake, defaultStep, stepOf, type Step } from '@/lib/intake'
@@ -45,7 +45,6 @@ export function Payroll() {
   const stats = cycleStats(cycle, state.resolutions, state.undone[cycle.id])
   const intake = cycleIntake(cycle, state)
   const step = stepOf(params, defaultStep(cycle, intake))
-  const next = `Go to Review · ${stats.needsReview.toLocaleString()} ${stats.needsReview === 1 ? 'flag' : 'flags'} ready.${intake.open ? ' You can review before everything is in.' : ''}`
   const batch = state.batches[cycle.id]
   const destination = (batch ? batchDestination(batch) : undefined)
     ?? destinations.find((item) => item.id === params.get('destination'))
@@ -126,43 +125,35 @@ export function Payroll() {
         {PERIODS.map((item) => <Chip key={item.id} active={item.id === period.id} aria-pressed={item.id === period.id} onClick={() => selectPeriod(item.id)}>{item.label}</Chip>)}
       </div>}
       items={cycles.filter((item) => inPeriod(period, item.status)).map((item) => {
-        // Only the week awaiting review can still be collecting time.
-        const collecting = item.status === 'needs-review' ? (item.id === cycle.id ? intake : cycleIntake(item, state)) : null
-        const missing = collecting ? collecting.expected - collecting.received : 0
+        const payouts = payTotals(item)
+        const count = payouts.workers.length.toLocaleString()
+        const total = money(payouts.gross)
         return {
           // The chip carries the cycle's identity the way the flags pane's chip carries a rule
           // id — the readable label, not the raw ISO key, and never repeated underneath.
           id: item.id, label: item.label, count: item.week.length, status: item.statusTag,
           tone: item.statusTag === 'Pending' ? 'amber' as const : undefined,
-          sentence: `${money(payTotals(item).gross)} · ${item.statusTag === 'Paid' ? 'paid' : 'pays'} ${shortDate(item.payDate)}${missing ? ` · ${missing.toLocaleString()} missing` : ''}`,
+          sentence: <span role="img" aria-label={`${count} payouts, ${total}`}><Banknote aria-hidden="true" />{count} · {total}</span>,
         }
       })} />
     <section className="detail reconcile-payments" aria-label="Payroll">
       <div className="payroll-head">
         <div className="payroll-head-title">
           <h2>{cycle.label}</h2><Tag tone={cycle.statusTag === 'Pending' ? 'amber' : undefined}>{cycle.statusTag}</Tag>
-          <span className="r-note payroll-dates">{cycle.statusTag === 'Paid'
-            ? <span className="payroll-date" role="img" title={`Paid ${payDate}`} aria-label={`Paid ${payDate}`}><CircleCheck size={14} aria-hidden="true" />{payDate}</span>
-            : <>
-              <span className="payroll-date" role="img" title={`Payroll closes ${closeDate}`} aria-label={`Payroll closes ${closeDate}`}><Lock size={14} aria-hidden="true" />{closeDate}</span>
-              <span className="payroll-date" role="img" title={`Pay date ${payDate}`} aria-label={`Pay date ${payDate}`}><Banknote size={14} aria-hidden="true" />{payDate}</span>
-            </>}</span>
         </div>
-        {step === 'review' && <Btn className="icon-btn" aria-label={listing ? 'Show summary' : 'Show all time entries'} title={listing ? 'Show summary' : 'Show all time entries'} onClick={() => showList(!listing)}>
-          {listing ? <LayoutDashboard aria-hidden /> : <List aria-hidden />}
-        </Btn>}
+        <nav className="cycle-steps" aria-label="Pay cycle steps">
+          <button type="button" className="cycle-step" aria-current={step === 'intake' ? 'step' : undefined} onClick={() => showStep('intake')}>Intake</button>
+          <button type="button" className="cycle-step" aria-current={step === 'review' ? 'step' : undefined} onClick={() => showStep('review')}>Review</button>
+        </nav>
+        <span className="r-note payroll-dates">{cycle.statusTag === 'Paid'
+          ? <span className="payroll-date" role="img" title={`Paid ${payDate}`} aria-label={`Paid ${payDate}`}><CircleCheck size={14} aria-hidden="true" />{payDate}</span>
+          : <>
+            <span className="payroll-date" role="img" title={`Payroll closes ${closeDate}`} aria-label={`Payroll closes ${closeDate}`}><Lock size={14} aria-hidden="true" />{closeDate}</span>
+            <span className="payroll-date" role="img" title={`Pay date ${payDate}`} aria-label={`Pay date ${payDate}`}><Banknote size={14} aria-hidden="true" />{payDate}</span>
+          </>}</span>
       </div>
-      <nav className="cycle-steps" aria-label="Pay cycle steps">
-        <button type="button" className="cycle-step" aria-current={step === 'intake' ? 'step' : undefined} onClick={() => showStep('intake')}>
-          1 · Intake<span className="num">{intake.received.toLocaleString()}/{intake.expected.toLocaleString()}</span></button>
-        <ChevronRight aria-hidden />
-        <button type="button" className="cycle-step" aria-current={step === 'review' ? 'step' : undefined} onClick={() => showStep('review')}>
-          2 · Review<span className="num">{stats.needsReview.toLocaleString()}</span></button>
-        {step === 'intake' && <Btn className="primary cycle-steps-next" onClick={() => showStep('review')} title={next} aria-label={next}>
-          Next<ArrowRight aria-hidden /></Btn>}
-      </nav>
       {step === 'intake' ? <Intake cycle={cycle} intake={intake} /> : <>
-        <CycleKpis cycle={cycle} stats={stats} summary={!listing} />
+        <CycleKpis cycle={cycle} stats={stats} summary={!listing} listing={listing} onView={showList} />
         {reviewing ? <PayrollSummary cycle={cycle} review />
           : listing ? <ShiftTable cycle={cycle} filterMode="discrepancies" defaultFilter="total"
               onSelect={(id) => navigate(shiftHref(cycle.id, id, params, '/payroll'))} />

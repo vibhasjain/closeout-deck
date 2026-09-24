@@ -43,8 +43,8 @@ const bucketCards = (html: string) => [...html.matchAll(/<div class="decision" d
 const bucketRules = (html: string) => [...new Set(bucketCards(html).map((card) => card.match(/data-rule="([^"]+)"/)![1]))].sort()
 const ruleIds = (items: { ruleId: string }[]) => [...new Set(items.map((item) => item.ruleId))].sort()
 // The cycle summary is one StatRow: `.stat` cells, label over value; selectable cells are pressed buttons.
-// Disputes is always the last cell and a (disabled) button, so the row ends at the first `</button></div>`.
-const summary = (html: string) => html.match(/<div class="result-summary" aria-label="Cycle summary">[\s\S]*?<\/button><\/div>/)![0]
+// Disputes is the final cell; earlier cells can contain accessory wrappers.
+const summary = (html: string) => html.match(/<div class="result-summary" aria-label="Cycle summary">[\s\S]*?<div class="lbl">Disputes<\/div>[\s\S]*?<\/button><\/div>/)![0]
 const metrics = (html: string) => [...summary(html).matchAll(/<(button|div)\b([^>]*class="stat(?: [^"]*)?"[^>]*)><div class="lbl">(.*?)<\/div><div class="stat-value">(.*?)<\/div>/g)].map((match) => ({
   element: match[1],
   label: match[3],
@@ -59,6 +59,20 @@ const selectedMetrics = (html: string) => metrics(html).filter((metric) => metri
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks() })
 
 describe('Payroll review composition', () => {
+  it('shows both pressed-state view controls in the review summary and hides them during intake', () => {
+    vi.useFakeTimers().setSystemTime(today)
+    for (const listing of [false, true]) {
+      const html = render(`/payroll?step=review${listing ? '&view=list' : ''}`)
+      const row = summary(html)
+      const buttons = [...row.matchAll(/<button\b[^>]*>/g)].map((match) => match[0])
+      expect(buttons.find((button) => button.includes('aria-label="Show summary"'))).toContain(`aria-pressed="${!listing}"`)
+      expect(buttons.find((button) => button.includes('aria-label="Show all time entries"'))).toContain(`aria-pressed="${listing}"`)
+    }
+    const intake = render('/payroll?step=intake')
+    expect(intake).not.toContain('aria-label="Show summary"')
+    expect(intake).not.toContain('aria-label="Show all time entries"')
+  })
+
   it('replaces the payments table with the summary rows for every pending kind in Review and keeps cycle navigation', () => {
     vi.useFakeTimers().setSystemTime(today)
     const cycles = buildCycles(DEFAULTS, today)
@@ -122,14 +136,27 @@ describe('Payroll review composition', () => {
     expect([...html.matchAll(/<th scope="col"[^>]*>(.*?)<\/th>/g)].map((match) => match[1])).toEqual(['Day', 'Worker', 'Site', 'Hours', 'Pay', 'Δ', 'Status'])
     expect(html).toContain('class="grp"')
     expect(html).toContain('sheet-group-row')
-    expect(html).toContain('sheet-group-meta')
+    expect(html).not.toContain('sheet-group-meta')
     const workerGroups = [...new Set(cycles[1].week.map((shift) => shift.worker))].map((worker) => cycles[1].run.shifts.filter((row) => row.shift.worker === worker))
     const workerHeaders = [...html.matchAll(/<tr class="grp">([\s\S]*?)<\/tr>/g)].map((match) => match[1])
     expect(workerHeaders).toHaveLength(workerGroups.length)
     workerGroups.forEach((rows, index) => {
       const header = workerHeaders[index]
-      expect(header).toContain(`>${textHtml(`${rows[0].shift.worker} · ${rows[0].shift.role}`)}</span>`)
-      expect(header).toContain(`<span class="sheet-group-meta count"><span>${fmtHM(rows.reduce((sum, row) => sum + row.payableMin, 0))}</span><span class="pay-amounts pay-amounts-sm">`)
+      const label = textHtml(`${rows[0].shift.worker} · ${rows[0].shift.role}`)
+      const hours = fmtHM(rows.reduce((sum, row) => sum + row.payableMin, 0))
+      const cells = [...header.matchAll(/<th\b([^>]*)>([\s\S]*?)<\/th>/g)]
+      expect(cells).toHaveLength(5)
+      expect(cells[0][1]).toContain('scope="rowgroup" colSpan="3"')
+      expect(cells[0][2]).toContain(`<span class="sheet-group-title fade-trunc" title="${label}">${label}</span>`)
+      expect(cells[0][2]).not.toContain('class="count"')
+      expect(cells[1][1]).toContain('class="num mono sheet-hours"')
+      expect(cells[1][2]).toBe(hours)
+      expect(cells[2][2]).toContain('pay-amounts')
+      const delta = rows.reduce((sum, row) => sum + row.pay, 0) - rows.reduce((sum, row) => sum + row.naive, 0)
+      const tone = Math.abs(delta) < 0.005 ? '' : delta > 0 ? 'owed' : 'overpay'
+      expect(cells[3][1]).toContain(`class="num mono pay-delta ${tone}"`)
+      expect(cells[3][2]).toBe(money(Math.abs(delta)))
+      expect(cells[4][2]).toBe('')
       expect(payAmounts(header)).toEqual([
         ['current', money(rows.reduce((sum, row) => sum + row.naive, 0)), 'Current'],
         ['resolved', money(rows.reduce((sum, row) => sum + row.pay, 0)), 'Resolved'],

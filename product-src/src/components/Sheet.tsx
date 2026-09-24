@@ -32,12 +32,12 @@ export function Sheet({ cycle, shifts, groupBy, selected, onSelect, days }: { cy
   const columns = 7
 
   return <table className={`sheet payments-sheet by-${groupBy}`} aria-label={groupBy === 'worker' ? 'Time entries by worker' : 'Flagged time entries by rule'}>
-      <colgroup>{[12, 20, 22, 9, 12, 11, 14].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}</colgroup>
+      <colgroup>{[11, 18, 18, 11, 22, 9, 11].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}</colgroup>
       <thead><tr>
         <th scope="col">Day</th>
         <th scope="col">Worker</th>
         <th scope="col">Site</th>
-        <th scope="col" className="num">Hours</th><th scope="col" className="num">Pay</th>
+        <th scope="col" className="num sheet-hours">Hours</th><th scope="col" className="num">Pay</th>
         <th scope="col" className="num" title="Difference from the submitted sheet">Δ</th><th scope="col">Status</th>
       </tr></thead>
       <tbody>
@@ -51,14 +51,17 @@ export function Sheet({ cycle, shifts, groupBy, selected, onSelect, days }: { cy
             ? <><span className="pay-delta owed">{money(under)}</span> / <span className="pay-delta overpay">{money(over)}</span></>
             : <span className={`pay-delta ${deltaTone(under || -over)}`}>{money(under || over)}</span>
           return <Fragment key={group.id}>
-            {groupBy !== 'none' && <tr className="grp"><th scope="rowgroup" colSpan={columns}>
-              <div className="sheet-group-row">
-                <span className="sheet-group-title fade-trunc" title={group.label}>{group.label}</span>
-                <span className="sheet-group-meta count">{groupBy === 'worker'
-                  ? <><span>{fmtHM(hours)}</span><PayDelta current={current} resolved={pay} size="sm" /></>
-                  : exposure}</span>
-              </div>
-            </th></tr>}
+            {groupBy !== 'none' && <tr className="grp">
+              <th scope="rowgroup" colSpan={3}>
+                <div className="sheet-group-row"><span className="sheet-group-title fade-trunc" title={group.label}>{group.label}</span></div>
+              </th>
+              <th className="num mono sheet-hours">{fmtHM(hours)}</th>
+              <th className="num"><PayDelta current={current} resolved={pay} size="sm" /></th>
+              <th className={`num mono${groupBy === 'worker' ? ` pay-delta ${deltaTone(pay - current)}` : ''}`}>
+                {groupBy === 'worker' ? money(Math.abs(pay - current)) : exposure}
+              </th>
+              <th />
+            </tr>}
             {group.rows.map((rs) => {
               const s = rs.shift
               const decision = decisions?.[s.id]
@@ -73,7 +76,7 @@ export function Sheet({ cycle, shifts, groupBy, selected, onSelect, days }: { cy
                 <td className="sheet-day">{days[s.day]}</td>
                 <td><span className="block fade-trunc" title={s.worker}>{s.worker}</span></td>
                 <td><span className="site-name fade-trunc" title={`${s.fac.name} · ${s.fac.city}, ${s.fac.state}`}>{s.fac.name}</span></td>
-                <td className="num mono">{fmtHM(rs.payableMin)}</td><td className="num"><PayDelta current={rs.naive} resolved={rs.pay} size="sm" /></td>
+                <td className="num mono sheet-hours">{fmtHM(rs.payableMin)}</td><td className="num"><PayDelta current={rs.naive} resolved={rs.pay} size="sm" /></td>
                 <td className={`num mono pay-delta ${deltaTone(delta)}`}>{money(Math.abs(delta))}</td>
                 <td>{flagged && <Tag tone="amber">Flagged</Tag>}</td>
               </tr>

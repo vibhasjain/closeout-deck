@@ -6,11 +6,12 @@ interface PayDeltaProps {
   current: number
   resolved: number
   size?: 'sm' | 'md' | 'lg'
+  orientation?: 'vertical' | 'horizontal'
   className?: string
 }
 
-export function PayDelta({ current, resolved, size = 'md', className }: PayDeltaProps) {
-  return <span className={cn('pay-amounts', `pay-amounts-${size}`, className)}>
+export function PayDelta({ current, resolved, size = 'md', orientation = 'horizontal', className }: PayDeltaProps) {
+  return <span className={cn('pay-amounts', `pay-amounts-${size}`, `pay-amounts-${orientation}`, className)}>
     <span className="pay-amounts-current">
       <span className="pay-amounts-value">{money(current)}</span>
       <span className="pay-amounts-caption">Current</span>

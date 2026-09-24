@@ -1,13 +1,19 @@
 .pay-amounts {
   display: inline-flex;
-  flex-direction: column;
-  gap: .5rem;
-  vertical-align: top;
+  align-items: center;
+  gap: 1rem;
+  vertical-align: middle;
   font-family: var(--sans);
   font-variant-numeric: tabular-nums;
   line-height: 1.15;
   text-align: right;
   white-space: nowrap;
+}
+
+.pay-amounts-vertical {
+  flex-direction: column;
+  align-items: stretch;
+  gap: .5rem;
 }
 
 .pay-amounts-current,
@@ -23,4 +29,5 @@
 .pay-amounts-caption { font-size: 10px; font-weight: 400; }
 .pay-amounts-sm { --pay-amount-size: 12px; }
 .pay-amounts-md { --pay-amount-size: 16px; }
-.pay-amounts-lg { --pay-amount-size: 24px; }
+.pay-amounts-lg { --pay-amount-size: 18px; }
+.pay-amounts-lg .pay-amounts-caption { font-size: 11px; }

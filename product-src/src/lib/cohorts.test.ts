@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { applyAction, isAction } from '@/components/chat/ChatPane'
-import { cycleError, cycleLine, removeCycle, saveCycle, withPeriodEnd, type Cohort, type CycleDraft } from '@/lib/cohorts'
+import { cycleError, cycleLine, nextCycleName, removeCycle, saveCycle, withPeriodEnd, type Cohort, type CycleDraft } from '@/lib/cohorts'
 import { DEFAULTS, type Onboarding } from '@/lib/onboarding'
 
 const clerical: CycleDraft = { name: 'Clerical', frequency: 'Biweekly', periodEndDay: 'Saturday', payDay: 'Friday', payDatesOfMonth: [20, 5] }
@@ -28,6 +28,15 @@ describe('additional pay cycles', () => {
     expect(cycleError(cycles, 'clerical ')).toBe('Clerical already has a pay cycle')
     expect(cycleError(cycles, 'CLERICAL', 'cohort-clerical')).toBe('')
     expect(cycleError(cycles, 'Light industrial')).toBe('')
+  })
+
+  it('starts unnamed additional cycles at Cycle 2 and skips names already taken', () => {
+    expect(nextCycleName([])).toBe('Cycle 2')
+    const cycles = ['Clerical', ' cycle 2 ', 'CYCLE 3', 'Cycle 5'].map((name, index) => ({ ...clerical, name, id: String(index) }))
+    const name = nextCycleName(cycles)
+    expect(name).toBe('Cycle 4')
+    expect(cycleError(cycles, name)).toBe('')
+    expect(nextCycleName(saveCycle(cycles, { ...clerical, name }))).toBe('Cycle 6')
   })
 
   it('reads each cycle as one line', () => {

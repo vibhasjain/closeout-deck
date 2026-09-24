@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Tag } from '@/components/ui'
 import { money } from '@/bench/engine.js'
+import './ClusterList.css'
 
 interface Cluster {
   id: string
@@ -9,7 +10,7 @@ interface Cluster {
   count: number
   status: string
   tone?: 'amber' | 'blue'
-  sentence: string
+  sentence: ReactNode
   impact?: number
 }
 

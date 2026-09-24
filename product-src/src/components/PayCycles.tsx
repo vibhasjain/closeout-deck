@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CycleFields } from '@/components/PayrollCalendar'
 import { Btn } from '@/components/ui'
-import { cycleError, cycleLine, removeCycle, saveCycle, type CycleDraft } from '@/lib/cohorts'
+import { cycleError, cycleLine, nextCycleName, removeCycle, saveCycle, type CycleDraft } from '@/lib/cohorts'
 import { useOnboarding } from '@/lib/onboarding'
 import './payroll-calendar.css'
 
@@ -12,28 +12,26 @@ export function PayCycleForm({ id, name = '', onClose }: { id: string | null; na
   const [draft, setDraft] = useState<CycleDraft>(() => editing ?? {
     name, frequency: state.frequency, periodEndDay: state.periodEndDay, payDay: state.payDay, payDatesOfMonth: [...state.payDatesOfMonth] })
   const [error, setError] = useState('')
+  const form = useRef<HTMLFormElement>(null)
+
+  useEffect(() => { form.current?.querySelector('select')?.focus() }, [])
 
   function save() {
-    const why = cycleError(state.cohorts, draft.name, editing?.id)
+    const cycle = { ...draft, name: draft.name.trim() || nextCycleName(state.cohorts) }
+    const why = cycleError(state.cohorts, cycle.name, editing?.id)
     if (why) { setError(why); return }
-    update({ cohorts: saveCycle(state.cohorts, draft, editing?.id) })
+    update({ cohorts: saveCycle(state.cohorts, cycle, editing?.id) })
     onClose()
   }
 
   return (
-    <form className="pay-cycle-form" aria-label={editing ? `Edit ${editing.name}` : 'Add pay cycle'} noValidate
+    <form ref={form} className="pay-cycle-form" aria-label={editing ? `Edit ${editing.name}` : 'Add pay cycle'} noValidate
       onSubmit={(event) => { event.preventDefault(); save() }}
       onKeyDown={(event) => { if (event.key === 'Escape') { event.preventDefault(); onClose() } }}>
       <div className="calendar-fields payroll-calendar">
-        <label className="calendar-field pay-cycle-name">
-          <span className="lbl">Who's on it</span>
-          <input className="q-input w-full" autoFocus value={draft.name} placeholder="E.g. Clerical, or Mercy General"
-            aria-invalid={Boolean(error)} aria-describedby={error ? 'pay-cycle-error' : undefined}
-            onChange={(event) => { setDraft({ ...draft, name: event.target.value }); setError('') }} />
-          {error && <span className="pay-cycle-error" id="pay-cycle-error" role="alert">{error}</span>}
-        </label>
         <CycleFields value={draft} onChange={(patch) => setDraft({ ...draft, ...patch })} idPrefix="cycle-" />
       </div>
+      {error && <span className="pay-cycle-error" id="pay-cycle-error" role="alert">{error}</span>}
       <div className="pay-cycle-actions">
         <Btn type="submit" className="primary">{editing ? 'Save' : 'Add'}</Btn>
         <Btn onClick={onClose}>Cancel</Btn>
