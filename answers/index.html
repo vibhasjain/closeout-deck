@@ -58,6 +58,8 @@ table { border-collapse: separate; border-spacing: 0; }
 th, td { border-right: 1px solid hsl(var(--border)); border-bottom: 1px solid hsl(var(--border)); padding: .6rem .75rem; vertical-align: top; text-align: left; width: 220px; min-width: 220px; }
 thead th { position: sticky; top: 0; z-index: 2; background: hsl(var(--background)); font-weight: 600; }
 .co { display: flex; align-items: center; gap: .5rem; }
+.co span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+thead th:hover .co span { white-space: normal; overflow: visible; }
 .co img, .co .ph { width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; object-fit: contain; }
 .co .ph { background: hsl(var(--muted)); border: 1px solid hsl(var(--border)); }
 .ppl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .45rem; }
@@ -66,9 +68,9 @@ thead th { position: sticky; top: 0; z-index: 2; background: hsl(var(--backgroun
 .ppl .pn { font-size: 12.5px; color: hsl(var(--foreground)); }
 .ppl .pt { font-size: 11px; color: hsl(var(--muted-foreground)); }
 .status { display: inline-flex; align-items: center; gap: .4rem; font-size: 12.5px; }
-.status svg { width: 14px; height: 14px; flex-shrink: 0; }
-.status.contracted { color: hsl(142 71% 32%); }
-.status.churned { color: hsl(0 72% 45%); }
+.status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.status.contracted::before { background: hsl(142 71% 40%); }
+.status.churned::before { background: hsl(0 72% 50%); }
 .ppl .pn a { color: inherit; text-decoration: underline; text-decoration-color: hsl(var(--border)); text-underline-offset: 2px; }
 .ppl .pn a:hover { text-decoration-color: currentColor; }
 .srcs { display: flex; flex-wrap: wrap; gap: .3rem; }
@@ -215,7 +217,7 @@ function render() {
   const last = c => cites(c).map(x => x.iso || '').sort().pop()
   const srcTags = c => { const seen = new Map(); cites(c).forEach(x => seen.has(x.label) || seen.set(x.label, x)); return [...seen.values()].sort((a, b) => a.label.localeCompare(b.label)).map(x => chip(x)).join('') }
   const row = (label, f) => `<tr class="prow"><td class="q">${label}</td>${cos.map(c => `<td>${f(c)}</td>`).join('')}</tr>`
-  const pplRow = row('Status', c => c.status ? `<span class="status ${c.status.toLowerCase()}">${c.status === 'Contracted' ? ICON.ok : ICON.no}${hl(c.status)}</span>` : '')
+  const pplRow = row('Status', c => c.status ? `<span class="status ${c.status.toLowerCase()}">${hl(c.status)}</span>` : '')
     + row('Last conversation', c => { const d = last(c); return d ? `<span class="dt">${ago(new Date(d + 'T12:00:00'))}</span>` : '' })
     + row('Sources', c => `<div class="srcs">${srcTags(c)}</div>`)
     + row('People', c => people(c.people, c.linkedin))
