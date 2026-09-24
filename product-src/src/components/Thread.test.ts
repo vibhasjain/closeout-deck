@@ -26,7 +26,7 @@ function render(saved?: MediationState) {
 afterEach(() => vi.restoreAllMocks())
 
 describe('Payroll Agent draft presentation', () => {
-  it('identifies the agent draft and keeps Skip separate from the primary actions', () => {
+  it('marks the draft Pending on its subject line and keeps Skip separate from the primary actions', () => {
     const html = render()
     const draft = html.match(/<section class="thread-draft"[\s\S]*?<\/section>/)![0]
     // No origin header: Pending sits on the subject line.
