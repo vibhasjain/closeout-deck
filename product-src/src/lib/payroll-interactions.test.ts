@@ -173,24 +173,22 @@ describe('Payroll review actions', () => {
     expect(component(Payroll(), ShiftTable).props.defaultFilter).toBe('agent-resolved')
   })
 
-  it.each(['Yes', 'Not Now'])('approves a whole group and answers its learning prompt with %s', (answer) => {
+  it('approves the whole Approve category from its header, not from the rows', () => {
     const { cycle, groups, render } = atReview()
-    const kind = groups.find((group) => group.state === 'proposed' && group.cases.length > 1)!
-    const card = elements(render()).find((element) => element.props.className === 'decision' && element.props['data-rule'] === kind.ruleId)!
-    click(card, `Approve ${kind.cases.length}`)
-    for (const item of kind.cases) {
+    const proposed = groups.filter((group) => group.state === 'proposed')
+    const total = proposed.reduce((sum, group) => sum + group.cases.length, 0)
+    const tree = render()
+    for (const card of elements(tree).filter((element) => element.props.className === 'decision')) expect(content(card)).not.toMatch(/Approve \d/)
+    const head = elements(tree).find((element) => element.props.className === 'payroll-summary-head' && content(element).startsWith('Approve'))!
+    click(head, `Approve ${total.toLocaleString()}`)
+    for (const item of proposed.flatMap((group) => group.cases)) {
       expect(getOnboarding().resolutions[cycle.id][item.shiftId]).toBe('applied')
       expect(getOnboarding().decisionTimes[`${cycle.id}:${item.shiftId}`]).toBe(now.toISOString())
     }
-    let tree = render()
-    expect(content(tree)).toContain('Approve these automatically from now on?')
-    expect(pendingGroups(cycle).some((group) => group.ruleId === kind.ruleId)).toBe(false)
+    expect(pendingGroups(cycle).some((group) => group.state === 'proposed')).toBe(false)
     expect(component(Payroll(), CycleKpis).props.stats).toEqual(cycleStats(cycle, getOnboarding().resolutions))
-    click(tree, answer)
-    tree = render()
-    expect(content(tree)).not.toContain('Approve these automatically from now on?')
-    expect(rowRules(tree)).toEqual(pendingGroups(cycle).map((group) => group.ruleId))
-    expect(getOnboarding().customRules.filter((rule) => rule.sourceRuleId === kind.ruleId && rule.autoApply)).toHaveLength(answer === 'Yes' ? 1 : 0)
+    // The emptied category disappears.
+    expect(elements(render()).some((element) => element.props.className === 'payroll-summary-head' && content(element).startsWith('Approve'))).toBe(false)
     expect(router.params.get('filter')).toBe('needs-review')
   })
 
@@ -232,21 +230,22 @@ describe('Payroll review actions', () => {
     expect(component(Payroll(), PayrollSummary).props.review).toBe(true)
   })
 
-  it('approves a summary group in bulk with the shortened label', () => {
+  it('approves every proposed case from the Approve header with the shortened label', () => {
     const cycle = buildCycles(getOnboarding())[0]
-    const group = resolutionGroups(cycle, {}).find((item) => item.state === 'proposed')!
+    const proposed = resolutionGroups(cycle, {}).filter((item) => item.state === 'proposed')
+    const total = proposed.reduce((sum, group) => sum + group.cases.length, 0)
     const render = mount(PayrollSummary, { cycle })
-    const card = elements(render()).find((element) => element.props.className === 'decision'
-      && content(element).includes(`Approve ${group.cases.length.toLocaleString()}`))!
-    expect(content(card)).not.toContain('Approve all')
-    click(card, `Approve ${group.cases.length.toLocaleString()}`)
-    for (const item of group.cases) {
+    const head = elements(render()).find((element) => element.props.className === 'payroll-summary-head' && content(element).startsWith('Approve'))!
+    expect(content(head)).not.toContain('Approve all')
+    click(head, `Approve ${total.toLocaleString()}`)
+    for (const item of proposed.flatMap((group) => group.cases)) {
       expect(getOnboarding().resolutions[cycle.id][item.shiftId]).toBe('applied')
       expect(getOnboarding().decisionTimes[`${cycle.id}:${item.shiftId}`]).toBe(now.toISOString())
     }
     expect(router.navigate).not.toHaveBeenCalled()
     expect(content(render())).not.toContain('Review one by one')
   })
+
 
   it('opens a summary case as its time entry and returns to the summary', () => {
     const cycle = buildCycles(getOnboarding())[0]

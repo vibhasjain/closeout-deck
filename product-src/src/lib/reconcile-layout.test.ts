@@ -177,9 +177,15 @@ describe('Payroll review composition', () => {
       .filter((row) => row.status === 'flag' || row.status === 'held').map((row) => row.ruleId)))].sort()
     const html = render(`/payroll?cycle=${cycle.id}&filter=needs-review`)
     expect(bucketRules(html)).toEqual(pendingRules)
-    expect([...html.matchAll(/<h3 id="summary-[^"]+">([^<·]+) ·/g)].map((match) => match[1].trim())).toEqual(['Approve', 'Waiting on a Reply', 'Needs Judgment'])
-    expect(html).not.toContain('By Client')
     const groups = resolutionGroups(cycle, {}).filter((group) => group.state !== 'fixed')
+    const titles = { proposed: 'Approve', waiting: 'Waiting on a Reply', judgment: 'Needs Judgment' } as const
+    // Only categories with something in them are shown.
+    expect([...html.matchAll(/<h3 id="summary-[^"]+">([^<·]+) ·/g)].map((match) => match[1].trim()))
+      .toEqual((['proposed', 'waiting', 'judgment'] as const).filter((state) => groups.some((group) => group.state === state)).map((state) => titles[state]))
+    expect(html).not.toContain('By Client')
+    const proposedTotal = groups.filter((group) => group.state === 'proposed').reduce((sum, group) => sum + group.cases.length, 0)
+    // The category's action sits in its header, not in the rows.
+    if (proposedTotal) expect(html).toContain(`>Approve ${proposedTotal.toLocaleString()}</button>`)
     const cards = bucketCards(html)
     expect(cards).toHaveLength(groups.length)
     groups.forEach((group, index) => {
@@ -187,7 +193,7 @@ describe('Payroll review composition', () => {
       expect(card).toContain(`data-rule="${group.ruleId}"`)
       expect(card).toContain(`class="pay-amounts-value">${money(group.current)}</span><span class="pay-amounts-caption">Current</span>`)
       expect(card).toContain(`class="pay-amounts-value">${money(group.resolved)}</span><span class="pay-amounts-caption">Resolved</span>`)
-      if (group.state === 'proposed') expect(card).toContain(`>Approve ${group.cases.length.toLocaleString()}</button>`)
+      expect(card).not.toMatch(/>Approve \d/)
       // The correction sits with the cases, not in the row.
       expect(card).not.toContain('Tell the Agent')
     })
@@ -216,7 +222,8 @@ describe('Payroll review composition', () => {
     const html = render(`/payroll?cycle=${cycle.id}&filter=needs-review`)
     expect(html).not.toContain('aria-label="Flags"')
     expect(bucketCards(html)).toEqual([])
-    for (const empty of ['Nothing waiting on approval', 'Nobody has been asked anything this cycle', 'Nothing needs a business decision']) expect(html).toContain(empty)
+    // Every category is empty, so none is shown.
+    expect(html).not.toMatch(/<h3 id="summary-/)
     expect(html).not.toContain('summary-fixed')
     expect(metrics(html).find((metric) => metric.label === 'Review')).toMatchObject({ value: '0', selected: true })
     expect(rowIds(html)).toEqual([])
