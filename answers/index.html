@@ -51,6 +51,15 @@ thead th { position: sticky; top: 0; z-index: 2; background: hsl(var(--backgroun
 .co { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; }
 .co img, .co .ph { width: 28px; height: 28px; border-radius: 6px; flex-shrink: 0; object-fit: contain; }
 .co .ph { background: hsl(var(--muted)); border: 1px solid hsl(var(--border)); }
+.ppl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .45rem; }
+.ppl li { display: flex; flex-direction: column; line-height: 1.3; }
+.ppl .pn { font-size: 12.5px; color: hsl(var(--foreground)); }
+.ppl .pt { font-size: 11px; color: hsl(var(--muted-foreground)); }
+.ppl .extra { display: none; }
+.ppl.open .extra { display: flex; }
+.ppl.open .more { display: none; }
+.more-btn { all: unset; cursor: pointer; font-family: var(--mono); font-size: 10.5px; color: hsl(var(--muted-foreground)); }
+.more-btn:hover { color: hsl(var(--foreground)); }
 .who { display: block; margin-top: .2rem; font-family: var(--mono); font-size: 10.5px; font-weight: 400; color: hsl(var(--muted-foreground)); line-height: 1.35; }
 th.q, td.q { position: sticky; left: 0; z-index: 1; background: hsl(var(--muted)); width: 150px; min-width: 150px; color: hsl(var(--foreground)); font-weight: 500; font-size: 12px; }
 thead th.q { z-index: 3; }
@@ -139,7 +148,9 @@ function signIn() {
   const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.onload = go; document.head.appendChild(sc)
 }
 
-const people = p => { const a = p.split(' · '); return a.slice(0, 3).map(esc).join('<br>') + (a.length > 3 ? `<br>+${a.length - 3} more` : '') }
+// "Adam Varro (Sr. Dir. Service)" -> name + title; first 3 shown, the rest behind a toggle.
+const person = p => { const m = p.match(/^(.*?)\s*\((.*)\)\s*$/); const [n, t] = m ? [m[1], m[2]] : [p, '']; return `<li><span class="pn">${esc(n)}</span>${t ? `<span class="pt">${esc(t[0].toUpperCase() + t.slice(1))}</span>` : ''}</li>` }
+const people = p => { const a = (p || '').split(' · ').filter(Boolean); if (!a.length) return ''; return `<ul class="ppl">${a.slice(0, 3).map(person).join('')}${a.length > 3 ? `<li class="more"><button class="more-btn">+${a.length - 3} more</button></li>${a.slice(3).map(person).join('').replace(/<li>/g, '<li class="extra">')}` : ''}</ul>` }
 // One unit only: "12 minutes ago", "3 hours ago", "2 days ago".
 const ago = d => { const m = Math.max(1, Math.round((Date.now() - d) / 60000)); const [n, u] = m < 60 ? [m, 'minute'] : m < 1440 ? [Math.round(m / 60), 'hour'] : [Math.round(m / 1440), 'day']; return `${n} ${u}${n === 1 ? '' : 's'} ago` }
 // lucide: building-2, circle-help, message-square-quote
@@ -157,8 +168,9 @@ function render() {
   const up = new Date(DATA.updatedAt)
   $('meta').innerHTML = [[ICON.co, cos.length, 'Companies'], [ICON.q, DATA.questions.length, 'Questions'], [ICON.a, n, 'Answers']].map(([i, v, t]) => `<span class="st" title="${t}">${i}${v}</span>`).join('') + `<span>Updated ${ago(up)}</span>`
   const logo = c => c.logo ? `<img src="${esc(c.logo)}" alt="" loading="lazy" onerror="this.outerHTML='<span class=ph></span>'">` : '<span class="ph"></span>'
-  const head = `<thead><tr><th class="q"></th>${cos.map(c => `<th><div class="co"><span>${esc(c.company)}</span>${logo(c)}</div>${c.people ? `<span class="who" title="${esc(c.people)}">${people(c.people)}</span>` : ''}</th>`).join('')}</tr></thead>`
-  const body = DATA.questions.map((q, i) => `<tr><td class="q">${esc(q)}</td>${cos.map((c, ci) => `<td>${(c.cells['Q' + (i + 1)] || []).length ? '<div class="cell">' + (c.cells['Q' + (i + 1)]).map((a, ai) =>
+  const head = `<thead><tr><th class="q"></th>${cos.map(c => `<th><div class="co"><span>${esc(c.company)}</span>${logo(c)}</div></th>`).join('')}</tr></thead>`
+  const pplRow = `<tr class="prow"><td class="q">People</td>${cos.map(c => `<td>${people(c.people)}</td>`).join('')}</tr>`
+  const body = pplRow + DATA.questions.map((q, i) => `<tr><td class="q">${esc(q)}</td>${cos.map((c, ci) => `<td>${(c.cells['Q' + (i + 1)] || []).length ? '<div class="cell">' + (c.cells['Q' + (i + 1)]).map((a, ai) =>
     `<div class="ans"><span>${esc(a.a)}</span><div class="foot"><span class="tag click" data-c="${ci}" data-q="${i + 1}" data-a="${ai}">${esc(a.cite.label)}</span><span class="dt">${esc(a.cite.date || '')}</span></div></div>`).join('') + '</div>' : ''}</td>`).join('')}</tr>`).join('')
   $('t').innerHTML = head + '<tbody>' + body + '</tbody>'
 }
@@ -186,7 +198,7 @@ async function showTranscript(s) {
 }
 function closeDrawer() { $('drawer').classList.remove('open'); $('scrim').classList.remove('open') }
 
-$('t').addEventListener('click', e => { const t = e.target.closest('.tag.click'); if (t) openDrawer(+t.dataset.c, +t.dataset.q, +t.dataset.a) })
+$('t').addEventListener('click', e => { const mb = e.target.closest('.more-btn'); if (mb) return mb.closest('.ppl').classList.add('open'); const t = e.target.closest('.tag.click'); if (t) openDrawer(+t.dataset.c, +t.dataset.q, +t.dataset.a) })
 $('scrim').onclick = closeDrawer; $('dClose').onclick = closeDrawer
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer() })
 
