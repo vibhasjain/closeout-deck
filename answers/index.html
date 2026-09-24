@@ -53,7 +53,6 @@ thead th { position: sticky; top: 0; z-index: 2; background: hsl(var(--backgroun
 .co .ph { background: hsl(var(--muted)); border: 1px solid hsl(var(--border)); }
 .ppl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .45rem; }
 .ppl li { display: flex; align-items: flex-start; gap: .45rem; line-height: 1.3; }
-.ppl li svg { width: 13px; height: 13px; margin-top: 2px; flex-shrink: 0; color: hsl(var(--muted-foreground)); }
 .ppl li div { display: flex; flex-direction: column; }
 .ppl .pn { font-size: 12.5px; color: hsl(var(--foreground)); }
 .ppl .pt { font-size: 11px; color: hsl(var(--muted-foreground)); }
@@ -76,6 +75,9 @@ td.sec { position: sticky; left: 0; background: hsl(var(--background)); border-r
 .ans + .ans { margin-top: .75rem; padding-top: .75rem; border-top: 1px dashed hsl(var(--border)); }
 .tag { display: inline-flex; align-items: center; gap: .3rem; border-radius: 9999px; border: 1px solid hsl(var(--border)); background: hsl(var(--muted)); padding: 0 .45rem; font-size: 10px; line-height: 1.6; color: hsl(var(--muted-foreground)); white-space: nowrap; vertical-align: 1px; margin-left: .25rem; }
 .tag.click { font-family: var(--mono); font-weight: 500; cursor: pointer; transition: background-color .12s, color .12s, border-color .12s; }
+.tag svg, .tag img { width: 10px; height: 10px; flex-shrink: 0; opacity: .7; }
+.tag img { filter: grayscale(1); }
+.tag.click:hover img { filter: grayscale(1) invert(1); }
 .tag.click:hover { background: hsl(var(--foreground)); color: hsl(var(--background)); border-color: hsl(var(--foreground) / .4); }
 .btn { display: inline-flex; align-items: center; gap: .4rem; height: 2rem; padding: 0 .75rem; border: 1px solid hsl(var(--border)); border-radius: .5rem; background: hsl(var(--background)); color: hsl(var(--foreground)); font: 500 12.5px var(--sans); text-decoration: none; cursor: pointer; }
 .btn:hover { background: hsl(var(--muted)); }
@@ -151,10 +153,10 @@ function signIn() {
 }
 
 // "Adam Varro (Sr. Dir. Service)" -> name + title; first 3 shown, the rest behind a toggle.
-const person = p => { const m = p.match(/^(.*?)\s*\((.*)\)\s*$/); const [n, t] = m ? [m[1], m[2]] : [p, '']; return `<li>${ICON.person}<div><span class="pn">${esc(n)}</span>${t ? `<span class="pt">${esc(t[0].toUpperCase() + t.slice(1))}</span>` : ''}</div></li>` }
+const person = p => { const m = p.match(/^(.*?)\s*\((.*)\)\s*$/); const [n, t] = m ? [m[1], m[2]] : [p, '']; return `<li><div><span class="pn">${esc(n)}</span>${t ? `<span class="pt">${esc(t[0].toUpperCase() + t.slice(1))}</span>` : ''}</div></li>` }
 const people = p => { const a = (p || '').split(' · ').filter(Boolean); return a.length ? `<ul class="ppl">${a.map(person).join('')}</ul>` : '' }
 // One unit only: "12 minutes ago", "3 hours ago", "2 days ago".
-const ago = d => { const m = Math.max(1, Math.round((Date.now() - d) / 60000)); const [n, u] = m < 60 ? [m, 'minute'] : m < 1440 ? [Math.round(m / 60), 'hour'] : [Math.round(m / 1440), 'day']; return `${n} ${u}${n === 1 ? '' : 's'} ago` }
+const ago = d => { const m = Math.max(1, Math.round((Date.now() - d) / 60000)); if (m >= 525600) return `${(m / 525600).toFixed(1)} years ago`; const [n, u] = m < 60 ? [m, 'minute'] : m < 1440 ? [Math.round(m / 60), 'hour'] : [Math.round(m / 1440), 'day']; return `${n} ${u}${n === 1 ? '' : 's'} ago` }
 // lucide: building-2, circle-help, message-square-quote
 const svg = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`
 const ICON = {
@@ -163,6 +165,15 @@ const ICON = {
   person: svg('<circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/>'),
   a: svg('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 12a2 2 0 0 0 2-2V8H8"/><path d="M14 12a2 2 0 0 0 2-2V8h-2"/>'),
 }
+// Source marks for chips: simple-icons (CC0) for HubSpot/Slack, Gong favicon, lucide mic for interviews.
+const fill = d => `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${d}"/></svg>`
+const SRC_ICON = {
+  hubspot: fill('M18.164 7.93V5.084a2.198 2.198 0 001.267-1.978v-.067A2.2 2.2 0 0017.238.845h-.067a2.2 2.2 0 00-2.193 2.193v.067a2.196 2.196 0 001.252 1.973l.013.006v2.852a6.22 6.22 0 00-2.969 1.31l.012-.01-7.828-6.095A2.497 2.497 0 104.3 4.656l-.012.006 7.697 5.991a6.176 6.176 0 00-1.038 3.446c0 1.343.425 2.588 1.147 3.607l-.013-.02-2.342 2.343a1.968 1.968 0 00-.58-.095h-.002a2.033 2.033 0 102.033 2.033 1.978 1.978 0 00-.1-.595l.005.014 2.317-2.317a6.247 6.247 0 104.782-11.134l-.036-.005zm-.964 9.378a3.206 3.206 0 113.215-3.207v.002a3.206 3.206 0 01-3.207 3.207z'),
+  slack: fill('M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z'),
+  gong: '<img src="/answers/logos/gong.io.png" alt="" aria-hidden="true">',
+  interview: svg('<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/>'),
+}
+const chip = (cite, attrs = '') => `<span class="tag${attrs ? ' click' : ''}"${attrs}>${SRC_ICON[cite.src] || ''}${esc(cite.label)}</span>`
 const SRC = { gong: 'Gong', hubspot: 'HubSpot', slack: 'Slack', interview: 'Interview' }
 function render() {
   $('gate').hidden = true; $('app').hidden = false
@@ -174,13 +185,13 @@ function render() {
   const head = `<thead><tr><th class="q"></th>${cos.map(c => `<th><div class="co">${logo(c)}<span>${esc(c.company)}</span></div></th>`).join('')}</tr></thead>`
   const cites = c => Object.values(c.cells).flat().map(a => a.cite)
   const last = c => cites(c).map(x => x.iso || '').sort().pop()
-  const srcTags = c => [...new Set(cites(c).map(x => x.label))].sort().map(l => `<span class="tag">${esc(l)}</span>`).join('')
+  const srcTags = c => { const seen = new Map(); cites(c).forEach(x => seen.has(x.label) || seen.set(x.label, x)); return [...seen.values()].sort((a, b) => a.label.localeCompare(b.label)).map(x => chip(x)).join('') }
   const row = (label, f) => `<tr class="prow"><td class="q">${label}</td>${cos.map(c => `<td>${f(c)}</td>`).join('')}</tr>`
   const pplRow = row('Last conversation', c => { const d = last(c); return d ? `<span class="dt">${ago(new Date(d + 'T12:00:00'))}</span>` : '' })
     + row('Sources', c => `<div class="srcs">${srcTags(c)}</div>`)
     + row('People', c => people(c.people))
   const body = pplRow + DATA.questions.map((q, i) => `<tr><td class="q">${esc(q)}</td>${cos.map((c, ci) => `<td>${(c.cells['Q' + (i + 1)] || []).length ? '<div class="cell">' + (c.cells['Q' + (i + 1)]).map((a, ai) =>
-    `<div class="ans"><span>${esc(a.a)}</span><div class="foot"><span class="tag click" data-c="${ci}" data-q="${i + 1}" data-a="${ai}">${esc(a.cite.label)}</span><span class="dt">${esc(a.cite.date || '')}</span></div></div>`).join('') + '</div>' : ''}</td>`).join('')}</tr>`).join('')
+    `<div class="ans"><span>${esc(a.a)}</span><div class="foot">${chip(a.cite, ` data-c="${ci}" data-q="${i + 1}" data-a="${ai}"`)}<span class="dt">${esc(a.cite.date || '')}</span></div></div>`).join('') + '</div>' : ''}</td>`).join('')}</tr>`).join('')
   $('t').innerHTML = head + '<tbody>' + body + '</tbody>'
 }
 
