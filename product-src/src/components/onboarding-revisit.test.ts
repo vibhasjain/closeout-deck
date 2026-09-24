@@ -214,10 +214,12 @@ describe('revisiting onboarding', () => {
       expect(Boolean(tab!.props['aria-disabled'])).toBe(!forwarded)
       expect(tab!.props.tabIndex).toBe(forwarded ? undefined : -1)
     }
-    for (const name of ['Settings', 'Agent', 'Account']) {
+    for (const name of ['Settings', 'Agent']) {
       expect(button(tree, name)).toBeDefined()
       expect(button(tree, name)!.props.disabled).toBe(!forwarded)
     }
+    // Logging out is never locked, even mid-setup.
+    expect(button(tree, 'Log Out')!.props.disabled).toBe(false)
   })
 
   it('keeps navigation available outside setup', () => {
@@ -225,10 +227,10 @@ describe('revisiting onboarding', () => {
     router.pathname = '/settings'
     const tree = mount(TopNav)()
     expect(elements(tree).filter(({ props }) => props.to).every(({ props }) => !props['aria-disabled'])).toBe(true)
-    for (const name of ['Settings', 'Agent', 'Account']) expect(button(tree, name)!.props.disabled).toBe(false)
+    for (const name of ['Settings', 'Agent', 'Log Out']) expect(button(tree, name)!.props.disabled).toBe(false)
   })
 
-  it('lets a returning user open Settings, toggle the agent, and open Account', () => {
+  it('lets a returning user open Settings, toggle the agent, and see Log Out', () => {
     router.params = new URLSearchParams('step=2&agent=1')
     const render = mount(TopNav)
     const tree = render()
@@ -237,8 +239,7 @@ describe('revisiting onboarding', () => {
     button(tree, 'Agent')!.props.onClick!()
     expect(router.params.get('agent')).toBeNull()
     expect(router.params.get('step')).toBe('2')
-    button(tree, 'Account')!.props.onClick!()
-    expect(button(render(), 'Account')!.props['aria-expanded']).toBe(true)
+    expect(button(render(), 'Log Out')).toBeDefined()
     expect(store.update).not.toHaveBeenCalled()
   })
 

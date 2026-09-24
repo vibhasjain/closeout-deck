@@ -23,6 +23,13 @@
   gap: .125rem;
 }
 
+.pay-amounts-horizontal > span {
+  /* Fixed-width, right-aligned halves so decimals line up row to row like a ledger (up to $999,999.99). */
+  min-width: 10.5ch;
+  font-size: var(--pay-amount-size);
+  align-items: flex-end;
+}
+
 .pay-amounts-current { color: hsl(var(--muted-foreground)); }
 .pay-amounts-resolved { color: hsl(var(--foreground)); }
 .pay-amounts-value { font-size: var(--pay-amount-size); font-weight: 500; }

@@ -73,14 +73,13 @@ export function Payroll() {
 
   // Review shows the summary's own rows, limited to what a person acts on.
   const reviewing = params.get('filter') === 'needs-review'
-  // A cycle opens on its summary; the full time-entry list is one click away, and any filter or search opens it.
+  // A cycle opens on its summary; picking a stat or searching opens the time-entry list.
   const listing = params.get('view') === 'list' || params.has('filter') || params.has('q')
 
-  function showList(on: boolean) {
+  function showSummary() {
     setParams((previous) => {
       const next = new URLSearchParams(previous)
-      if (on) next.set('view', 'list')
-      else for (const key of ['view', 'filter', 'q', 'page', 'flag', 'review', 'cases']) next.delete(key)
+      for (const key of ['view', 'filter', 'q', 'page', 'flag', 'review', 'cases']) next.delete(key)
       return next
     })
   }
@@ -142,7 +141,7 @@ export function Payroll() {
           <h2>{cycle.label}</h2><Tag tone={cycle.statusTag === 'Pending' ? 'amber' : undefined}>{cycle.statusTag}</Tag>
         </div>
         <nav className="cycle-steps" aria-label="Pay cycle steps">
-          <button type="button" className="cycle-step" aria-current={step === 'intake' ? 'step' : undefined} onClick={() => showStep('intake')}>Intake</button>
+          <button type="button" className="cycle-step" aria-current={step === 'intake' ? 'step' : undefined} onClick={() => showStep('intake')}>Collect</button>
           <button type="button" className="cycle-step" aria-current={step === 'review' ? 'step' : undefined} onClick={() => showStep('review')}>Review</button>
         </nav>
         <span className="r-note payroll-dates">{cycle.statusTag === 'Paid'
@@ -153,7 +152,7 @@ export function Payroll() {
           </>}</span>
       </div>
       {step === 'intake' ? <Intake cycle={cycle} intake={intake} /> : <>
-        <CycleKpis cycle={cycle} stats={stats} summary={!listing} listing={listing} onView={showList} />
+        <CycleKpis cycle={cycle} stats={stats} summary={!listing} onSummary={showSummary} />
         {reviewing ? <PayrollSummary cycle={cycle} review />
           : listing ? <ShiftTable cycle={cycle} filterMode="discrepancies" defaultFilter="total"
               onSelect={(id) => navigate(shiftHref(cycle.id, id, params, '/payroll'))} />

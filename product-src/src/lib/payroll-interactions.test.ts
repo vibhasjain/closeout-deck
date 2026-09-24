@@ -124,39 +124,14 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals() })
 
 describe('Payroll review actions', () => {
-  it('switches views inside Discrepancies without selecting the tile and clears list filters on returning to summary', () => {
+  it('returns to the summary when the selected stat is picked again and clears list filters', () => {
     const cycle = buildCycles(getOnboarding())[0]
     router.params = new URLSearchParams({ cycle: cycle.id, step: 'review', agent: '1', filter: 'needs-review',
       q: 'Maria', page: '2', flag: 'CS-16H', review: 'done', cases: 'one,two' })
-    const views = () => {
-      const row = kpiRow(component(Payroll(), CycleKpis).props)
-      const tile = elements(row).find((element) => element.props.className === 'stat stat-with-accessory')!
-      expect(content(tile)).toContain('Discrepancies')
-      const controls = elements(tile).filter((element) => element.type === 'button')
-      for (const control of controls) expect(elements(control.props.children).some((element) => element.type === 'button')).toBe(false)
-      const summary = controls.find((element) => element.props['aria-label'] === 'Show summary')!
-      const list = controls.find((element) => element.props['aria-label'] === 'Show all time entries')!
-      expect(summary).toBeDefined()
-      expect(list).toBeDefined()
-      return { summary, list }
-    }
-    let controls = views()
-    expect(controls.summary.props['aria-pressed']).toBe(false)
-    expect(controls.list.props['aria-pressed']).toBe(true)
-    ;(controls.summary.props.onClick as () => void)()
-    expect(router.setParams).toHaveBeenCalledTimes(1)
+    const kpi = component(Payroll(), CycleKpis)
+    click(kpiRow(kpi.props), `Review${kpi.props.stats.needsReview.toLocaleString()}`)
     expect(Object.fromEntries(router.params)).toEqual({ cycle: cycle.id, step: 'review', agent: '1' })
     expect(component(Payroll(), PayrollSummary).props.review).not.toBe(true)
-    controls = views()
-    expect(controls.summary.props['aria-pressed']).toBe(true)
-    expect(controls.list.props['aria-pressed']).toBe(false)
-    ;(controls.list.props.onClick as () => void)()
-    expect(router.setParams).toHaveBeenCalledTimes(2)
-    expect(Object.fromEntries(router.params)).toEqual({ cycle: cycle.id, step: 'review', agent: '1', view: 'list' })
-    expect(component(Payroll(), ShiftTable).props.cycle.id).toBe(cycle.id)
-    controls = views()
-    expect(controls.summary.props['aria-pressed']).toBe(false)
-    expect(controls.list.props['aria-pressed']).toBe(true)
   })
 
   it('moves the selected stat between the payments table and the summary rows that need a person', () => {
@@ -286,7 +261,7 @@ describe('Payroll cycle steps', () => {
     expect(elements(payroll).filter((element) => element.props.className === 'cycle-steps')).toEqual([steps])
     const buttons = Children.toArray(steps.props.children).filter(isValidElement<ElementProps>)
     expect(buttons.map((element) => element.type)).toEqual(['button', 'button'])
-    expect(buttons.map((element) => element.props.children)).toEqual(['Intake', 'Review'])
+    expect(buttons.map((element) => element.props.children)).toEqual(['Collect', 'Review'])
   })
 
   it('opens the week awaiting review on the step in the URL and clears it when the cycle or period changes', () => {
@@ -296,19 +271,19 @@ describe('Payroll cycle steps', () => {
     let payroll = Payroll()
     expect(component(payroll, Intake).props.cycle.id).toBe(pending.id)
     expect(elements(payroll).some((element) => element.type === CycleKpis)).toBe(false)
-    expect(button(payroll, 'Intake').props['aria-current']).toBe('step')
+    expect(button(payroll, 'Collect').props['aria-current']).toBe('step')
     expect(button(payroll, 'Review').props['aria-current']).toBeUndefined()
     click(payroll, 'Review')
     expect(router.params.get('step')).toBe('review')
     payroll = Payroll()
     expect(component(payroll, CycleKpis).props.cycle.id).toBe(pending.id)
-    expect(button(payroll, 'Intake').props['aria-current']).toBeUndefined()
+    expect(button(payroll, 'Collect').props['aria-current']).toBeUndefined()
     expect(button(payroll, 'Review').props['aria-current']).toBe('step')
-    click(payroll, 'Intake')
+    click(payroll, 'Collect')
     expect(router.params.get('step')).toBe('intake')
     payroll = Payroll()
     expect(component(payroll, Intake).props.cycle.id).toBe(pending.id)
-    expect(button(payroll, 'Intake').props['aria-current']).toBe('step')
+    expect(button(payroll, 'Collect').props['aria-current']).toBe('step')
     expect(button(payroll, 'Review').props['aria-current']).toBeUndefined()
     const totals = payTotals(pending)
     const sentence = component(payroll, ClusterList).props.items.find((item) => item.id === pending.id)!.sentence

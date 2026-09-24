@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
-import { MessageSquare, Settings, User } from 'lucide-react'
+import { useLayoutEffect, useRef, useState } from 'react'
+import { LogOut, MessageSquare, Settings } from 'lucide-react'
 import { NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Btn } from '@/components/ui'
 import { signOut } from '@/lib/viewerSession'
@@ -24,11 +24,6 @@ export function TopNav() {
   const { toast } = useOverlay()
   const nav = useRef<HTMLElement>(null)
   const indicator = useRef<HTMLDivElement>(null)
-  const account = useRef<HTMLDivElement>(null)
-  const accountButton = useRef<HTMLButtonElement>(null)
-  const menuId = useId()
-  const [menu, setMenu] = useState<'closed' | 'entering' | 'open' | 'closing'>('closed')
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const [signingOut, setSigningOut] = useState(false)
 
   useLayoutEffect(() => {
@@ -53,43 +48,6 @@ export function TopNav() {
       window.removeEventListener('resize', measure)
     }
   }, [pathname, setup])
-
-  const closeMenu = useCallback(() => {
-    clearTimeout(timer.current)
-    setMenu('closing')
-    timer.current = setTimeout(() => setMenu('closed'), 120)
-  }, [])
-
-  useEffect(() => {
-    if (menu !== 'entering') return
-    let frame = requestAnimationFrame(() => {
-      frame = requestAnimationFrame(() => {
-        setMenu('open')
-        account.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus()
-      })
-    })
-    return () => cancelAnimationFrame(frame)
-  }, [menu])
-
-  useEffect(() => {
-    if (menu === 'closed') return
-    const outside = (event: PointerEvent) => {
-      if (event.target instanceof Node && !account.current?.contains(event.target)) closeMenu()
-    }
-    const escape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        closeMenu()
-        accountButton.current?.focus()
-      } else if (event.key === 'Tab') closeMenu()
-    }
-    document.addEventListener('pointerdown', outside)
-    document.addEventListener('keydown', escape)
-    return () => {
-      document.removeEventListener('pointerdown', outside)
-      document.removeEventListener('keydown', escape)
-    }
-  }, [menu, closeMenu])
-  useEffect(() => () => clearTimeout(timer.current), [])
 
   const logOut = async () => {
     setSigningOut(true)
@@ -119,19 +77,7 @@ export function TopNav() {
         else next.set('agent', '1')
         return next
       })}><MessageSquare size={16} aria-hidden="true" /></Btn>
-      <div className="relative min-w-0 shrink-0" ref={account}>
-        <button ref={accountButton} disabled={setupLocked} type="button" className="btn icon-box" aria-label="Account" title={email ?? undefined} aria-haspopup="menu" aria-expanded={menu !== 'closed' && menu !== 'closing'} aria-controls={menu !== 'closed' ? menuId : undefined}
-          onClick={() => {
-            if (menu === 'open' || menu === 'entering') closeMenu()
-            else { clearTimeout(timer.current); setMenu('entering') }
-          }}>
-          <User size={16} aria-hidden="true" />
-        </button>
-        {menu !== 'closed' && <div id={menuId} role="menu" aria-label="Account" className={`modal${menu === 'open' ? ' open' : menu === 'closing' ? ' closing' : ''}`}>
-          {email && <p className="account-email">{email}</p>}
-          <Btn role="menuitem" disabled={signingOut} onClick={() => void logOut()}>Sign out</Btn>
-        </div>}
-      </div>
+      <Btn className="icon-box" aria-label="Log Out" title={email ? `Log out ${email}` : 'Log out'} disabled={signingOut} onClick={() => void logOut()}><LogOut size={16} aria-hidden="true" /></Btn>
     </header>
   )
 }

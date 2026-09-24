@@ -77,20 +77,20 @@
 .payroll-summary-clients th:first-child, .payroll-summary-clients td:first-child { padding-left: 1.25rem; }
 
 /* Decision cards: toggle, issue pill, what the agent wants, pay impact, the one action. */
-.payroll-summary .payroll-summary-row { grid-template-columns: 1.25rem 12rem minmax(0, 1fr) 9.5rem 12rem; }
+.payroll-summary .payroll-summary-row { grid-template-columns: 1.25rem 12rem minmax(0, 1fr) 13rem 12rem; }
 .decision-toggle { display: inline-flex; align-items: center; justify-content: center; width: 1.25rem; height: 1.25rem; color: hsl(var(--muted-foreground)); }
 .decision-line { min-width: 0; }
 .decision-action { display: flex; justify-content: flex-end; }
 .decision-action .btn { white-space: nowrap; }
 .decision-cases { margin: 0; padding: 0 1.25rem .75rem 3.25rem; list-style: none; }
-.decision-cases li { display: grid; grid-template-columns: 12rem minmax(0, 1fr) 9.5rem 12rem; gap: .75rem; align-items: start; padding: .5rem 0; border-top: 1px solid hsl(var(--border)); font-size: 12px; }
+.decision-cases li { display: grid; grid-template-columns: 12rem minmax(0, 1fr) 13rem 12rem; gap: .75rem; align-items: start; padding: .5rem 0; border-top: 1px solid hsl(var(--border)); font-size: 12px; }
 .decision-case { cursor: pointer; }
 .decision-case:hover { background: hsl(var(--muted) / .4); }
 .decision-who a { color: inherit; }
 .decision-who { display: flex; flex-direction: column; min-width: 0; }
 .decision-who .r-note, .decision-more { margin: 0; }
 .decision-note { min-width: 0; color: hsl(var(--muted-foreground)); }
-.payroll-summary-row > .num, .decision-cases .decision-diff { white-space: nowrap; text-align: right; }
+.payroll-summary-row > .num, .decision-cases .decision-diff { justify-self: end; white-space: nowrap; text-align: right; }
 .decision-note b { display: block; margin-top: .125rem; font-weight: 500; color: hsl(var(--foreground)); }
 
 /* The stacked amounts set the footer height so both captions remain visible. */

@@ -59,20 +59,6 @@ const selectedMetrics = (html: string) => metrics(html).filter((metric) => metri
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks() })
 
 describe('Payroll review composition', () => {
-  it('shows both pressed-state view controls in the review summary and hides them during intake', () => {
-    vi.useFakeTimers().setSystemTime(today)
-    for (const listing of [false, true]) {
-      const html = render(`/payroll?step=review${listing ? '&view=list' : ''}`)
-      const row = summary(html)
-      const buttons = [...row.matchAll(/<button\b[^>]*>/g)].map((match) => match[0])
-      expect(buttons.find((button) => button.includes('aria-label="Show summary"'))).toContain(`aria-pressed="${!listing}"`)
-      expect(buttons.find((button) => button.includes('aria-label="Show all time entries"'))).toContain(`aria-pressed="${listing}"`)
-    }
-    const intake = render('/payroll?step=intake')
-    expect(intake).not.toContain('aria-label="Show summary"')
-    expect(intake).not.toContain('aria-label="Show all time entries"')
-  })
-
   it('replaces the payments table with the summary rows for every pending kind in Review and keeps cycle navigation', () => {
     vi.useFakeTimers().setSystemTime(today)
     const cycles = buildCycles(DEFAULTS, today)
@@ -410,7 +396,7 @@ describe('payroll and settings separation', () => {
     expect(selectedMetrics(render('/payroll?view=list'))).toEqual(['Discrepancies'])
     // The summary is the landing view: nothing picked yet, the list a click away.
     expect(selectedMetrics(render('/payroll'))).toEqual([])
-    expect(render('/payroll')).toMatch(/aria-label="Show all time entries"[\s\S]*Approve ·[\s\S]*Waiting on a reply ·[\s\S]*Needs judgment ·[\s\S]*Fixed ·[\s\S]*By client/)
+    expect(render('/payroll')).toMatch(/Approve ·[\s\S]*Waiting on a reply ·[\s\S]*Needs judgment ·[\s\S]*Fixed ·[\s\S]*By client/)
   })
 
   it('restores the selected KPI filter from the URL and ignores a stale search term', () => {
