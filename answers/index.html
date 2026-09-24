@@ -128,7 +128,7 @@ td.sec { position: sticky; left: 0; background: hsl(var(--background)); border-r
   <div class="top"><img src="/logo-small.svg" alt="HyperTrack">
     <input id="q" class="ctl search" type="search" placeholder="Search" autocomplete="off" aria-label="Search companies, people and answers">
     <select id="fStatus" class="ctl" aria-label="Filter by status"><option value="">All Statuses</option><option>Contracted</option><option>Churned</option><option value="none">No Status</option></select>
-    <select id="fSort" class="ctl" aria-label="Sort"><option value="">Default Order</option><option value="new">Last Talked: Newest</option><option value="old">Last Talked: Oldest</option></select><span class="lbl" id="meta"></span><button class="logout" id="logout" title="Log out" aria-label="Log out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></button></div>
+    <select id="fSort" class="ctl" aria-label="Sort"><option value="new" selected>Last Talked: Newest</option><option value="old">Last Talked: Oldest</option></select><span class="lbl" id="meta"></span><button class="logout" id="logout" title="Log out" aria-label="Log out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></button></div>
   <div class="wrap"><table id="t"></table></div>
 </div>
 <div class="scrim" id="scrim"></div>
@@ -201,7 +201,7 @@ const SRC_ICON = {
 }
 const chip = (cite, attrs = '') => `<span class="tag${attrs ? ' click' : ''}"${attrs}>${SRC_ICON[cite.src] || ''}${esc(cite.label)}</span>`
 // Live search: case-insensitive substring; hl() escapes then wraps matches in <mark>.
-let Q = '', F_STATUS = '', F_SORT = ''
+let Q = '', F_STATUS = '', F_SORT = 'new'  // default: most recent conversation first
 const hl = t => { const e = esc(t); if (!Q) return e; const q = esc(Q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); return e.replace(new RegExp(q, 'gi'), m => `<mark>${m}</mark>`) }
 const hay = c => [c.company, c.people, c.status, ...Object.values(c.cells).flat().flatMap(a => [a.a, a.cite.label, a.cite.quote])].join(' ').toLowerCase()
 const SRC = { gong: 'Gong', hubspot: 'HubSpot', slack: 'Slack', interview: 'Interview' }
