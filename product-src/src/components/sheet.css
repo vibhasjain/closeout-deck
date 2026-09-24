@@ -1,0 +1,3 @@
+.payments-sheet .sheet-group-row { align-items: center; }
+.payments-sheet .sheet-group-meta { display: inline-flex; align-items: center; gap: .75rem; }
+.payments-sheet td > .pay-amounts { text-align: left; }

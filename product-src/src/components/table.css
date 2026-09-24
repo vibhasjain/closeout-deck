@@ -1,0 +1,13 @@
+/* Match card padding at table edges without changing compact interior cells.
+   Direct children also cover group/total rows without reaching nested tables. */
+table:is(.sheet, .kv) > :is(thead, tbody, tfoot) > tr > :is(th, td):first-child,
+.reconcile-sheet table.payments-sheet > :is(thead, tbody, tfoot) > tr > :is(th, td):first-child,
+#cycleDetail table.sheet > :is(thead, tbody, tfoot) > tr > :is(th, td):first-child {
+  padding-left: var(--table-edge-inset, 1.25rem);
+}
+
+table:is(.sheet, .kv) > :is(thead, tbody, tfoot) > tr > :is(th, td):last-child,
+.reconcile-sheet table.payments-sheet > :is(thead, tbody, tfoot) > tr > :is(th, td):last-child,
+#cycleDetail table.sheet > :is(thead, tbody, tfoot) > tr > :is(th, td):last-child {
+  padding-right: var(--table-edge-inset, 1.25rem);
+}

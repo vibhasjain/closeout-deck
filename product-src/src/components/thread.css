@@ -1,0 +1,52 @@
+.aux-head.thread-titlebar {
+  justify-content: space-between;
+  gap: .5rem;
+  padding: .625rem .75rem;
+  font-family: var(--sans);
+  font-size: 12px;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.thread-title { font-weight: 500; }
+
+.thread-party-switch {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 9999px;
+  background: hsl(var(--background));
+}
+
+.thread-party-switch button {
+  min-height: 2rem;
+  padding: .25rem .625rem;
+  border-radius: 9999px;
+  color: hsl(var(--muted-foreground));
+  font: 500 12px/1.5 var(--sans);
+  text-align: left;
+}
+
+.thread-party-switch button:hover { color: hsl(var(--foreground)); }
+.thread-party-switch button[aria-pressed="true"] {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+.thread-party-switch button:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px hsl(var(--foreground) / .45);
+}
+
+/* Theirs on the right, ours (and the agent's draft) on the left. */
+.thread .thread-bubble, .thread .thread-draft { text-align: left; max-width: 82%; }
+.thread .thread-bubble.in { align-self: flex-end; }
+.thread .thread-bubble.out, .thread .thread-bubble.internal, .thread .thread-draft { align-self: flex-start; }
+.thread .thread-bubble.in { background: hsl(var(--muted) / .6); }
+.thread .thread-bubble.out { background: hsl(var(--background)); }
+.thread .thread-bubble.internal { font-family: var(--sans); }
+.thread .thread-draft-actions .lnk { margin-left: 0; }
+.thread .thread-empty { align-items: flex-start; color: hsl(var(--muted-foreground) / .5); }
+.thread .thread-name { overflow-wrap: anywhere; }

@@ -1,0 +1,24 @@
+.thread .thread-draft {
+  border-style: dashed;
+  background: hsl(var(--muted) / .65);
+}
+
+.thread-draft-origin {
+  display: flex;
+  align-items: center;
+  gap: .375rem;
+  margin-bottom: .375rem;
+  color: hsl(var(--muted-foreground));
+  font: 500 11px/1.5 var(--sans);
+}
+
+.thread-draft-primary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+}
+
+.thread-draft-actions .thread-draft-skip {
+  margin-left: auto;
+}

@@ -1,0 +1,26 @@
+.pay-amounts {
+  display: inline-flex;
+  flex-direction: column;
+  gap: .5rem;
+  vertical-align: top;
+  font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.pay-amounts-current,
+.pay-amounts-resolved {
+  display: flex;
+  flex-direction: column;
+  gap: .125rem;
+}
+
+.pay-amounts-current { color: hsl(var(--muted-foreground)); }
+.pay-amounts-resolved { color: hsl(var(--foreground)); }
+.pay-amounts-value { font-size: var(--pay-amount-size); font-weight: 500; }
+.pay-amounts-caption { font-size: 10px; font-weight: 400; }
+.pay-amounts-sm { --pay-amount-size: 12px; }
+.pay-amounts-md { --pay-amount-size: 16px; }
+.pay-amounts-lg { --pay-amount-size: 24px; }

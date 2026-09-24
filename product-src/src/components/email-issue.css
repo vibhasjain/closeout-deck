@@ -1,0 +1,17 @@
+/* A pre-written email about one issue, composed in place, with its time entries attached. */
+.email-issue-open { align-self: flex-start; }
+.email-issue { display: flex; width: 100%; flex-direction: column; gap: .75rem; margin-top: .25rem; padding-top: .875rem; border-top: 1px solid hsl(var(--border)); text-align: left; }
+.email-issue-field { display: flex; flex-direction: column; gap: .3125rem; }
+.email-issue-lbl { color: hsl(var(--muted-foreground)); font-size: 12px; }
+.email-issue .q-input { width: 100%; font-size: 13px; }
+.email-issue textarea.q-input { height: auto; min-height: 14.5rem; padding: .5rem .75rem; line-height: 1.55; resize: vertical; white-space: pre-wrap; }
+.email-issue .q-input[aria-invalid="true"] { border-color: hsl(0 55% 45%); }
+.email-issue-error { margin: -.375rem 0 0; color: hsl(0 55% 40%); font-size: 12px; }
+.email-issue-attachment { display: flex; align-items: center; gap: .625rem; padding: .5rem .75rem; border: 1px solid hsl(var(--border)); border-radius: var(--radius); }
+.email-issue-attachment > svg { flex: none; color: hsl(var(--muted-foreground)); }
+.email-issue-file { display: flex; min-width: 0; flex: 1; flex-direction: column; font-size: 12.5px; }
+.email-issue-file b { overflow: hidden; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.email-issue-file span { color: hsl(var(--muted-foreground)); font-size: 12px; }
+.email-issue-actions { display: flex; gap: .5rem; }
+.email-issue-sent { display: flex; flex-wrap: wrap; align-items: center; gap: .375rem .625rem; margin: 0; font-size: 12.5px; }
+.email-issue-sent > svg { flex: none; }

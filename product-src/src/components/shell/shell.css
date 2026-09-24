@@ -1,0 +1,72 @@
+/* React shell layout and NavLink equivalents of the bench's button pills. */
+.app { display: grid; grid-template-rows: 3rem 1fr; height: 100dvh; }
+.main { display: flex; min-width: 0; min-height: 0; overflow: hidden; }
+.main > * { min-width: 0; min-height: 0; flex: 1; }
+.rail-layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; min-width: 0; min-height: 0; overflow: hidden; }
+.rail-layout > .detail { display: flex; min-height: 0; overflow: hidden; }
+.rail-layout > .aux { min-height: 0; overflow: hidden; }
+.brand { flex-shrink: 0; }
+.brand img { display: block; filter: grayscale(1); }
+.topbar .brand img { width: 22px; height: 22px; }
+.topbar > .nav-tabs { position: absolute; left: 50%; translate: -50% 0; }
+.topbar { position: relative; }
+.nav-tabs a, .nav-tabs [aria-hidden] span {
+  border-radius: 9999px; padding: .25rem .625rem; font-size: 12px; font-weight: 500;
+  white-space: nowrap; color: hsl(var(--muted-foreground)); text-decoration: none;
+}
+.nav-tabs a:hover { color: hsl(var(--foreground)); }
+.nav-tabs a[aria-disabled="true"] { pointer-events: none; opacity: .45; }
+.nav-tabs > [aria-hidden] {
+  position: absolute; inset: 0; pointer-events: none;
+  background: hsl(var(--background)); color: hsl(var(--foreground));
+  box-shadow: 0 1px 2px rgb(0 0 0 / .06);
+  clip-path: inset(2px 100% 2px 0 round 9999px);
+  transition: clip-path 300ms var(--ease-out);
+}
+.nav-tabs [aria-hidden] span { color: inherit; }
+.topbar .modal {
+  position: absolute; top: calc(100% + .5rem); right: 0; left: auto; translate: none;
+  width: max-content; min-width: 100%; max-width: calc(100vw - 2rem); padding: .375rem;
+  transform-origin: top right;
+}
+.topbar .modal .btn { width: 100%; }
+.scrim.overlay-scrim {
+  position: fixed; inset: 0; visibility: visible; transform: none;
+  opacity: 0; pointer-events: none; transition: opacity 120ms var(--ease-out);
+}
+.scrim.overlay-scrim.open { opacity: 1; pointer-events: auto; }
+.scrim.overlay-scrim.closing { opacity: 0; }
+.topbar > div:last-child > .btn { max-width: min(22vw, 18rem); }
+[data-aux-toggle] { display: none; position: fixed; bottom: .75rem; z-index: 20; }
+[data-aux-toggle] { right: .75rem; }
+.agent-scrim { top: 3rem; z-index: 30; transform: none; }
+.agent-panel { top: 3rem; height: calc(100dvh - 3rem); width: 380px; max-width: 100vw; z-index: 35; }
+.agent-panel[hidden], .agent-scrim[hidden] { display: none; }
+.agent-panel > .chat { flex: 1; width: 100%; min-height: 0; border-right: 0; }
+.agent-panel.closing { transform: none; }
+@media (max-width: 1099.98px) {
+  .rail-layout { grid-template-columns: minmax(0, 1fr); }
+  [data-aux-toggle] { display: inline-flex; }
+}
+@media (max-width: 899.98px) {
+  .topbar { min-width: 0; }
+  .topbar > .nav-tabs { min-width: 0; overflow-x: auto; flex-shrink: 1; scrollbar-width: none; }
+  .topbar > .nav-tabs::-webkit-scrollbar { display: none; }
+  .topbar > .spacer { flex: 0; }
+  .topbar > div:last-child { margin-left: auto; }
+  .topbar > div:last-child > .btn { max-width: 20vw; }
+}
+@media (max-width: 767.98px) {
+  .nav-tabs a, .nav-tabs [aria-hidden] span { padding-left: .5rem; padding-right: .5rem; }
+}
+
+/* Top-right cluster: settings, agent and account as matching boxed icons. */
+.topbar .icon-box { width: 2rem; height: 2rem; padding: 0; display: inline-grid; place-items: center; }
+.topbar .icon-box[aria-expanded="true"] { background: hsl(var(--muted)); }
+.topbar .icon-box:disabled { opacity: .45; pointer-events: none; }
+.account-email { margin: 0 0 .5rem; font-size: 12px; color: hsl(var(--muted-foreground)); white-space: nowrap; }
+
+/* Top-bar tabs: no track behind them, room between, and the active tab on a light fill. */
+.topbar .nav-tabs { background: none; gap: .5rem; }
+.topbar .nav-tabs a, .topbar .nav-tabs [aria-hidden] span { padding: .25rem .875rem; font-size: 12.5px; }
+.topbar .nav-tabs > [aria-hidden] { background: hsl(var(--muted)); box-shadow: none; }

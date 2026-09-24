@@ -1,0 +1,71 @@
+import { FACILITIES, fmtT } from './engine.js'
+
+/** When a source usually sends: nightly, or weekly on `day` (0 is Sunday), at `at` minutes past midnight. */
+export interface SendSchedule { day?: number; at: number }
+
+export interface Source {
+  id: string
+  name: string
+  short: string
+  tile?: string
+  icon?: string
+  mark?: string
+  builtin?: boolean
+  group: string
+  status: string
+  method: string
+  sites: string[]
+  pulls: string[]
+  lastSync: string | null
+  sends?: SendSchedule
+}
+
+export interface Destination {
+  id: string
+  name: string
+  tile?: string
+  group: string
+  status: string
+  method: string
+  sites: string[]
+  format: string
+  lastSync: string | null
+}
+
+const TIME_PULLS = ['Punches','Schedules','Meal punches','Timecard edits'];
+export const SOURCES: Source[] = [
+  { id:'ukg-ready', name:'UKG', short:'UKG', tile:'/logos/ukg.svg', status:'connected', method:'API', sites:['Pacific Cold Storage'], sends:{ at:4 * 60 } },
+  { id:'adp-wfn', name:'ADP Workforce Now', short:'ADP WFN', tile:'/logos/adp.jpg', status:'connected', method:'Export · nightly', sites:['Mercy General', 'Lonestar Packaging'], sends:{ at:2 * 60 } },
+  { id:'ubeya', name:'Ubeya', short:'Ubeya', tile:'/logos/ubeya.svg', status:'connected', method:'API', sites:['Northbank Arena'], sends:{ at:3 * 60 } },
+  { id:'7shifts', name:'7shifts', short:'7shifts', tile:'/logos/7shifts.png', status:'connected', method:'API', sites:['Wicker Park Kitchen'], sends:{ at:3 * 60 } },
+  { id:'paylocity', name:'Paylocity', short:'Paylocity', tile:'/logos/paylocity.svg', status:'connected', method:'API', sites:['Harbor Point Hotel'], sends:{ at:5 * 60 } },
+  { id:'tempworks', name:'TempWorks', tile:'/logos/tempworks.png' },
+  { id:'avionte', name:'Avionté', tile:'/logos/avionte.svg' },
+  { id:'wheniwork', name:'When I Work', tile:'/logos/when-i-work.svg' },
+  { id:'wallclock', name:'Facility wall clock', short:'Wall clock', icon:'clock', group:'Facility', status:'connected', method:'Email · xlsx', sites:['Bayview Warehouse'], pulls:['Punches','Badge reader events'], sends:{ day:0, at:23 * 60 } },
+  { id:'paper', name:'Paper sign-in sheet', icon:'camera', group:'Facility', method:'Photo', pulls:['Names','Work dates','Signed hours'] },
+  { id:'qr', name:'QR kiosk', icon:'qr', group:'Facility', method:'Browser kiosk', pulls:['Punches','Site check-ins'] },
+  { id:'hypertrack', name:'HyperTrack location', mark:'/logo-small.svg', group:'Location', status:'connected', method:'Built in', builtin:true, sites:Object.values(FACILITIES).map(f=>f.name), pulls:['Geofence enter/exit','Route','Badge reader (Bayview)'] },
+  { id:'upload', name:'Upload a time export', icon:'upload', group:'Manual', method:'CSV · PDF · XLSX', pulls:['Names','Sites','Work dates','Punches'] },
+].map(s=>({group:'Time & attendance', status:'available', method:'API', sites:[], pulls:TIME_PULLS, short:s.name, ...s, lastSync:s.status==='connected'?fmtT(4 * 60 + 10):null}));
+export const DESTS: Destination[] = [
+  {id:'adp', name:'ADP', tile:'/logos/adp.jpg', status:'connected', format:'ADP WFN hours import'},
+  {id:'gusto', name:'Gusto', tile:'/logos/gusto.jpg'},
+  {id:'paychex', name:'Paychex', tile:'/logos/paychex.jpg'},
+  {id:'paylocity', name:'Paylocity', tile:'/logos/paylocity.svg'},
+  {id:'rippling', name:'Rippling', tile:'/logos/rippling.svg'},
+  {id:'workday', name:'Workday', tile:'/logos/workday.jpg'},
+  {id:'quickbooks', name:'QuickBooks', tile:'/logos/quickbooks.jpg', group:'Billing', status:'connected', format:'QuickBooks hours export'},
+  {id:'netsuite', name:'NetSuite', tile:'/logos/netsuite.jpg', group:'Billing'},
+  {id:'bullhorn', name:'Bullhorn', tile:'/logos/bullhorn.jpg', group:'Billing'},
+  {id:'sap', name:'SAP', tile:'/logos/sap.jpg', group:'Billing'},
+  {id:'dailypay', name:'DailyPay', tile:'/logos/dailypay.jpg', group:'Earned wage access'},
+  {id:'branch', name:'Branch', tile:'/logos/branch.jpg', group:'Earned wage access'},
+  {id:'zeal', name:'Zeal', tile:'/logos/zeal.svg', group:'Earned wage access'},
+].map(d=>({group:'Payroll', status:'available', method:'API', sites:['All sites'], format:'Approved hours import', ...d, lastSync:d.status==='connected'?fmtT(4 * 60 + 10):null}));
+
+export function sourceFor(fac: string): Source | undefined {
+  const facility = FACILITIES[fac]
+  if (!facility) return undefined
+  return SOURCES.find(v => v.sites.includes(facility.name) && !v.builtin && v.id !== 'upload')
+}

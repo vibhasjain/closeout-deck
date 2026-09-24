@@ -1,0 +1,4 @@
+.payroll-head-title { flex-wrap: wrap; }
+.payroll-dates { display: inline-flex; align-items: center; flex-wrap: wrap; gap: .75rem; }
+.payroll-date { display: inline-flex; align-items: center; gap: .375rem; white-space: nowrap; }
+.payroll-date svg { width: 14px; height: 14px; flex-shrink: 0; color: hsl(var(--muted-foreground)); }

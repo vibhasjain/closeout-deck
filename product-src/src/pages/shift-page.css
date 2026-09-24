@@ -1,0 +1,130 @@
+.shift-page { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 380px; width: 100%; height: 100%; min-height: 0; overflow: hidden; }
+.shift-page:not(:has(> aside)) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.shift-page .aux-head, .shift-page .lbl { text-transform: none; letter-spacing: normal; }
+.shift-page-column { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
+.shift-page-column + .shift-page-column { border-left: 1px solid hsl(var(--border)); }
+.shift-page .info-bar { height: auto; min-height: 3.5rem; padding-right: 1.25rem; padding-left: 1.25rem; }
+.shift-page .ib-sub { overflow-wrap: anywhere; }
+.shift-page-body { flex: 1; min-height: 0; padding: 1.25rem; overflow-y: auto; overflow-x: hidden; overflow-wrap: anywhere; }
+.shift-page .shift-evidence .kv { table-layout: fixed; }
+.shift-page .shift-evidence .actions { align-items: center; }
+.shift-page .shift-evidence .btn { max-width: 100%; white-space: normal; height: auto; min-height: 2rem; }
+.shift-conversation > .thread { flex: 1; height: auto; overflow: hidden; }
+.shift-page .thread-log { overflow-x: hidden; }
+.shift-audit-section { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid hsl(var(--border)); }
+.shift-audit-section > .lbl { margin-bottom: .625rem; }
+.shift-audit-time { margin: .375rem 0; font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; color: hsl(var(--muted-foreground)); }
+.shift-page-missing { min-width: 0; overflow-y: auto; }
+@media (max-width: 1000px) {
+  .shift-page { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 300px; }
+  .shift-page-body { padding: 1rem; }
+  .shift-page .info-bar { padding-left: 1rem; padding-right: 1rem; }
+}
+@media (max-width: 800px) {
+  .shift-page { display: block; overflow-y: auto; }
+  .shift-page-column { min-height: 32rem; max-height: 85dvh; }
+  .shift-page-column + .shift-page-column { border-left: 0; border-top: 1px solid hsl(var(--border)); }
+}
+
+/* The shift as a near-fullscreen surface over the payments table. */
+.shift-scrim { position: fixed; inset: 3rem 0 0; z-index: 40; background: rgb(0 0 0 / .2);
+  display: grid; place-items: stretch; padding: 1.25rem;
+  visibility: hidden; pointer-events: none; }
+.shift-scrim.open { visibility: visible; pointer-events: auto; }
+.shift-modal { position: relative; min-height: 0; overflow: hidden;
+  background: hsl(var(--background)); border-radius: var(--radius);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / .06), 0 1px 2px -1px rgb(0 0 0 / .06), 0 2px 4px 0 rgb(0 0 0 / .04);
+  visibility: hidden; transform: scale(.98); transition: transform 200ms var(--ease-out); }
+.shift-modal.open { visibility: visible; transform: none; }
+.shift-modal-close { position: absolute; top: .625rem; right: .625rem; z-index: 2; }
+.shift-modal > .shift-page { border-radius: var(--radius); }
+.shift-modal .shift-page-column:last-child .aux-head { padding-right: 3rem; }
+@media (prefers-reduced-motion: reduce) {
+  .shift-scrim, .shift-modal { transition: none; }
+}
+
+/* The decision is a fixed footer of the column, not a sticky element inside the
+   scroller — nothing can render underneath it. */
+.shift-page .shift-decide { flex: 0 0 auto; padding-top: .75rem; padding-bottom: .25rem;
+  background: hsl(var(--background)); border-top: 1px solid hsl(var(--border)); }
+.shift-evidence .shift-action-bar { display: flex; align-items: center; gap: .625rem; min-width: 0; }
+.shift-evidence .shift-action-bar .actions { flex: 0 0 auto; flex-wrap: nowrap; margin: 0; gap: .5rem; }
+.shift-page .shift-action-bar .btn { white-space: nowrap; padding-right: .625rem; padding-left: .625rem; }
+.shift-page .shift-page-body { display: flex; flex-direction: column; }
+.shift-page .shift-evidence { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+/* A key/value list is not a numeric column: every value reads from the same left edge.
+   tabular-nums stays, so digits still line up. */
+.shift-page .kv td, .shift-page .kv td.num { text-align: left; }
+
+/* Sections divide edge to edge; cards inside them keep their own border. */
+.shift-audit-section { margin: 1.25rem -1.25rem 0; padding: 1rem 1.25rem 0; }
+
+/* Key/value values all read from the same left edge, including numeric ones. */
+.shift-page .kv .num, .shift-page .kv td .num { text-align: left; }
+
+/* The evidence scrolls; the decision bar below it never moves. */
+.shift-page .shift-page-body { overflow: hidden; }
+.shift-evidence-scroll { flex: 1; min-height: 0; overflow-y: auto; }
+
+/* A timesheet value prefixed by the mark of the system that reported it. */
+.kv-via { display: inline-flex; align-items: flex-start; gap: .5rem; }
+.kv-via-mark { display: inline-grid; place-items: center; flex-shrink: 0; width: 16px; height: 16px; margin-top: 1px;
+  color: hsl(var(--muted-foreground)); }
+.kv-via-mark img { width: 16px; height: 16px; object-fit: contain; border-radius: 3px; filter: grayscale(1);
+  outline: 1px solid rgb(0 0 0 / .1); outline-offset: -1px; }
+.kv-via-text { font-size: 10.5px; font-family: var(--mono); }
+
+/* Rules applied: the rule in plain words and a link to its source. Nothing else. */
+.rule-applied { padding: .875rem 0; }
+.rule-applied + .rule-applied { border-top: 1px solid hsl(var(--border)); }
+.rule-applied:first-child { padding-top: 0; }
+.rule-applied-text { margin: 0; font-size: 13px; line-height: 1.5; color: hsl(var(--foreground)); }
+.rule-applied-source { margin-top: .625rem; max-width: 100%; min-width: 0; }
+
+/* Evidence values stay on one line; the label column is only as wide as its labels need. */
+.shift-page .kv .k, .shift-page .kv th.k { width: 6.5rem; }
+.kv-via, .kv-via > span:last-child { white-space: nowrap; }
+
+.btn-arrow { flex-shrink: 0; margin-left: .375rem; color: hsl(var(--muted-foreground)); }
+.thread-empty { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: .5rem;
+  min-height: 12rem; font-size: 12px; color: hsl(var(--muted-foreground)); }
+
+/* A long source name truncates; the arrow always stays inside the button. */
+.rule-applied-source .btn-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.thread-empty { color: hsl(var(--muted-foreground) / .5); }
+
+/* The evidence column has room: larger type and looser rows. */
+.shift-page .info-bar h2 { font-size: 18px; letter-spacing: -0.01em; }
+.shift-page .info-bar .ib-sub { font-size: 13px; }
+.shift-page .kv td, .shift-page .kv th { font-size: 14px; padding-top: .625rem; padding-bottom: .625rem; }
+.shift-page .kv .k, .shift-page .kv th.k { font-size: 13px; }
+.kv-via-mark, .kv-via-mark img { width: 18px; height: 18px; }
+.rule-applied-text { font-size: 14px; }
+.shift-page .kv td:last-child { font-size: 14px; }
+.shift-page .kv th.k, .shift-page .kv td.k { font-size: 13px; }
+/* Labels take only the room they need; values start right after them. */
+.shift-page .shift-evidence .kv { table-layout: auto; }
+.shift-page .kv th.k, .shift-page .kv td.k { width: 1%; white-space: nowrap; padding-right: 2.5rem; }
+
+/* Pulled back one step: readable, not oversized. */
+.shift-page .info-bar h2 { font-size: 16px; }
+.shift-page .info-bar .ib-sub { font-size: 12px; }
+.shift-page .kv td:last-child { font-size: 13px; }
+.shift-page .kv th.k, .shift-page .kv td.k { font-size: 12px; }
+.shift-page .kv td, .shift-page .kv th { padding-top: .5rem; padding-bottom: .5rem; }
+.kv-via-mark, .kv-via-mark img { width: 16px; height: 16px; }
+.rule-applied-text { font-size: 13px; }
+
+/* The decision bar and the composer share one baseline at the bottom of the modal. */
+.shift-page .shift-page-column > .shift-page-body { padding-bottom: 0; }
+.shift-page .shift-decide { display: flex; align-items: center; height: 4.5rem; padding-top: 0; padding-bottom: 0; }
+.shift-page .shift-decide .shift-action-bar { flex: 1; }
+.shift-page .thread-composer { height: 4.5rem; box-sizing: border-box; align-items: center; padding-top: 0; padding-bottom: 0; }
+
+/* In a side rail the timesheet, rule and payout blocks each get their own band. */
+.aux .shift-evidence-scroll > .lbl { margin-top: 1.5rem; padding-top: 1.25rem; margin-bottom: .75rem; border-top: 1px solid hsl(var(--border)); }
+.aux .shift-decide { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid hsl(var(--border)); }
+.aux .shift-evidence-scroll > .lbl:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.aux .shift-evidence-scroll > .rule-head { margin-bottom: .75rem; }
+.rule-detail > .bucket-tag { margin-bottom: .875rem; }
+.rule-detail .rule-applied { padding-top: 0; }

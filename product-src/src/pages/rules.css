@@ -1,0 +1,31 @@
+.rules-page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.rules-page.dragging {
+  outline: 2px solid hsl(var(--foreground) / .45);
+  outline-offset: -2px;
+}
+
+.rules-page .rules-toolbar { padding-inline: 1.25rem; }
+.rules-page .rules-toolbar > .btn { margin-left: 0; }
+.rules-sheet .rule-date-col { width: 5rem; }
+.rules-sheet .rule-uses-col { width: 4rem; }
+.rules-sheet .rule-last-used-col { width: 6rem; }
+
+.rules-sheet .rule-sentence {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.rules-sheet th.num,
+.rules-sheet td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
