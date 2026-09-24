@@ -1,31 +1,6 @@
-const ISSUER = 'https://cognito-idp.us-west-2.amazonaws.com/us-west-2_P0x6BcgIB'
-const CLIENT_ID = '4no1uu2bacjkgv8ja325otmens'
-const HEADERS = { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' }
-let jwks
+import { valid } from '../lib/ak-session.js'
 
-async function authenticate(req) {
-  const token = req.headers.get('Authorization')?.match(/^Bearer (\S+)$/)?.[1]
-  if (!token) throw new Error('Missing ID token')
-  const parts = token.split('.')
-  if (parts.length !== 3) throw new Error('Invalid ID token')
-  const decode = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0))
-  const header = JSON.parse(new TextDecoder().decode(decode(parts[0])))
-  const claims = JSON.parse(new TextDecoder().decode(decode(parts[1])))
-  if (header?.alg !== 'RS256' || typeof header.kid !== 'string' || claims?.iss !== ISSUER ||
-      claims.token_use !== 'id' || claims.aud !== CLIENT_ID || !Number.isFinite(claims.exp) || claims.exp <= Date.now() / 1000) {
-    throw new Error('Invalid ID token')
-  }
-  if (!jwks?.some((key) => key.kid === header.kid)) {
-    const res = await fetch(`${ISSUER}/.well-known/jwks.json`)
-    if (!res.ok) throw new Error('Unable to verify ID token')
-    jwks = (await res.json()).keys
-  }
-  const jwk = jwks?.find((key) => key.kid === header.kid)
-  if (!jwk) throw new Error('Invalid ID token')
-  const key = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify'])
-  const valid = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, decode(parts[2]), new TextEncoder().encode(`${parts[0]}.${parts[1]}`))
-  if (!valid) throw new Error('Invalid ID token')
-}
+const HEADERS = { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' }
 
 export default async (req) => {
   if (req.method !== 'POST') return new Response(null, { status: 405 })
@@ -38,8 +13,9 @@ export default async (req) => {
   if (!apiKey) {
     return new Response(`data: ${JSON.stringify({ done: true, sessionId, error: 'Chat is unavailable: ANTHROPIC_API_KEY is not configured' })}\n\n`, { headers: HEADERS })
   }
-  try { await authenticate(req) } catch {
-    return Response.json({ error: 'A valid Cognito ID token is required' }, { status: 401 })
+  const token = req.headers.get('Authorization')?.match(/^Bearer (\S+)$/)?.[1]
+  if (!(await valid(token))) {
+    return Response.json({ error: 'Sign in with your hypertrack.io account' }, { status: 401 })
   }
   const { message, system, history = [] } = input ?? {}
   if (typeof message !== 'string' || message.length > 8000 || typeof system !== 'string' || system.length > 60000 ||

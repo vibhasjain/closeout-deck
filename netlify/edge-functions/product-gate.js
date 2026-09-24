@@ -1,21 +1,7 @@
 // HyperTrack employee gate for /product/*, sharing /answers and /job sessions.
-const API = 'https://agent-keyboard.fly.dev/sites/closeout-jobs'
-const COOKIE = 'ht_product_session'
-const TTL = 10 * 60 * 1000
-const cache = new Map() // ponytail: per-isolate cache; revocation lags up to 10 min.
+import { API, valid, remember } from '../lib/ak-session.js'
 
-async function valid(token) {
-  if (typeof token !== 'string' || !token) return false
-  const hit = cache.get(token)
-  if (hit && hit.until > Date.now()) return hit.ok
-  cache.delete(token)
-  try {
-    const res = await fetch(`${API}/files/answers/answers.json`, { headers: { Authorization: `Bearer ${token}`, Range: 'bytes=0-0' } })
-    await res.body?.cancel()
-    cache.set(token, { ok: res.ok, until: Date.now() + TTL })
-    return res.ok
-  } catch { return false }
-}
+const COOKIE = 'ht_product_session'
 
 function cookie(context, value, maxAge) {
   context.cookies.set({ name: COOKIE, value, path: '/product', maxAge, httpOnly: true, secure: true, sameSite: 'Lax' })
@@ -96,7 +82,7 @@ export default async (request, context) => {
         const now = Math.floor(Date.now() / 1000)
         if (typeof session.sessionToken !== 'string' || !session.sessionToken || !Number.isFinite(session.exp) || session.exp <= now) throw new Error('Invalid session')
         cookie(context, session.sessionToken, session.exp - now)
-        cache.set(session.sessionToken, { ok: true, until: Date.now() + TTL })
+        remember(session.sessionToken)
         return json(session)
       } catch { return json({ error: 'hypertrack.io accounts only' }, 403) }
     }
