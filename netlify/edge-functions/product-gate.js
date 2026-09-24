@@ -14,7 +14,7 @@ function form() {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Closeout</title>
+<title>Product</title>
 <meta name="description" content="Every payroll discrepancy, caught and fixed before you pay.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/product/apple-touch-icon.png">
