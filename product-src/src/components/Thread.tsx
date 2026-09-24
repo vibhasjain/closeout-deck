@@ -155,7 +155,6 @@ function PartyThread({ cycle, rs, party, legacyParty, switcher }: { cycle: DeskC
 
   return <>
     <header className="aux-head thread-titlebar">
-      <span className="thread-title">{thread.counterparty.name} · {thread.channel}</span>
       {thread.askedAt && <Tag tone="amber">{titleCase(`Waiting on ${party}`)}</Tag>}
       {switcher}
     </header>

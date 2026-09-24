@@ -51,7 +51,7 @@ function ShiftTrail({ cycle, rs, primaryRuleId }: { cycle: DeskCycle; rs: RunShi
     && all.findIndex((other) => other.ruleId === row.ruleId) === index)
     .sort((a, b) => Number(b.ruleId === primaryRuleId) - Number(a.ruleId === primaryRuleId))
   return <aside className="shift-page-column" aria-label="Time entry rules and trail">
-    <div className="aux-head">Rules applied</div>
+    <div className="aux-head">Rules Applied</div>
     <div className="shift-page-body scroll">
     {fired.map((row, index) => {
       const rule = rules.find((candidate) => candidate.id === row.ruleId)

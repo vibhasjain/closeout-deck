@@ -1,5 +1,5 @@
 .aux-head.thread-titlebar {
-  justify-content: space-between;
+  justify-content: center;
   gap: .5rem;
   padding: .625rem .75rem;
   font-family: var(--sans);
@@ -9,7 +9,6 @@
   letter-spacing: normal;
 }
 
-.thread-title { font-weight: 500; }
 
 .thread-party-switch {
   display: inline-flex;

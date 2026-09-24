@@ -273,9 +273,7 @@ describe('conversation rendering', () => {
     for (const rs of [clean, shift('4839')]) {
       for (const party of ['worker', 'facility'] as const) {
         const html = renderConversation(rs, `?with=${party}`)
-        // The title names the person and the channel rather than the word "Conversation".
-        const expected = generateThread(cycle, rs, party)
-        expect(html).toContain(`<span class="thread-title">${expected.counterparty.name} · ${expected.channel}</span>`)
+        expect(html).not.toContain(`class="thread-title"`)
         expect(html).toContain('aria-label="Conversation recipient"')
         expect(html).toContain(`aria-pressed="true">${party === 'worker' ? 'Worker' : 'Facility'}</button>`)
         expect(html).toContain('class="chat-input"')
