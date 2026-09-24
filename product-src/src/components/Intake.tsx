@@ -64,7 +64,7 @@ export function Intake({ cycle, intake }: { cycle: DeskCycle; intake: IntakeData
       </div>
       <div className="intake-gap-actions">
         <Btn onClick={() => ask(gap, who)}>{gap.onSite ? 'Ask Supervisor' : 'Ask Worker'}</Btn>
-        <Btn aria-expanded={!!form} onClick={() => setClosing(form ? null : { id: gap.id, chip: '', text: '' })}>Not Worked</Btn>
+        <Btn aria-expanded={!!form} onClick={() => setClosing(form ? null : { id: gap.id, chip: '', text: '' })}>Mark No-Show</Btn>
       </div>
       {form && <form className="intake-reason" aria-label={`Why ${gap.worker} didn't work`}
         onSubmit={(event) => { event.preventDefault(); if (reason) closeGap(gap, reason) }}
