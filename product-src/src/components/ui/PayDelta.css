@@ -38,3 +38,6 @@
 .pay-amounts-md { --pay-amount-size: 16px; }
 .pay-amounts-lg { --pay-amount-size: 18px; }
 .pay-amounts-lg .pay-amounts-caption { font-size: 11px; }
+/* A single large pair (the shift footer) isn't a ledger column: the two sit together, left-aligned. */
+.pay-amounts-lg { gap: 1.5rem; text-align: left; }
+.pay-amounts-horizontal.pay-amounts-lg > span { min-width: 0; align-items: flex-start; }

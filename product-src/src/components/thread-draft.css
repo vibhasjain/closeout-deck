@@ -3,14 +3,8 @@
   background: hsl(var(--muted) / .65);
 }
 
-.thread-draft-origin {
-  display: flex;
-  align-items: center;
-  gap: .375rem;
-  margin-bottom: .375rem;
-  color: hsl(var(--muted-foreground));
-  font: 500 11px/1.5 var(--sans);
-}
+.thread-draft-subject { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.thread-draft-subject .thread-subject { margin: 0; }
 
 .thread-draft-primary-actions {
   display: flex;

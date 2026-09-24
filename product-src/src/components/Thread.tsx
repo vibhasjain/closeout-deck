@@ -26,7 +26,7 @@ function MessageBubble({ entry, name }: { entry: ThreadEntry; name: string }) {
   </article>
 }
 
-function DraftCard({ name, draft, onAction }: { name: string; draft: Draft; onAction(action: ThreadAction): void }) {
+function DraftCard({ draft, onAction }: { draft: Draft; onAction(action: ThreadAction): void }) {
   const [editing, setEditing] = useState(false)
   const [text, setText] = useState(draft.text)
   const editor = useRef<HTMLTextAreaElement>(null)
@@ -45,15 +45,8 @@ function DraftCard({ name, draft, onAction }: { name: string; draft: Draft; onAc
   }
 
   return <section className="thread-draft" aria-label="Pending outbound draft">
-    <div className="thread-draft-head">
-      <div>
-        <div className="thread-draft-origin"><Tag>Draft</Tag><span>Payroll Agent</span></div>
-        <div className="thread-label">Draft to {name} · <Time at={draft.createdAt} /></div>
-      </div>
-      <Tag tone="blue">Pending</Tag>
-    </div>
     <div className="thread-draft-body">
-      <p className="thread-subject">{draft.subject}</p>
+      <div className="thread-draft-subject"><p className="thread-subject">{draft.subject}</p><Tag tone="blue">Pending</Tag></div>
       {editing ? <textarea ref={editor} className="thread-editor" aria-label="Edit draft message" value={text} rows={3} autoFocus
         onChange={(event) => setText(event.target.value)}
         onKeyDown={(event) => {
@@ -169,7 +162,7 @@ function PartyThread({ cycle, rs, party, legacyParty, switcher }: { cycle: DeskC
     <div className="thread">
     <div ref={log} className="thread-log scroll" role="log" aria-live="polite" aria-label={`Conversation with ${thread.counterparty.name}`}>
       {thread.entries.map((entry) => <MessageBubble key={entry.id} entry={entry} name={thread.counterparty.name} />)}
-      {thread.draft && <DraftCard key={thread.draft.id} name={thread.counterparty.name} draft={thread.draft} onAction={act} />}
+      {thread.draft && <DraftCard key={thread.draft.id} draft={thread.draft} onAction={act} />}
       {!thread.entries.length && !thread.draft && <div className="thread-empty" aria-label="No messages"><MessageSquare size={20} aria-hidden="true" /></div>}
     </div>
     <form className="chat-composer thread-composer" onSubmit={(event) => { event.preventDefault(); send() }}>
