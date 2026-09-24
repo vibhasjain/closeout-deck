@@ -271,7 +271,14 @@ $('t').addEventListener('click', e => {
   if (h) {
     const co = h.dataset.co
     ROW_SORT = ROW_SORT.co !== co ? { co, mode: 'answered' } : ROW_SORT.mode === 'answered' ? { co, mode: 'unanswered' } : { co: '', mode: '' }
-    return render()
+    render()
+    // Sorting by a company = start reading it: back to the top, its column right after the questions.
+    if (ROW_SORT.co) {
+      const col = [...document.querySelectorAll('th.coh')].find(x => x.dataset.co === co)
+      const wrap = document.querySelector('.wrap')
+      if (col) wrap.scrollTo({ top: 0, left: col.offsetLeft - document.querySelector('th.q').offsetWidth })
+    }
+    return
   } const t = e.target.closest('.tag.click'); if (t) openDrawer(+t.dataset.c, +t.dataset.q, +t.dataset.a) })
 // One-click log out: drop the viewer session (not the Agent Keyboard owner login) and stop Google auto sign-in.
 $('logout').onclick = () => { try { localStorage.removeItem(KEY) } catch {} window.google?.accounts?.id?.disableAutoSelect(); location.reload() }
