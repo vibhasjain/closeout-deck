@@ -30,7 +30,8 @@ export function EmailIssue({ email, open: controlled, onOpenChange }: { email: I
     const { list, error: why } = recipients(to)
     if (why) { setError(why); return }
     setSent(list)
-    setOpen(false)
+    // Stay open to show the confirmation; only Cancel tells a controlling parent to close.
+    setOwn(false)
   }
 
   if (sent.length) return <p className="email-issue-sent" role="status"><Check size={14} aria-hidden />Sent to {sent.join(', ')} with {email.file}

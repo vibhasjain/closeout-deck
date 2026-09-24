@@ -3,6 +3,7 @@ import { RULES } from '@/bench/engine.js'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronDown, ChevronRight, Mail } from 'lucide-react'
 import { EmailIssue } from '@/components/EmailIssue'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useOverlay } from '@/components/shell/Overlay'
 import { Btn, PayDelta } from '@/components/ui'
 import { shortDate } from '@/lib/cycles'
@@ -39,7 +40,8 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const [open, setOpen] = useState<string[]>([])
-  const [emailing, setEmailing] = useState<string[]>([])
+  // The issue being emailed, in a panel that slides out on the right.
+  const [emailing, setEmailing] = useState<ResolutionGroup | null>(null)
   // The group just approved asks once whether to do it every cycle.
   const [learning, setLearning] = useState<{ cycleId: string; ruleId: string; count: number } | null>(null)
   const undone = state.undone[cycle.id] ?? []
@@ -102,6 +104,12 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
   const learned = learning?.cycleId === cycle.id ? learning : null
 
   return <div className="payroll-summary scroll">
+    <Sheet open={!!emailing} onOpenChange={(next) => { if (!next) setEmailing(null) }}>
+      <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
+        <SheetHeader><SheetTitle>Email This Issue</SheetTitle></SheetHeader>
+        {emailing && <div className="px-4 pb-4"><EmailIssue key={key(emailing)} email={groupEmail(emailing, cycle)} open onOpenChange={(next) => { if (!next) setEmailing(null) }} /></div>}
+      </SheetContent>
+    </Sheet>
     {STATES.filter((resolution) => !review || resolution !== 'fixed').map((resolution) => {
       const items = groups.filter((group) => group.state === resolution)
       const count = items.reduce((total, group) => total + group.cases.length, 0)
@@ -135,7 +143,7 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
               <PayDelta className="num" current={group.current} resolved={group.resolved} size="sm" />
               <span className="decision-action">
                 <button type="button" className="icon-btn sm dim" aria-label="Email This Issue" title="Email This Issue"
-                  onClick={() => { setEmailing([...emailing.filter((item) => item !== key(group)), key(group)]); if (!expanded) toggle() }}><Mail aria-hidden /></button>
+                  onClick={() => setEmailing(group)}><Mail aria-hidden /></button>
               </span>
             </div>
             {expanded && <ul className="decision-cases">
@@ -146,10 +154,6 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
                 <PayDelta className="num decision-diff" current={item.before} resolved={item.after} size="sm" />
               </li>)}
             </ul>}
-            {expanded && <div className="decision-correct">
-              <EmailIssue email={groupEmail(group, cycle)} open={emailing.includes(key(group))}
-                onOpenChange={(next) => setEmailing([...emailing.filter((item) => item !== key(group)), ...(next ? [key(group)] : [])])} />
-            </div>}
           </div>
         })}
       </section>

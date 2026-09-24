@@ -125,12 +125,10 @@
   .payroll-summary-row > .num { grid-area: 1 / 3; white-space: nowrap; }
   .payroll-summary-row .decision-line { grid-area: 2 / 1 / 3 / -1; }
   .payroll-summary-row .decision-action { grid-area: 3 / 1 / 4 / -1; }
-  .decision-cases, .decision-correct { padding-left: 1.25rem; }
+  .decision-cases { padding-left: 1.25rem; }
   .decision-cases li { grid-template-columns: minmax(0, 1fr) auto; }
   .decision-cases .decision-diff { grid-area: 1 / 2; }
   .decision-cases .decision-note { grid-area: 2 / 1 / 3 / -1; }
 }
-.decision-correct { display: flex; flex-wrap: wrap; align-items: flex-start; gap: .5rem; padding: 0 1.25rem .75rem 3.25rem; }
-.decision-correct .email-issue { flex: 1 0 100%; order: 1; }
 .decision-learn { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .625rem; padding: .625rem 1.25rem; border-top: 1px solid hsl(var(--border)); font-size: 12.5px; }
 .decision-learn > span { flex: 1 1 16rem; min-width: 0; }
