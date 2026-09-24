@@ -56,6 +56,12 @@ thead th { position: sticky; top: 0; z-index: 2; background: hsl(var(--backgroun
 .ppl li div { display: flex; flex-direction: column; }
 .ppl .pn { font-size: 12.5px; color: hsl(var(--foreground)); }
 .ppl .pt { font-size: 11px; color: hsl(var(--muted-foreground)); }
+.status { display: inline-flex; align-items: center; gap: .4rem; font-size: 12.5px; }
+.status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: hsl(var(--muted-foreground)); }
+.status.contracted::before { background: hsl(142 71% 40%); }
+.status.churned { color: hsl(var(--muted-foreground)); }
+.ppl .pn a { color: inherit; text-decoration: underline; text-decoration-color: hsl(var(--border)); text-underline-offset: 2px; }
+.ppl .pn a:hover { text-decoration-color: currentColor; }
 .srcs { display: flex; flex-wrap: wrap; gap: .3rem; }
 .srcs .tag { margin: 0; }
 .prow .dt { font-size: 12.5px; color: hsl(var(--foreground)); }
@@ -153,8 +159,8 @@ function signIn() {
 }
 
 // "Adam Varro (Sr. Dir. Service)" -> name + title; first 3 shown, the rest behind a toggle.
-const person = p => { const m = p.match(/^(.*?)\s*\((.*)\)\s*$/); const [n, t] = m ? [m[1], m[2]] : [p, '']; return `<li><div><span class="pn">${esc(n)}</span>${t ? `<span class="pt">${esc(t[0].toUpperCase() + t.slice(1))}</span>` : ''}</div></li>` }
-const people = p => { const a = (p || '').split(' · ').filter(Boolean); return a.length ? `<ul class="ppl">${a.map(person).join('')}</ul>` : '' }
+const person = (p, li = {}) => { const m = p.match(/^(.*?)\s*\((.*)\)\s*$/); const [n, t] = m ? [m[1], m[2]] : [p, '']; const u = li[n]; return `<li><div><span class="pn">${u ? `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(n)}</a>` : esc(n)}</span>${t ? `<span class="pt">${esc(t[0].toUpperCase() + t.slice(1))}</span>` : ''}</div></li>` }
+const people = (p, li) => { const a = (p || '').split(' · ').filter(Boolean); return a.length ? `<ul class="ppl">${a.map(x => person(x, li)).join('')}</ul>` : '' }
 // One unit only: "12 minutes ago", "3 hours ago", "2 days ago".
 const ago = d => { const m = Math.max(1, Math.round((Date.now() - d) / 60000)); if (m >= 525600) return `${(m / 525600).toFixed(1)} years ago`; const [n, u] = m < 60 ? [m, 'minute'] : m < 1440 ? [Math.round(m / 60), 'hour'] : [Math.round(m / 1440), 'day']; return `${n} ${u}${n === 1 ? '' : 's'} ago` }
 // lucide: building-2, circle-help, message-square-quote
@@ -187,9 +193,10 @@ function render() {
   const last = c => cites(c).map(x => x.iso || '').sort().pop()
   const srcTags = c => { const seen = new Map(); cites(c).forEach(x => seen.has(x.label) || seen.set(x.label, x)); return [...seen.values()].sort((a, b) => a.label.localeCompare(b.label)).map(x => chip(x)).join('') }
   const row = (label, f) => `<tr class="prow"><td class="q">${label}</td>${cos.map(c => `<td>${f(c)}</td>`).join('')}</tr>`
-  const pplRow = row('Last conversation', c => { const d = last(c); return d ? `<span class="dt">${ago(new Date(d + 'T12:00:00'))}</span>` : '' })
+  const pplRow = row('Status', c => c.status ? `<span class="status ${c.status.toLowerCase()}">${esc(c.status)}</span>` : '')
+    + row('Last conversation', c => { const d = last(c); return d ? `<span class="dt">${ago(new Date(d + 'T12:00:00'))}</span>` : '' })
     + row('Sources', c => `<div class="srcs">${srcTags(c)}</div>`)
-    + row('People', c => people(c.people))
+    + row('People', c => people(c.people, c.linkedin))
   const body = pplRow + DATA.questions.map((q, i) => `<tr><td class="q">${esc(q)}</td>${cos.map((c, ci) => `<td>${(c.cells['Q' + (i + 1)] || []).length ? '<div class="cell">' + (c.cells['Q' + (i + 1)]).map((a, ai) =>
     `<div class="ans"><span>${esc(a.a)}</span><div class="foot">${chip(a.cite, ` data-c="${ci}" data-q="${i + 1}" data-a="${ai}"`)}<span class="dt">${esc(a.cite.date || '')}</span></div></div>`).join('') + '</div>' : ''}</td>`).join('')}</tr>`).join('')
   $('t').innerHTML = head + '<tbody>' + body + '</tbody>'
