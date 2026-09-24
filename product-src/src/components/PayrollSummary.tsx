@@ -2,7 +2,7 @@ import { useState, type CSSProperties } from 'react'
 import { RULES } from '@/bench/engine.js'
 import { focusChatComposer } from '@/components/chat/ChatPane'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, Mail } from 'lucide-react'
 import { EmailIssue } from '@/components/EmailIssue'
 import { useOverlay } from '@/components/shell/Overlay'
 import { Btn, PayDelta } from '@/components/ui'
@@ -40,6 +40,7 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const [open, setOpen] = useState<string[]>([])
+  const [emailing, setEmailing] = useState<string[]>([])
   // The group just approved asks once whether to do it every cycle.
   const [learning, setLearning] = useState<{ cycleId: string; ruleId: string; count: number } | null>(null)
   const undone = state.undone[cycle.id] ?? []
@@ -69,10 +70,18 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
     toast(`Undid ${group.cases.length.toLocaleString()} ${kindLabel(group.ruleId)} fixes · they now wait for approval`)
   }
 
-  function action(group: ResolutionGroup) {
-    if (group.state === 'proposed') return <Btn className="primary" onClick={() => approve(group)}>Approve {group.cases.length.toLocaleString()}</Btn>
-    if (group.state === 'fixed') return closed || group.approved ? null : <Btn onClick={() => undo(group)}>Undo</Btn>
-    if (group.state === 'judgment') return <Btn onClick={() => toast(`Sent ${group.cases.length} ${kindLabel(group.ruleId)} cases to ${group.owner}`)}>Escalate</Btn>
+  /** A category's one action, shown in its header: it acts on every group in the category. */
+  function action(resolution: ResolutionState, items: ResolutionGroup[], count: number) {
+    if (!items.length) return null
+    if (resolution === 'proposed') return <Btn className="primary" onClick={() => {
+      for (const group of items) approve(group)
+      if (items.length > 1) { setLearning(null); toast(`Approved ${count.toLocaleString()}`) }
+    }}>Approve {count.toLocaleString()}</Btn>
+    if (resolution === 'fixed') {
+      const undoable = items.filter((group) => !group.approved)
+      return closed || !undoable.length ? null : <Btn onClick={() => undoable.forEach(undo)}>Undo All</Btn>
+    }
+    if (resolution === 'judgment') return <Btn onClick={() => toast(`Sent ${count.toLocaleString()} cases to ${[...new Set(items.map((group) => group.owner))].join(', ')}`)}>Escalate</Btn>
     return null
   }
 
@@ -103,10 +112,15 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
     {STATES.filter((resolution) => !review || resolution !== 'fixed').map((resolution) => {
       const items = groups.filter((group) => group.state === resolution)
       const count = items.reduce((total, group) => total + group.cases.length, 0)
+      // An empty category needs no attention, so it isn't shown at all.
+      if (!items.length) return null
       return <section key={resolution} aria-labelledby={`summary-${resolution}`}>
         <div className="payroll-summary-head">
           <h3 id={`summary-${resolution}`}>{HEADINGS[resolution].title} · {count.toLocaleString()}</h3>
-          {resolution === 'fixed' && count > 0 && !closed && <span className="r-note">Undo the agent's fixes until Payroll closes {shortDate(cycle.deadline)}</span>}
+          <span className="payroll-summary-head-end">
+            {resolution === 'fixed' && count > 0 && !closed && <span className="r-note">Undo the agent's fixes until Payroll closes {shortDate(cycle.deadline)}</span>}
+            {action(resolution, items, count)}
+          </span>
         </div>
         {resolution === 'proposed' && learned && <div className="decision-learn">
           <span>Approved {learned.count.toLocaleString()} · {kindLabel(learned.ruleId)}. Approve these automatically from now on?</span>
@@ -126,19 +140,22 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
               {pill(group.ruleId, group.cases.length)}
               <span className="decision-line">{line(group)}</span>
               <PayDelta className="num" current={group.current} resolved={group.resolved} size="sm" />
-              <span className="decision-action">{action(group)}</span>
+              <span className="decision-action">
+                <button type="button" className="icon-btn sm dim" aria-label="Email This Issue" title="Email This Issue"
+                  onClick={() => { setEmailing([...emailing.filter((item) => item !== key(group)), key(group)]); if (!expanded) toggle() }}><Mail aria-hidden /></button>
+              </span>
             </div>
             {expanded && <ul className="decision-cases">
-              {group.cases.slice(0, 50).map((item) => <li key={item.shiftId} className="decision-case"
+              {group.cases.map((item) => <li key={item.shiftId} className="decision-case"
                 onClick={(event) => { if (!(event.target as Element).closest('a, button')) navigate(shiftHref(cycle.id, item.shiftId, params, '/payroll')) }}>
                 <span className="decision-who"><Link to={shiftHref(cycle.id, item.shiftId, params, '/payroll')}>{item.worker}</Link><span className="r-note">{item.day} · {item.site}</span></span>
                 <span className="decision-note">{item.note}{(resolution === 'fixed' || resolution === 'proposed') && <b>{resolution === 'fixed' ? actionFor(group.ruleId) : `Resolved: ${proposalFor(group.ruleId)}`}</b>}</span>
                 <PayDelta className="num decision-diff" current={item.before} resolved={item.after} size="sm" />
               </li>)}
-              {group.cases.length > 50 && <li className="r-note decision-more">And {(group.cases.length - 50).toLocaleString()} more</li>}
             </ul>}
             {expanded && <div className="decision-correct">
-              <EmailIssue email={groupEmail(group, cycle)} />
+              <EmailIssue email={groupEmail(group, cycle)} open={emailing.includes(key(group))}
+                onOpenChange={(next) => setEmailing([...emailing.filter((item) => item !== key(group)), ...(next ? [key(group)] : [])])} />
               {group.state === 'proposed' && <Btn onClick={() => correct(group)}>Tell the Agent What's Wrong</Btn>}
             </div>}
           </div>

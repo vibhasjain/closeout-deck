@@ -14,9 +14,12 @@ function download({ csv, file }: IssueEmail) {
 }
 
 /** Email someone a pre-written summary of an issue, with its time entries attached as a CSV. */
-export function EmailIssue({ email }: { email: IssueEmail }) {
+/** Uncontrolled, it renders its own button; controlled (`open`), the trigger lives elsewhere and a closed form renders nothing. */
+export function EmailIssue({ email, open: controlled, onOpenChange }: { email: IssueEmail; open?: boolean; onOpenChange?(open: boolean): void }) {
   const id = useId()
-  const [open, setOpen] = useState(false)
+  const [own, setOwn] = useState(false)
+  const open = controlled ?? own
+  const setOpen = (next: boolean) => { setOwn(next); onOpenChange?.(next) }
   const [to, setTo] = useState('')
   const [subject, setSubject] = useState(email.subject)
   const [body, setBody] = useState(email.body)
@@ -32,7 +35,7 @@ export function EmailIssue({ email }: { email: IssueEmail }) {
 
   if (sent.length) return <p className="email-issue-sent" role="status"><Check size={14} aria-hidden />Sent to {sent.join(', ')} with {email.file}
     <button type="button" className="lnk" onClick={() => { setSent([]); setTo(''); setOpen(true) }}>Send to Someone Else</button></p>
-  if (!open) return <Btn className="email-issue-open" onClick={() => setOpen(true)}><Mail aria-hidden />Email This Issue</Btn>
+  if (!open) return controlled === undefined ? <Btn className="email-issue-open" onClick={() => setOpen(true)}><Mail aria-hidden />Email This Issue</Btn> : null
 
   return <form className="email-issue" aria-label="Email this issue" noValidate
     onSubmit={(event) => { event.preventDefault(); send() }}
