@@ -326,9 +326,7 @@ $('t').addEventListener('click', e => {
     else COL_SORT = { key: k, dir: COL_SORT.key === k && COL_SORT.dir === 'desc' ? 'asc' : 'desc' }  // alternate; Reset clears
     render()
     // same as a company sort: clicked row right under the header, columns from the start
-    const wrap = document.querySelector('.wrap'), rowEl = document.querySelector(`td.rs[data-sort="${k}"]`)?.parentElement
-    const top = rowEl ? rowEl.getBoundingClientRect().top - document.querySelector('thead').getBoundingClientRect().bottom : 0
-    wrap.scrollTo({ top, left: 0 })
+    document.querySelector('.wrap').scrollLeft = 0  // row stays put vertically; only back to the first company
     return
   }
   const h = e.target.closest('th.coh')
@@ -342,7 +340,7 @@ $('t').addEventListener('click', e => {
       const wrap = document.querySelector('.wrap')
       const firstQ = document.querySelector('tbody tr:not(.prow)')
       const top = firstQ ? firstQ.getBoundingClientRect().top - document.querySelector('thead').getBoundingClientRect().bottom : 0  // = height of the summary rows
-      if (col) wrap.scrollTo({ top, left: col.offsetLeft - document.querySelector('th.q').offsetWidth })
+      wrap.scrollTop = top  // column stays put horizontally; only jump to the first question
     }
     return
   } const t = e.target.closest('.tag.click'); if (t) openDrawer(+t.dataset.c, +t.dataset.q, +t.dataset.a) })
