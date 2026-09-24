@@ -86,7 +86,7 @@ export function SourcesTable({ group, selected, onSelect, onConnect, vendors: su
   return <div className="sources-table-wrap scroll">
     <table className="sheet sources-sheet" aria-label={group === 'sources' ? 'Time sources' : 'Payroll destinations'}>
       <thead><tr>
-        <th scope="col" aria-label="Logo" /><th scope="col">Name</th><th scope="col">Method</th><th scope="col" className="num">Sites</th><th scope="col" className="num">Last sync</th>
+        <th scope="col" aria-label="Logo" /><th scope="col">Name</th><th scope="col">Method</th><th scope="col" className="num">Sites</th><th scope="col" className="num">Last Sync</th>
         <th scope="col" className="num">Records</th><th scope="col">Status</th><th scope="col" aria-label="Action" />
       </tr></thead>
       <tbody>{groups.map((name) => <Fragment key={name}>
@@ -105,7 +105,7 @@ export function SourcesTable({ group, selected, onSelect, onConnect, vendors: su
             <td><span className="source-name" title={vendor.name}>{vendor.name}</span></td>
             <td className="source-method">{vendorMethod(vendor.method)}</td>
             <td className="mono num">{vendor.sites.length}</td>
-            <td className="mono num" title={vendor.lastSync?.includes('T') ? new Date(vendor.lastSync).toLocaleString('en-US', { hour12: true }) : lastSync ?? undefined}>{lastSync ?? '—'}</td>
+            <td className="mono num" title={vendor.lastSync?.includes('T') ? new Date(vendor.lastSync).toLocaleString('en-US', { hour12: true }) : lastSync ?? undefined}>{lastSync}</td>
             <td className="mono num">{vendorRows(vendor, current).length}</td>
             <td><Tag tone={busy ? 'blue' : undefined}>{busy ? 'Syncing' : vendor.status === 'connected' ? 'Connected' : 'Available'}</Tag></td>
             <td><Btn disabled={busy || action?.disabled} onClick={(event) => {

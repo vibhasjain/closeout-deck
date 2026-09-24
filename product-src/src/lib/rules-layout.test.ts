@@ -50,7 +50,7 @@ describe('rules table', () => {
     expect(RULES).toHaveLength(30)
     expect(rowIds(table).sort()).toEqual(RULES.map((rule) => rule.id).sort())
     expect([...table.matchAll(/<th scope="col"[^>]*>(.*?)<\/th>/g)].map((match) => match[1]))
-      .toEqual(['Bucket', 'Rule', 'Created', 'Uses', 'Last used'])
+      .toEqual(['Bucket', 'Rule', 'Created', 'Last used', 'Uses'])
     // The bucket is the rule's only classification, and rows sit together by bucket.
     const buckets = [...table.matchAll(/<span class="bucket-tag"[^>]*>(.*?)<\/span>/g)].map((match) => match[1])
     expect(buckets).toEqual(RULES.map((rule) => titleCase(kindLabel(rule.id))).sort((a, b) => a.localeCompare(b)))
@@ -90,7 +90,7 @@ describe('rules table', () => {
     const customRow = table.match(/<tr[^>]*data-rule="CUST-NIGHT"[\s\S]*?<\/tr>/)![0]
     expect(customRow).toContain('<time dateTime="2026-09-22">Sep 22</time>')
     expect(customRow).toContain('<td class="num rule-uses">0</td>')
-    expect(customRow).toContain('<td>—</td>')
+    expect(customRow).toContain('<td></td>')
     expect(table).not.toContain('DOC-PENDING')
     expect(visibleText(table)).not.toMatch(/\b(?:Live|Pack|Draft|Expiring)\b/i)
   })
@@ -198,7 +198,7 @@ describe('rule activity and display', () => {
     expect(getRuleActivity(custom.id, [], { ...state, customRules: [custom] })).toEqual(created)
     expect(created).toEqual({ created: '2026-09-22', uses: 0, lastUsed: null })
     expect(formatRuleDate('2026-09-04')).toBe('Sep 4')
-    expect(formatRuleDate(null)).toBe('—')
+    expect(formatRuleDate(null)).toBe('')
   })
 
   it('starts accepted document rules with today and no historical applications', () => {

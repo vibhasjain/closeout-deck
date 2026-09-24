@@ -19,10 +19,10 @@ export function Settings() {
       <div className="settings-columns settings-two">
         <ConnectorGrid />
         <aside className="settings-side detail-body scroll" aria-labelledby="settings-calendar">
-          <h3 id="settings-calendar">Payroll calendar</h3>
-          <h4 className="settings-cycle-head">Main pay cycle</h4>
+          <h3 id="settings-calendar">Payroll Calendar</h3>
+          <h4 className="settings-cycle-head">Main Pay Cycle</h4>
           <PayrollCalendar />
-          <h4 className="settings-cycle-head">Other pay cycles</h4>
+          <h4 className="settings-cycle-head">Other Pay Cycles</h4>
           <PayCycles />
         </aside>
       </div>

@@ -6,10 +6,9 @@ import type { cycleStats, DeskCycle } from '@/lib/desk'
 type Stats = ReturnType<typeof cycleStats>
 
 /** The stats row is the view switch: Payments and Resolved are tables, Discrepancies and Review are the grouped summary. */
-export function CycleKpis({ cycle, stats }: { cycle: DeskCycle; stats: Stats }) {
+export function CycleKpis({ stats }: { cycle: DeskCycle; stats: Stats }) {
   const [params, setParams] = useSearchParams()
   const view = payrollView(params)
-  const disputeTitle = cycle.statusTag === 'Paid' ? 'Dispute data is not available for this cycle' : 'Payroll has not run yet'
   const pick = (value: PayrollView) => ({
     pressed: view === value,
     onSelect: () => setParams((previous) => {
@@ -25,6 +24,7 @@ export function CycleKpis({ cycle, stats }: { cycle: DeskCycle; stats: Stats }) 
     { label: 'Discrepancies', value: stats.total.toLocaleString(), ...pick('total') },
     { label: 'Resolved', value: stats.agentResolved.toLocaleString(), ...pick('agent-resolved') },
     { label: 'Review', value: stats.needsReview.toLocaleString(), tone: 'flagged', ...pick('needs-review') },
-    { label: 'Disputes', value: '—', title: disputeTitle, disabled: true },
+    // No dispute data yet: an empty, inert tile (the space keeps the row height).
+    { label: 'Disputes', value: '\u00a0' },
   ]} />
 }

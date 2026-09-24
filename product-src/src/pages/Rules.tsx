@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { Search, X } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { RULES } from '@/bench/engine.js'
 import { BucketTag } from '@/components/BucketTag'
@@ -8,6 +8,9 @@ import { useSetChatContext, useSetChatSuggestions } from '@/components/chat/Chat
 import { useAux } from '@/components/shell/Aux'
 import { useOverlay } from '@/components/shell/Overlay'
 import { Btn, Lbl, Toolbar } from '@/components/ui'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
 import { titleCase } from '@/lib/utils'
 import { kindLabel, topstats, useDesk } from '@/lib/desk'
 import { useOnboarding, type CustomDeskRule } from '@/lib/onboarding'
@@ -45,33 +48,35 @@ function RuleComposer({ onSave, onCancel }: { onSave(rule: CustomDeskRule): void
     }, 900)
   }
 
-  return <div className="rule-composer-modal">
-    <div className="drawer-head"><h3 className="drawer-title">Add a rule</h3><button type="button" className="icon-btn" aria-label="Close" onClick={onCancel}><X aria-hidden="true" /></button></div>
-    <div className="rule-composer">
-      {compiled ? <>
-        <div className="rule-compiled">
-          <p className="r-sent">{formatRuleText(compiled.sentence)}</p>
-          {ask && <div className="ask">
-            <span className="wq">{ask.question}</span>
-            <div>{ask.options.map((option) => <button type="button" key={option} className={`wopt${answer === option ? ' active' : ''}`} aria-pressed={answer === option} onClick={() => setAnswer(option)}>{titleCase(option)}</button>)}</div>
-          </div>}
-        </div>
-        <div className="actions mt-4">
-          <Btn disabled={!!ask && !answer} onClick={() => onSave(withThreshold(compiled, answer))}>Add Rule</Btn>
-          <Btn onClick={() => { setCompiled(null); setAnswer('') }}>Edit Sentence</Btn>
-        </div>
-      </> : <>
-        <textarea autoFocus className="q-input composer" aria-label="Write the rule" placeholder="Flag a meal break shorter than 30 minutes" value={sentence} disabled={compiling} onChange={(event) => setSentence(event.target.value)} />
-        <div className="actions mt-4"><Btn disabled={!sentence.trim() || compiling} onClick={compile}>{compiling ? 'Compiling…' : 'Compile'}</Btn></div>
-      </>}
-    </div>
-  </div>
+  return <DialogContent className="sm:max-w-lg">
+    <DialogHeader><DialogTitle>Add a Rule</DialogTitle></DialogHeader>
+    {compiled ? <>
+      <div className="rule-compiled">
+        <p className="r-sent">{formatRuleText(compiled.sentence)}</p>
+        {ask && <div className="ask">
+          <span className="wq">{ask.question}</span>
+          <div>{ask.options.map((option) => <button type="button" key={option} className={`wopt${answer === option ? ' active' : ''}`} aria-pressed={answer === option} onClick={() => setAnswer(option)}>{titleCase(option)}</button>)}</div>
+        </div>}
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={() => { setCompiled(null); setAnswer('') }}>Edit Sentence</Button>
+        <Button disabled={!!ask && !answer} onClick={() => onSave(withThreshold(compiled, answer))}>Add Rule</Button>
+      </DialogFooter>
+    </> : <>
+      <Textarea autoFocus className="min-h-32" aria-label="Write the rule" placeholder="Flag a meal break shorter than 30 minutes" value={sentence} disabled={compiling} onChange={(event) => setSentence(event.target.value)} />
+      <DialogFooter>
+        <Button variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button disabled={!sentence.trim() || compiling} onClick={compile}>{compiling ? 'Compiling…' : 'Compile'}</Button>
+      </DialogFooter>
+    </>}
+  </DialogContent>
 }
 
 export function Rules() {
   const [state, update] = useOnboarding()
   const { current, cycles } = useDesk()
-  const { toast, openModal, close } = useOverlay()
+  const { toast } = useOverlay()
+  const [composing, setComposing] = useState(false)
   const [params, setParams] = useSearchParams()
   const [searchOpen, setSearchOpen] = useState(false)
   const [dragging, setDragging] = useState(false)
@@ -134,7 +139,7 @@ export function Rules() {
       if (previous.get('agent') === '1') next.set('agent', '1')
       return next
     })
-    close()
+    setComposing(false)
     toast('Rule added')
   }
 
@@ -167,7 +172,10 @@ export function Rules() {
     <Toolbar className="rules-toolbar">
       {searchOpen || query ? <input autoFocus className="q-input rules-search" type="search" aria-label="Search rules" placeholder="Search rules…" value={query} onChange={(event) => filter('q', event.target.value)} onBlur={() => { if (!query) setSearchOpen(false) }} onKeyDown={(event) => { if (event.key === 'Escape') { filter('q', ''); setSearchOpen(false) } }} /> : <button type="button" className="icon-btn sm dim" aria-label="Search rules" onClick={() => setSearchOpen(true)}><Search size={14} /></button>}
       <div className="flex-1" />
-      <Btn onClick={() => openModal(<RuleComposer onSave={saveRule} onCancel={close} />)}>Add Rule</Btn>
+      <Dialog open={composing} onOpenChange={setComposing}>
+        <Btn onClick={() => setComposing(true)}>Add Rule</Btn>
+        {composing && <RuleComposer onSave={saveRule} onCancel={() => setComposing(false)} />}
+      </Dialog>
       <Btn onClick={() => fileInput.current?.click()}>Add Contracts</Btn>
     </Toolbar>
     <input ref={fileInput} hidden type="file" multiple aria-label="Choose contracts, CBAs or handbooks" onChange={(event) => { ingest(event.target.files); event.target.value = '' }} />
@@ -186,15 +194,15 @@ export function Rules() {
         </li>)}</ul>
       </section>}
       {rows.length > 0 && <table className="sheet rules-sheet" aria-label="Rulebook">
-        <colgroup><col className="rule-bucket-col" /><col /><col className="rule-date-col" /><col className="rule-uses-col" /><col className="rule-last-used-col" /></colgroup>
-        <thead><tr><th scope="col">Bucket</th><th scope="col">Rule</th><th scope="col">Created</th><th scope="col" className="num">Uses</th><th scope="col">Last used</th></tr></thead>
+        <colgroup><col className="rule-bucket-col" /><col /><col className="rule-date-col" /><col className="rule-last-used-col" /><col className="rule-uses-col" /></colgroup>
+        <thead><tr><th scope="col">Bucket</th><th scope="col">Rule</th><th scope="col">Created</th><th scope="col">Last Used</th><th scope="col" className="num">Uses</th></tr></thead>
         <tbody>
           {rows.map((rule) => <tr key={rule.id} data-rule={rule.id} className={selected === rule.id ? 'sel' : undefined} tabIndex={0} aria-selected={selected === rule.id} onKeyDown={(event) => activateRow(event, () => selectRule(rule.id))} onClick={() => selectRule(rule.id)}>
             <td><BucketTag ruleId={rule.id} /></td>
             <td><span className="rule-sentence">{rule.sentence}</span></td>
             <td><time dateTime={rule.created}>{formatRuleDate(rule.created)}</time></td>
+            <td>{rule.lastUsed ? <time dateTime={rule.lastUsed}>{formatRuleDate(rule.lastUsed)}</time> : null}</td>
             <td className="num rule-uses">{rule.uses.toLocaleString('en-US')}</td>
-            <td>{rule.lastUsed ? <time dateTime={rule.lastUsed}>{formatRuleDate(rule.lastUsed)}</time> : '—'}</td>
           </tr>)}
         </tbody>
       </table>}

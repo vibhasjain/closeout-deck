@@ -124,26 +124,34 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals() })
 
 describe('Payroll review actions', () => {
-  it('returns to the summary when the selected stat is picked again and clears list filters', () => {
+  it('keeps a stat selected when it is picked again and clears list filters on every pick', () => {
     const cycle = buildCycles(getOnboarding())[0]
-    router.params = new URLSearchParams({ cycle: cycle.id, step: 'review', agent: '1', filter: 'needs-review',
-      q: 'Maria', page: '2', flag: 'CS-16H', review: 'done', cases: 'one,two' })
-    const kpi = component(Payroll(), CycleKpis)
+    const stale = { view: 'list', q: 'Maria', page: '2', flag: 'CS-16H', review: 'done', cases: 'one,two' }
+    router.params = new URLSearchParams({ cycle: cycle.id, step: 'review', agent: '1', filter: 'needs-review', ...stale })
+    let kpi = component(Payroll(), CycleKpis)
     click(kpiRow(kpi.props), `Review${kpi.props.stats.needsReview.toLocaleString()}`)
-    expect(Object.fromEntries(router.params)).toEqual({ cycle: cycle.id, step: 'review', agent: '1' })
+    expect(Object.fromEntries(router.params)).toEqual({ cycle: cycle.id, step: 'review', agent: '1', filter: 'needs-review' })
+    expect(component(Payroll(), PayrollSummary).props.review).toBe(true)
+    // Leaving Review for Discrepancies returns to the plain summary.
+    for (const [key, value] of Object.entries(stale)) router.params.set(key, value)
+    kpi = component(Payroll(), CycleKpis)
+    click(kpiRow(kpi.props), `Discrepancies${kpi.props.stats.total.toLocaleString()}`)
+    expect(Object.fromEntries(router.params)).toEqual({ cycle: cycle.id, step: 'review', agent: '1', filter: 'total' })
     expect(component(Payroll(), PayrollSummary).props.review).not.toBe(true)
   })
 
-  it('moves the selected stat between the payments table and the summary rows that need a person', () => {
+  it('moves the selected stat between the summary rows, the rows that need a person, and the payments table', () => {
     router.params.set('page', '2')
     router.params.set('agent', '1')
+    // A search term opens Review but no longer opens a list: the landing view is the Discrepancies summary.
     router.params.set('q', 'Maria')
     let payroll = Payroll()
-    expect(component(payroll, ShiftTable).props.shifts).toBeUndefined()
-    expect(elements(payroll).some((element) => element.type === PayrollSummary)).toBe(false)
+    expect(component(payroll, PayrollSummary).props.review).not.toBe(true)
+    expect(elements(payroll).some((element) => element.type === ShiftTable)).toBe(false)
     let kpi = component(payroll, CycleKpis)
+    expect(button(kpiRow(kpi.props), `Discrepancies${kpi.props.stats.total.toLocaleString()}`).props['aria-pressed']).toBe(true)
     click(kpiRow(kpi.props), `Review${kpi.props.stats.needsReview.toLocaleString()}`)
-    expect(Object.fromEntries(router.params)).toEqual({ cycle: kpi.props.cycle.id, agent: '1', q: 'Maria', filter: 'needs-review' })
+    expect(Object.fromEntries(router.params)).toEqual({ cycle: kpi.props.cycle.id, agent: '1', filter: 'needs-review' })
     payroll = Payroll()
     expect(elements(payroll).some((element) => element.type === ShiftTable)).toBe(false)
     const summary = component(payroll, PayrollSummary)
@@ -152,11 +160,16 @@ describe('Payroll review actions', () => {
     expect([...new Set(pendingGroups(kpi.props.cycle).map((group) => group.ruleId))].sort()).toEqual(kinds(kpi.props.cycle, {}).map((kind) => kind.ruleId).sort())
     kpi = component(payroll, CycleKpis)
     expect(button(kpiRow(kpi.props), `Review${kpi.props.stats.needsReview.toLocaleString()}`).props['aria-pressed']).toBe(true)
-    // The selection moves; clicking another view leaves Review and restores the table.
-    click(kpiRow(kpi.props), `Discrepancies${kpi.props.stats.total.toLocaleString()}`)
-    expect(Object.fromEntries(router.params)).toEqual({ cycle: kpi.props.cycle.id, agent: '1', q: 'Maria', filter: 'total' })
-    expect(component(Payroll(), ShiftTable).props.shifts).toBeUndefined()
-    expect(elements(Payroll()).some((element) => element.type === PayrollSummary)).toBe(false)
+    // The selection moves; Payments leaves Review for the all-entries table.
+    click(kpiRow(kpi.props), `Payments${kpi.props.stats.payments.toLocaleString()}`)
+    expect(Object.fromEntries(router.params)).toEqual({ cycle: kpi.props.cycle.id, agent: '1', filter: 'all' })
+    payroll = Payroll()
+    expect(component(payroll, ShiftTable).props.shifts).toBeUndefined()
+    expect(component(payroll, ShiftTable).props.defaultFilter).toBe('all')
+    expect(elements(payroll).some((element) => element.type === PayrollSummary)).toBe(false)
+    // Resolved is the same table limited to agent-resolved entries.
+    click(kpiRow(component(payroll, CycleKpis).props), `Resolved${kpi.props.stats.agentResolved.toLocaleString()}`)
+    expect(component(Payroll(), ShiftTable).props.defaultFilter).toBe('agent-resolved')
   })
 
   it.each(['Yes', 'Not Now'])('approves a whole group and answers its learning prompt with %s', (answer) => {
@@ -264,7 +277,7 @@ describe('Payroll cycle steps', () => {
     expect(buttons.map((element) => element.props.children)).toEqual(['Collect', 'Review'])
   })
 
-  it('opens the week awaiting review on the step in the URL and clears it when the cycle or period changes', () => {
+  it('opens every cycle on Collect, follows the step in the URL, and clears it when the cycle changes', () => {
     const cycles = buildCycles(getOnboarding())
     const pending = cycles.find((cycle) => cycle.status === 'needs-review')!
     router.params = new URLSearchParams({ cycle: pending.id, step: 'intake' })
@@ -292,12 +305,17 @@ describe('Payroll cycle steps', () => {
     expect(elements(sentence)[1].type).toBe(Banknote)
     component(payroll, ClusterList).props.onSelect(cycles[0].id)
     expect(router.params.has('step')).toBe(false)
-    router.params = new URLSearchParams({ cycle: pending.id, step: 'intake' })
-    const completed = elements(component(Payroll(), ClusterList).props.header).find((element) => content(element.props.children) === 'Completed')
-    ;(completed!.props.onClick as () => void)()
-    expect(router.params.has('step')).toBe(false)
-    // Hours are due Mon noon; by Tue the week awaiting review opens on Review.
-    router.params = new URLSearchParams({ cycle: pending.id })
-    expect(elements(Payroll()).some((element) => element.type === Intake)).toBe(false)
+    // One list, no period filters above it.
+    expect(component(Payroll(), ClusterList).props.header).toBeUndefined()
+    expect(component(Payroll(), ClusterList).props.items.map((item) => item.id)).toEqual(cycles.map((cycle) => cycle.id))
+    // Without a step every cycle, even one past its hours deadline, opens on Collect; a view param opens Review.
+    for (const cycle of [pending, cycles[0]]) {
+      router.params = new URLSearchParams({ cycle: cycle.id })
+      expect(component(Payroll(), Intake).props.cycle.id).toBe(cycle.id)
+    }
+    for (const key of ['filter', 'view', 'q']) {
+      router.params = new URLSearchParams({ cycle: pending.id, [key]: 'x' })
+      expect(elements(Payroll()).some((element) => element.type === Intake), key).toBe(false)
+    }
   })
 })

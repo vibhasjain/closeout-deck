@@ -24,8 +24,8 @@ const hours = (minutes: number) => { const whole = Math.round(minutes), m = whol
 
 const HEADINGS: Record<ResolutionState, { title: string; empty: string }> = {
   proposed: { title: 'Approve', empty: 'Nothing waiting on approval' },
-  waiting: { title: 'Waiting on a reply', empty: 'Nobody has been asked anything this cycle' },
-  judgment: { title: 'Needs judgment', empty: 'Nothing needs a business decision' },
+  waiting: { title: 'Waiting on a Reply', empty: 'Nobody has been asked anything this cycle' },
+  judgment: { title: 'Needs Judgment', empty: 'Nothing needs a business decision' },
   fixed: { title: 'Fixed', empty: 'Nothing has been fixed yet' },
 }
 
@@ -146,9 +146,9 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
       </section>
     })}
     {!review && <section aria-labelledby="summary-clients">
-      <div className="payroll-summary-head"><h3 id="summary-clients">By client</h3></div>
+      <div className="payroll-summary-head"><h3 id="summary-clients">By Client</h3></div>
       <table className="sheet payroll-summary-clients">
-        <thead><tr><th scope="col">Client</th><th scope="col" className="num">Workers</th><th scope="col" className="num">Time entries</th><th scope="col" className="num sheet-hours">Hours</th><th scope="col" className="num">Gross</th></tr></thead>
+        <thead><tr><th scope="col">Client</th><th scope="col" className="num">Workers</th><th scope="col" className="num">Time Entries</th><th scope="col" className="num sheet-hours">Hours</th><th scope="col" className="num">Gross</th></tr></thead>
         <tbody>{[...clients].sort((a, b) => b[1].resolved - a[1].resolved).map(([name, item]) => <tr key={name}>
           <td>{name}</td><td className="num">{item.workers.size.toLocaleString()}</td><td className="num">{item.entries.toLocaleString()}</td>
           <td className="num sheet-hours">{hours(item.minutes)}</td><td className="num"><PayDelta current={item.current} resolved={item.resolved} size="sm" /></td>

@@ -58,7 +58,7 @@ export function CyclesTable({ cycles, selected, onSelect }: { cycles: DeskCycle[
     <div className="cycles-table-wrap" ref={wrapRef}>
       <table className="sheet cycles-sheet" aria-label="Pay cycles">
         <thead ref={headRef}><tr>
-          <th scope="col">Start</th><th scope="col">End</th><th scope="col">Pay date</th>
+          <th scope="col">Start</th><th scope="col">End</th><th scope="col">Pay Date</th>
           <th scope="col" className="num cycle-edge">Payments</th><th scope="col" className="num">Workers</th>
           <th scope="col" className="num">Gross</th><th scope="col" className="num cycle-edge">Flagged</th>
           <th scope="col" className="num">Held</th><th scope="col" className="num">Corrections</th>

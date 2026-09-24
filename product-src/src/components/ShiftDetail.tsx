@@ -44,7 +44,7 @@ export function RuleEvidence({ rule }: { rule: Rule }) {
     <Lbl>{source?.verbatim ? 'Verbatim · as ingested' : 'Obligation summary · as compiled'}</Lbl>
     {source?.verbatim ? <div className="src-quote" dangerouslySetInnerHTML={{ __html: source.verbatim }} /> : <p className="src-quote">{source?.summary ?? rule.sentence}</p>}
     <Kv rows={[
-      ['Effective', source?.dates ?? '—'],
+      ['Effective', source?.dates],
       ...(rule.source.cite ? [['Citation', rule.source.cite] as [string, string]] : []),
     ]} />
     <div className="actions"><Btn className="src-link" onClick={() => openDocument(rule)}>Open Source Document ↗</Btn></div>
@@ -106,10 +106,10 @@ function ShiftEvidence({ cycle, rs, primaryRuleId, showHeading = true, showSourc
     <Kv rows={[
       ['Worker', <span key="worker">{s.worker} · {s.role}</span>],
       ['Site', <span key="site">{s.fac.name}<span className="block">{s.fac.city}, {s.fac.state}</span></span>],
-      ['Scheduled', <Via key="sched" mark={vendorMark} title={`From ${vendorName}`}>{s.sched ? `${fmtT(s.sched[0])} to ${fmtT(s.sched[1])}` : '—'}</Via>],
+      ['Scheduled', <Via key="sched" mark={vendorMark} title={`From ${vendorName}`}>{s.sched ? `${fmtT(s.sched[0])} to ${fmtT(s.sched[1])}` : null}</Via>],
       ['Punched', <Via key="punched" mark={vendorMark} title={`From ${vendorName}`}><span>{s.punches.map((punch, index) => <span className="block num" key={index}>{fmtT(punch.in)} to {punch.out == null ? '—' : fmtT(punch.out)}</span>)}</span></Via>],
       ['Geofence', <Via key="geo" mark={<MapPin size={13} aria-hidden="true" />} title="HyperTrack location">{s.geo ? `${fmtT(s.geo[0])} to ${fmtT(s.geo[1])}` : s.fac.geofence ? 'No location evidence' : 'Not used at this site'}</Via>],
-      ['Badge', <Via key="badge" mark={<IdCard size={13} aria-hidden="true" />} title="Door badge">{s.badgeIn != null || s.badgeOut != null ? `${s.badgeIn == null ? '—' : fmtT(s.badgeIn)} to ${s.badgeOut == null ? '—' : fmtT(s.badgeOut)}` : '—'}</Via>],
+      ['Badge', <Via key="badge" mark={<IdCard size={13} aria-hidden="true" />} title="Door badge">{s.badgeIn != null || s.badgeOut != null ? `${s.badgeIn == null ? '—' : fmtT(s.badgeIn)} to ${s.badgeOut == null ? '—' : fmtT(s.badgeOut)}` : null}</Via>],
       ['Meal break', <Via key="meal" mark={vendorMark} title={`From ${vendorName}`}>{s.meal ? `${fmtT(s.meal[0])} to ${fmtT(s.meal[1])} · ${s.meal[1] - s.meal[0]} min` : 'No meal punch'}</Via>],
       ...(timeOnly ? [] : [['Rate', <span className="block num" key="rate">{money(rs.rate)}/h</span>] as [string, ReactNode]]),
     ]} />

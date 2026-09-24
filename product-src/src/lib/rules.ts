@@ -12,7 +12,7 @@ const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() 
 
 /** Format calendar dates without UTC conversion moving them to the previous day. */
 export function formatRuleDate(date: string | null): string {
-  return date ? new Date(`${date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'
+  return date ? new Date(`${date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''
 }
 
 /** Keep rule sentences consistent without changing their stored or compiled meaning. */

@@ -8,7 +8,7 @@ import { Payroll } from '@/pages/Payroll'
 import { Settings } from '@/pages/Settings'
 import { Sheet } from '@/components/Sheet'
 import { ShiftPage } from '@/pages/ShiftPage'
-import { fmtHM, money, RULES } from '@/bench/engine.js'
+import { fmtHM, money, RULES, type RunShift } from '@/bench/engine.js'
 import { PROV } from '@/bench/prov'
 import { SOURCES } from '@/bench/vendors'
 import { buildCycles, kinds, cycleStats } from '@/lib/desk'
@@ -29,7 +29,16 @@ function render(url: string) {
   ))))
 }
 const rowIds = (html: string) => [...html.matchAll(/data-shift="([^"]+)"/g)].map((match) => match[1])
-const inPeriod = (...statuses: string[]) => buildCycles(DEFAULTS, today).filter((item) => statuses.includes(item.status)).map((item) => item.id)
+// Every cycle is listed together; there are no Upcoming/Completed filters.
+const allCycles = () => buildCycles(DEFAULTS, today).map((item) => item.id)
+// Sheet mounts worker groups 40 at a time, so server HTML holds only the first chunk.
+const CHUNK = 40
+const chunkWorkers = (shifts: RunShift[]) => [...new Set(shifts.map((rs) => rs.shift.worker))].slice(0, CHUNK)
+const firstChunk = (shifts: RunShift[]) => {
+  const workers = new Set(chunkWorkers(shifts))
+  return shifts.filter((rs) => workers.has(rs.shift.worker)).map((rs) => rs.shift.id)
+}
+const sentinel = '<tr aria-hidden="true"><td colSpan="7"></td></tr>'
 const cycleIds = (html: string) => [...html.matchAll(/data-cycle="([^"]+)"/g)].map((match) => match[1])
 const selectedCycles = (html: string) => [...html.matchAll(/<button\b[^>]*>/g)]
   .filter((match) => match[0].includes('aria-pressed="true"'))
@@ -85,21 +94,25 @@ describe('Payroll review composition', () => {
     expect(html).not.toContain('class="toolbar reconcile-toolbar"')
     expect(html).not.toContain('sheet-group-row')
     expect(html).toContain('aria-label="Pay cycles"')
-    expect(cycleIds(html)).toEqual(inPeriod('needs-review'))
-    expect(selectedCycles(html)).toEqual([]) // the open cycle opens by link but is not listed
+    expect(cycleIds(html)).toEqual(allCycles())
+    expect(selectedCycles(html)).toEqual([cycle.id])
     expect(selectedMetrics(html)).toEqual(['Review'])
   })
 
   it('shows unsigned deltas with the approved direction colors', () => {
     vi.useFakeTimers().setSystemTime(today)
-    const html = render('/payroll?view=list')
+    // The pending cycle's first chunk of workers happens to be all overpay; pick one of each direction.
+    const cycle = buildCycles(DEFAULTS, today)[1]
+    const owed = cycle.run.shifts.find((rs) => rs.pay - rs.naive > 0.005)!
+    const overpay = cycle.run.shifts.find((rs) => rs.naive - rs.pay > 0.005)!
+    const html = renderToStaticMarkup(h(Sheet, { cycle, shifts: [owed, overpay], groupBy: 'worker', onSelect: vi.fn(), days: cycle.days }))
     const deltas = [...html.matchAll(/<td class="[^"]*pay-delta ([^"]*)"[^>]*>(.*?)<\/td>/g)]
     expect(deltas.some((match) => match[1] === 'owed')).toBe(true)
     expect(deltas.some((match) => match[1] === 'overpay')).toBe(true)
     for (const delta of deltas) expect(delta[2]).not.toMatch(/[+−-]/)
   })
 
-  it('opens on the pending cycle under Upcoming, with Upcoming and Completed filters, without send or search controls', () => {
+  it('opens on the pending cycle with every cycle in one list, without period filters, send or search controls', () => {
     vi.useFakeTimers().setSystemTime(today)
     const cycles = buildCycles(DEFAULTS, today)
     const html = render('/payroll?filter=all')
@@ -114,16 +127,17 @@ describe('Payroll review composition', () => {
     expect(html).toContain('aria-label="Pay cycles"')
     expect(html).toContain('queue flags-pane pay-cycles-pane')
     expect(html).not.toContain('aria-label="Search pay cycles"')
-    expect(html).toMatch(/aria-label="Show cycles">.*>Upcoming<.*>Completed<\/button><\/div>/)
-    expect(html).toMatch(/aria-pressed="true" class="chip active">Upcoming</)
-    expect(cycleIds(html)).toEqual(inPeriod('needs-review'))
+    expect(html).not.toContain('aria-label="Show cycles"')
+    expect(html).not.toMatch(/>(Upcoming|Completed)<\/button>/)
+    expect(cycleIds(html)).toEqual(allCycles())
     expect(selectedCycles(html)).toEqual([cycles[1].id])
-    expect(rowIds(html).sort()).toEqual(cycles[1].week.map((shift) => shift.id).sort())
-    expect([...html.matchAll(/<th scope="col"[^>]*>(.*?)<\/th>/g)].map((match) => match[1])).toEqual(['Day', 'Worker', 'Site', 'Hours', 'Pay', 'Δ', 'Status'])
+    expect(rowIds(html).sort()).toEqual(firstChunk(cycles[1].run.shifts).sort())
+    expect(html).toContain(sentinel)
+    expect([...html.matchAll(/<th scope="col"[^>]*>(.*?)<\/th>/g)].map((match) => match[1])).toEqual(['Day', 'Worker', 'Site', 'Hours', 'Pay', 'Delta', 'Status'])
     expect(html).toContain('class="grp"')
     expect(html).toContain('sheet-group-row')
     expect(html).not.toContain('sheet-group-meta')
-    const workerGroups = [...new Set(cycles[1].week.map((shift) => shift.worker))].map((worker) => cycles[1].run.shifts.filter((row) => row.shift.worker === worker))
+    const workerGroups = chunkWorkers(cycles[1].run.shifts).map((worker) => cycles[1].run.shifts.filter((row) => row.shift.worker === worker))
     const workerHeaders = [...html.matchAll(/<tr class="grp">([\s\S]*?)<\/tr>/g)].map((match) => match[1])
     expect(workerHeaders).toHaveLength(workerGroups.length)
     workerGroups.forEach((rows, index) => {
@@ -350,9 +364,9 @@ describe('payroll and settings separation', () => {
     const html = render(`/payroll?cycle=${cycle.id}&filter=all`)
     expect(html).toContain('aria-label="Time entries by worker"')
     expect(html).toContain('class="grp"')
-    expect(rowIds(html).sort()).toEqual(cycle.week.map((shift) => shift.id).sort())
+    expect(rowIds(html).sort()).toEqual(firstChunk(cycle.run.shifts).sort())
     expect(selectedCycles(html)).toEqual([cycle.id])
-    expect(cycleIds(html)).toEqual(inPeriod('reviewed'))
+    expect(cycleIds(html)).toEqual(allCycles())
     expect(html).toContain(cycle.label)
     expect(html).not.toContain('aria-label="Worker pay run"')
     expect(html).not.toContain('<tfoot>')
@@ -392,11 +406,15 @@ describe('payroll and settings separation', () => {
       ])
       expect(metrics(html).map(({ label }) => label)).not.toContain('Gross')
     }
-    // Without a filter the cycle opens on its discrepancies.
-    expect(selectedMetrics(render('/payroll?view=list'))).toEqual(['Discrepancies'])
-    // The summary is the landing view: nothing picked yet, the list a click away.
-    expect(selectedMetrics(render('/payroll'))).toEqual([])
-    expect(render('/payroll')).toMatch(/Approve ·[\s\S]*Waiting on a reply ·[\s\S]*Needs judgment ·[\s\S]*Fixed ·[\s\S]*By client/)
+    // Old list links open Payments.
+    expect(selectedMetrics(render('/payroll?view=list'))).toEqual(['Payments'])
+    // Review without a filter lands on Discrepancies: the grouped summary, not a table.
+    const landing = render('/payroll?step=review')
+    expect(selectedMetrics(landing)).toEqual(['Discrepancies'])
+    expect(landing).toMatch(/Approve ·[\s\S]*Waiting on a reply ·[\s\S]*Needs judgment ·[\s\S]*Fixed ·[\s\S]*By client/)
+    expect(shiftTable(landing)).toBeUndefined()
+    // A bare visit opens on Collect, so no stats row yet.
+    expect(render('/payroll')).not.toContain('aria-label="Cycle summary"')
   })
 
   it('restores the selected KPI filter from the URL and ignores a stale search term', () => {
@@ -408,15 +426,13 @@ describe('payroll and settings separation', () => {
         const html = render(`/payroll?${params}`)
         const expected = cycle.run.shifts.filter((shift) => {
           const corrected = shift.rows.some((row) => row.status === 'applied' && row.effect)
-          const open = shift.rows.some((row) => row.status === 'flag' || row.status === 'held')
-          const matchesFilter = filter === 'all'
-            || filter === 'total' && (corrected || open)
-            || filter === 'agent-resolved' && corrected
-          return matchesFilter
+          return filter === 'all' || filter === 'agent-resolved' && corrected
         })
-        expect(rowIds(html).sort(), `${filter}: ${query}`).toEqual(expected.map((shift) => shift.shift.id).sort())
+        // Payments and Resolved are tables; Discrepancies is the grouped summary.
+        expect(rowIds(html).sort(), `${filter}: ${query}`).toEqual(filter === 'total' ? [] : firstChunk(expected).sort())
         expect(selectedMetrics(html)).toEqual([{ all: 'Payments', total: 'Discrepancies', 'agent-resolved': 'Resolved' }[filter]])
-        expect(bucketCards(html)).toEqual([])
+        if (filter === 'total') expect(bucketCards(html).length).toBeGreaterThan(0)
+        else expect(bucketCards(html)).toEqual([])
         expect(html).not.toContain('class="chips"')
       }
     }
@@ -441,7 +457,10 @@ describe('payroll and settings separation', () => {
     expect(selectedMetrics(html)).toEqual(['Review'])
     expect(rowIds(html)).toEqual([])
     const resolvedHtml = render(`/payroll?cycle=${cycle.id}&filter=agent-resolved`)
-    for (const id of decided) expect(rowIds(resolvedHtml)).toContain(id)
+    const corrected = (rs: RunShift) => rs.rows.some((row) => row.status === 'applied' && row.effect)
+    const shown = firstChunk(cycle.run.shifts.filter((rs) => decided.has(rs.shift.id) || corrected(rs)))
+    expect(shown.some((id) => decided.has(id))).toBe(true)
+    expect(rowIds(resolvedHtml).sort()).toEqual(shown.sort())
   })
 
   it('falls back to the pending cycle for an unknown cycle id', () => {
@@ -471,8 +490,10 @@ describe('payroll and settings separation', () => {
     const resolutions = { [cycle.id]: { [open[0].shift.id]: 'applied' as const, [open[1].shift.id]: 'dismissed' as const } }
     vi.spyOn(onboarding, 'useOnboarding').mockReturnValue([{ ...DEFAULTS, resolutions }, vi.fn()])
     const html = render(`/payroll?cycle=${cycle.id}&filter=all`)
-    expect(rowIds(html)).toHaveLength(cycle.week.length)
-    for (const rs of cycle.run.shifts) {
+    const shown = new Set(firstChunk(cycle.run.shifts))
+    expect(rowIds(html)).toHaveLength(shown.size)
+    expect(shown.has(open[0].shift.id) && shown.has(open[1].shift.id)).toBe(true)
+    for (const rs of cycle.run.shifts.filter((row) => shown.has(row.shift.id))) {
       const row = html.match(new RegExp(`<tr\\b[^>]*data-shift="${rs.shift.id}"[\\s\\S]*?<\\/tr>`))![0]
       const cells = [...row.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/g)]
       expect(cells).toHaveLength(7)
@@ -489,7 +510,7 @@ describe('payroll and settings separation', () => {
     expect(html).toContain('aria-label="Pay cycles"')
     expect(html).toContain('aria-label="Time entries by worker"')
     expect(selectedCycles(html)).toEqual([cycle.id])
-    expect(rowIds(html)).toHaveLength(cycle.week.length)
+    expect(rowIds(html).sort()).toEqual(firstChunk(cycle.run.shifts).sort())
     expect(html).toContain('class="shift-modal open"')
     expect(html).toContain('aria-label="Close time entry"')
     expect([...html.matchAll(/class="shift-page-column(?: shift-conversation)?"/g)]).toHaveLength(3)

@@ -54,7 +54,7 @@ export function FindingDetail({ finding, dayLabel }: { finding: Finding; dayLabe
       <div className="finding-case-body" role="region" aria-labelledby={`${id}-case-${index}`} tabIndex={0}>
         <table className="sheet" aria-labelledby={`${id}-case-${index}`}>
           <colgroup>{[18, 20, 26, 20, 16].map((width, column) => <col key={column} style={{ width: `${width}%` }} />)}</colgroup>
-          <thead><tr><th scope="col">Source</th><th scope="col" className="num">Clock in</th><th scope="col" className="num">Meal break</th><th scope="col" className="num">Clock out</th><th scope="col" className="num">Hours</th></tr></thead>
+          <thead><tr><th scope="col">Source</th><th scope="col" className="num">Clock In</th><th scope="col" className="num">Meal Break</th><th scope="col" className="num">Clock Out</th><th scope="col" className="num">Hours</th></tr></thead>
           <tbody>{item.rows.map((row, i) => {
             const source = findingCopy(row.source).trim()
             const note = row.note ? findingCopy(row.note).trim() : ''

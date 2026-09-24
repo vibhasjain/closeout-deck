@@ -108,7 +108,7 @@ export function Intake({ cycle, intake }: { cycle: DeskCycle; intake: IntakeData
   return <div className="intake scroll">
     {waiting.length > 0 ? <section aria-label="Still waiting on">
       {waiting.map((client) => <div key={client.name} className="intake-client">
-        <div className="intake-client-head"><b>{client.name}</b><span className="num">{(client.expected - client.received).toLocaleString()} pending</span></div>
+        <div className="intake-client-head"><b>{client.name}</b><span className="num">{(client.expected - client.received).toLocaleString()} Pending</span></div>
         <ul className="intake-sources">{client.sources.filter((row) => row.pending || row.missing.length).map((row) => <li key={row.source.id} className="intake-source">
           <div className="intake-source-head"><VendorTile vendor={row.source} /><span>{row.source.name}</span><span className="r-note">{vendorMethod(row.source.method)}</span></div>
           <ul className="intake-gaps">{sourceRows(client.name, row)}</ul>
