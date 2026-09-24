@@ -19,6 +19,15 @@
 /payroll/assets/*
   Cache-Control: public, max-age=31536000, immutable
 
+/product/
+  Cache-Control: no-cache
+
+/product/index.html
+  Cache-Control: no-cache
+
+/product/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
 /bench/
   Cache-Control: no-cache
 

@@ -1,3 +1,4 @@
+import { getJwtToken } from '@/lib/auth'
 import type { Onboarding } from '@/lib/onboarding'
 
 export type Action =
@@ -33,9 +34,11 @@ export function systemPrompt(ctx: ChatContext): string {
   ].join('\n\n')
 }
 
-export async function* stream(message: string, system: string, sessionId: string | null): AsyncGenerator<{ text?: string; done?: boolean; sessionId?: string; error?: string }> {
-  const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message, system, sessionId }) })
-  const reader = res.body!.getReader(); const dec = new TextDecoder(); let buf = ''
+export async function* stream(message: string, system: string, sessionId: string | null, history: { role: 'user' | 'assistant'; text: string }[] = []): AsyncGenerator<{ text?: string; done?: boolean; sessionId?: string; error?: string }> {
+  const token = await getJwtToken().catch(() => null)
+  const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ message, system, sessionId, history }) })
+  if (!res.ok || !res.body) { yield { done: true, error: 'Chat is unavailable right now' }; return }
+  const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = ''
   for (;;) {
     const { value, done } = await reader.read(); if (done) return
     buf += dec.decode(value, { stream: true })

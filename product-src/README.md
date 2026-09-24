@@ -15,37 +15,38 @@ The bench engine computes payroll and discrepancies from deterministic synthetic
 
 ## Run locally
 
-Use Node.js 20.19+ or 22.12+ and Yarn Classic. Run from this directory:
+Use Node.js 20.19+ or 22.12+. Run from this directory:
 
 ```bash
-cp .env.sample .env
-yarn install
-yarn dev
+npm install
+npm run dev
 ```
 
-Open <http://localhost:9000>. `.env.sample` contains the public Cognito client configuration. Sign in with email and password; Google SSO also requires this origin to be registered with the Cognito app client.
+Open <http://localhost:9000/product/>. `.env.development` supplies the public Cognito client configuration. Sign in with email and password; Google SSO requires the redirect URLs to be registered with the Cognito app client.
 
-The agent chat needs a logged-in `claude` CLI on this machine, available on the dev server's `PATH`. The Vite middleware launches that CLI and streams its reply through `POST /api/chat`. It is available through `yarn dev`, not in the static build or `yarn preview`.
+Local agent chat needs a logged-in `claude` CLI on the dev server's `PATH`. The Vite middleware streams its reply through `POST /api/chat` during `npm run dev`.
+
+Production chat uses `netlify/edge-functions/chat.js` with Cognito ID tokens and prior turns. Set `ANTHROPIC_API_KEY` on Netlify; optional `CLOSEOUT_CHAT_MODEL` defaults to `claude-sonnet-5`. `npm run preview` does not run the edge function.
 
 `CLOSEOUT_CHAT_MODEL` selects the CLI model and defaults to `sonnet`. Pass it to the dev-server process:
 
 ```bash
-CLOSEOUT_CHAT_MODEL=sonnet yarn dev
+CLOSEOUT_CHAT_MODEL=sonnet npm run dev
 ```
 
 ## Checks and screenshots
 
 ```bash
-yarn lint
-yarn build
-yarn test
-yarn preview
+npm run lint
+npm run build
+npm test
+npm run preview
 ```
 
 For local screenshot QA, the explicit development-only flag skips the Cognito gate:
 
 ```bash
-VITE_QA_BYPASS_AUTH=1 yarn dev --port 9500 --strictPort false
+VITE_QA_BYPASS_AUTH=1 npm run dev
 ```
 
 This bypass requires `import.meta.env.DEV`; it does not enable authentication bypass in production builds. In the browser console, seed the local demo state before navigating:
@@ -53,9 +54,9 @@ This bypass requires `import.meta.env.DEV`; it does not enable authentication by
 ```js
 // Main tabs. This replaces any existing prototype state in this browser.
 localStorage.setItem('closeout-onboarding-v2', JSON.stringify({ forwarded: true }))
-location.href = '/timesheets'
+location.href = '/product/timesheets'
 
-// Use { forwarded: false } and /setup/calendar for the setup screens.
+// Use { forwarded: false } and /product/setup/calendar for the setup screens.
 ```
 
 Capture at 1440×900 and check density at 1280×800 using the prepared headless sweep:
@@ -67,7 +68,7 @@ node tasks/qa/capture-navigation-19.mjs
 Playwright must already be installed; set `PLAYWRIGHT_MODULE` to its absolute `index.mjs` path if it is outside this app. The script uses isolated browser state, captures Timesheets, Payroll and Settings at 1440×900, checks layout at 1280×800, and closes Chromium afterwards. QA screenshots and audits live in `tasks/qa/`; see `density-audit.md` for the current verification status. Stop the local dev server with:
 
 ```bash
-lsof -ti tcp:9500 | xargs kill
+lsof -ti tcp:9000 | xargs kill
 ```
 
 Calendar settings, review decisions, connections, chat history and mediation threads are stored under `closeout-onboarding-v2` in localStorage. This prototype state belongs to the browser, not to a server account.

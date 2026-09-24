@@ -5,7 +5,9 @@ import tailwindcss from '@tailwindcss/vite'
 import { chatPlugin } from './vite-chat'
 
 export default defineConfig({
+  base: '/product/',
   plugins: [react(), tailwindcss(), chatPlugin()],
+  build: { outDir: '../product', emptyOutDir: true },
   resolve: { alias: { '@': path.resolve(__dirname, './src') } },
   // Amplify v5 expects Node's `global`; Vite dev doesn't provide it.
   define: { global: 'globalThis' },

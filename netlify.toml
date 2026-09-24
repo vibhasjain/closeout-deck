@@ -1,5 +1,5 @@
 [build]
-  command = "cd shift-xray && npm install && npm run build && cd ../tasks && npm install && npm run build && cp -r dist/* . && cd ../job-src && npm install && npm run build && cd ../payroll-src && npm install && npm run build"
+  command = "cd shift-xray && npm install && npm run build && cd ../tasks && npm install && npm run build && cp -r dist/* . && cd ../job-src && npm install && npm run build && cd ../payroll-src && npm install && npm run build && cd ../product-src && npm install && npm run build"
   publish = "."
 
 [build.environment]
@@ -8,6 +8,10 @@
 [[edge_functions]]
   function = "linear"
   path = "/api/linear"
+
+[[edge_functions]]
+  function = "chat"
+  path = "/api/chat"
 
 [[edge_functions]]
   function = "report-gate"
@@ -25,4 +29,9 @@
 [[redirects]]
   from = "/experiment/*"
   to = "/decks/closeout-scroll-world/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/product/*"
+  to = "/product/index.html"
   status = 200

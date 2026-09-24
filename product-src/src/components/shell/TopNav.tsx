@@ -104,7 +104,7 @@ export function TopNav() {
 
   return (
     <header className="topbar">
-      <div className="brand"><img src="/logo-small.svg" alt="HyperTrack" width="22" height="22" /></div>
+      <div className="brand"><img src={import.meta.env.BASE_URL + 'logo-small.svg'} alt="HyperTrack" width="22" height="22" /></div>
       <nav className="nav-tabs" ref={nav} aria-label="Main navigation">
         {tabs.map(({ to, label }) => <NavLink key={to} to={`${to}${agentOpen ? '?agent=1' : ''}`} aria-disabled={setupLocked || undefined} tabIndex={setupLocked ? -1 : undefined}>{label}</NavLink>)}
         <div className="nav-tabs" ref={indicator} aria-hidden="true">

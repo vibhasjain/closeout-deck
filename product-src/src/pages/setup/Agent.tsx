@@ -225,6 +225,8 @@ export function Agent() {
   async function ask(question: string) {
     if (!question.trim() || asking) return
     const id = ++asked.current
+    const history: { role: 'user' | 'assistant'; text: string }[] = asides.filter((aside) => !aside.failed && aside.reply.trim()).slice(-10)
+      .flatMap((aside) => [{ role: 'user', text: aside.question }, { role: 'assistant', text: aside.reply }])
     const edit = (patch: Partial<Aside>) => setAsides((previous) => previous.map((aside) => aside.id === id ? { ...aside, ...patch } : aside))
     setDraft('')
     setAsking(true)
@@ -232,7 +234,7 @@ export function Agent() {
     let text = ''
     try {
       // ponytail: replies are read-only here; actions the agent proposes are dropped until setup can apply them safely.
-      for await (const event of stream(question, systemPrompt(context), session.current)) {
+      for await (const event of stream(question, systemPrompt(context), session.current, history)) {
         if (event.error) throw new Error(event.error)
         if (event.text) { text += event.text; edit({ reply: parseActions(text).text }) }
         if (event.done) { session.current = event.sessionId ?? session.current; break }
