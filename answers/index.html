@@ -76,6 +76,14 @@ th, td { border-right: 1px solid hsl(var(--border)); border-bottom: 1px solid hs
 thead th { position: sticky; top: 0; z-index: 2; background: hsl(var(--background)); font-weight: 600; padding: .8rem .75rem; vertical-align: middle; }
 .co { display: flex; align-items: center; gap: .5rem; }
 th.coh { cursor: pointer; }
+td.rs { cursor: pointer; }
+td.rs:hover .rl { text-decoration: underline; text-decoration-color: hsl(var(--muted-foreground) / .5); text-underline-offset: 3px; }
+.rl { display: inline; }
+.rl .arr { display: inline-flex; vertical-align: -2px; margin-left: .3rem; color: hsl(var(--muted-foreground)); }
+.rl .arr svg { width: 13px; height: 13px; }
+.rl .fv { margin-left: .4rem; font-family: var(--mono); font-size: 10.5px; padding: 1px 6px; border-radius: 9999px; background: hsl(var(--background)); border: 1px solid hsl(var(--border)); color: hsl(var(--muted-foreground)); }
+.num { font-size: 13px; font-variant-numeric: tabular-nums; }
+.num .of { color: hsl(var(--muted-foreground)); font-size: 11px; }
 .co .arr { display: inline-flex; flex-shrink: 0; color: hsl(var(--muted-foreground)); }
 .co .arr svg { width: 14px; height: 14px; }
 .co span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -146,8 +154,7 @@ td.sec { position: sticky; left: 0; background: hsl(var(--background)); border-r
 <div id="app" class="app">
   <div class="top"><img src="/logo-small.svg" alt="HyperTrack">
     <input id="q" class="ctl search" type="search" placeholder="Search" autocomplete="off" aria-label="Search companies, people and answers">
-    <select id="fStatus" class="ctl" aria-label="Filter by status"><option value="">All Customers</option><option>Contracted</option><option>Churned</option><option value="none">No Status</option></select>
-    <select id="fSort" class="ctl" aria-label="Sort"><option value="new" selected>Most Recent</option><option value="old">Oldest</option></select><span class="lbl" id="meta"></span><button class="logout" id="logout" title="Log out" aria-label="Log out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></button></div>
+<span class="lbl" id="meta"></span><button class="logout" id="logout" title="Log out" aria-label="Log out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></button></div>
   <div class="wrap"><table id="t"></table></div>
 </div>
 <div class="scrim" id="scrim"></div>
@@ -231,7 +238,9 @@ const SRC_ICON = {
 const chip = (cite, attrs = '') => `<span class="tag${attrs ? ' click' : ''}"${attrs}>${SRC_ICON[cite.src] || ''}${esc(cite.label)}</span>`
 // Live search: case-insensitive substring; hl() escapes then wraps matches in <mark>.
 let ROW_SORT = { co: '', mode: '' }  // click a company name: answered first -> unanswered first -> off
-let Q = '', F_STATUS = '', F_SORT = 'new'  // default: most recent conversation first
+let Q = '', F_STATUS = ''
+// One column sort at a time: key = last | answers | sources | people | q<i>; dir desc -> asc -> off. Off = most recent first.
+let COL_SORT = { key: '', dir: '' }
 const hl = t => { const e = esc(t); if (!Q) return e; const q = esc(Q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); return e.replace(new RegExp(q, 'gi'), m => `<mark>${m}</mark>`) }
 const hay = c => [c.company, c.people, c.status, ...Object.values(c.cells).flat().flatMap(a => [a.a, a.cite.label, a.cite.quote])].join(' ').toLowerCase()
 const SRC = { gong: 'Gong', hubspot: 'HubSpot', slack: 'Slack', interview: 'Interview' }
@@ -240,7 +249,13 @@ function render() {
   const lastIso = c => Object.values(c.cells).flat().map(a => a.cite.iso || '').sort().pop() || ''
   const qMatchesQuestion = Q && DATA.questions.some(x => x.toLowerCase().includes(Q.toLowerCase()))
   let cos = DATA.companies.filter(c => (!F_STATUS || (F_STATUS === 'none' ? !c.status : c.status === F_STATUS)) && (!Q || qMatchesQuestion || hay(c).includes(Q.toLowerCase())))
-  if (F_SORT) cos = [...cos].sort((a, b) => F_SORT === 'new' ? lastIso(b).localeCompare(lastIso(a)) : lastIso(a).localeCompare(lastIso(b)))
+  const nAns = c => Object.values(c.cells).filter(v => v.length).length
+  const nSrc = c => new Set(Object.values(c.cells).flat().map(a => a.cite.label)).size
+  const nPpl = c => (c.people || '').split(' · ').filter(Boolean).length
+  const metric = (c, k) => k === 'last' ? lastIso(c) : k === 'answers' ? nAns(c) : k === 'sources' ? nSrc(c) : k === 'people' ? nPpl(c) : +((c.cells['Q' + (+k.slice(1) + 1)] || []).length > 0)
+  const cmp = (x, y) => typeof x === 'string' ? x.localeCompare(y) : x - y
+  const { key, dir } = COL_SORT
+  cos = [...cos].sort((a, b) => (key ? (dir === 'desc' ? cmp(metric(b, key), metric(a, key)) : cmp(metric(a, key), metric(b, key))) : 0) || lastIso(b).localeCompare(lastIso(a)))
   VIEW = cos
   const n = DATA.companies.reduce((t, c) => t + Object.values(c.cells).reduce((u, v) => u + v.length, 0), 0)
   const up = new Date(DATA.updatedAt)
@@ -250,16 +265,18 @@ function render() {
   const cites = c => Object.values(c.cells).flat().map(a => a.cite)
   const last = c => cites(c).map(x => x.iso || '').sort().pop()
   const srcTags = c => { const seen = new Map(); cites(c).forEach(x => seen.has(x.label) || seen.set(x.label, x)); return [...seen.values()].sort((a, b) => a.label.localeCompare(b.label)).map(x => chip(x)).join('') }
-  const row = (label, f) => `<tr class="prow"><td class="q">${label}</td>${cos.map(c => `<td>${f(c)}</td>`).join('')}</tr>`
-  const pplRow = row('Status', c => c.status ? `<span class="status ${c.status.toLowerCase()}">${hl(c.status)}</span>` : '')
-    + row('Last conversation', c => { const d = last(c); return d ? `<span class="dt">${ago(new Date(d + 'T12:00:00'))}</span>` : '' })
-    + row('Sources', c => `<div class="srcs">${srcTags(c)}</div>`)
-    + row('People', c => people(c.people, c.linkedin))
+  const arrow = k => COL_SORT.key === k ? `<i class="arr">${COL_SORT.dir === 'desc' ? ICON.down : ICON.up}</i>` : ''
+  const row = (label, f, k) => `<tr class="prow"><td class="q${k ? ' rs' : ''}"${k ? ` data-sort="${k}"` : ''}><span class="rl">${label}${k === 'status' ? (F_STATUS ? `<span class="fv">${F_STATUS}</span>` : '') : arrow(k)}</span></td>${cos.map(c => `<td>${f(c)}</td>`).join('')}</tr>`
+  const pplRow = row('Status', c => c.status ? `<span class="status ${c.status.toLowerCase()}">${hl(c.status)}</span>` : '', 'status')
+    + row('Last conversation', c => { const d = last(c); return d ? `<span class="dt">${ago(new Date(d + 'T12:00:00'))}</span>` : '' }, 'last')
+    + row('Answers', c => `<span class="num">${nAns(c)}<span class="of">/${DATA.questions.length}</span></span>`, 'answers')
+    + row('Sources', c => `<div class="srcs">${srcTags(c)}</div>`, 'sources')
+    + row('People', c => people(c.people, c.linkedin), 'people')
   const sel = ROW_SORT.co && DATA.companies.find(c => c.company === ROW_SORT.co)
   const has = i => sel && (sel.cells['Q' + (i + 1)] || []).length > 0
   const order = DATA.questions.map((_, i) => i)
   if (sel) order.sort((a, b) => ROW_SORT.mode === 'answered' ? has(b) - has(a) || a - b : has(a) - has(b) || a - b)
-  const body = pplRow + order.map(i => [DATA.questions[i], i]).map(([q, i]) => `<tr><td class="q">${hl(q)}</td>${cos.map((c, ci) => `<td>${(c.cells['Q' + (i + 1)] || []).length ? '<div class="cell">' + (c.cells['Q' + (i + 1)]).map((a, ai) =>
+  const body = pplRow + order.map(i => [DATA.questions[i], i]).map(([q, i]) => `<tr><td class="q rs" data-sort="q${i}"><span class="rl">${hl(q)}${arrow('q' + i)}</span></td>${cos.map((c, ci) => `<td>${(c.cells['Q' + (i + 1)] || []).length ? '<div class="cell">' + (c.cells['Q' + (i + 1)]).map((a, ai) =>
     `<div class="ans"><span>${hl(a.a)}</span><div class="foot">${chip(a.cite, ` data-c="${ci}" data-q="${i + 1}" data-a="${ai}"`)}<span class="dt">${esc(a.cite.date || '')}</span></div></div>`).join('') + '</div>' : ''}</td>`).join('')}</tr>`).join('')
   $('t').innerHTML = head + '<tbody>' + body + '</tbody>'
 }
@@ -288,6 +305,14 @@ async function showTranscript(s) {
 function closeDrawer() { $('drawer').classList.remove('open'); $('scrim').classList.remove('open') }
 
 $('t').addEventListener('click', e => {
+  const rs = e.target.closest('td.rs')
+  if (rs) {
+    const k = rs.dataset.sort
+    if (k === 'status') F_STATUS = F_STATUS === '' ? 'Contracted' : F_STATUS === 'Contracted' ? 'Churned' : ''
+    else COL_SORT = COL_SORT.key !== k ? { key: k, dir: 'desc' } : COL_SORT.dir === 'desc' ? { key: k, dir: 'asc' } : { key: '', dir: '' }
+    render(); document.querySelector('.wrap').scrollLeft = 0
+    return
+  }
   const h = e.target.closest('th.coh')
   if (h) {
     const co = h.dataset.co
@@ -306,8 +331,6 @@ $('t').addEventListener('click', e => {
 // One-click log out: drop the viewer session (not the Agent Keyboard owner login) and stop Google auto sign-in.
 $('logout').onclick = () => { try { localStorage.removeItem(KEY) } catch {} window.google?.accounts?.id?.disableAutoSelect(); location.reload() }
 $('q').addEventListener('input', e => { Q = e.target.value.trim(); if (DATA) render() })
-$('fStatus').onchange = e => { F_STATUS = e.target.value; if (DATA) render() }
-$('fSort').onchange = e => { F_SORT = e.target.value; if (DATA) render() }
 // No zoom anywhere: iOS Safari ignores user-scalable=no, so block its pinch gestures and double-tap zoom too.
 for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, e => e.preventDefault(), { passive: false })
 document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault() }, { passive: false })
