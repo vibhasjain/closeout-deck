@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>Answers</title>
 <meta name="description" content="How staffing companies and payroll operators handle worker pay disputes. Every answer cited.">
@@ -30,7 +30,11 @@
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-html, body { margin: 0; height: 100%; overscroll-behavior: none; }
+html, body { margin: 0; height: 100%; overscroll-behavior: none; touch-action: pan-x pan-y; }
+* { -webkit-tap-highlight-color: transparent; }
+*:focus, *:focus-visible { outline: none; }
+button, select, input, a, .tag { -webkit-user-select: none; user-select: none; }
+.ctl:focus, .ctl:focus-visible { box-shadow: 0 1px 2px rgb(0 0 0 / .05); border-color: hsl(var(--input)); }
 body { font-family: var(--sans); font-size: 13px; line-height: 1.5; color: hsl(var(--foreground)); background: hsl(var(--background)); -webkit-font-smoothing: antialiased; }
 .lbl { font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: hsl(var(--muted-foreground)); }
 .gate { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; text-align: center; color: hsl(var(--muted-foreground)); font-size: 12px; }
@@ -40,7 +44,6 @@ body { font-family: var(--sans); font-size: 13px; line-height: 1.5; color: hsl(v
 .top img { height: 26px; }
 .ctl { height: 32px; border: 1px solid hsl(var(--input)); border-radius: .5rem; background: hsl(var(--background)); color: hsl(var(--foreground)); font: 13px var(--sans); padding: 0 .75rem; box-shadow: 0 1px 2px rgb(0 0 0 / .05); transition: box-shadow .15s, border-color .15s; }
 .ctl::placeholder { color: hsl(var(--muted-foreground)); }
-.ctl:focus-visible { outline: none; border-color: hsl(var(--foreground) / .35); box-shadow: 0 0 0 3px hsl(var(--foreground) / .08); }
 /* shadcn native-select: own chevron, room after it */
 select.ctl { appearance: none; -webkit-appearance: none; cursor: pointer; padding-right: 2rem; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b6b6b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right .6rem center; background-size: 14px; }
 select.ctl:hover { background-color: hsl(var(--muted)); }
@@ -259,6 +262,10 @@ $('logout').onclick = () => { try { localStorage.removeItem(KEY) } catch {} wind
 $('q').addEventListener('input', e => { Q = e.target.value.trim(); if (DATA) render() })
 $('fStatus').onchange = e => { F_STATUS = e.target.value; if (DATA) render() }
 $('fSort').onchange = e => { F_SORT = e.target.value; if (DATA) render() }
+// No zoom anywhere: iOS Safari ignores user-scalable=no, so block its pinch gestures and double-tap zoom too.
+for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, e => e.preventDefault(), { passive: false })
+document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault() }, { passive: false })
+document.addEventListener('dblclick', e => e.preventDefault(), { passive: false })
 $('scrim').onclick = closeDrawer; $('dClose').onclick = closeDrawer
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer() })
 
