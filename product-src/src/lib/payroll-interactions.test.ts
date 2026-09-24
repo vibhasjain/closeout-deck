@@ -1,3 +1,4 @@
+import { cycleIntake } from '@/lib/intake'
 import { Children, isValidElement, type ReactElement, type ReactNode } from 'react'
 import { Banknote } from 'lucide-react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -277,7 +278,7 @@ describe('Payroll cycle steps', () => {
     expect(buttons.map((element) => element.props.children)).toEqual(['Collect', 'Review'])
   })
 
-  it('opens every cycle on Collect, follows the step in the URL, and clears it when the cycle changes', () => {
+  it('opens a cycle on Collect while anything is pending and on Review once everything is in, follows the step in the URL, and clears it when the cycle changes', () => {
     const cycles = buildCycles(getOnboarding())
     const pending = cycles.find((cycle) => cycle.status === 'needs-review')!
     router.params = new URLSearchParams({ cycle: pending.id, step: 'intake' })
@@ -308,11 +309,13 @@ describe('Payroll cycle steps', () => {
     // One list, no period filters above it.
     expect(component(Payroll(), ClusterList).props.header).toBeUndefined()
     expect(component(Payroll(), ClusterList).props.items.map((item) => item.id)).toEqual(cycles.map((cycle) => cycle.id))
-    // Without a step every cycle, even one past its hours deadline, opens on Collect; a view param opens Review.
-    for (const cycle of [pending, cycles[0]]) {
+    // Without a step a cycle opens on Collect while anything is pending, otherwise on Review; a view param opens Review.
+    for (const cycle of cycles) {
       router.params = new URLSearchParams({ cycle: cycle.id })
-      expect(component(Payroll(), Intake).props.cycle.id).toBe(cycle.id)
+      const open = cycleIntake(cycle, getOnboarding()).open > 0
+      expect(elements(Payroll()).some((element) => element.type === Intake), cycle.id).toBe(open)
     }
+    expect(cycles.some((cycle) => cycleIntake(cycle, getOnboarding()).open > 0)).toBe(true)
     for (const key of ['filter', 'view', 'q']) {
       router.params = new URLSearchParams({ cycle: pending.id, [key]: 'x' })
       expect(elements(Payroll()).some((element) => element.type === Intake), key).toBe(false)

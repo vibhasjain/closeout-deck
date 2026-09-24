@@ -41,8 +41,8 @@ export function Payroll() {
   const totals = payTotals(cycle)
   const stats = cycleStats(cycle, state.resolutions, state.undone[cycle.id])
   const intake = cycleIntake(cycle, state)
-  // Every cycle opens on Collect; a view in the URL opens Review.
-  const step = stepOf(params, 'intake')
+  // A cycle opens on Collect while anything is pending, on Review once everything's in; a view in the URL opens Review.
+  const step = stepOf(params, intake.open > 0 ? 'intake' : 'review')
   const batch = state.batches[cycle.id]
   const destination = (batch ? batchDestination(batch) : undefined)
     ?? destinations.find((item) => item.id === params.get('destination'))

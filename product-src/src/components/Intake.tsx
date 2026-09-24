@@ -106,7 +106,8 @@ export function Intake({ cycle, intake }: { cycle: DeskCycle; intake: IntakeData
   }
 
   return <div className="intake scroll">
-    {waiting.length > 0 ? <section aria-label="Still waiting on">
+    {/* Every client keeps its card; a client with everything in is the same card, ghosted. */}
+    <section aria-label="Time exports by client">
       {waiting.map((client) => <div key={client.name} className="intake-client">
         <div className="intake-client-head"><b>{client.name}</b><span className="num">{(client.expected - client.received).toLocaleString()} Pending</span></div>
         <ul className="intake-sources">{client.sources.filter((row) => row.pending || row.missing.length).map((row) => <li key={row.source.id} className="intake-source">
@@ -114,7 +115,13 @@ export function Intake({ cycle, intake }: { cycle: DeskCycle; intake: IntakeData
           <ul className="intake-gaps">{sourceRows(client.name, row)}</ul>
         </li>)}</ul>
       </div>)}
-    </section> : <p className="intake-done"><Check size={14} aria-hidden />Everything's in</p>}
+      {complete.map((client) => <div key={client.name} className="intake-client intake-client-done">
+        <div className="intake-client-head"><b>{client.name}</b><span className="num"><Check size={12} aria-hidden /> All In</span></div>
+        <ul className="intake-sources">{client.sources.map((row) => <li key={row.source.id} className="intake-source">
+          <div className="intake-source-head"><VendorTile vendor={row.source} /><span>{row.source.name}</span><span className="r-note">Last Received {dayTime(row.lastReceived)}</span></div>
+        </li>)}</ul>
+      </div>)}
+    </section>
 
     {intake.closed.length > 0 && <details className="intake-fold">
       <summary><ChevronRight size={14} aria-hidden />{intake.closed.length} closed as not worked</summary>
@@ -122,14 +129,6 @@ export function Intake({ cycle, intake }: { cycle: DeskCycle; intake: IntakeData
         <span>{initial(gap.worker)} · {md(dayOf(gap.day))} · {gap.reason}</span>
         <Btn className="ghost" onClick={() => reopen(gap.id)}>Undo</Btn>
       </li>)}</ul>
-    </details>}
-
-    {waiting.length > 0 && complete.length > 0 && <details className="intake-fold">
-      <summary><ChevronRight size={14} aria-hidden /><Check size={14} aria-hidden className="intake-ok" />{complete.length} {complete.length === 1 ? 'client' : 'clients'} complete</summary>
-      <ul>{complete.flatMap((client) => client.sources.map((row) => <li key={`${client.name}-${row.source.id}`}>
-        <span><b>{client.name}</b> · {row.source.name}</span>
-        <span className="r-note">Last received {dayTime(row.lastReceived)}</span>
-      </li>))}</ul>
     </details>}
 
     <input ref={upload} hidden type="file" accept=".csv,.xlsx,.xls,.pdf" aria-label="Upload a time export"
