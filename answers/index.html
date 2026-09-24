@@ -77,11 +77,13 @@ thead th { position: sticky; top: 0; z-index: 2; background: hsl(var(--backgroun
 .co { display: flex; align-items: center; gap: .5rem; }
 th.coh { cursor: pointer; }
 td.rs { cursor: pointer; }
-td.rs:hover .rl { text-decoration: underline; text-decoration-color: hsl(var(--muted-foreground) / .5); text-underline-offset: 3px; }
-.rl { display: inline; }
-.rl .arr { display: inline-flex; vertical-align: -2px; margin-left: .3rem; color: hsl(var(--muted-foreground)); }
+.clr { all: unset; cursor: pointer; font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+.clr:hover { color: hsl(var(--foreground)); }
+td.rs:hover .rt { text-decoration: underline; text-decoration-color: hsl(var(--muted-foreground) / .5); text-underline-offset: 3px; }
+.rl { display: flex; align-items: flex-start; gap: .3rem; }
+.rl .arr { display: inline-flex; flex-shrink: 0; margin-top: 2px; color: hsl(var(--muted-foreground)); }
 .rl .arr svg { width: 13px; height: 13px; }
-.rl .fv { margin-left: .4rem; font-family: var(--mono); font-size: 10.5px; padding: 1px 6px; border-radius: 9999px; background: hsl(var(--background)); border: 1px solid hsl(var(--border)); color: hsl(var(--muted-foreground)); }
+.rl .fv { flex-shrink: 0; align-self: center; font-family: var(--mono); font-size: 10.5px; padding: 1px 6px; border-radius: 9999px; background: hsl(var(--background)); border: 1px solid hsl(var(--border)); color: hsl(var(--muted-foreground)); }
 .num { font-size: 13px; font-variant-numeric: tabular-nums; }
 .num .of { color: hsl(var(--muted-foreground)); }
 .co .arr { display: inline-flex; flex-shrink: 0; color: hsl(var(--muted-foreground)); }
@@ -263,13 +265,13 @@ function render() {
   const up = new Date(DATA.updatedAt)
   $('meta').innerHTML = [[ICON.co, DATA.companies.length, 'Companies'], [ICON.q, DATA.questions.length, 'Questions'], [ICON.a, n, 'Answers']].map(([i, v, t]) => `<span class="st" title="${t}">${i}${v}</span>`).join('') + `<span class="st" title="Updated">${ICON.clock}${ago(up)}</span>`
   const logo = c => c.logo ? `<img src="${esc(c.logo)}" alt="" loading="lazy" onerror="this.outerHTML='<span class=ph></span>'">` : '<span class="ph"></span>'
-  const head = `<thead><tr><th class="q"></th>${cos.map(c => `<th class="coh" data-co="${esc(c.company)}"><div class="co">${logo(c)}<span>${hl(c.company)}</span>${ROW_SORT.co === c.company ? `<i class="arr" title="${ROW_SORT.mode === 'answered' ? 'Answered first' : 'Unanswered first'}">${ROW_SORT.mode === 'answered' ? ICON.up : ICON.down}</i>` : ''}</div></th>`).join('')}</tr></thead>`
+  const head = `<thead><tr><th class="q"><button class="clr" id="clr">Reset</button></th>${cos.map(c => `<th class="coh" data-co="${esc(c.company)}"><div class="co">${logo(c)}<span>${hl(c.company)}</span>${ROW_SORT.co === c.company ? `<i class="arr" title="${ROW_SORT.mode === 'answered' ? 'Answered first' : 'Unanswered first'}">${ROW_SORT.mode === 'answered' ? ICON.up : ICON.down}</i>` : ''}</div></th>`).join('')}</tr></thead>`
   const cites = c => Object.values(c.cells).flat().map(a => a.cite)
   const last = c => cites(c).map(x => x.iso || '').sort().pop()
   const srcTags = c => { const seen = new Map(); cites(c).forEach(x => seen.has(x.label) || seen.set(x.label, x)); return [...seen.values()].sort((a, b) => a.label.localeCompare(b.label)).map(x => chip(x)).join('') }
   // column sorts reorder sideways: right = highest first, left = lowest first
   const arrow = k => COL_SORT.key === k ? `<i class="arr">${COL_SORT.dir === 'desc' ? ICON.right : ICON.left}</i>` : ''
-  const row = (label, f, k) => `<tr class="prow"><td class="q${k ? ' rs' : ''}"${k ? ` data-sort="${k}"` : ''}><span class="rl">${label}${k === 'status' ? (F_STATUS ? `<span class="fv">${F_STATUS}</span>` : '') : arrow(k)}</span></td>${cos.map(c => `<td>${f(c)}</td>`).join('')}</tr>`
+  const row = (label, f, k) => `<tr class="prow"><td class="q${k ? ' rs' : ''}"${k ? ` data-sort="${k}"` : ''}><span class="rl"><span class="rt">${label}</span>${k === 'status' ? (F_STATUS ? `<span class="fv">${F_STATUS}</span>` : '') : arrow(k)}</span></td>${cos.map(c => `<td>${f(c)}</td>`).join('')}</tr>`
   const pplRow = row('Status', c => c.status ? `<span class="status ${c.status.toLowerCase()}">${hl(c.status)}</span>` : '', 'status')
     + row('Last conversation', c => { const d = last(c); return d ? `<span class="dt">${ago(new Date(d + 'T12:00:00'))}</span>` : '' }, 'last')
     + row('Answers', c => `<span class="num">${nAns(c)}<span class="of"> of ${DATA.questions.length}</span></span>`, 'answers')
@@ -279,7 +281,7 @@ function render() {
   const has = i => sel && (sel.cells['Q' + (i + 1)] || []).length > 0
   const order = DATA.questions.map((_, i) => i)
   if (sel) order.sort((a, b) => ROW_SORT.mode === 'answered' ? has(b) - has(a) || a - b : has(a) - has(b) || a - b)
-  const body = pplRow + order.map(i => [DATA.questions[i], i]).map(([q, i]) => `<tr><td class="q rs" data-sort="q${i}"><span class="rl">${hl(q)}${arrow('q' + i)}</span></td>${cos.map((c, ci) => `<td>${(c.cells['Q' + (i + 1)] || []).length ? '<div class="cell">' + (c.cells['Q' + (i + 1)]).map((a, ai) =>
+  const body = pplRow + order.map(i => [DATA.questions[i], i]).map(([q, i]) => `<tr><td class="q rs" data-sort="q${i}"><span class="rl"><span class="rt">${hl(q)}</span>${arrow('q' + i)}</span></td>${cos.map((c, ci) => `<td>${(c.cells['Q' + (i + 1)] || []).length ? '<div class="cell">' + (c.cells['Q' + (i + 1)]).map((a, ai) =>
     `<div class="ans"><span>${hl(a.a)}</span><div class="foot">${chip(a.cite, ` data-c="${ci}" data-q="${i + 1}" data-a="${ai}"`)}<span class="dt">${esc(a.cite.date || '')}</span></div></div>`).join('') + '</div>' : ''}</td>`).join('')}</tr>`).join('')
   $('t').innerHTML = head + '<tbody>' + body + '</tbody>'
 }
@@ -308,12 +310,21 @@ async function showTranscript(s) {
 function closeDrawer() { $('drawer').classList.remove('open'); $('scrim').classList.remove('open') }
 
 $('t').addEventListener('click', e => {
+  if (e.target.closest('#clr')) {
+    ROW_SORT = { co: '', mode: '' }; COL_SORT = { key: '', dir: '' }; F_STATUS = ''; Q = ''; $('q').value = ''
+    render(); document.querySelector('.wrap').scrollTo({ top: 0, left: 0 })
+    return
+  }
   const rs = e.target.closest('td.rs')
   if (rs) {
     const k = rs.dataset.sort
     if (k === 'status') F_STATUS = F_STATUS === '' ? 'Contracted' : F_STATUS === 'Contracted' ? 'Churned' : ''
     else COL_SORT = COL_SORT.key !== k ? { key: k, dir: 'desc' } : COL_SORT.dir === 'desc' ? { key: k, dir: 'asc' } : { key: '', dir: '' }
-    render(); document.querySelector('.wrap').scrollLeft = 0
+    render()
+    // same as a company sort: clicked row right under the header, columns from the start
+    const wrap = document.querySelector('.wrap'), rowEl = document.querySelector(`td.rs[data-sort="${k}"]`)?.parentElement
+    const top = rowEl ? rowEl.getBoundingClientRect().top - document.querySelector('thead').getBoundingClientRect().bottom : 0
+    wrap.scrollTo({ top, left: 0 })
     return
   }
   const h = e.target.closest('th.coh')
