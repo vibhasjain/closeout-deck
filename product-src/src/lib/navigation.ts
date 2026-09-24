@@ -57,3 +57,13 @@ export function agentHref(to: string, context: URLSearchParams, cycleId?: string
   if (context.get('agent') === '1') url.searchParams.set('agent', '1')
   return `${url.pathname}${url.search}${url.hash}`
 }
+
+export type PayrollView = 'all' | 'total' | 'agent-resolved' | 'needs-review'
+const VIEWS: PayrollView[] = ['all', 'total', 'agent-resolved', 'needs-review']
+/** Payroll's four views, keyed by `filter`. Opens on Discrepancies; old `view=list` links open Payments. */
+export function payrollView(params: URLSearchParams): PayrollView {
+  const filter = params.get('filter') as PayrollView
+  if (VIEWS.includes(filter)) return filter
+  return params.get('view') === 'list' ? 'all' : 'total'
+}
+export const isTableView = (view: PayrollView) => view === 'all' || view === 'agent-resolved'

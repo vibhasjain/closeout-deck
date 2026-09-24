@@ -106,11 +106,6 @@ export function cycleIntake(cycle: IntakeCycle, state: Pick<Onboarding, 'accepte
     expected: collecting ? [...week, ...PLANTED, ...WALL_CLOCK] : week })
 }
 
-/** Intake while gaps are open before hours are due; Review once they're in, past due, or paid. */
-export function defaultStep(cycle: Pick<Cycle, 'cutoff' | 'status'>, intake: Pick<Intake, 'open'>, now = new Date()): Step {
-  return cycle.status !== 'reviewed' && intake.open > 0 && now < dueAt(cycle) ? 'intake' : 'review'
-}
-
 /** An explicit `?step=` wins; a review filter or list view means Review. */
 export function stepOf(params: URLSearchParams, fallback: Step): Step {
   const step = params.get('step')

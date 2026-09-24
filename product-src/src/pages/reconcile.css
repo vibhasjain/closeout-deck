@@ -20,7 +20,7 @@
 .reconcile-payments .reconcile-toolbar > .icon-btn { margin-left: 0; }
 .reconcile-payments .reconcile-toolbar .cycle-actions { display: flex; flex: 0 0 auto; align-items: center; gap: .5rem; margin-left: auto; }
 .reconcile-payments .reconcile-toolbar .cycle-actions .btn { margin-left: 0; }
-.reconcile-sheet { overflow: auto; max-width: 100%; }
+.reconcile-sheet { overflow: auto; max-width: 100%; padding-top: 1rem; }
 .reconcile-sheet .payments-sheet { min-width: 0; width: 100%; }
 .reconcile-sheet .payments-sheet th, .reconcile-sheet .payments-sheet td { padding: .5rem .625rem; }
 .reconcile-sheet .payments-sheet tr.grp th { padding: .625rem; }
@@ -54,7 +54,6 @@
 .reconcile-toolbar .toolbar-lead { display: flex; align-items: center; gap: .75rem; min-width: 0; font-size: 12px; color: hsl(var(--muted-foreground)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Pay-cycle period filters head the left panel. */
-.cycle-periods { display: flex; gap: .375rem; padding: .75rem 1rem; border-bottom: 1px solid hsl(var(--border)); }
 
 /* Cycle header: which cycle, its deadlines, and the summary/list switch on the right. */
 .payroll-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .75rem 1.25rem; border-bottom: 1px solid hsl(var(--border)); }

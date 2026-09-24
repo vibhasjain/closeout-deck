@@ -1,15 +1,25 @@
-import { Fragment, type JSX } from 'react'
+import { Fragment, useEffect, useState, type JSX } from 'react'
 import { fmtHM, money, type RunShift } from '@/bench/engine.js'
 import { PayDelta, Tag } from '@/components/ui'
 import { effectiveResolutions, kinds, type DeskCycle } from '@/lib/desk'
 import { useOnboarding } from '@/lib/onboarding'
 import './sheet.css'
 
+// ponytail: mount worker groups in chunks as the table scrolls; a full cycle is ~3,000 rows and blocks the switch. Virtualize if chunks ever lag.
+const CHUNK = 40
 const deltaTone = (value: number) => Math.abs(value) < 0.005 ? '' : value > 0 ? 'owed' : 'overpay'
 
 export function Sheet({ cycle, shifts, groupBy, selected, onSelect, days }: { cycle: DeskCycle; shifts: RunShift[]; groupBy: 'worker' | 'kind' | 'none'; selected?: string; onSelect(id: string): void; days: string[] }): JSX.Element {
   const [settings] = useOnboarding()
   const decisions = effectiveResolutions(cycle, settings.resolutions)[cycle.id]
+  const [limit, setLimit] = useState(CHUNK)
+  const [sentinel, setSentinel] = useState<HTMLTableRowElement | null>(null)
+  useEffect(() => {
+    if (!sentinel) return
+    const observer = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) setLimit((count) => count + CHUNK) }, { rootMargin: '800px' })
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [sentinel, limit])
 
   const workerGroups = new Map<string, RunShift[]>()
   for (const rs of shifts) {
@@ -38,10 +48,10 @@ export function Sheet({ cycle, shifts, groupBy, selected, onSelect, days }: { cy
         <th scope="col">Worker</th>
         <th scope="col">Site</th>
         <th scope="col" className="num sheet-hours">Hours</th><th scope="col" className="num">Pay</th>
-        <th scope="col" className="num" title="Difference from the submitted sheet">Δ</th><th scope="col">Status</th>
+        <th scope="col" className="num" title="Difference from the submitted sheet">Delta</th><th scope="col">Status</th>
       </tr></thead>
       <tbody>
-        {groups.map((group) => {
+        {groups.slice(0, limit).map((group) => {
           const hours = group.rows.reduce((sum, rs) => sum + rs.payableMin, 0)
           const current = group.rows.reduce((sum, rs) => sum + rs.naive, 0)
           const pay = group.rows.reduce((sum, rs) => sum + rs.pay, 0)
@@ -83,6 +93,7 @@ export function Sheet({ cycle, shifts, groupBy, selected, onSelect, days }: { cy
             })}
           </Fragment>
         })}
+        {limit < groups.length && <tr ref={setSentinel} aria-hidden="true"><td colSpan={columns} /></tr>}
         {shifts.length === 0 && <tr><td colSpan={columns} className="empty">Nothing matches</td></tr>}
       </tbody>
     </table>

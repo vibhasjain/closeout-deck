@@ -8,8 +8,8 @@
 .brand { flex-shrink: 0; }
 .brand img { display: block; filter: grayscale(1); }
 .topbar .brand img { width: 22px; height: 22px; }
-.topbar > .nav-tabs { position: absolute; left: 50%; translate: -50% 0; }
 .topbar { position: relative; }
+.topbar > .nav-tabs { position: relative; }
 .nav-tabs a, .nav-tabs [aria-hidden] span {
   border-radius: 9999px; padding: .25rem .625rem; font-size: 12px; font-weight: 500;
   white-space: nowrap; color: hsl(var(--muted-foreground)); text-decoration: none;
@@ -36,7 +36,6 @@
 }
 .scrim.overlay-scrim.open { opacity: 1; pointer-events: auto; }
 .scrim.overlay-scrim.closing { opacity: 0; }
-.topbar > div:last-child > .btn { max-width: min(22vw, 18rem); }
 [data-aux-toggle] { display: none; position: fixed; bottom: .75rem; z-index: 20; }
 [data-aux-toggle] { right: .75rem; }
 .agent-scrim { top: 3rem; z-index: 30; transform: none; }
@@ -52,9 +51,6 @@
   .topbar { min-width: 0; }
   .topbar > .nav-tabs { min-width: 0; overflow-x: auto; flex-shrink: 1; scrollbar-width: none; }
   .topbar > .nav-tabs::-webkit-scrollbar { display: none; }
-  .topbar > .spacer { flex: 0; }
-  .topbar > div:last-child { margin-left: auto; }
-  .topbar > div:last-child > .btn { max-width: 20vw; }
 }
 @media (max-width: 767.98px) {
   .nav-tabs a, .nav-tabs [aria-hidden] span { padding-left: .5rem; padding-right: .5rem; }

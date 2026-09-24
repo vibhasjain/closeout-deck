@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildCycles } from '@/lib/desk'
-import { buildIntake, cycleIntake, defaultStep, dueTone, gapId, gapKey, hour, isLate, lastExpected, PLANTED, stepOf, usually, WALL_CLOCK, type Expected } from '@/lib/intake'
+import { buildIntake, cycleIntake, dueTone, gapId, gapKey, hour, isLate, lastExpected, PLANTED, stepOf, usually, WALL_CLOCK, type Expected } from '@/lib/intake'
 import { DEFAULTS } from '@/lib/onboarding'
 
 // Mon Sep 14 2026 to Sun Sep 20; hours due Mon Sep 21 noon.
@@ -51,11 +51,7 @@ describe('intake', () => {
     expect(build({})).toMatchObject({ expected: 5, open: 2, closed: [] })
   })
 
-  it('opens on Intake only while gaps are open before hours are due', () => {
-    expect(defaultStep(cycle, { open: 2 }, new Date(2026, 8, 21, 11))).toBe('intake')
-    expect(defaultStep(cycle, { open: 2 }, new Date(2026, 8, 21, 12))).toBe('review')
-    expect(defaultStep(cycle, { open: 0 }, new Date(2026, 8, 20))).toBe('review')
-    expect(defaultStep({ ...cycle, status: 'reviewed' }, { open: 2 }, new Date(2026, 8, 20))).toBe('review')
+  it('lets an explicit step or a view in the URL pick the step', () => {
     expect(stepOf(new URLSearchParams('step=intake&filter=needs-review'), 'review')).toBe('intake')
     expect(stepOf(new URLSearchParams('filter=needs-review'), 'intake')).toBe('review')
     expect(stepOf(new URLSearchParams('cycle=x'), 'intake')).toBe('intake')

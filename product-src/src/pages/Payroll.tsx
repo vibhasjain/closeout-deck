@@ -10,11 +10,11 @@ import { PayrollSummary } from '@/components/PayrollSummary'
 import { ShiftTable } from '@/components/ShiftTable'
 import { useSetChatContext, useSetChatSuggestions } from '@/components/chat/ChatPane'
 import { useOverlay } from '@/components/shell/Overlay'
-import { Chip, Tag } from '@/components/ui'
+import { Tag } from '@/components/ui'
 import { shortDate } from '@/lib/cycles'
 import { cycleStats, useDesk } from '@/lib/desk'
-import { cycleIntake, defaultStep, stepOf, type Step } from '@/lib/intake'
-import { shiftHref } from '@/lib/navigation'
+import { cycleIntake, stepOf, type Step } from '@/lib/intake'
+import { isTableView, payrollView, shiftHref } from '@/lib/navigation'
 import { getOnboarding, useOnboarding, type Onboarding } from '@/lib/onboarding'
 import { payTotals } from '@/lib/payroll'
 import './reconcile.css'
@@ -26,8 +26,6 @@ const batchDestination = (batch: PayrollBatch) => destinations.find((destination
 // A send belongs to its cycle. Leaving Payroll must not cancel or duplicate it.
 const batchTimers = new Map<string, ReturnType<typeof setTimeout>>()
 /** Left-panel filters: the cycle waiting on review, and paid ones. The open cycle is left out for now. */
-const PERIODS = [{ id: 'upcoming', label: 'Upcoming', statuses: ['needs-review'] }, { id: 'completed', label: 'Completed', statuses: ['reviewed'] }] as const
-const inPeriod = (period: (typeof PERIODS)[number], status: string) => (period.statuses as readonly string[]).includes(status)
 
 export function Payroll() {
   const { cycles, current, byId } = useDesk()
@@ -40,11 +38,11 @@ export function Payroll() {
   const cycle = byId(params.get('cycle') ?? '') ?? cycles.find((item) => item.status === 'needs-review') ?? current
   const closeDate = shortDate(cycle.deadline)
   const payDate = shortDate(cycle.payDate)
-  const period = PERIODS.find((item) => item.id === params.get('period')) ?? PERIODS.find((item) => inPeriod(item, cycle.status)) ?? PERIODS[0]
   const totals = payTotals(cycle)
   const stats = cycleStats(cycle, state.resolutions, state.undone[cycle.id])
   const intake = cycleIntake(cycle, state)
-  const step = stepOf(params, defaultStep(cycle, intake))
+  // Every cycle opens on Collect; a view in the URL opens Review.
+  const step = stepOf(params, 'intake')
   const batch = state.batches[cycle.id]
   const destination = (batch ? batchDestination(batch) : undefined)
     ?? destinations.find((item) => item.id === params.get('destination'))
@@ -71,37 +69,10 @@ export function Payroll() {
     }
   }, [state.batches, update, toast])
 
-  // Review shows the summary's own rows, limited to what a person acts on.
-  const reviewing = params.get('filter') === 'needs-review'
-  // A cycle opens on its summary; picking a stat or searching opens the time-entry list.
-  const listing = params.get('view') === 'list' || params.has('filter') || params.has('q')
-
-  function showSummary() {
-    setParams((previous) => {
-      const next = new URLSearchParams(previous)
-      for (const key of ['view', 'filter', 'q', 'page', 'flag', 'review', 'cases']) next.delete(key)
-      return next
-    })
-  }
+  const view = payrollView(params)
 
   function showStep(next: Step) {
     setParams((previous) => { const params = new URLSearchParams(previous); params.set('step', next); return params })
-  }
-
-  function selectPeriod(id: string) {
-    const chosen = PERIODS.find((p) => p.id === id)!
-    // Upcoming opens the cycle waiting on review; Completed opens the newest paid one.
-    const first = cycles.find((item) => item.status === 'needs-review' && inPeriod(chosen, item.status)) ?? cycles.find((item) => inPeriod(chosen, item.status))
-    setParams((previous) => {
-      const next = new URLSearchParams(previous)
-      next.set('period', id)
-      next.delete('step')
-      if (first && first.id !== cycle.id) {
-        next.set('cycle', first.id)
-        for (const key of ['destination', 'filter', 'q', 'flag', 'review', 'cases', 'page']) next.delete(key)
-      }
-      return next
-    })
   }
 
   function selectCycle(id: string) {
@@ -119,11 +90,9 @@ export function Payroll() {
     connections: state.connections }, !shiftOpen)
 
   return <div className="reconcile-layout payroll-layout">
+    {/* Every cycle in one list; the status tags tell upcoming from paid. */}
     <ClusterList kind="cycles" selected={cycle.id} onSelect={selectCycle}
-      header={<div className="chip-row cycle-periods" role="group" aria-label="Show cycles">
-        {PERIODS.map((item) => <Chip key={item.id} active={item.id === period.id} aria-pressed={item.id === period.id} onClick={() => selectPeriod(item.id)}>{item.label}</Chip>)}
-      </div>}
-      items={cycles.filter((item) => inPeriod(period, item.status)).map((item) => {
+      items={cycles.map((item) => {
         const payouts = payTotals(item)
         const count = payouts.workers.length.toLocaleString()
         const total = money(payouts.gross)
@@ -152,11 +121,10 @@ export function Payroll() {
           </>}</span>
       </div>
       {step === 'intake' ? <Intake cycle={cycle} intake={intake} /> : <>
-        <CycleKpis cycle={cycle} stats={stats} summary={!listing} onSummary={showSummary} />
-        {reviewing ? <PayrollSummary cycle={cycle} review />
-          : listing ? <ShiftTable cycle={cycle} filterMode="discrepancies" defaultFilter="total"
-              onSelect={(id) => navigate(shiftHref(cycle.id, id, params, '/payroll'))} />
-          : <PayrollSummary cycle={cycle} />}
+        <CycleKpis cycle={cycle} stats={stats} />
+        {isTableView(view)
+          ? <ShiftTable key={view} cycle={cycle} filterMode="discrepancies" defaultFilter={view} onSelect={(id) => navigate(shiftHref(cycle.id, id, params, '/payroll'))} />
+          : <PayrollSummary cycle={cycle} review={view === 'needs-review'} />}
       </>}
     </section>
     <Outlet />
