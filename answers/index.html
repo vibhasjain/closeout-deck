@@ -39,15 +39,13 @@ thead th { position: sticky; top: 0; z-index: 2; background: hsl(var(--backgroun
 th.q, td.q { position: sticky; left: 0; z-index: 1; background: hsl(var(--muted)); width: 150px; min-width: 150px; color: hsl(var(--foreground)); font-weight: 500; font-size: 12px; }
 thead th.q { z-index: 3; }
 td.sec { position: sticky; left: 0; background: hsl(var(--background)); border-right: 0; padding-top: 1rem; }
-.cell { display: flex; flex-direction: column; height: 100%; }
-td { height: 1px; } /* lets .cell fill the row so the chip can sit at the bottom */
+.cell { display: flex; flex-direction: column; }
 .ans { display: flex; flex-direction: column; align-items: flex-start; }
-.ans:only-child { flex: 1; }
 .ans > span:first-child { padding-bottom: .6rem; }
 .ans .tag { margin: 0; }
 .foot { display: flex; align-items: center; justify-content: space-between; gap: .5rem; width: 100%; }
 .foot .dt { font-family: var(--mono); font-size: 10.5px; color: hsl(var(--muted-foreground)); white-space: nowrap; }
-.ans:only-child .foot { margin-top: auto; }
+
 .ans + .ans { margin-top: .75rem; padding-top: .75rem; border-top: 1px dashed hsl(var(--border)); }
 .tag { display: inline-flex; align-items: center; gap: .3rem; border-radius: 9999px; border: 1px solid hsl(var(--border)); background: hsl(var(--muted)); padding: 0 .45rem; font-size: 10px; line-height: 1.6; color: hsl(var(--muted-foreground)); white-space: nowrap; vertical-align: 1px; margin-left: .25rem; }
 .tag.click { font-family: var(--mono); font-weight: 500; cursor: pointer; transition: background-color .12s, color .12s, border-color .12s; }
