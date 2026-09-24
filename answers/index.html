@@ -274,7 +274,7 @@ function render() {
   const row = (label, f, k) => `<tr class="prow"><td class="q${k ? ' rs' : ''}"${k ? ` data-sort="${k}"` : ''}><span class="rl"><span class="rt">${label}</span>${k === 'status' ? (F_STATUS ? `<span class="fv">${F_STATUS}</span>` : '') : arrow(k)}</span></td>${cos.map(c => `<td>${f(c)}</td>`).join('')}</tr>`
   const pplRow = row('Status', c => c.status ? `<span class="status ${c.status.toLowerCase()}">${hl(c.status)}</span>` : '', 'status')
     + row('Last conversation', c => { const d = last(c); return d ? `<span class="dt">${ago(new Date(d + 'T12:00:00'))}</span>` : '' }, 'last')
-    + row('Answers', c => `<span class="num">${nAns(c)}<span class="of"> of ${DATA.questions.length}</span></span>`, 'answers')
+    + row('Answers', c => `<span class="num">${nAns(c)}</span>`, 'answers')
     + row('Sources', c => `<div class="srcs">${srcTags(c)}</div>`, 'sources')
     + row('People', c => people(c.people, c.linkedin), 'people')
   const sel = ROW_SORT.co && DATA.companies.find(c => c.company === ROW_SORT.co)
@@ -318,8 +318,8 @@ $('t').addEventListener('click', e => {
   const rs = e.target.closest('td.rs')
   if (rs) {
     const k = rs.dataset.sort
-    if (k === 'status') F_STATUS = F_STATUS === '' ? 'Contracted' : F_STATUS === 'Contracted' ? 'Churned' : ''
-    else COL_SORT = COL_SORT.key !== k ? { key: k, dir: 'desc' } : COL_SORT.dir === 'desc' ? { key: k, dir: 'asc' } : { key: '', dir: '' }
+    if (k === 'status') F_STATUS = F_STATUS === 'Contracted' ? 'Churned' : 'Contracted'
+    else COL_SORT = { key: k, dir: COL_SORT.key === k && COL_SORT.dir === 'desc' ? 'asc' : 'desc' }  // alternate; Reset clears
     render()
     // same as a company sort: clicked row right under the header, columns from the start
     const wrap = document.querySelector('.wrap'), rowEl = document.querySelector(`td.rs[data-sort="${k}"]`)?.parentElement
@@ -330,7 +330,7 @@ $('t').addEventListener('click', e => {
   const h = e.target.closest('th.coh')
   if (h) {
     const co = h.dataset.co
-    ROW_SORT = ROW_SORT.co !== co ? { co, mode: 'answered' } : ROW_SORT.mode === 'answered' ? { co, mode: 'unanswered' } : { co: '', mode: '' }
+    ROW_SORT = { co, mode: ROW_SORT.co === co && ROW_SORT.mode === 'answered' ? 'unanswered' : 'answered' }  // alternate; Reset clears
     render()
     // Sorting by a company = start reading it: first question under the header, its column right after the questions.
     if (ROW_SORT.co) {
