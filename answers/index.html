@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex">
-<title>Dispute Answers</title>
+<title>Answers</title>
 <meta name="description" content="How staffing companies and payroll operators handle worker pay disputes. Every answer cited.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/answers/apple-touch-icon.png">
@@ -48,16 +48,18 @@ body { font-family: var(--sans); font-size: 13px; line-height: 1.5; color: hsl(v
 table { border-collapse: separate; border-spacing: 0; }
 th, td { border-right: 1px solid hsl(var(--border)); border-bottom: 1px solid hsl(var(--border)); padding: .6rem .75rem; vertical-align: top; text-align: left; width: 220px; min-width: 220px; }
 thead th { position: sticky; top: 0; z-index: 2; background: hsl(var(--background)); font-weight: 600; }
-.co { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; }
-.co img, .co .ph { width: 28px; height: 28px; border-radius: 6px; flex-shrink: 0; object-fit: contain; }
+.co { display: flex; align-items: center; gap: .5rem; }
+.co img, .co .ph { width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; object-fit: contain; }
 .co .ph { background: hsl(var(--muted)); border: 1px solid hsl(var(--border)); }
 .ppl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .45rem; }
-.ppl li { display: flex; flex-direction: column; line-height: 1.3; }
+.ppl li { display: flex; align-items: flex-start; gap: .45rem; line-height: 1.3; }
+.ppl li svg { width: 13px; height: 13px; margin-top: 2px; flex-shrink: 0; color: hsl(var(--muted-foreground)); }
+.ppl li div { display: flex; flex-direction: column; }
 .ppl .pn { font-size: 12.5px; color: hsl(var(--foreground)); }
 .ppl .pt { font-size: 11px; color: hsl(var(--muted-foreground)); }
-.ppl .extra { display: none; }
-.ppl.open .extra { display: flex; }
-.ppl.open .more { display: none; }
+.srcs { display: flex; flex-wrap: wrap; gap: .3rem; }
+.srcs .tag { margin: 0; }
+.prow .dt { font-size: 12.5px; color: hsl(var(--foreground)); }
 .more-btn { all: unset; cursor: pointer; font-family: var(--mono); font-size: 10.5px; color: hsl(var(--muted-foreground)); }
 .more-btn:hover { color: hsl(var(--foreground)); }
 .who { display: block; margin-top: .2rem; font-family: var(--mono); font-size: 10.5px; font-weight: 400; color: hsl(var(--muted-foreground)); line-height: 1.35; }
@@ -149,8 +151,8 @@ function signIn() {
 }
 
 // "Adam Varro (Sr. Dir. Service)" -> name + title; first 3 shown, the rest behind a toggle.
-const person = p => { const m = p.match(/^(.*?)\s*\((.*)\)\s*$/); const [n, t] = m ? [m[1], m[2]] : [p, '']; return `<li><span class="pn">${esc(n)}</span>${t ? `<span class="pt">${esc(t[0].toUpperCase() + t.slice(1))}</span>` : ''}</li>` }
-const people = p => { const a = (p || '').split(' · ').filter(Boolean); if (!a.length) return ''; return `<ul class="ppl">${a.slice(0, 3).map(person).join('')}${a.length > 3 ? `<li class="more"><button class="more-btn">+${a.length - 3} more</button></li>${a.slice(3).map(person).join('').replace(/<li>/g, '<li class="extra">')}` : ''}</ul>` }
+const person = p => { const m = p.match(/^(.*?)\s*\((.*)\)\s*$/); const [n, t] = m ? [m[1], m[2]] : [p, '']; return `<li>${ICON.person}<div><span class="pn">${esc(n)}</span>${t ? `<span class="pt">${esc(t[0].toUpperCase() + t.slice(1))}</span>` : ''}</div></li>` }
+const people = p => { const a = (p || '').split(' · ').filter(Boolean); return a.length ? `<ul class="ppl">${a.map(person).join('')}</ul>` : '' }
 // One unit only: "12 minutes ago", "3 hours ago", "2 days ago".
 const ago = d => { const m = Math.max(1, Math.round((Date.now() - d) / 60000)); const [n, u] = m < 60 ? [m, 'minute'] : m < 1440 ? [Math.round(m / 60), 'hour'] : [Math.round(m / 1440), 'day']; return `${n} ${u}${n === 1 ? '' : 's'} ago` }
 // lucide: building-2, circle-help, message-square-quote
@@ -158,6 +160,7 @@ const svg = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" str
 const ICON = {
   co: svg('<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4M10 10h4M10 14h4M10 18h4"/>'),
   q: svg('<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>'),
+  person: svg('<circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/>'),
   a: svg('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 12a2 2 0 0 0 2-2V8H8"/><path d="M14 12a2 2 0 0 0 2-2V8h-2"/>'),
 }
 const SRC = { gong: 'Gong', hubspot: 'HubSpot', slack: 'Slack', interview: 'Interview' }
@@ -168,8 +171,14 @@ function render() {
   const up = new Date(DATA.updatedAt)
   $('meta').innerHTML = [[ICON.co, cos.length, 'Companies'], [ICON.q, DATA.questions.length, 'Questions'], [ICON.a, n, 'Answers']].map(([i, v, t]) => `<span class="st" title="${t}">${i}${v}</span>`).join('') + `<span>Updated ${ago(up)}</span>`
   const logo = c => c.logo ? `<img src="${esc(c.logo)}" alt="" loading="lazy" onerror="this.outerHTML='<span class=ph></span>'">` : '<span class="ph"></span>'
-  const head = `<thead><tr><th class="q"></th>${cos.map(c => `<th><div class="co"><span>${esc(c.company)}</span>${logo(c)}</div></th>`).join('')}</tr></thead>`
-  const pplRow = `<tr class="prow"><td class="q">People</td>${cos.map(c => `<td>${people(c.people)}</td>`).join('')}</tr>`
+  const head = `<thead><tr><th class="q"></th>${cos.map(c => `<th><div class="co">${logo(c)}<span>${esc(c.company)}</span></div></th>`).join('')}</tr></thead>`
+  const cites = c => Object.values(c.cells).flat().map(a => a.cite)
+  const last = c => cites(c).map(x => x.iso || '').sort().pop()
+  const srcTags = c => [...new Set(cites(c).map(x => x.label))].sort().map(l => `<span class="tag">${esc(l)}</span>`).join('')
+  const row = (label, f) => `<tr class="prow"><td class="q">${label}</td>${cos.map(c => `<td>${f(c)}</td>`).join('')}</tr>`
+  const pplRow = row('Last conversation', c => { const d = last(c); return d ? `<span class="dt">${ago(new Date(d + 'T12:00:00'))}</span>` : '' })
+    + row('Sources', c => `<div class="srcs">${srcTags(c)}</div>`)
+    + row('People', c => people(c.people))
   const body = pplRow + DATA.questions.map((q, i) => `<tr><td class="q">${esc(q)}</td>${cos.map((c, ci) => `<td>${(c.cells['Q' + (i + 1)] || []).length ? '<div class="cell">' + (c.cells['Q' + (i + 1)]).map((a, ai) =>
     `<div class="ans"><span>${esc(a.a)}</span><div class="foot"><span class="tag click" data-c="${ci}" data-q="${i + 1}" data-a="${ai}">${esc(a.cite.label)}</span><span class="dt">${esc(a.cite.date || '')}</span></div></div>`).join('') + '</div>' : ''}</td>`).join('')}</tr>`).join('')
   $('t').innerHTML = head + '<tbody>' + body + '</tbody>'
@@ -198,7 +207,7 @@ async function showTranscript(s) {
 }
 function closeDrawer() { $('drawer').classList.remove('open'); $('scrim').classList.remove('open') }
 
-$('t').addEventListener('click', e => { const mb = e.target.closest('.more-btn'); if (mb) return mb.closest('.ppl').classList.add('open'); const t = e.target.closest('.tag.click'); if (t) openDrawer(+t.dataset.c, +t.dataset.q, +t.dataset.a) })
+$('t').addEventListener('click', e => { const t = e.target.closest('.tag.click'); if (t) openDrawer(+t.dataset.c, +t.dataset.q, +t.dataset.a) })
 $('scrim').onclick = closeDrawer; $('dClose').onclick = closeDrawer
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer() })
 
