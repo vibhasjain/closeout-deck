@@ -159,7 +159,7 @@ describe('Payroll review actions', () => {
     expect(elements(Payroll()).some((element) => element.type === PayrollSummary)).toBe(false)
   })
 
-  it.each(['Yes', 'Not now'])('approves a whole group and answers its learning prompt with %s', (answer) => {
+  it.each(['Yes', 'Not Now'])('approves a whole group and answers its learning prompt with %s', (answer) => {
     const { cycle, groups, render } = atReview()
     const kind = groups.find((group) => group.state === 'proposed' && group.cases.length > 1)!
     const card = elements(render()).find((element) => element.props.className === 'decision' && element.props['data-rule'] === kind.ruleId)!
@@ -184,11 +184,11 @@ describe('Payroll review actions', () => {
     const { groups, render } = atReview()
     const group = groups.find((item) => item.state === 'proposed')!
     const row = () => elements(render()).find((element) => element.props.className === 'decision' && element.props['data-rule'] === group.ruleId)!
-    expect(content(row())).not.toContain('Tell the agent')
+    expect(content(row())).not.toContain('Tell the Agent')
     const toggle = elements(row()).find((element) => element.props['aria-label'] === 'Show cases')!
     ;(toggle.props.onClick as () => void)()
     vi.stubGlobal('requestAnimationFrame', (callback: () => void) => callback())
-    click(row(), "Tell the agent what's wrong")
+    click(row(), "Tell the Agent What's Wrong")
     expect(router.params.get('agent')).toBe('1')
     expect(router.params.get('filter')).toBe('needs-review')
   })

@@ -1,7 +1,8 @@
 import type { CSSProperties } from 'react'
 import { bucketHue, kindLabel } from '@/lib/desk'
+import { titleCase } from '@/lib/utils'
 
 /** The rule's bucket, in that bucket's colour. The only classification a rule carries. */
 export function BucketTag({ ruleId }: { ruleId: string }) {
-  return <span className="bucket-tag" style={{ '--hue': bucketHue(ruleId) } as CSSProperties}>{kindLabel(ruleId)}</span>
+  return <span className="bucket-tag" style={{ '--hue': bucketHue(ruleId) } as CSSProperties}>{titleCase(kindLabel(ruleId))}</span>
 }

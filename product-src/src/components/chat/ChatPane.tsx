@@ -325,7 +325,7 @@ export function ChatPane({ scope: explicitScope }: { scope?: string } = {}) {
         {scope && (
           <div className="flex shrink-0 items-center justify-between gap-2">
             <span className="lbl">This case</span>
-            <button type="button" className="lnk" onClick={toggleScope}>{showAll ? 'Show this case' : 'Show all'}</button>
+            <button type="button" className="lnk" onClick={toggleScope}>{showAll ? 'Show This Case' : 'Show All'}</button>
           </div>
         )}
         {messages.length === 0 && !(showRequest && (sending || reply || error)) && (

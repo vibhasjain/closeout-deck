@@ -31,8 +31,8 @@ export function EmailIssue({ email }: { email: IssueEmail }) {
   }
 
   if (sent.length) return <p className="email-issue-sent" role="status"><Check size={14} aria-hidden />Sent to {sent.join(', ')} with {email.file}
-    <button type="button" className="lnk" onClick={() => { setSent([]); setTo(''); setOpen(true) }}>Send to someone else</button></p>
-  if (!open) return <Btn className="email-issue-open" onClick={() => setOpen(true)}><Mail aria-hidden />Email this issue</Btn>
+    <button type="button" className="lnk" onClick={() => { setSent([]); setTo(''); setOpen(true) }}>Send to Someone Else</button></p>
+  if (!open) return <Btn className="email-issue-open" onClick={() => setOpen(true)}><Mail aria-hidden />Email This Issue</Btn>
 
   return <form className="email-issue" aria-label="Email this issue" noValidate
     onSubmit={(event) => { event.preventDefault(); send() }}

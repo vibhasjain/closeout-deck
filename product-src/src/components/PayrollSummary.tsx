@@ -9,6 +9,7 @@ import { Btn, PayDelta } from '@/components/ui'
 import { shortDate } from '@/lib/cycles'
 import { bucketHue, kindLabel, rememberKind, type DeskCycle } from '@/lib/desk'
 import { shiftHref } from '@/lib/navigation'
+import { titleCase } from '@/lib/utils'
 import { groupEmail } from '@/lib/issueEmail'
 import { getOnboarding, useOnboarding } from '@/lib/onboarding'
 import { actionFor, proposalFor, resolutionGroups, STATES, type ResolutionGroup, type ResolutionState } from '@/lib/resolution'
@@ -16,7 +17,7 @@ import './sheet.css'
 
 const pill = (ruleId: string, count: number) => {
   const label = kindLabel(ruleId)
-  return <span className="bucket-tag issue-tag" style={{ '--hue': bucketHue(ruleId) } as CSSProperties}>{count.toLocaleString()} {label[0].toUpperCase() + label.slice(1)}</span>
+  return <span className="bucket-tag issue-tag" style={{ '--hue': bucketHue(ruleId) } as CSSProperties}>{count.toLocaleString()} {titleCase(label)}</span>
 }
 // Big totals read better with separators: 24,801h 44m.
 const hours = (minutes: number) => { const whole = Math.round(minutes), m = whole % 60; return `${Math.floor(whole / 60).toLocaleString()}h${m ? ` ${m}m` : ''}` }
@@ -71,7 +72,7 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
   function action(group: ResolutionGroup) {
     if (group.state === 'proposed') return <Btn className="primary" onClick={() => approve(group)}>Approve {group.cases.length.toLocaleString()}</Btn>
     if (group.state === 'fixed') return closed || group.approved ? null : <Btn onClick={() => undo(group)}>Undo</Btn>
-    if (group.state === 'judgment') return <Btn onClick={() => toast(`Sent ${group.cases.length} ${kindLabel(group.ruleId)} cases to ${group.owner}`)}>Send to {group.owner}</Btn>
+    if (group.state === 'judgment') return <Btn onClick={() => toast(`Sent ${group.cases.length} ${kindLabel(group.ruleId)} cases to ${group.owner}`)}>Escalate</Btn>
     return null
   }
 
@@ -110,14 +111,16 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
         {resolution === 'proposed' && learned && <div className="decision-learn">
           <span>Approved {learned.count.toLocaleString()} · {kindLabel(learned.ruleId)}. Approve these automatically from now on?</span>
           <Btn className="primary" onClick={() => { rememberKind(learned.ruleId); setLearning(null); toast(`Decision remembered for ${learned.ruleId}`) }}>Yes</Btn>
-          <Btn onClick={() => setLearning(null)}>Not now</Btn>
+          <Btn onClick={() => setLearning(null)}>Not Now</Btn>
         </div>}
         {items.length === 0 ? <p className="r-note">{HEADINGS[resolution].empty}</p> : items.map((group) => {
           const expanded = open.includes(key(group))
+          const toggle = () => setOpen(expanded ? open.filter((item) => item !== key(group)) : [...open, key(group)])
           return <div key={key(group)} className="decision" data-rule={group.ruleId}>
-            <div className="payroll-summary-row">
+            {/* The whole row expands; its own buttons and links keep their clicks. The chevron stays the keyboard control. */}
+            <div className="payroll-summary-row" onClick={(event) => { if (!(event.target as Element).closest('button, a')) toggle() }}>
               <button type="button" className="decision-toggle" aria-expanded={expanded} aria-label={`${expanded ? 'Hide' : 'Show'} cases`}
-                onClick={() => setOpen(expanded ? open.filter((item) => item !== key(group)) : [...open, key(group)])}>
+                onClick={toggle}>
                 {expanded ? <ChevronDown size={14} aria-hidden /> : <ChevronRight size={14} aria-hidden />}
               </button>
               {pill(group.ruleId, group.cases.length)}
@@ -136,7 +139,7 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
             </ul>}
             {expanded && <div className="decision-correct">
               <EmailIssue email={groupEmail(group, cycle)} />
-              {group.state === 'proposed' && <Btn onClick={() => correct(group)}>Tell the agent what's wrong</Btn>}
+              {group.state === 'proposed' && <Btn onClick={() => correct(group)}>Tell the Agent What's Wrong</Btn>}
             </div>}
           </div>
         })}

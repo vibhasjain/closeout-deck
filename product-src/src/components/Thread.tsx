@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import type { RunShift } from '@/bench/engine.js'
 import { useOverlay } from '@/components/shell/Overlay'
 import { Btn, Tag } from '@/components/ui'
+import { titleCase } from '@/lib/utils'
 import type { DeskCycle } from '@/lib/desk'
 import { getOnboarding, useOnboarding } from '@/lib/onboarding'
 import { defaultThreadParty, readThreadInput, recordThreadAction, recordThreadInput, threadFor, type Draft, type ThreadAction, type ThreadEntry, type ThreadParty } from '@/lib/threads'
@@ -162,7 +163,7 @@ function PartyThread({ cycle, rs, party, legacyParty, switcher }: { cycle: DeskC
   return <>
     <header className="aux-head thread-titlebar">
       <span className="thread-title">{thread.counterparty.name} · {thread.channel}</span>
-      {thread.askedAt && <Tag tone="amber">Waiting on {party}</Tag>}
+      {thread.askedAt && <Tag tone="amber">{titleCase(`Waiting on ${party}`)}</Tag>}
       {switcher}
     </header>
     <div className="thread">

@@ -247,7 +247,7 @@ describe('revisiting onboarding', () => {
     const before = getOnboarding()
     const tree = mount(Agent)()
     const header = elements(tree).find(({ props }) => props.className === 'convo-head')
-    const exit = button(header, 'Exit setup')
+    const exit = button(header, 'Exit Setup')
     expect(exit).toBeDefined()
     expect(exit!.props.className?.split(' ')).toContain('ghost')
     expect(elements(exit).some((element) => element.type === X)).toBe(true)
@@ -259,7 +259,7 @@ describe('revisiting onboarding', () => {
 
   it('does not offer an exit during first-time onboarding', () => {
     updateOnboarding({ forwarded: false })
-    expect(button(mount(Agent)(), 'Exit setup')).toBeUndefined()
+    expect(button(mount(Agent)(), 'Exit Setup')).toBeUndefined()
   })
 
   it('saves an answer changed during a revisit and retains it after exiting', () => {
@@ -275,7 +275,7 @@ describe('revisiting onboarding', () => {
       payDay: 'Thursday',
       discovery: { period: 'Monthly', payroll: 'ADP' },
     })
-    button(render(), 'Exit setup')!.props.onClick!()
+    button(render(), 'Exit Setup')!.props.onClick!()
     expect(router.navigate).toHaveBeenCalledWith('/settings')
     const saved = JSON.parse(vi.mocked(localStorage.setItem).mock.calls.at(-1)![1]) as Onboarding
     expect(saved.forwarded).toBe(true)
@@ -289,7 +289,7 @@ describe('revisiting onboarding', () => {
     const cleanups = hooks.effects.map((effect) => effect())
     button(tree, 'Monthly')!.props.onClick!()
     expect(vi.getTimerCount()).toBe(1)
-    button(tree, 'Exit setup')!.props.onClick!()
+    button(tree, 'Exit Setup')!.props.onClick!()
     cleanups.forEach((cleanup) => { if (cleanup) cleanup() })
     vi.runAllTimers()
     expect(router.navigate).toHaveBeenCalledExactlyOnceWith('/settings')
@@ -312,15 +312,15 @@ describe('revisiting onboarding', () => {
     router.params = new URLSearchParams('step=4')
     const render = mount(Agent)
     const chips = (tree: ReactNode) => elements(tree).filter(({ props }) => props.className === 'convo-chips').flatMap(({ props }) => elements(props.children).map((chip) => label(chip.props.children)))
-    expect(chips(render())).toEqual(['No, just this one', 'Add another'])
-    button(render(), 'Add another')!.props.onClick!()
+    expect(chips(render())).toEqual(['No, Just This One', 'Add Another'])
+    button(render(), 'Add Another')!.props.onClick!()
     const open = render()
     expect(elements(open).some((element) => element.type === PayCycleForm)).toBe(true)
     expect(chips(open)).toEqual([])
     updateOnboarding({ cohorts: [{ id: 'cohort-clerical', name: 'Clerical', frequency: 'Biweekly', periodEndDay: 'Sunday', payDay: 'Friday', payDatesOfMonth: [20, 5] }] })
     hooks.slots = []
     const saved = render()
-    expect(chips(saved)).toEqual(['Add another', 'That\'s all'])
+    expect(chips(saved)).toEqual(['Add Another', 'That\'s All'])
     router.params = new URLSearchParams('step=5')
     button(mount(Agent)(), 'Clerical · Biweekly · paid Friday')!.props.onClick!()
     expect(router.params.get('step')).toBe('4')
@@ -329,14 +329,14 @@ describe('revisiting onboarding', () => {
   it('takes Varies by client without a typed note or a main frequency, then suggests adding a cycle', () => {
     updateOnboarding({ frequency: 'Semi-monthly' })
     router.params = new URLSearchParams('step=2')
-    button(mount(Agent)(), 'Varies by client')!.props.onClick!()
+    button(mount(Agent)(), 'Varies by Client')!.props.onClick!()
     expect(getOnboarding()).toMatchObject({ frequency: 'Semi-monthly', discovery: { period: 'Varies by client' } })
     expect(vi.getTimerCount()).toBe(1)
     router.params = new URLSearchParams('step=3')
     expect(elements(mount(Agent)()).filter(({ props }) => props.text).at(-1)!.props.text).toBe('Which calendar are most of your workers on?')
     router.params = new URLSearchParams('step=4')
     const first = elements(mount(Agent)()).find(({ props }) => props.className === 'convo-chips')
-    expect(label(elements(first!.props.children)[0].props.children)).toBe('Add another')
+    expect(label(elements(first!.props.children)[0].props.children)).toBe('Add Another')
   })
 
   it('takes an answer typed in the composer instead of asking again', () => {
@@ -378,14 +378,14 @@ describe('revisiting onboarding', () => {
     const render = mount(Agent)
     const tree = render()
     const cleanups = hooks.effects.map((effect) => effect())
-    button(tree, 'Start with the sample')!.props.onClick!()
+    button(tree, 'Start with the Sample')!.props.onClick!()
     vi.runOnlyPendingTimers()
     const finishing = render()
     const finalMessage = elements(finishing).find(({ props }) => props.text === HANDOFF_LINE)
     expect(finalMessage?.props.onDone).toBeDefined()
     finalMessage!.props.onDone!()
     expect(vi.getTimerCount()).toBe(1)
-    button(finishing, 'Exit setup')!.props.onClick!()
+    button(finishing, 'Exit Setup')!.props.onClick!()
     cleanups.forEach((cleanup) => { if (cleanup) cleanup() })
     vi.runAllTimers()
     expect(router.navigate).toHaveBeenCalledExactlyOnceWith('/settings')
@@ -394,7 +394,7 @@ describe('revisiting onboarding', () => {
   it('hands off to Intake on the week awaiting review after one short line', () => {
     router.params = new URLSearchParams('step=15')
     const render = mount(Agent)
-    button(render(), 'Start with the sample')!.props.onClick!()
+    button(render(), 'Start with the Sample')!.props.onClick!()
     vi.runOnlyPendingTimers()
     const line = elements(render()).find(({ props }) => props.text === HANDOFF_LINE)
     line!.props.onDone!()

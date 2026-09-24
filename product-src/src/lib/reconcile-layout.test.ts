@@ -175,12 +175,12 @@ describe('Payroll review composition', () => {
       expect(card).toContain(`class="pay-amounts-value">${money(group.resolved)}</span><span class="pay-amounts-caption">Resolved</span>`)
       if (group.state === 'proposed') expect(card).toContain(`>Approve ${group.cases.length.toLocaleString()}</button>`)
       // The correction sits with the cases, not in the row.
-      expect(card).not.toContain('Tell the agent')
+      expect(card).not.toContain('Tell the Agent')
     })
   })
 
   it.each([
-    ['CS-16H', 'Over-length day'], ['CS-OVLP', 'Overlap'], ['CA-SS-01', 'Split day'], ['CON-MIN-4H', 'Minimum pay'],
+    ['CS-16H', 'Over-Length Day'], ['CS-OVLP', 'Overlap'], ['CA-SS-01', 'Split Day'], ['CON-MIN-4H', 'Minimum Pay'],
   ])('names pending %s buckets %s', (ruleId, label) => {
     vi.useFakeTimers().setSystemTime(today)
     const original = buildCycles(DEFAULTS, today)[0]
@@ -278,7 +278,7 @@ describe('Payroll review composition', () => {
     const rules = html.match(/<aside\b[^>]*aria-label="Time entry rules and trail"[\s\S]*?<\/aside>/)![0]
     const recorded = rules.match(/<section\b[^>]*aria-label="Recorded decision"[\s\S]*?<\/section>/)![0]
     expect(recorded).toContain('>Decision</div>')
-    expect(recorded).toContain(`<span class="tag">${decision === 'applied' ? 'Applied' : 'Not an issue'}</span>`)
+    expect(recorded).toContain(`<span class="tag">${decision === 'applied' ? 'Applied' : 'Not an Issue'}</span>`)
     expect(rules).toContain('class="rule-applied"')
     expect(rules).not.toContain('<span class="tag amber">Flagged</span>')
   })

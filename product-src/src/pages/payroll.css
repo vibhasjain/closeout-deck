@@ -1,6 +1,8 @@
-.payroll-head { display: grid; grid-template-columns: 1fr auto 1fr; }
+.payroll-head { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
 .payroll-head-title { flex-wrap: wrap; }
-.payroll-head .cycle-steps { justify-self: center; flex-wrap: nowrap; gap: .125rem; padding: .125rem; border: 1px solid hsl(var(--border)); border-radius: 9999px; background: hsl(var(--muted)); }
+.payroll-head .cycle-steps { justify-self: center; flex-wrap: nowrap; gap: .125rem; padding: .125rem; border: 1px solid hsl(var(--border)); border-radius: .375rem; background: hsl(var(--muted)); }
+/* Square segmented control, shorter than the default pill step. */
+.payroll-head .cycle-step { height: 1.5rem; padding: 0 .625rem; border-radius: .25rem; }
 .payroll-head .cycle-step[aria-current] { background: hsl(var(--background)); color: hsl(var(--foreground)); }
 .payroll-head .cycle-step:focus-visible { outline: 2px solid hsl(var(--foreground) / .35); outline-offset: 2px; }
 .payroll-dates { display: inline-flex; align-items: center; justify-content: flex-end; justify-self: end; min-width: 0; flex-wrap: wrap; gap: .75rem; margin: 0; }

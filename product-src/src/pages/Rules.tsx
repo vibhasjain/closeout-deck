@@ -8,6 +8,7 @@ import { useSetChatContext, useSetChatSuggestions } from '@/components/chat/Chat
 import { useAux } from '@/components/shell/Aux'
 import { useOverlay } from '@/components/shell/Overlay'
 import { Btn, Lbl, Toolbar } from '@/components/ui'
+import { titleCase } from '@/lib/utils'
 import { kindLabel, topstats, useDesk } from '@/lib/desk'
 import { useOnboarding, type CustomDeskRule } from '@/lib/onboarding'
 import { formatRuleDate, formatRuleSource, formatRuleText, getRuleActivity, type Proposal, type RuleActivity } from '@/lib/rules'
@@ -52,12 +53,12 @@ function RuleComposer({ onSave, onCancel }: { onSave(rule: CustomDeskRule): void
           <p className="r-sent">{formatRuleText(compiled.sentence)}</p>
           {ask && <div className="ask">
             <span className="wq">{ask.question}</span>
-            <div>{ask.options.map((option) => <button type="button" key={option} className={`wopt${answer === option ? ' active' : ''}`} aria-pressed={answer === option} onClick={() => setAnswer(option)}>{option}</button>)}</div>
+            <div>{ask.options.map((option) => <button type="button" key={option} className={`wopt${answer === option ? ' active' : ''}`} aria-pressed={answer === option} onClick={() => setAnswer(option)}>{titleCase(option)}</button>)}</div>
           </div>}
         </div>
         <div className="actions mt-4">
-          <Btn disabled={!!ask && !answer} onClick={() => onSave(withThreshold(compiled, answer))}>Add rule</Btn>
-          <Btn onClick={() => { setCompiled(null); setAnswer('') }}>Edit sentence</Btn>
+          <Btn disabled={!!ask && !answer} onClick={() => onSave(withThreshold(compiled, answer))}>Add Rule</Btn>
+          <Btn onClick={() => { setCompiled(null); setAnswer('') }}>Edit Sentence</Btn>
         </div>
       </> : <>
         <textarea autoFocus className="q-input composer" aria-label="Write the rule" placeholder="Flag a meal break shorter than 30 minutes" value={sentence} disabled={compiling} onChange={(event) => setSentence(event.target.value)} />
@@ -166,8 +167,8 @@ export function Rules() {
     <Toolbar className="rules-toolbar">
       {searchOpen || query ? <input autoFocus className="q-input rules-search" type="search" aria-label="Search rules" placeholder="Search rules…" value={query} onChange={(event) => filter('q', event.target.value)} onBlur={() => { if (!query) setSearchOpen(false) }} onKeyDown={(event) => { if (event.key === 'Escape') { filter('q', ''); setSearchOpen(false) } }} /> : <button type="button" className="icon-btn sm dim" aria-label="Search rules" onClick={() => setSearchOpen(true)}><Search size={14} /></button>}
       <div className="flex-1" />
-      <Btn onClick={() => openModal(<RuleComposer onSave={saveRule} onCancel={close} />)}>Add rule</Btn>
-      <Btn onClick={() => fileInput.current?.click()}>Add contracts</Btn>
+      <Btn onClick={() => openModal(<RuleComposer onSave={saveRule} onCancel={close} />)}>Add Rule</Btn>
+      <Btn onClick={() => fileInput.current?.click()}>Add Contracts</Btn>
     </Toolbar>
     <input ref={fileInput} hidden type="file" multiple aria-label="Choose contracts, CBAs or handbooks" onChange={(event) => { ingest(event.target.files); event.target.value = '' }} />
     {(rows.length > 0 || proposals.length > 0) && <div className="sheet-wrap scroll rules-table-wrap">

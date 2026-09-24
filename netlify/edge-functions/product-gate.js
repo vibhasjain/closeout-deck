@@ -15,6 +15,21 @@ function form() {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Closeout</title>
+<meta name="description" content="Every payroll discrepancy, caught and fixed before you pay.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/product/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="Closeout">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://closeoutcopilot.com/product/">
+<meta property="og:title" content="Closeout">
+<meta property="og:description" content="Every payroll discrepancy, caught and fixed before you pay.">
+<meta property="og:image" content="https://closeoutcopilot.com/product/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Closeout">
+<meta name="twitter:description" content="Every payroll discrepancy, caught and fixed before you pay.">
+<meta name="twitter:image" content="https://closeoutcopilot.com/product/og-image.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="/job/config.js"></script>
@@ -67,11 +82,15 @@ body { font-family: var(--sans); font-size: 13px; line-height: 1.5; color: hsl(v
   if (window.google) return go()
   const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.onload = go; sc.onerror = error; document.head.appendChild(sc)
 })()
-</script></body></html>`, { status: 401, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex' } })
+</script></body></html>`, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex' } })
 }
+
+// Share previews and the home-screen icon must load without a session.
+const PUBLIC = new Set(['/product/og-image.png', '/product/apple-touch-icon.png'])
 
 export default async (request, context) => {
   const path = new URL(request.url).pathname
+  if (PUBLIC.has(path)) return context.next()
   if (request.method === 'POST' && path === '/product/__gate') {
     const data = await request.json().catch(() => null)
     if (typeof data?.idToken === 'string' && data.idToken) {

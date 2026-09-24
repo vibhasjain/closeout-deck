@@ -9,6 +9,7 @@ import { RuleDetail } from '@/components/RuleDetail'
 import { AuxProvider } from '@/components/shell/Aux'
 import { OverlayProvider } from '@/components/shell/Overlay'
 import { bucketHue, buildCycles, kindLabel, type DeskCycle } from '@/lib/desk'
+import { titleCase } from '@/lib/utils'
 import { DEFAULTS, useOnboarding, type CustomDeskRule, type Onboarding } from '@/lib/onboarding'
 import { formatRuleDate, formatRuleText, getRuleActivity } from '@/lib/rules'
 import { acceptProposal, compileRule, propose } from '@/lib/ruleIntake'
@@ -52,7 +53,7 @@ describe('rules table', () => {
       .toEqual(['Bucket', 'Rule', 'Created', 'Uses', 'Last used'])
     // The bucket is the rule's only classification, and rows sit together by bucket.
     const buckets = [...table.matchAll(/<span class="bucket-tag"[^>]*>(.*?)<\/span>/g)].map((match) => match[1])
-    expect(buckets).toEqual(RULES.map((rule) => kindLabel(rule.id)).sort((a, b) => a.localeCompare(b)))
+    expect(buckets).toEqual(RULES.map((rule) => titleCase(kindLabel(rule.id))).sort((a, b) => a.localeCompare(b)))
     expect(visibleText(table)).not.toMatch(/\b(?:Deterministic|LLM|Kind)\b/)
     for (const rule of RULES) expect(visibleText(table), rule.id).not.toContain(rule.id)
     expect(table).not.toContain('<th scope="colgroup"')
@@ -101,7 +102,7 @@ describe('rules table', () => {
     }]
     const html = render(h(Rules))
     const section = html.match(/<section\b[^>]*aria-label="Rules to review"[\s\S]*?<\/section>/)![0]
-    expect(section).toContain(`<span class="bucket-tag" style="--hue:${bucketHue('DOC-PENDING')}">${kindLabel('DOC-PENDING')}</span>`)
+    expect(section).toContain(`<span class="bucket-tag" style="--hue:${bucketHue('DOC-PENDING')}">${titleCase(kindLabel('DOC-PENDING'))}</span>`)
     expect(section).toMatch(/<button type="button" class="[^"]*rule-proposal-text[^"]*" aria-pressed="false">Pay a \$3 weekend differential<\/button>/)
     expect(visibleText(section)).not.toContain('DOC-PENDING')
     expect(html).not.toContain('bucket-chip')
@@ -110,7 +111,7 @@ describe('rules table', () => {
   it('places both add actions in the toolbar and keeps the multiple-file picker without a drop box', () => {
     const html = render(h(Rules))
     const toolbar = html.match(/<div class="toolbar rules-toolbar">[\s\S]*?<\/div>\s*<input/)![0]
-    expect(toolbar).toMatch(/<button[^>]*class="btn">Add rule<\/button>\s*<button[^>]*class="btn">Add contracts<\/button>/)
+    expect(toolbar).toMatch(/<button[^>]*class="btn">Add Rule<\/button>\s*<button[^>]*class="btn">Add Contracts<\/button>/)
     expect(html).toMatch(/<input[^>]*type="file"[^>]*multiple=""[^>]*aria-label="Choose contracts, CBAs or handbooks"/)
     expect(html).not.toContain('rules-drop')
   })
@@ -119,7 +120,7 @@ describe('rules table', () => {
     const html = render(h(Rules), '/rules?q=no-matching-rule')
     expect(html).toContain('rules-toolbar')
     expect(html).toContain('aria-label="Search rules"')
-    expect(html).toContain('Add rule')
+    expect(html).toContain('Add Rule')
     expect(html).not.toContain('rules-table-wrap')
     expect(html).not.toContain('<table')
     expect(html).not.toContain('Rules to review')
@@ -134,7 +135,7 @@ describe('rule detail', () => {
     const source = PROV[id]
     const rule = RULES.find((item) => item.id === id)!
     const html = render(h(RuleDetail, { ruleId: id }), '/rules?agent=1')
-    const sequence = [`>${kindLabel(id)}</span>`, `<p class="rule-applied-text">${textMarkup(formatRuleText(rule.sentence))}</p>`, 'rule-applied-source', `>${formatRuleText(source.doc)}</span>`]
+    const sequence = [`>${titleCase(kindLabel(id))}</span>`, `<p class="rule-applied-text">${textMarkup(formatRuleText(rule.sentence))}</p>`, 'rule-applied-source', `>${formatRuleText(source.doc)}</span>`]
     const positions = sequence.map((part) => html.indexOf(part))
     expect(positions.every((position) => position >= 0)).toBe(true)
     expect(positions).toEqual([...positions].sort((a, b) => a - b))
@@ -165,7 +166,7 @@ describe('rule detail', () => {
     state.customRules = [custom]
     state.rules = [{ id: custom.id, text: custom.sentence, scope: 'per-CBA', source: custom.source.doc, cite: null, effective: null }]
     const html = render(h(RuleDetail, { ruleId: custom.id }))
-    expect(html).toContain(`>${kindLabel(custom.id)}</span>`)
+    expect(html).toContain(`>${titleCase(kindLabel(custom.id))}</span>`)
     expect(html.split(formatRuleText(custom.sentence))).toHaveLength(2)
     expect(html).not.toContain(custom.sentence)
     expect(html).toMatch(/<span class="[^"]*rule-applied-source[^"]*">Custom<\/span>/)

@@ -114,7 +114,7 @@ export function SourcesTable({ group, selected, onSelect, onConnect, vendors: su
               if (action) action.onClick()
               else if (vendor.status === 'connected') sync(vendor)
               else onConnect(key)
-            }}>{action?.label ?? (vendor.status === 'connected' ? 'Sync now' : 'Connect')}</Btn></td>
+            }}>{action?.label ?? (vendor.status === 'connected' ? 'Sync Now' : 'Connect')}</Btn></td>
           </tr>
         })}
       </Fragment>)}{vendors.length === 0 && <tr><td colSpan={8}><span className="r-note">No systems match this search</span></td></tr>}</tbody>

@@ -4,6 +4,7 @@ import { Lbl, Tag } from '@/components/ui'
 import { fmtHM } from '@/bench/engine.js'
 import { findingEmail } from '@/lib/issueEmail'
 import { clock, type Finding } from '@/lib/sample'
+import { titleCase } from '@/lib/utils'
 import './sample-result.css'
 
 function findingCopy(value: string) {
@@ -32,10 +33,10 @@ export function FindingDetail({ finding, dayLabel }: { finding: Finding; dayLabe
     <h2>{findingCopy(finding.title)}</h2>
     <p className="finding-why">{findingCopy(finding.why)}</p>
     <div className="finding-tags">
-      <Tag>{finding.cases.length} {findingCopy(finding.tag)}</Tag>
+      <Tag>{finding.cases.length} {titleCase(findingCopy(finding.tag))}</Tag>
       <div className="finding-stats">
-        {finding.hoursLabel && <Tag>{findingStatCopy(finding.hoursLabel)}</Tag>}
-        {finding.amountLabel && <Tag>{findingStatCopy(finding.amountLabel)}</Tag>}
+        {finding.hoursLabel && <Tag>{titleCase(findingStatCopy(finding.hoursLabel))}</Tag>}
+        {finding.amountLabel && <Tag>{titleCase(findingStatCopy(finding.amountLabel))}</Tag>}
       </div>
     </div>
     <section className="finding-action-card" aria-label="Suggested action">

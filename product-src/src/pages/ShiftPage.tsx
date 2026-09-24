@@ -60,7 +60,7 @@ function ShiftTrail({ cycle, rs, primaryRuleId }: { cycle: DeskCycle; rs: RunShi
     })}
     {decision && <section className="shift-audit-section" aria-label="Recorded decision">
       <Lbl>Decision</Lbl>
-        <Tag>{decision === 'applied' ? 'Applied' : 'Not an issue'}</Tag>
+        <Tag>{decision === 'applied' ? 'Applied' : 'Not an Issue'}</Tag>
         <p className="shift-audit-time"><RecordedTime at={state.decisionTimes[key]} /></p>
         {decision === 'applied' && <PayDelta current={rs.naive} resolved={rs.pay} size="sm" />}
         {decision === 'dismissed' && <p className="r-note">{state.reasons[key] || 'A reason was not recorded with this earlier decision'}</p>}

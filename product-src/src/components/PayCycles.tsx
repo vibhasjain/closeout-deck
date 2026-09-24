@@ -61,7 +61,7 @@ export function PayCycles() {
         </li>)}
       </ul>}
       {open === null ? <PayCycleForm id={null} onClose={() => setOpen(undefined)} />
-        : <Btn className="pay-cycle-add" onClick={() => setOpen(null)}>Add pay cycle</Btn>}
+        : <Btn className="pay-cycle-add" onClick={() => setOpen(null)}>Add Pay Cycle</Btn>}
     </div>
   )
 }

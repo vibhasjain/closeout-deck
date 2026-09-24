@@ -75,13 +75,13 @@ export function ConnectModal({ vendor, onDone }: { vendor: Source | Destination;
             <VendorTile vendor={vendor} large />
             <h4>Sign in to {vendor.name}</h4>
             <div className="vbrowser-account">
-              <div className="vbrowser-account-heading"><span>Demo account</span><Tag>Signed out</Tag></div>
+              <div className="vbrowser-account-heading"><span>Demo account</span><Tag>Signed Out</Tag></div>
               <dl>
                 <div><dt>Email</dt><dd className="mono">payroll.ops@demo.hypertrack.com</dd></div>
                 <div><dt>Password</dt><dd className="mono">••••••••</dd></div>
               </dl>
             </div>
-            <Btn className="primary" onClick={connect}>Sign in</Btn>
+            <Btn className="primary" onClick={connect}>Sign In</Btn>
             <p className="r-note">Demo connection · use placeholder credentials</p>
           </div> : <div className="vbrowser-progress">
             <div className="vbrowser-progress-heading">

@@ -18,7 +18,7 @@ import { isMonthly, useOnboarding, type CustomDeskRule, type Onboarding } from '
 import { acceptProposal, clarify, compileRule, propose, withThreshold } from '@/lib/ruleIntake'
 import type { Proposal } from '@/lib/rules'
 import { buildSample, CLIENTS, findings, sampleCsvs, type Csv, type Finding } from '@/lib/sample'
-import { ordinal } from '@/lib/utils'
+import { ordinal, titleCase } from '@/lib/utils'
 import './agent.css'
 
 const SAMPLE_DATA = buildSample()
@@ -108,7 +108,7 @@ function SampleFiles({ csvs, start, onSeen, onClose }: { csvs: Csv[]; start: num
     </div>
     <div className="chip-row demo-tabs" role="tablist" aria-label="Sample files">
       {csvs.map((file, i) => <Chip key={file.name} role="tab" active={i === index} aria-selected={i === index}
-        onClick={() => { setIndex(i); onSeen(file.name) }}>{file.label} · {file.count}</Chip>)}
+        onClick={() => { setIndex(i); onSeen(file.name) }}>{titleCase(`${file.label} · ${file.count}`)}</Chip>)}
     </div>
     <div className="sample-table demo-table">
       <table className="sheet"><thead><tr>{csv.header.map((head) => <th key={head} scope="col">{head}</th>)}</tr></thead>
@@ -289,7 +289,7 @@ export function Agent() {
     <button type="button" className="agent-finding" aria-haspopup="dialog" onClick={() => evidence(finding)}>
       <span className="agent-finding-text">{said}{why && <span className="r-note">{why}</span>}</span>
       <FindingAmount label={finding.amountLabel || finding.hoursLabel} />
-      <Tag>{due[finding.deadline]}</Tag>
+      <Tag>{titleCase(due[finding.deadline])}</Tag>
     </button>
   </li>
   const chips = (options: string[], picked: string[], pick: (value: string) => void): Option[] =>
@@ -326,7 +326,7 @@ export function Agent() {
       <div className="convo-agent"><img className="convo-mark" src={mark} alt="" /><div className="convo-body">
         {event.saved ? <p>Added {event.rule.sentence} as a draft on the Rules tab</p> : <>
           <p>{event.ask?.question}</p>
-          <div className="convo-chips">{event.ask?.options.map((option) => <Chip key={option} onClick={() => answerTyped(event.id, event.rule, option)}>{option}</Chip>)}</div>
+          <div className="convo-chips">{event.ask?.options.map((option) => <Chip key={option} onClick={() => answerTyped(event.id, event.rule, option)}>{titleCase(option)}</Chip>)}</div>
         </>}
       </div></div>
     </div>
@@ -350,7 +350,7 @@ export function Agent() {
               <Btn onClick={() => update({ proposals: state.proposals.filter((p) => p.id !== item.id) })}>Skip</Btn>
             </span> : <Tag>{status(item) === 'accepted' ? 'Added' : 'Skipped'}</Tag>}
           </li>)}</ul>
-          {pending.length > 1 && <Btn className="convo-accept-all" onClick={() => acceptAll(pending.map((item) => item.id))}>Accept all {pending.length}</Btn>}
+          {pending.length > 1 && <Btn className="convo-accept-all" onClick={() => acceptAll(pending.map((item) => item.id))}>Accept All {pending.length}</Btn>}
           {pending.length === 0 && <p className="convo-in">{accepted.length
             ? `Added ${accepted.length} ${accepted.length === 1 ? 'rule' : 'rules'}${who ? ` for ${who}` : ''}. I'll apply them ${from}.`
             : 'Skipped them all. Nothing changed.'}</p>}
@@ -486,7 +486,7 @@ export function Agent() {
   return <div className="convo">
     <header className="convo-head">
       <span>{step} of {TURNS}</span>
-      {state.forwarded && <Btn className="ghost convo-exit" onClick={() => navigate('/settings')}><X size={14} aria-hidden />Exit setup</Btn>}
+      {state.forwarded && <Btn className="ghost convo-exit" onClick={() => navigate('/settings')}><X size={14} aria-hidden />Exit Setup</Btn>}
       <Btn className="ghost convo-skip" onClick={() => { update({ forwarded: true }); navigate('/timesheets') }}>Skip</Btn>
     </header>
     <div className="convo-progress" style={{ '--progress': step / TURNS } as CSSProperties}><span /></div>
@@ -515,9 +515,9 @@ export function Agent() {
             {shown && turn.thread}
             {now && ready && <div ref={controls} className="convo-controls convo-in">
               {turn.extra}
-              {turn.options && <div className="convo-chips">{turn.options.filter((option) => !option.hidden).map((option) => <Chip key={option.label} id={option.id} active={option.active} aria-pressed={option.active} onClick={option.pick}>{option.label}</Chip>)}</div>}
+              {turn.options && <div className="convo-chips">{turn.options.filter((option) => !option.hidden).map((option) => <Chip key={option.label} id={option.id} active={option.active} aria-pressed={option.active} onClick={option.pick}>{titleCase(option.label)}</Chip>)}</div>}
               {turn.belowOptions}
-              {turn.primary && <Btn className="primary convo-primary" onClick={turn.primary.run}>{turn.primary.label}</Btn>}
+              {turn.primary && <Btn className="primary convo-primary" onClick={turn.primary.run}>{titleCase(turn.primary.label)}</Btn>}
             </div>}
             {(!now || phase === 'typing' || leaving) && <button type="button" className="convo-user" title="Change this answer" disabled={leaving}
               onClick={() => reopen(n)}>{turn.said}</button>}

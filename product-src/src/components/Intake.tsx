@@ -5,6 +5,7 @@ import { InboxAddress } from '@/components/InboxAddress'
 import { VendorTile, vendorMethod } from '@/components/SourcesTable'
 import { useOverlay } from '@/components/shell/Overlay'
 import { Btn, Chip } from '@/components/ui'
+import { titleCase } from '@/lib/utils'
 import type { DeskCycle } from '@/lib/desk'
 import { ago, dayTime, gapKey, initial, usually, type Gap, type Intake as IntakeData, type SourceIntake } from '@/lib/intake'
 import { addNote, useOnboarding } from '@/lib/onboarding'
@@ -65,19 +66,19 @@ export function Intake({ cycle, intake }: { cycle: DeskCycle; intake: IntakeData
         {note && <span className="intake-agent">{note}</span>}
       </div>
       <div className="intake-gap-actions">
-        <Btn onClick={() => ask(gap, who)}>{gap.onSite ? 'Ask supervisor' : 'Ask worker'}</Btn>
-        <Btn aria-expanded={!!form} onClick={() => setClosing(form ? null : { id: gap.id, chip: '', text: '' })}>Not worked</Btn>
+        <Btn onClick={() => ask(gap, who)}>{gap.onSite ? 'Ask Supervisor' : 'Ask Worker'}</Btn>
+        <Btn aria-expanded={!!form} onClick={() => setClosing(form ? null : { id: gap.id, chip: '', text: '' })}>Not Worked</Btn>
       </div>
       {form && <form className="intake-reason" aria-label={`Why ${gap.worker} didn't work`}
         onSubmit={(event) => { event.preventDefault(); if (reason) closeGap(gap, reason) }}
         onKeyDown={(event) => { if (event.key === 'Escape') setClosing(null) }}>
         <div className="chip-row" role="group" aria-label="Reason">
           {REASONS.map((chip) => <Chip key={chip} active={form.chip === chip} aria-pressed={form.chip === chip}
-            onClick={() => setClosing({ ...form, chip })}>{chip}</Chip>)}
+            onClick={() => setClosing({ ...form, chip })}>{titleCase(chip)}</Chip>)}
         </div>
         <input className="q-input" value={form.text} autoFocus={form.chip === 'Other'} aria-label="Reason in your words"
           placeholder={form.chip === 'Other' ? 'Say why' : 'Add a note (optional)'} onChange={(event) => setClosing({ ...form, text: event.target.value })} />
-        <Btn type="submit" className="primary" disabled={!reason}>Close gap</Btn>
+        <Btn type="submit" className="primary" disabled={!reason}>Close Gap</Btn>
       </form>}
     </li>
   }
@@ -91,7 +92,7 @@ export function Intake({ cycle, intake }: { cycle: DeskCycle; intake: IntakeData
           {note && <span className="intake-agent">{note}</span>}
         </div>
         <div className="intake-gap-actions">
-          <Btn onClick={() => { addNote(threadKey(cycle.id, row.source.id), 'agent', 'Nudged the site'); toast(`Nudged ${client}`) }}>Nudge site</Btn>
+          <Btn onClick={() => { addNote(threadKey(cycle.id, row.source.id), 'agent', 'Nudged the site'); toast(`Nudged ${client}`) }}>Nudge Site</Btn>
           <Btn onClick={() => { setUploading(row); upload.current?.click() }}>Upload</Btn>
         </div>
       </li>}

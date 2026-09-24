@@ -65,7 +65,7 @@ const textContent = (html: string) => html.replace(/<[^>]*>/g, '')
 function clickSignIn(node: ReactNode): boolean {
   for (const child of Children.toArray(node)) {
     if (!isValidElement<{ children?: ReactNode; onClick?: () => void }>(child)) continue
-    if (child.props.children === 'Sign in' && child.props.onClick) {
+    if (child.props.children === 'Sign In' && child.props.onClick) {
       child.props.onClick()
       return true
     }

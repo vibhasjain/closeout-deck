@@ -78,6 +78,8 @@
 
 /* Decision cards: toggle, issue pill, what the agent wants, pay impact, the one action. */
 .payroll-summary .payroll-summary-row { grid-template-columns: 1.25rem 12rem minmax(0, 1fr) 13rem 12rem; }
+.payroll-summary .payroll-summary-row { cursor: pointer; }
+.payroll-summary .payroll-summary-row:hover { background: hsl(var(--muted) / .4); }
 .decision-toggle { display: inline-flex; align-items: center; justify-content: center; width: 1.25rem; height: 1.25rem; color: hsl(var(--muted-foreground)); }
 .decision-line { min-width: 0; }
 .decision-action { display: flex; justify-content: flex-end; }

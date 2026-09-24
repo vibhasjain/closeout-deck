@@ -47,7 +47,7 @@ export function RuleEvidence({ rule }: { rule: Rule }) {
       ['Effective', source?.dates ?? '—'],
       ...(rule.source.cite ? [['Citation', rule.source.cite] as [string, string]] : []),
     ]} />
-    <div className="actions"><Btn className="src-link" onClick={() => openDocument(rule)}>Open source document ↗</Btn></div>
+    <div className="actions"><Btn className="src-link" onClick={() => openDocument(rule)}>Open Source Document ↗</Btn></div>
   </div>
 }
 
@@ -121,7 +121,7 @@ function ShiftEvidence({ cycle, rs, primaryRuleId, showHeading = true, showSourc
       <PayDelta current={rs.naive} resolved={rs.pay} size="lg" />
       {((!decision && onApply) || (showSourceAction && primaryRule)) && <div className="actions">
         {onApply && !decision && <Btn className="primary" onClick={onApply}>Approve</Btn>}
-        {showSourceAction && primaryRule && <Btn onClick={() => showRule(primaryRule)}>Open source document ↗</Btn>}
+        {showSourceAction && primaryRule && <Btn onClick={() => showRule(primaryRule)}>Open Source Document ↗</Btn>}
       </div>}
     </div>
     </div>}
