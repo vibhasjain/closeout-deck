@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowUp, Check as CheckIcon, FileSpreadsheet, Lock, ScrollText, Upload, X } from 'lucide-react'
+import { ArrowUp, Check as CheckIcon, ChevronLeft, ChevronRight, FileSpreadsheet, Lock, ScrollText, Upload, X } from 'lucide-react'
 import mark from '@/assets/hypertrack-sm.svg'
 import { PayCycleForm } from '@/components/PayCycles'
 import { PayrollCalendar } from '@/components/PayrollCalendar'
@@ -485,7 +485,12 @@ export function Agent() {
 
   return <div className="convo">
     <header className="convo-head">
-      <span>{step} of {TURNS}</span>
+      {/* Step back or forward one question, answered or not. */}
+      <span className="convo-steps">
+        <button type="button" className="icon-btn sm dim" aria-label="Previous step" disabled={step <= 1} onClick={() => go(step - 1)}><ChevronLeft aria-hidden /></button>
+        <span>{step} of {TURNS}</span>
+        <button type="button" className="icon-btn sm dim" aria-label="Next step" disabled={step >= TURNS} onClick={() => go(step + 1)}><ChevronRight aria-hidden /></button>
+      </span>
       {/* One way out: a returning user goes back to Settings, a first-timer skips ahead. */}
       <Btn className="ghost convo-skip" onClick={() => { if (state.forwarded) navigate('/settings'); else { update({ forwarded: true }); navigate('/timesheets') } }}>Skip</Btn>
     </header>

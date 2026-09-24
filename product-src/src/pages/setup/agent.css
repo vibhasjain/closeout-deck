@@ -159,3 +159,4 @@ button.convo-user:focus-visible { outline: 2px solid hsl(var(--foreground) / .35
 .finding-detail-head .bucket-tag { white-space: nowrap; }
 .sample-table .sheet th:first-child, .sample-table .sheet td:first-child { position: sticky; left: 0; z-index: 1; background: hsl(var(--background)); box-shadow: inset -1px 0 hsl(var(--border)); }
 .sample-table .sheet thead th:first-child { z-index: 2; }
+.convo-steps { display: inline-flex; align-items: center; gap: .25rem; }
