@@ -61,6 +61,25 @@ select.ctl:hover { background-color: hsl(var(--muted)); }
 .top { gap: .5rem; }
 mark { background: hsl(48 100% 70% / .7); color: inherit; border-radius: 2px; padding: 0 1px; }
 @media (max-width: 640px) { .search { width: auto; flex: 1; min-width: 0; margin-left: .5rem; } .top select { width: 32px; padding: 0; color: transparent; background-position: center; } }
+.tabs { display: inline-flex; gap: 2px; margin-left: 1rem; padding: 3px; background: hsl(var(--muted)); border-radius: .55rem; }
+.tab { all: unset; cursor: pointer; font-size: 12.5px; font-weight: 500; padding: 4px 12px; border-radius: .4rem; color: hsl(var(--muted-foreground)); }
+.tab.on { background: hsl(var(--background)); color: hsl(var(--foreground)); box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
+.search { margin-left: .5rem; }
+/* analysis table */
+table.an th:not(.q), table.an td:not(.q) { width: 380px; min-width: 380px; }
+table.an th.an-f, table.an td.an-f { width: 300px; min-width: 300px; }
+.an-h { font-weight: 600; font-size: 13px; line-height: 1.45; }
+.an-pts { list-style: none; margin: .6rem 0 0; padding: 0; display: flex; flex-direction: column; gap: .55rem; }
+.an-pts li { font-size: 12.5px; line-height: 1.45; color: hsl(var(--foreground) / .85); }
+.cites { display: inline-flex; flex-wrap: wrap; gap: 3px; vertical-align: -3px; margin-left: .35rem; }
+.cites img, .cites .ph { width: 14px; height: 14px; border-radius: 3px; object-fit: contain; }
+.cites .more { font-family: var(--mono); font-size: 10px; color: hsl(var(--muted-foreground)); align-self: center; }
+.an-meta { margin-top: .6rem; font-family: var(--mono); font-size: 10.5px; color: hsl(var(--muted-foreground)); text-transform: uppercase; letter-spacing: .04em; }
+.fit { margin-top: .6rem; }
+.tag.fit-have { background: hsl(142 60% 95%); border-color: hsl(142 45% 82%); color: hsl(142 55% 28%); }
+.tag.fit-extend { background: hsl(220 70% 96%); border-color: hsl(220 50% 86%); color: hsl(220 45% 38%); }
+.tag.fit-gap { background: hsl(38 90% 94%); border-color: hsl(38 70% 80%); color: hsl(30 60% 32%); }
+.tag.ty svg { opacity: .8; }
 .logout { all: unset; cursor: pointer; margin-left: .75rem; display: inline-flex; color: hsl(var(--muted-foreground)); }
 .logout svg { width: 15px; height: 15px; }
 .logout:hover { color: hsl(var(--foreground)); }
@@ -159,6 +178,7 @@ td.sec { position: sticky; left: 0; background: hsl(var(--background)); border-r
 </div>
 <div id="app" class="app">
   <div class="top"><img src="/logo-small.svg" alt="HyperTrack">
+    <div class="tabs" role="tablist"><button class="tab on" data-tab="data">Data</button><button class="tab" data-tab="analysis">Analysis</button></div>
     <input id="q" class="ctl search" type="search" placeholder="Search" autocomplete="off" aria-label="Search companies, people and answers">
 <span class="lbl" id="meta"></span><button class="logout" id="logout" title="Log out" aria-label="Log out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></button></div>
   <div class="wrap"><table id="t"></table></div>
@@ -230,6 +250,8 @@ const ICON = {
   left: svg('<path d="m15 18-6-6 6-6"/>'),
   up: svg('<path d="m18 15-6-6-6 6"/>'),
   down: svg('<path d="m6 9 6 6 6-6"/>'),
+  modern: svg('<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>'),
+  trad: svg('<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4M10 10h4M10 14h4M10 18h4"/>'),
   ok: svg('<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>'),
   no: svg('<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>'),
   person: svg('<circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/>'),
@@ -246,17 +268,34 @@ const SRC_ICON = {
 const chip = (cite, attrs = '') => `<span class="tag${attrs ? ' click' : ''}"${attrs}>${SRC_ICON[cite.src] || ''}${esc(cite.label)}</span>`
 // Live search: case-insensitive substring; hl() escapes then wraps matches in <mark>.
 let ROW_SORT = { co: '', mode: '' }  // click a company name: answered first -> unanswered first -> off
-let Q = '', F_STATUS = ''
+let Q = '', F_STATUS = '', F_TYPE = '', TAB = 'data', ANALYSIS = null
 // One column sort at a time: key = last | answers | sources | people | q<i>; dir desc -> asc -> off. Off = most recent first.
 let COL_SORT = { key: '', dir: '' }
 const hl = t => { const e = esc(t); if (!Q) return e; const q = esc(Q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); return e.replace(new RegExp(q, 'gi'), m => `<mark>${m}</mark>`) }
 const hay = c => [c.company, c.people, c.status, ...Object.values(c.cells).flat().flatMap(a => [a.a, a.cite.label, a.cite.quote])].join(' ').toLowerCase()
 const SRC = { gong: 'Gong', hubspot: 'HubSpot', slack: 'Slack', interview: 'Interview' }
+function renderAnalysis() {
+  $('t').className = 'an'
+  if (!ANALYSIS) { $('t').innerHTML = '<tbody><tr><td class="q">Loading analysis…</td></tr></tbody>'; return }
+  const byName = Object.fromEntries(DATA.companies.map(c => [c.company, c]))
+  const cites = names => { const n = names || []; const shown = n.slice(0, 10); return `<span class="cites">${shown.map(x => byName[x]?.logo ? `<img src="${esc(byName[x].logo)}" alt="" title="${esc(x)}" loading="lazy">` : `<span class="ph" title="${esc(x)}"></span>`).join('')}${n.length > 10 ? `<span class="more">+${n.length - 10}</span>` : ''}</span>` }
+  const pts = list => `<ul class="an-pts">${(list || []).map(p => `<li>${hl(p.text)}${cites(p.companies)}</li>`).join('')}</ul>`
+  const head = `<thead><tr><th class="q"></th><th>What we learned</th><th>Product hypothesis</th><th class="an-f">Feature</th></tr></thead>`
+  const across = `<tr class="across"><td class="q"><span class="rt">Across all questions</span></td><td>${pts(ANALYSIS.cross)}</td><td colspan="2"><div class="an-h">Top product bets</div><ul class="an-pts">${(ANALYSIS.bets || []).map(b => `<li>${hl(b.text)} <span class="an-meta" style="display:inline">${(b.qs || []).join(' ')}</span></li>`).join('')}</ul></td></tr>`
+  const rows = DATA.questions.map((q, i) => {
+    const r = ANALYSIS.rows['Q' + (i + 1)] || {}
+    return `<tr><td class="q"><span class="rt">${hl(q)}</span></td><td><div class="an-h">${hl(r.headline || '')}</div>${pts(r.points)}<div class="an-meta">${r.coverage ?? 0} companies · ${esc(r.confidence || '')} confidence</div></td><td>${hl(r.hypothesis || '')}</td><td class="an-f">${hl(r.feature || '')}${r.fit ? `<div class="fit"><span class="tag fit-${r.fit}">${r.fit === 'have' ? 'We have this' : r.fit === 'extend' ? 'Extends product' : 'Gap'}</span></div>` : ''}</td></tr>`
+  }).join('')
+  $('t').innerHTML = head + '<tbody>' + across + rows + '</tbody>'
+}
+
 function render() {
+  if (TAB === 'analysis') return renderAnalysis()
+  $('t').className = ''
   $('gate').hidden = true; $('app').hidden = false
   const lastIso = c => Object.values(c.cells).flat().map(a => a.cite.iso || '').sort().pop() || ''
   const qMatchesQuestion = Q && DATA.questions.some(x => x.toLowerCase().includes(Q.toLowerCase()))
-  let cos = DATA.companies.filter(c => (!F_STATUS || (F_STATUS === 'none' ? !c.status : c.status === F_STATUS)) && (!Q || qMatchesQuestion || hay(c).includes(Q.toLowerCase())))
+  let cos = DATA.companies.filter(c => (!F_TYPE || c.type === F_TYPE) && (!F_STATUS || (F_STATUS === 'none' ? !c.status : c.status === F_STATUS)) && (!Q || qMatchesQuestion || hay(c).includes(Q.toLowerCase())))
   const nAns = c => Object.values(c.cells).filter(v => v.length).length
   const nSrc = c => new Set(Object.values(c.cells).flat().map(a => a.cite.label)).size
   const nPpl = c => (c.people || '').split(' · ').filter(Boolean).length
@@ -275,8 +314,9 @@ function render() {
   const srcTags = c => { const seen = new Map(); cites(c).forEach(x => seen.has(x.label) || seen.set(x.label, x)); return [...seen.values()].sort((a, b) => a.label.localeCompare(b.label)).map(x => chip(x)).join('') }
   // column sorts reorder sideways: right = highest first, left = lowest first
   const arrow = k => COL_SORT.key === k ? `<i class="arr">${COL_SORT.dir === 'desc' ? ICON.right : ICON.left}</i>` : ''
-  const row = (label, f, k) => `<tr class="prow${k === 'people' ? ' ppl-row' : ''}"><td class="q${k ? ' rs' : ''}"${k ? ` data-sort="${k}"` : ''}><span class="rl"><span class="rt">${label}</span>${k === 'status' ? '' : arrow(k)}</span></td>${cos.map(c => `<td>${f(c)}</td>`).join('')}</tr>`
+  const row = (label, f, k) => `<tr class="prow${k === 'people' ? ' ppl-row' : ''}"><td class="q${k ? ' rs' : ''}"${k ? ` data-sort="${k}"` : ''}><span class="rl"><span class="rt">${label}</span>${k === 'status' || k === 'type' ? '' : arrow(k)}</span></td>${cos.map(c => `<td>${f(c)}</td>`).join('')}</tr>`
   const pplRow = row('Status', c => c.status ? `<span class="tag st-${c.status.toLowerCase()}">${c.status === 'Contracted' ? ICON.ok : ICON.no}${hl(c.status)}</span>` : '', 'status')
+    + row('Type', c => c.type ? `<span class="tag ty">${c.type === 'Modern' ? ICON.modern : ICON.trad}${hl(c.type)}</span>` : '', 'type')
     + row('Last conversation', c => { const d = last(c); return d ? `<span class="dt">${ago(new Date(d + 'T12:00:00'))}</span>` : '' }, 'last')
     + row('Answers', c => `<span class="num">${nAns(c)}</span>`, 'answers')
     + row('Sources', c => `<div class="srcs">${srcTags(c)}</div>`, 'sources')
@@ -315,7 +355,7 @@ function closeDrawer() { $('drawer').classList.remove('open'); $('scrim').classL
 
 $('t').addEventListener('click', e => {
   if (e.target.closest('#clr')) {
-    ROW_SORT = { co: '', mode: '' }; COL_SORT = { key: '', dir: '' }; F_STATUS = ''; Q = ''; $('q').value = ''
+    ROW_SORT = { co: '', mode: '' }; COL_SORT = { key: '', dir: '' }; F_STATUS = ''; F_TYPE = ''; Q = ''; $('q').value = ''
     render(); document.querySelector('.wrap').scrollTo({ top: 0, left: 0 })
     return
   }
@@ -323,6 +363,7 @@ $('t').addEventListener('click', e => {
   if (rs) {
     const k = rs.dataset.sort
     if (k === 'status') F_STATUS = F_STATUS === 'Contracted' ? 'Churned' : 'Contracted'
+    else if (k === 'type') F_TYPE = F_TYPE === 'Modern' ? 'Traditional' : 'Modern'
     else COL_SORT = { key: k, dir: COL_SORT.key === k && COL_SORT.dir === 'desc' ? 'asc' : 'desc' }  // alternate; Reset clears
     render()
     // same as a company sort: clicked row right under the header, columns from the start
@@ -346,6 +387,18 @@ $('t').addEventListener('click', e => {
   } const t = e.target.closest('.tag.click'); if (t) openDrawer(+t.dataset.c, +t.dataset.q, +t.dataset.a) })
 // One-click log out: drop the viewer session (not the Agent Keyboard owner login) and stop Google auto sign-in.
 $('logout').onclick = () => { try { localStorage.removeItem(KEY) } catch {} window.google?.accounts?.id?.disableAutoSelect(); location.reload() }
+document.querySelector('.tabs').addEventListener('click', async e => {
+  const b = e.target.closest('.tab'); if (!b || b.dataset.tab === TAB) return
+  TAB = b.dataset.tab
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === b))
+  document.querySelector('.wrap').scrollTo({ top: 0, left: 0 })
+  if (DATA) render()
+  if (TAB === 'analysis' && !ANALYSIS) {
+    const res = await authed('answers/analysis.json')
+    ANALYSIS = res.ok ? await res.json() : { rows: {}, cross: [], bets: [] }
+    if (TAB === 'analysis') render()
+  }
+})
 $('q').addEventListener('input', e => { Q = e.target.value.trim(); if (DATA) render() })
 // No zoom anywhere: iOS Safari ignores user-scalable=no, so block its pinch gestures and double-tap zoom too.
 for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, e => e.preventDefault(), { passive: false })
