@@ -69,8 +69,10 @@ mark { background: hsl(48 100% 70% / .7); color: inherit; border-radius: 2px; pa
 table.an th:not(.q), table.an td:not(.q) { width: 380px; min-width: 380px; }
 table.an th.an-f, table.an td.an-f { width: 300px; min-width: 300px; }
 .an-h { font-weight: 600; font-size: 13px; line-height: 1.45; }
-.an-pts { list-style: none; margin: .6rem 0 0; padding: 0; display: flex; flex-direction: column; gap: .55rem; }
+.an-pts { list-style: none; margin: .75rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 1rem; }
 .an-pts li { font-size: 12.5px; line-height: 1.45; color: hsl(var(--foreground) / .85); }
+.an-pts:first-child { margin-top: 0; }
+.tag.cnt { margin-left: .2rem; font-family: var(--mono); vertical-align: 1px; }
 .cites { display: inline-flex; flex-wrap: wrap; gap: 3px; vertical-align: -3px; margin-left: .35rem; }
 .cites img, .cites .ph { width: 14px; height: 14px; border-radius: 3px; object-fit: contain; }
 .cites .more { font-family: var(--mono); font-size: 10px; color: hsl(var(--muted-foreground)); align-self: center; }
@@ -278,7 +280,7 @@ function renderAnalysis() {
   $('t').className = 'an'
   if (!ANALYSIS) { $('t').innerHTML = '<tbody><tr><td class="q">Loading analysis…</td></tr></tbody>'; return }
   const byName = Object.fromEntries(DATA.companies.map(c => [c.company, c]))
-  const cites = names => { const n = names || []; const shown = n.slice(0, 10); return `<span class="cites">${shown.map(x => byName[x]?.logo ? `<img src="${esc(byName[x].logo)}" alt="" title="${esc(x)}" loading="lazy">` : `<span class="ph" title="${esc(x)}"></span>`).join('')}${n.length > 10 ? `<span class="more">+${n.length - 10}</span>` : ''}</span>` }
+  const cites = names => { const n = names || []; return n.length ? ` <span class="tag cnt" title="${esc(n.join(', '))}">${n.length} ${n.length === 1 ? 'company' : 'companies'}</span>` : '' }
   const pts = list => `<ul class="an-pts">${(list || []).map(p => `<li>${hl(p.text)}${cites(p.companies)}</li>`).join('')}</ul>`
   const head = `<thead><tr><th class="q"></th><th>What we learned</th><th>Product hypothesis</th><th class="an-f">Feature</th></tr></thead>`
   const across = `<tr class="across"><td class="q"><span class="rt">Across all questions</span></td><td>${pts(ANALYSIS.cross)}</td><td colspan="2"><div class="an-h">Top product bets</div><ul class="an-pts">${(ANALYSIS.bets || []).map(b => `<li>${hl(b.text)} <span class="an-meta" style="display:inline">${(b.qs || []).join(' ')}</span></li>`).join('')}</ul></td></tr>`
