@@ -146,7 +146,7 @@ td.sec { position: sticky; left: 0; background: hsl(var(--background)); border-r
 .foot .dt { font-family: var(--mono); font-size: 10.5px; word-spacing: -.3em; color: hsl(var(--muted-foreground)); white-space: nowrap; }
 
 .ans + .ans { margin-top: 1.1rem; padding-top: 1.1rem; border-top: 1px dashed hsl(var(--border)); }
-.tag { display: inline-flex; align-items: center; gap: .3rem; border-radius: 9999px; border: 1px solid hsl(var(--border)); background: hsl(var(--muted)); padding: 0 .45rem; font-size: 10px; line-height: 1.6; color: hsl(var(--muted-foreground)); white-space: nowrap; vertical-align: 1px; margin-left: .25rem; }
+.tag { display: inline-flex; align-items: center; gap: .3rem; border-radius: 9999px; border: 1px solid hsl(var(--border)); background: hsl(var(--muted)); padding: 0 .45rem; font-size: 10px; line-height: 1.6; color: hsl(var(--muted-foreground)); white-space: nowrap; vertical-align: 1px;  }
 .tag.click { font-family: var(--mono); font-weight: 500; cursor: pointer; transition: background-color .12s, color .12s, border-color .12s; }
 .tag svg, .tag img { width: 10px; height: 10px; flex-shrink: 0; opacity: .7; }
 .tag img { filter: grayscale(1); }
@@ -282,13 +282,13 @@ function renderAnalysis() {
   $('t').className = 'an'
   if (!ANALYSIS) { $('t').innerHTML = '<tbody><tr><td class="q">Loading analysis…</td></tr></tbody>'; return }
   const byName = Object.fromEntries(DATA.companies.map(c => [c.company, c]))
-  const cites = names => { const n = names || []; return n.length ? ` <span class="tag cnt" title="${esc(n.join(', '))}">${n.length} ${n.length === 1 ? 'company' : 'companies'}</span>` : '' }
+  const cites = names => { const n = names || []; return n.length ? ` <span class="tag cnt" title="${esc(n.join(', '))}">${n.length} ${n.length === 1 ? 'Company' : 'Companies'}</span>` : '' }
   const pts = list => `<ul class="an-pts">${(list || []).map(p => `<li>${hl(p.text)}${cites(p.companies)}</li>`).join('')}</ul>`
   const head = `<thead><tr><th class="q"></th><th>What we learned</th><th>Product hypothesis</th><th class="an-f">Feature</th></tr></thead>`
   const across = `<tr class="across"><td class="q"><span class="rt">Across all questions</span></td><td>${pts(ANALYSIS.cross)}</td><td colspan="2"><div class="an-h">Top product bets</div><ul class="an-pts">${(ANALYSIS.bets || []).map(b => `<li>${hl(b.text)} <span class="an-meta" style="display:inline">${(b.qs || []).join(' ')}</span></li>`).join('')}</ul></td></tr>`
   const rows = DATA.questions.map((q, i) => {
     const r = ANALYSIS.rows['Q' + (i + 1)] || {}
-    return `<tr><td class="q"><span class="rt">${hl(q)}</span></td><td><div class="an-h">${hl(r.headline || '')}</div>${pts(r.points)}<div class="an-meta">${r.coverage ?? 0} companies · ${esc(r.confidence || '')} confidence</div></td><td>${hl(r.hypothesis || '')}</td><td class="an-f">${hl(r.feature || '')}${r.fit ? `<div class="fit"><span class="tag fit-${r.fit}">${r.fit === 'have' ? 'We have this' : r.fit === 'extend' ? 'Extends product' : 'Gap'}</span></div>` : ''}</td></tr>`
+    return `<tr><td class="q"><span class="rt">${hl(q)}</span></td><td><div class="an-h">${hl(r.headline || '')}</div>${pts(r.points)}<div class="an-meta">${r.coverage ?? 0} companies · ${esc(r.confidence || '')} confidence</div></td><td>${hl(r.hypothesis || '')}</td><td class="an-f">${hl(r.feature || '')}${r.fit ? `<div class="fit"><span class="tag fit-${r.fit}">${r.fit === 'have' ? 'We Have This' : r.fit === 'extend' ? 'Extends Product' : 'Gap'}</span></div>` : ''}</td></tr>`
   }).join('')
   $('t').innerHTML = head + '<tbody>' + across + rows + '</tbody>'
 }
