@@ -138,13 +138,15 @@ function signIn() {
 }
 
 const people = p => { const a = p.split(' · '); return a.slice(0, 3).map(esc).join('<br>') + (a.length > 3 ? `<br>+${a.length - 3} more` : '') }
+// One unit only: "12 minutes ago", "3 hours ago", "2 days ago".
+const ago = d => { const m = Math.max(1, Math.round((Date.now() - d) / 60000)); const [n, u] = m < 60 ? [m, 'minute'] : m < 1440 ? [Math.round(m / 60), 'hour'] : [Math.round(m / 1440), 'day']; return `${n} ${u}${n === 1 ? '' : 's'} ago` }
 const SRC = { gong: 'Gong', hubspot: 'HubSpot', slack: 'Slack', interview: 'Interview' }
 function render() {
   $('gate').hidden = true; $('app').hidden = false
   const cos = DATA.companies
   const n = cos.reduce((t, c) => t + Object.values(c.cells).reduce((u, v) => u + v.length, 0), 0)
   const up = new Date(DATA.updatedAt)
-  $('meta').textContent = `${cos.length} companies · ${DATA.questions.length} questions · ${n} answers · updated ${up.getDate()} ${up.toLocaleString('en-US', { month: 'short' })} ${String(up.getFullYear()).slice(2)}, ${up.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+  $('meta').textContent = `${cos.length} companies · ${DATA.questions.length} questions · ${n} answers · updated ${ago(up)}`
   const logo = c => c.logo ? `<img src="${esc(c.logo)}" alt="" loading="lazy" onerror="this.outerHTML='<span class=ph></span>'">` : '<span class="ph"></span>'
   const head = `<thead><tr><th class="q lbl">Question</th>${cos.map(c => `<th><div class="co">${logo(c)}<span>${esc(c.company)}</span></div>${c.people ? `<span class="who" title="${esc(c.people)}">${people(c.people)}</span>` : ''}</th>`).join('')}</tr></thead>`
   const body = DATA.questions.map((q, i) => `<tr><td class="q">${esc(q)}</td>${cos.map((c, ci) => `<td>${(c.cells['Q' + (i + 1)] || []).length ? '<div class="cell">' + (c.cells['Q' + (i + 1)]).map((a, ai) =>
