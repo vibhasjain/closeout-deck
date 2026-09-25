@@ -61,11 +61,14 @@ export class DataService {
     const facts = await this.store.listFacts(email)
     const storedMapping = parsed.fingerprint ? await this.store.getMapping(email, parsed.fingerprint) : null
     let mapping = storedMapping?.spec ?? libraryMapping(parsed, name, id)
+    let layout = mapping
     if (mapping) {
       mapping = { ...mapping, file: id }
       // The period belongs to this export, never to the cached layout's first file.
       const period = inferPeriod(name)
       mapping = { ...mapping, period }
+      // The cached layout stays site-agnostic: a connection's site lives on its source and replays via mappingForFile.
+      layout = mapping
       if (input.site) mapping = { ...mapping, source: { ...mapping.source, site: input.site } }
       if (input.system) mapping = { ...mapping, source: { ...mapping.source, system: input.system } }
     }
@@ -104,7 +107,7 @@ export class DataService {
       } else {
         const result = validation.result ?? normalize(grid, mapping, meta)
         const mappingId = storedMapping?.id ?? 'map_' + hash(`${email}|${file.fingerprint}`).slice(0, 16)
-        await this.store.upsertMapping(email, { id: mappingId, fingerprint: file.fingerprint, spec: mapping,
+        await this.store.upsertMapping(email, { id: mappingId, fingerprint: file.fingerprint, spec: layout!,
           author: storedMapping?.author ?? 'library', version: storedMapping?.version ?? 1, updatedAt: storedMapping?.updatedAt ?? receivedAt })
         file.mappingId = mappingId
         // Same-source exports replace whole worker-days; other sources can reveal duplicate submissions.

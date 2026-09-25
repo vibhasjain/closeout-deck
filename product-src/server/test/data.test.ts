@@ -141,6 +141,17 @@ test('simulated sheet and inbox connectors load their source sample shape and re
   assert.ok((await store.listEntries(email, { fileId: inbox.files[0].id })).every(e => e.site === 'Pacific Cold Storage' && e.sample))
 })
 
+test('a connection site stays on its source; the cached layout mapping never inherits it', async () => {
+  const { store, service } = setup()
+  const adp = await service.connect(email, { set: 2, system: 'ADP Workforce Now', site: 'Mercy General' }, {}, now)
+  assert.ok((await store.listEntries(email, { fileId: adp.files[0].id })).every(e => e.site === 'Mercy General'))
+  const layout = (await store.listMappings(email)).find(m => m.id === adp.files[0].mappingId)!
+  assert.equal(layout.spec.source.site, 'Lonestar Packaging')
+  assert.equal(layout.spec.source.system, 'ADP')
+  await service.renormalizeOriginals(email, {})
+  assert.ok((await store.listEntries(email, { fileId: adp.files[0].id })).every(e => e.site === 'Mercy General'))
+})
+
 test('simulated location connector names its file after the week its rows fall in, so it normalizes', async () => {
   const { service } = setup()
   await service.connect(email, { set: 1, system: 'Forwarding inbox', site: 'Pacific Cold Storage' }, {}, now)
