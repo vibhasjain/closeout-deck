@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { authedFetch } from '@/lib/api'
 import * as session from '@/lib/viewerSession'
-vi.mock('@/lib/viewerSession', () => ({ viewerSession: vi.fn(() => null), signOut: vi.fn() }))
+vi.mock('@/lib/viewerSession', () => ({ viewerSession: vi.fn(() => null), expireSession: vi.fn() }))
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals() })
 describe('authenticated transport', () => {
   it('preserves raw bodies and caller headers while adding the current token', async () => {
@@ -16,10 +16,10 @@ describe('authenticated transport', () => {
     expect(new Headers(init.headers).get('Authorization')).toBe('Bearer test-session')
     expect(new Headers(init.headers).get('X-Set')).toBe('2')
   })
-  it('signs out on a rejected session and returns the response for the caller', async () => {
+  it('drops the Closeout session on a 401 and returns the response for the caller', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 401 })))
     expect((await authedFetch('/data/cycles')).status).toBe(401)
-    expect(session.signOut).toHaveBeenCalledOnce()
+    expect(session.expireSession).toHaveBeenCalledOnce()
   })
 })
 

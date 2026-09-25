@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createViewerSession, HttpError, resetAppStorage, type ViewerSession } from '@/api'
+import './SignIn.css'
 
 interface GoogleCredentialResponse {
   credential: string
@@ -20,21 +21,6 @@ declare global {
     __GOOGLE_CLIENT_ID?: string
     google?: { accounts: { id: GoogleIdApi } }
   }
-}
-
-function tokenDomain(token: string): string {
-  try {
-    const segment = token.split('.')[1]
-    if (!segment) return ''
-    const normalized = segment.replace(/-/g, '+').replace(/_/g, '/')
-    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=')
-    const payload = JSON.parse(atob(padded)) as { hd?: unknown; email?: unknown }
-    if (typeof payload.hd === 'string') return payload.hd.toLowerCase()
-    if (typeof payload.email === 'string') return payload.email.split('@')[1]?.toLowerCase() ?? ''
-  } catch {
-    /* Invalid JWT; the server remains authoritative. */
-  }
-  return ''
 }
 
 export function SignIn({
@@ -61,11 +47,8 @@ export function SignIn({
         // Re-sign in silently when a session runs out instead of parking the
         // owner on a sign-in screen — but not after a deliberate sign-out.
         auto_select: autoSignIn,
+        // Exchanges with both backends, so this also signs in /answers and /product.
         callback: async (response) => {
-          if (tokenDomain(response.credential) !== 'hypertrack.io') {
-            setError('hypertrack.io accounts only.')
-            return
-          }
           setError('')
           try {
             const session = await createViewerSession(response.credential)
@@ -73,7 +56,7 @@ export function SignIn({
           } catch (sessionError) {
             resetAppStorage()
             setError(
-              sessionError instanceof HttpError && sessionError.status === 401
+              sessionError instanceof HttpError && (sessionError.status === 401 || sessionError.status === 403)
                 ? 'hypertrack.io accounts only.'
                 : 'Could not sign in. Try again.',
             )
@@ -111,17 +94,15 @@ export function SignIn({
     }
   }, [autoSignIn, clientId, onSignedIn])
 
+  // Same card as the /answers sign-in (markup and SignIn.css mirror answers/index.html); only the name differs.
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-6 text-center">
-      <div className="flex flex-col items-center gap-3">
-        <p className="text-[12px] text-muted-foreground">Internal — hypertrack.io accounts</p>
-        {notice && <p className="text-[12.5px] text-nosource">{notice}</p>}
-        {clientId ? (
-          <div ref={buttonRef} />
-        ) : (
-          <p className="text-[12px] text-nosource">Google sign-in is not configured</p>
-        )}
-        {error && <p className="text-[12.5px] text-nosource">{error}</p>}
+    <div className="gate">
+      <div className="card">
+        <img src="/logo-small.svg" alt="HyperTrack" className="card-logo" />
+        <h1 className="card-title">Chats</h1>
+        <p className="card-sub">Sign in with your hypertrack.io Google account.</p>
+        <div ref={buttonRef} className="card-btn" />
+        <p className="err">{error || notice || (clientId ? '' : 'Google sign-in is not configured.')}</p>
       </div>
     </div>
   )

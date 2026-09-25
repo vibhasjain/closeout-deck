@@ -8,5 +8,5 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: { outDir: '../product', emptyOutDir: true },
   resolve: { alias: { '@': path.resolve(__dirname, './src') } },
-  server: { port: 9000, strictPort: true, proxy: { '/api': { target: 'http://localhost:8787', rewrite: (url) => url.replace(/^\/api/, '') } } },
+  server: { port: 9000, strictPort: true, fs: { allow: ['..'] }, proxy: { '/api': { target: 'http://localhost:8787', rewrite: (url) => url.replace(/^\/api/, '') } } },
 })

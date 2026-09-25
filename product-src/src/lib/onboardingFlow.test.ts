@@ -6,7 +6,7 @@ import { applyOnboardReply, finishOnboarding, readFirm, requestOnboarding, rollb
 
 vi.mock('./chat', async (original) => ({ ...await original<typeof import('./chat')>(), stream: vi.fn() }))
 vi.mock('./onboarding', async (original) => ({ ...await original<typeof import('./onboarding')>(), flushOnboarding: vi.fn(async () => {}) }))
-vi.mock('./viewerSession', () => ({ viewerSession: () => null, signOut: vi.fn() }))
+vi.mock('./viewerSession', () => ({ viewerSession: () => null, expireSession: vi.fn() }))
 
 beforeEach(() => {
   vi.stubGlobal('localStorage', { getItem: () => null, setItem: vi.fn() })

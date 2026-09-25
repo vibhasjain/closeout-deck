@@ -22,6 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="/job/config.js"></script>
+<script src="/shared/session.js"></script>
 <style>
 /* Design language: /bench (ShopStream restraint) — B&W Inter 13px, mono chips, 480px source drawer. */
 :root {
@@ -245,9 +246,8 @@ const $ = id => document.getElementById(id)
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
 let DATA, TOKEN, VIEW = []
 
-function session() {
-  try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); return s && s.sessionToken && s.exp * 1000 > Date.now() ? s : null } catch { return null }
-}
+// One sign-in with /job and /product (/shared/session.js): a Google sign-in on any of them works here.
+const session = () => CloseoutSession.get('jobs')
 const authed = path => fetch(`${API}/files/${path}`, { headers: { Authorization: `Bearer ${TOKEN}` } })
 
 function skeleton() {
@@ -271,10 +271,9 @@ function signIn() {
     google.accounts.id.initialize({
       client_id: window.__GOOGLE_CLIENT_ID, auto_select: true,
       callback: async ({ credential }) => {
-        const res = await fetch(`${API}/session`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: credential }) })
-        if (!res.ok) { $('gateErr').textContent = 'hypertrack.io accounts only.'; return }
-        const s = await res.json(); try { localStorage.setItem(KEY, JSON.stringify(s)) } catch {}
-        skeleton(); load(s.sessionToken)
+        const { jobs } = await CloseoutSession.exchange(credential)
+        if (!jobs.session) { $('gateErr').textContent = 'hypertrack.io accounts only.'; return }
+        skeleton(); load(jobs.session.sessionToken)
       },
     })
     google.accounts.id.renderButton($('btn'), { theme: 'outline', size: 'large', text: 'signin_with' })
@@ -437,8 +436,8 @@ $('t').addEventListener('click', e => {
     }
     return
   } const t = e.target.closest('.tag.click'); if (t) openDrawer(+t.dataset.c, +t.dataset.q, +t.dataset.a) })
-// One-click log out: drop the viewer session (not the Agent Keyboard owner login) and stop Google auto sign-in.
-$('logout').onclick = () => { try { localStorage.removeItem(KEY) } catch {} window.google?.accounts?.id?.disableAutoSelect(); location.reload() }
+// One-click log out of /answers, /job and /product together (not the Agent Keyboard owner login); stops Google auto sign-in.
+$('logout').onclick = () => { CloseoutSession.signOut(); location.reload() }
 document.querySelector('.tabs').addEventListener('click', async e => {
   const b = e.target.closest('.tab'); if (!b || b.dataset.tab === TAB) return
   TAB = b.dataset.tab
@@ -604,9 +603,12 @@ const Story = (() => {
   return { render }
 })()
 
-// Signed in: straight to the table (skeleton while data loads). Otherwise the sign-in card.
+// Signed in: straight to the table (skeleton while data loads). Signed in on /product only: mint ours
+// silently behind the skeleton. Otherwise the sign-in card.
 const s = session()
-if (s) { skeleton(); load(s.sessionToken) } else signIn()
+if (s) { skeleton(); load(s.sessionToken) }
+else if (CloseoutSession.any()) { skeleton(); CloseoutSession.ensure('jobs', window.__GOOGLE_CLIENT_ID).then(n => n ? load(n.sessionToken) : signIn()) }
+else signIn()
 </script>
 <script src="https://agent-keyboard.fly.dev/widget.js" data-site="closeout-jobs" defer></script>
 </body>

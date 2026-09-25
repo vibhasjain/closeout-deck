@@ -12,9 +12,12 @@ import {
   HttpError,
   SESSION_EXPIRED_EVENT,
   canWrite,
+  ensureViewerSession,
   fetchFeed,
   getViewerSession,
+  hasOtherSession,
   resetAppStorage,
+  signOutEverywhere,
 } from '@/api'
 import type { Feed } from '@/types'
 
@@ -34,6 +37,8 @@ function loadAgentKeyboard(): void {
 
 export default function App() {
   const [viewerSession, setViewerSession] = useState(() => getViewerSession())
+  // Signed in on /product but not here yet: mint this page's session silently before showing a sign-in.
+  const [minting, setMinting] = useState(() => !viewerSession && !canWrite() && hasOtherSession())
   const [feed, setFeed] = useState<Feed | null>(null)
   const [feedError, setFeedError] = useState(false)
   const [signInNotice, setSignInNotice] = useState('')
@@ -75,6 +80,19 @@ export default function App() {
     setMobileDetail(false)
     setSignInNotice(notice)
   }, [])
+
+  const signOut = useCallback(() => {
+    signOutEverywhere()
+    returnToSignIn()
+  }, [returnToSignIn])
+
+  useEffect(() => {
+    if (!minting) return
+    void ensureViewerSession().then((session) => {
+      if (session) setViewerSession(session)
+      setMinting(false)
+    })
+  }, [minting])
 
   useEffect(() => {
     const onSessionExpired = () => returnToSignIn('Session expired — sign in again.')
@@ -126,6 +144,8 @@ export default function App() {
     setView((current) => current === next ? 'pipeline' : next)
     setMobileDetail(false)
   }, [])
+
+  if (minting) return null
 
   if (!authenticated) {
     return (
@@ -190,7 +210,7 @@ export default function App() {
               size="icon"
               variant="ghost"
               className="text-muted-foreground/60 hover:text-foreground"
-              onClick={() => returnToSignIn()}
+              onClick={signOut}
               aria-label="Sign out"
               title="Sign out"
             >
@@ -210,7 +230,7 @@ export default function App() {
             size="icon"
             variant="ghost"
             className="h-6 w-6 text-muted-foreground/60 hover:text-foreground"
-            onClick={() => returnToSignIn()}
+            onClick={signOut}
             aria-label="Sign out"
             title="Sign out"
           >
@@ -230,7 +250,7 @@ export default function App() {
               size="icon"
               variant="ghost"
               className="text-muted-foreground/60 hover:text-foreground"
-              onClick={() => returnToSignIn()}
+              onClick={signOut}
               aria-label="Sign out"
               title="Sign out"
             >

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { loadGoogleIdentity } from '@/lib/googleIdentity'
-import { saveViewerSession } from '@/lib/viewerSession'
-import { API_BASE } from '@/lib/api'
+import { signInWithGoogle } from '@/lib/viewerSession'
 import './SignIn.css'
 
 export default function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
@@ -23,17 +22,11 @@ export default function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
           pending.current = true
           setError(null)
           try {
-            const response = await fetch(`${API_BASE}/session`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ idToken: credential }),
-            })
+            // Signs in on /answers and /job too; ours is the one this page needs.
+            const { session, status } = await signInWithGoogle(credential)
             if (!active) return
-            if (response.status === 403) { setError('invite_only'); return }
-            if (!response.ok) throw new Error('Sign-in failed')
-            const session: unknown = await response.json()
-            if (!active) return
-            saveViewerSession(session)
+            if (status === 403) { setError('invite_only'); return }
+            if (!session) throw new Error('Sign-in failed')
             onSignedIn()
           } catch {
             if (active) setError('unavailable')

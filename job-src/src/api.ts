@@ -2,12 +2,13 @@ import type { Attachment, Candidate, Discussion, Draft, Feed, Meeting, MeetingRe
 import { parseDiscussion } from './lib/discussion'
 import { safeHttpUrl } from './lib/links'
 import { parseStatus } from './lib/status'
+// One sign-in across /product, /answers and /job: the shared script owns both session keys.
+import '../../shared/session.js'
 
 const API = 'https://agent-keyboard.fly.dev'
 const SITE = 'closeout-jobs'
 const FEED_PATH = `/sites/${SITE}/feed`
 const FILES_PATH = `/sites/${SITE}/files`
-const SESSION_PATH = `/sites/${SITE}/session`
 const OWNER_KEY = 'agent-keyboard-auth'
 const SESSION_KEY = 'job:viewer-session:v1'
 const COMPOSER_KEY_PREFIX = 'job:composer:v1:'
@@ -59,34 +60,23 @@ function freshOwnerToken(): string | null {
   return session && session.expiresAt - 60 > Date.now() / 1000 ? session.token : null
 }
 
-function viewerSession(value: unknown): ViewerSession | null {
-  const item = object(value)
-  const sessionToken = string(item.sessionToken)
-  const exp = typeof item.exp === 'number' ? item.exp : Number.NaN
-  const email = string(item.email)
-  return sessionToken && Number.isFinite(exp) && exp * 1000 > Date.now() && email
-    ? { sessionToken, exp, email }
-    : null
-}
-
 export function getViewerSession(): ViewerSession | null {
-  try {
-    const raw = localStorage.getItem(SESSION_KEY)
-    if (!raw) return null
-    const session = viewerSession(JSON.parse(raw))
-    if (!session) localStorage.removeItem(SESSION_KEY)
-    return session
-  } catch {
-    return null
-  }
+  return globalThis.CloseoutSession.get('jobs')
 }
 
-function storeViewerSession(session: ViewerSession): void {
-  try {
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session))
-  } catch {
-    /* localStorage unavailable; App keeps the session in memory */
-  }
+/** Signed in on /product only: mint this page's session with a silent Google One Tap. */
+export function ensureViewerSession(): Promise<ViewerSession | null> {
+  return globalThis.CloseoutSession.ensure('jobs', window.__GOOGLE_CLIENT_ID)
+}
+
+/** Signed in somewhere else on this origin (/product), so a silent mint is worth trying. */
+export function hasOtherSession(): boolean {
+  return Boolean(globalThis.CloseoutSession.get('closeout'))
+}
+
+/** Sign out of /job, /answers and /product together and stop Google auto sign-in. */
+export function signOutEverywhere(): void {
+  globalThis.CloseoutSession.signOut()
 }
 
 function storageKeys(storage: Storage): string[] {
@@ -112,8 +102,9 @@ export function purgeLegacyStorage(): void {
     /* sessionStorage unavailable */
   }
   try {
+    // Only this app's own stale keys: /product and /answers share this origin's localStorage.
     for (const key of storageKeys(localStorage)) {
-      if (!isCurrentLocalStorageKey(key)) localStorage.removeItem(key)
+      if ((key.startsWith(JOB_KEY_PREFIX) && !isCurrentLocalStorageKey(key)) || isGoogleTokenKey(key)) localStorage.removeItem(key)
     }
   } catch {
     /* localStorage unavailable */
@@ -307,17 +298,11 @@ async function fetchFeedResponse(): Promise<Response> {
   }
 }
 
+/** Exchange the Google credential with both backends (this page needs the Agent Keyboard one). */
 export async function createViewerSession(idToken: string): Promise<ViewerSession> {
-  const res = await fetch(`${API}${SESSION_PATH}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken }),
-  })
-  if (!res.ok) throw new HttpError(res.status, `${SESSION_PATH} -> ${res.status}`)
-  const session = viewerSession(await res.json())
-  if (!session) throw new Error('Invalid viewer session response')
-  storeViewerSession(session)
-  return session
+  const { jobs } = await globalThis.CloseoutSession.exchange(idToken)
+  if (!jobs.session) throw new HttpError(jobs.status, `sites/${SITE}/session -> ${jobs.status}`)
+  return jobs.session
 }
 
 export async function fetchFeed(): Promise<Feed> {

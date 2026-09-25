@@ -2,7 +2,7 @@ import { API_BASE } from '@/lib/api'
 import { appendTrace, limitCards, parseActions, parseCards, stream, type QuestionCard, type Action, type OnboardContext } from '@/lib/chat'
 import { applyAction, isAction, safeModelCard, safeModelText, validatedActions } from '@/lib/chatActions'
 import { effectiveAuthority, flushOnboarding, getOnboarding, inboxAddress, updateOnboarding, type FirmFacts, type Onboarding } from '@/lib/onboarding'
-import { signOut, viewerSession } from '@/lib/viewerSession'
+import { expireSession, viewerSession } from '@/lib/viewerSession'
 
 export const authHeaders = () => {
   const token = viewerSession()?.sessionToken
@@ -11,7 +11,7 @@ export const authHeaders = () => {
 
 export async function readFirm(domain: string, signal?: AbortSignal): Promise<FirmFacts> {
   const response = await fetch(`${API_BASE}/firm`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify({ domain }), signal })
-  if (response.status === 401) signOut()
+  if (response.status === 401) expireSession()
   if (!response.ok) throw new Error('The firm website could not be read. Check the website and try again.')
   const { firm } = await response.json()
   if (!firm || typeof firm.name !== 'string' || !isAction({ type: 'set_firm', patch: firm })) throw new Error('The firm read was incomplete. Try again.')
@@ -129,7 +129,7 @@ export function rollbackOnboardingAnswer(index: number) {
 export async function uploadOnboardingFiles(files: File[], signal?: AbortSignal, set?: 1 | 2 | 3): Promise<string[]> {
   for (const file of files) {
     const response = await fetch(`${API_BASE}/files`, { method: 'POST', headers: { ...authHeaders(), 'Content-Type': file.type || 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name), ...(set ? { 'X-Set': String(set) } : {}) }, body: file, signal })
-    if (response.status === 401) signOut()
+    if (response.status === 401) expireSession()
     if (response.status === 404 || response.status === 501) break
     if (!response.ok) throw new Error('The upload failed. Try those files again.')
   }

@@ -3,7 +3,7 @@ import type { CustomRule, Proposal } from '@/lib/rules'
 import type { Card, QuestionCard } from '@/lib/chat'
 import { withPeriodEnd, type Cohort } from '@/lib/cohorts'
 import { API_BASE } from '@/lib/api'
-import { viewerSession, signOut } from '@/lib/viewerSession'
+import { viewerSession, expireSession } from '@/lib/viewerSession'
 import { createOnboardingSync, type SyncPatch, type SyncStatus } from '@/lib/onboardingSync'
 import { createChatHistory, isChatMessage } from '@/lib/chatHistory'
 
@@ -276,7 +276,7 @@ const canonical = createOnboardingSync({
     const token = viewerSession()?.sessionToken
     const response = await fetch(`${API_BASE}/state`, { method, headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       ...(body ? { body: JSON.stringify(body) } : {}) })
-    if (response.status === 401) signOut()
+    if (response.status === 401) expireSession()
     return response
   },
   status(next) { syncStatus = next; syncListeners.forEach((listener) => listener()) },
@@ -290,7 +290,7 @@ const history = createChatHistory({
     const token = viewerSession()?.sessionToken
     const response = await fetch(`${API_BASE}/chat/history`, { method, headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       ...(body ? { body: JSON.stringify(body) } : {}) })
-    if (response.status === 401) signOut()
+    if (response.status === 401) expireSession()
     return response
   },
 })
