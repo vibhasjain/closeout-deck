@@ -12,6 +12,9 @@ export class DataError extends Error {
   constructor(readonly status: number, message: string) { super(message) }
 }
 const hash = (value: string | Uint8Array) => createHash('sha256').update(value).digest('hex')
+// An empty week publishes no run, so without this every read reloads all entries to rebuild it.
+// ponytail: in-process, keyed by input hash like the cycle summaries; a restart or second machine rebuilds once.
+const emptyCycles = new Map<string, string>()
 export const dateKey = (date: Date): string => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 
 /** Account-local civil date; calendar arithmetic never depends on the host's UTC date. */
@@ -209,12 +212,18 @@ export class DataService {
     for (const cycle of cycles) {
       const start = dateKey(cycle.start), end = dateKey(cycle.end)
       if (!files.some(f => f.status === 'normalized' && f.firstDate && f.lastDate && f.firstDate <= end && f.lastDate >= start) && !prior.some(r => r.cycleId === cycle.id)) continue
-      const old = prior.find(r => r.cycleId === cycle.id)
-      if (old?.inputHash === pipelineInputHash({ cycle, calendar, files, facts, engineSha, timezone: typeof doc.timezone === 'string' ? doc.timezone : undefined })) continue
+      const old = prior.find(r => r.cycleId === cycle.id), emptyKey = `${email}|${cycle.id}`
+      const inputHash = pipelineInputHash({ cycle, calendar, files, facts, engineSha, timezone: typeof doc.timezone === 'string' ? doc.timezone : undefined })
+      if ((old ? old.inputHash : emptyCycles.get(emptyKey)) === inputHash) continue
       entries ??= await this.store.listEntries(email)
       const built = buildCycle({ email, cycle, calendar, entries, files, facts, sources, engineSha, now, timezone: typeof doc.timezone === 'string' ? doc.timezone : undefined })
       const { payload } = built
-      if (!payload.week.length) { if (old) await this.store.deleteRun(email, cycle.id); continue }
+      if (!payload.week.length) {
+        if (old) await this.store.deleteRun(email, cycle.id)
+        emptyCycles.set(emptyKey, inputHash)
+        if (emptyCycles.size > 4096) emptyCycles.delete(emptyCycles.keys().next().value!)
+        continue
+      }
       await this.store.saveRun(email, { cycleId: cycle.id, runId: payload.runId, periodStart: start,
         inputHash: built.inputHash, storagePath: `${accountHash(email)}/runs/${cycle.id}/${payload.runId}.json.gz`,
         totals: payload.totals, counts: payload.counts, groups: payload.groups, gaps: payload.gaps,

@@ -68,6 +68,24 @@ for (const [frequency, cycleId] of [['Monthly', '2026-09-30'], ['Biweekly', '202
   })
 }
 
+test('a cycle whose overlapping file builds no time entries is not rebuilt on every read', async () => {
+  const store = createMemoryDataStore()
+  let reads = 0
+  const service = new DataService({ ...store, listEntries: (...args) => { reads++; return store.listEntries(...args) } })
+  // Location-only evidence overlaps the open cycle but yields no shift, so no run is published.
+  const bytes = Buffer.from('Worker,Site,Date,Entered,Exited\r\nAna Pena,Pacific Cold Storage,09/22/2026,6:00 AM,2:00 PM\r\n')
+  const file = await service.ingestFile(email, { name: 'hypertrack_location_09-27-2026.csv', bytes, set: 3, method: 'simulated', deferRun: true }, {}, now)
+  assert.equal(file.status, 'normalized'); assert.equal(file.firstDate, '2026-09-22')
+  reads = 0
+  assert.deepEqual(await service.recompute(email, {}, now), [])
+  assert.equal(reads, 1); assert.equal(await store.getRun(email, '2026-09-27'), null)
+  assert.deepEqual(await service.recompute(email, {}, now), [])
+  assert.equal(reads, 1)
+  // Changed inputs still rebuild the cycle.
+  await service.setFact(email, { kind: 'account', key: 'burden', value: { value: 0.3 } }, {}, new Date(now.getTime() + 1000))
+  assert.equal(reads, 2)
+})
+
 test('future exports are assigned to future cycles while preserving the biweekly anchor', async () => {
   const { store, service } = setup(), doc = { frequency: 'Biweekly' }
   const file = await service.ingestFile(email, { name: 'bullhorn_10-11-2026.csv', bytes: csv({ date: '10/06/2026' }), set: 1 }, doc, now)
