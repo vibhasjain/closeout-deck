@@ -44,7 +44,9 @@ export interface QuestionCard {
   choice?: { yours: string; sample: string }
 }
 export interface ChoiceCard { kind: 'choice'; ask: string; yours: string; sample: string; set?: 1 | 2 | 3 }
-export type Card = QuestionCard | ChoiceCard | { kind: 'onboard_complete' }
+export interface CallCard { kind: 'call'; callId: string; seconds: number }
+export interface CallTranscriptTurn { role: 'user' | 'agent'; text: string; startMs: number }
+export type Card = QuestionCard | ChoiceCard | CallCard | { kind: 'onboard_complete' }
   | { kind: 'task' | 'findings'; cycleId: string }
   | { kind: 'form'; form: JourneyFormName; cycleId: string; prefill?: Record<string, unknown> }
 
@@ -57,6 +59,9 @@ export const isJourneyForm = (value: unknown): value is JourneyFormName => typeo
 export function isCard(value: unknown): value is Card {
   if (!record(value)) return false
   if (value.kind === 'onboard_complete') return Object.keys(value).every((key) => key === 'kind')
+  if (value.kind === 'call') return typeof value.callId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value.callId)
+    && typeof value.seconds === 'number' && Number.isFinite(value.seconds) && value.seconds >= 0 && value.seconds <= 3600
+    && Object.keys(value).every(key => ['kind', 'callId', 'seconds'].includes(key))
   if (value.kind === 'task' || value.kind === 'findings') return reference(value.cycleId) && Object.keys(value).every(key => ['kind', 'cycleId'].includes(key))
   if (value.kind === 'form') return reference(value.cycleId) && isJourneyForm(value.form)
     && Object.keys(value).every(key => ['kind', 'form', 'cycleId', 'prefill'].includes(key))
@@ -99,8 +104,10 @@ export function limitCards(values: Card[]): { cards: Card[]; skipped: boolean } 
 
 export interface OnboardContext { firm: FirmFacts | null; profile: PayrollProfile; covered: OnboardTopic[]; sources: OnboardingSource[]; inbox: string; authorityConfigured: boolean; authority: Onboarding['authority']; phase?: 'first_closeout'; missingSets?: (1 | 2 | 3)[] }
 export interface IngestContext { fileIds: string[] }
+export interface VoiceContext { purpose: 'onboard' | 'desk'; uncovered?: string[]; known?: unknown; cycleId?: string; page?: string }
+export interface ConsolidateContext { callId: string }
 export type ChatMode = 'chat' | 'onboard' | 'scribe' | 'delegate' | 'consolidate' | 'ingest'
-export type TurnContext = ChatContext | OnboardContext | IngestContext
+export type TurnContext = ChatContext | OnboardContext | IngestContext | VoiceContext | ConsolidateContext
 export interface IngestEvent { fileId: string; status: 'normalized' | 'needs_mapping'; rows?: number; entries?: number; unparsed?: number; cycles?: string[]; gaps?: { ask: string }[]; errors?: string[] }
 
 export interface ChatContext { page: string; step?: string; calendar: object; cycle?: { id: string; label: string; stats: string }; selection?: object; discrepancies?: object[]; rules?: { id: string; sentence: string }[]; connections?: object; firm?: FirmFacts | null; profile?: PayrollProfile; sources?: OnboardingSource[]; inbox?: string; authorityConfigured?: boolean; authority?: Onboarding['authority'] }

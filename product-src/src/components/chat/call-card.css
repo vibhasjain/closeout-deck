@@ -1,0 +1,15 @@
+.chat-call-card { margin: 12px 0; border: 1px solid hsl(var(--border)); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+.chat-call-title { display: flex; align-items: flex-start; gap: 9px; margin: 0; font-size: 13px; line-height: 1.6; }
+.chat-call-title svg { flex: none; margin-top: 2px; }
+.chat-call-transcript { margin-top: 6px; }
+.chat-call-transcript summary { display: list-item; width: fit-content; min-height: 44px; padding: 12px 4px; cursor: pointer; font-size: 12px; color: var(--muted); }
+.chat-call-transcript summary:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 3px; }
+.chat-call-transcript ol { display: grid; gap: 16px; padding: 10px 0 0; margin: 0; list-style: none; max-height: 360px; overflow-y: auto; overscroll-behavior: contain; }
+.chat-call-speaker { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 11px; font-weight: 600; }
+.chat-call-speaker time { color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+.chat-call-transcript li p { margin: 4px 0 0; font-size: 13px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.chat-call-unavailable { margin: 4px 0; color: var(--muted); font-size: 12px; }
+.chat-call-save-error { margin: 8px 0; font-size: 12px; color: var(--muted); }
+.chat-call-save-error p { margin: 0; }
+.chat-call-retry { min-height: 36px; padding: 4px 6px; color: inherit; background: transparent; border: 0; text-decoration: underline; text-underline-offset: 3px; font: inherit; cursor: pointer; }
+.chat-call-retry:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 3px; }

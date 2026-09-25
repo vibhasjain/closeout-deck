@@ -147,3 +147,20 @@ describe('onboarding cards', () => {
     expect(parseCards('No card yet')).toEqual({ text: 'No card yet', cards: [], invalid: false })
   })
 })
+
+describe('call cards', () => {
+  const call = { kind: 'call', callId: '6b7fef17-4651-40b3-9d88-58621a81b4ca', seconds: 276 }
+  it('validates and parses the exact persisted call reference', () => {
+    expect(isCard(call)).toBe(true)
+    expect(isCard({ ...call, seconds: 0 })).toBe(true)
+    expect(isCard({ ...call, seconds: 3600 })).toBe(true)
+    expect(parseCards(`Call ended.\n\`\`\`card ${JSON.stringify(call)}\`\`\``)).toEqual({ text: 'Call ended.', cards: [call], invalid: false })
+  })
+  it('rejects missing or invalid references, durations and extra presentation fields', () => {
+    for (const card of [
+      { kind: 'call', callId: call.callId }, { ...call, callId: '' }, { ...call, callId: '../other-call' },
+      { ...call, seconds: '276' }, { ...call, seconds: -1 }, { ...call, seconds: 3601 },
+      { ...call, seconds: NaN }, { ...call, seconds: Infinity }, { ...call, transcript: [] },
+    ]) expect(isCard(card)).toBe(false)
+  })
+})

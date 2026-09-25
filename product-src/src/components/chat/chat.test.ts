@@ -3,15 +3,20 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { ChatPane } from './ChatPane'
 import { Message } from './Message'
 import { dayDivider } from './dayDivider'
+import { startCall } from '@/lib/live'
+import { startDictation, type DictationOptions } from '@/lib/dictate'
 import { DEFAULTS, getOnboarding, updateOnboarding, type Onboarding } from '@/lib/onboarding'
+import { CHAT_POST_EVENT } from '@/lib/chatBus'
+import { Chip } from '@/components/ui'
+import { Loader2, Square } from 'lucide-react'
 
-const hooks = vi.hoisted(() => ({ cursor: 0, slots: [] as unknown[] }))
+const hooks = vi.hoisted(() => ({ cursor: 0, slots: [] as unknown[], suggestions: [] as string[], effects: [] as { effect: () => void; dependencies?: unknown[] }[] }))
 const router = vi.hoisted(() => ({ params: new URLSearchParams(), setParams: vi.fn(), navigate: vi.fn() }))
 const transport = vi.hoisted(() => ({ stream: vi.fn() }))
 
 vi.mock('react', async (importOriginal) => ({
   ...await importOriginal<typeof import('react')>(),
-  useContext: (context: { _currentValue: unknown }) => context._currentValue,
+  useContext: (context: { _currentValue: unknown }) => Array.isArray(context._currentValue) ? hooks.suggestions : context._currentValue,
   useState: <T>(initial: T | (() => T)) => {
     const slot = hooks.cursor++
     if (!(slot in hooks.slots)) hooks.slots[slot] = typeof initial === 'function' ? (initial as () => T)() : initial
@@ -25,7 +30,7 @@ vi.mock('react', async (importOriginal) => ({
     return hooks.slots[slot]
   },
   useCallback: <T>(callback: T) => callback,
-  useEffect: () => {},
+  useEffect: (effect: () => void, dependencies?: unknown[]) => { hooks.effects.push({ effect, dependencies }) },
   useLayoutEffect: () => {},
 }))
 vi.mock('react-router-dom', () => ({
@@ -41,6 +46,9 @@ vi.mock('@/lib/chat', async (importOriginal) => ({
   ...await importOriginal<typeof import('@/lib/chat')>(), stream: transport.stream,
 }))
 
+vi.mock('@/lib/live', async (original) => ({ ...await original<typeof import('@/lib/live')>(), startCall: vi.fn() }))
+vi.mock('@/lib/dictate', () => ({ startDictation: vi.fn() }))
+
 type Props = {
   children?: ReactNode
   message?: { text: string }
@@ -49,6 +57,7 @@ type Props = {
   value?: string
   placeholder?: string
   'aria-label'?: string
+  'aria-pressed'?: boolean
   onClick?: () => void
   onSubmit?: (event: { preventDefault(): void }) => void
   onChange?: (event: { target: { value: string; files?: FileList } }) => void
@@ -59,15 +68,16 @@ const elements = (node: ReactNode): ReactElement<Props>[] => Children.toArray(no
 const button = (tree: ReactNode, name: string) => elements(tree).find((element) => element.type === 'button' && element.props['aria-label'] === name)!
 const textarea = (tree: ReactNode) => elements(tree).find((element) => element.type === 'textarea')!
 const composer = (tree: ReactNode) => elements(tree).find((element) => element.type === 'form')!
-function render(scope?: string) { hooks.cursor = 0; return ChatPane({ scope }) }
+function render(scope?: string) { hooks.cursor = 0; hooks.effects = []; return ChatPane({ scope }) }
 function type(value: string) { textarea(render()).props.onChange!({ target: { value } }) }
 function submit() { composer(render()).props.onSubmit!({ preventDefault() {} }) }
 
 beforeEach(() => {
   hooks.slots = []
+  hooks.suggestions = []
   vi.clearAllMocks()
   vi.stubGlobal('localStorage', { getItem: () => null, setItem: vi.fn() })
-  vi.stubGlobal('window', { setTimeout, clearTimeout })
+  vi.stubGlobal('window', { setTimeout, clearTimeout, addEventListener: vi.fn(), removeEventListener: vi.fn() })
   updateOnboarding(structuredClone(DEFAULTS))
   router.params = new URLSearchParams()
   router.setParams.mockImplementation((next: (previous: URLSearchParams) => URLSearchParams) => { router.params = next(router.params) })
@@ -76,13 +86,86 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('permanent Closeout Agent conversation', () => {
-  it('has an empty-state orb, exact placeholder, one disabled trailing action, and no Clear control', () => {
+  it('has an empty-state orb, exact placeholder, one phone trailing action, and no Clear control', () => {
     const tree = render()
     expect(textarea(tree).props.placeholder).toBe('Ask the Closeout Agent anything…')
-    expect(button(tree, 'Send message').props.disabled).toBe(true)
+    expect(button(tree, 'Call your Closeout Agent').props.disabled).toBe(false)
     expect(elements(tree).filter(({ props }) => props.className === 'icon-btn chat-send')).toHaveLength(1)
     expect(elements(tree).some(({ props }) => props.className === 'chat-empty')).toBe(true)
     expect(elements(tree).some(({ props }) => /clear/i.test(props['aria-label'] ?? ''))).toBe(false)
+  })
+
+  it('starts a desk call from the single empty trailing button and switches to Send with text', async () => {
+    const snapshot = { status: 'connecting' as const, orb: 'connecting' as const, stream: null, remoteStream: null, muted: false, seconds: 0, caption: '', transcript: [], level: 0 }
+    vi.mocked(startCall).mockReturnValue({ snapshot: () => snapshot, hangup: vi.fn(async () => {}), dispose: vi.fn(async () => {}), release: vi.fn(async () => {}), retrySave: vi.fn(async () => {}), retryTurn: vi.fn(), mute: vi.fn() })
+    button(render(), 'Call your Closeout Agent').props.onClick!()
+    await vi.waitFor(() => expect(startCall).toHaveBeenCalledWith(expect.objectContaining({ purpose: 'desk' })))
+    expect(vi.mocked(startCall).mock.calls[0][0].getContext?.()).toMatchObject({ page: '/payroll', calendar: expect.any(Object) })
+    expect(transport.stream).not.toHaveBeenCalled()
+    // A fresh composer has Send when there is a draft, then Stop during its reply.
+    hooks.slots = []
+    type('Review this Payroll')
+    expect(button(render(), 'Send message').props.disabled).toBe(false)
+    expect(button(render(), 'Call your Closeout Agent')).toBeUndefined()
+  })
+
+  it('blocks suggestions and posted chat turns for the full live call', async () => {
+    const snapshot = { status: 'active' as const, orb: 'listening' as const, stream: null, remoteStream: null, muted: false, seconds: 8, caption: '', transcript: [], level: 0 }
+    vi.mocked(startCall).mockReturnValue({ snapshot: () => snapshot, hangup: vi.fn(async () => {}), dispose: vi.fn(async () => {}), release: vi.fn(async () => {}), retrySave: vi.fn(async () => {}), retryTurn: vi.fn(), mute: vi.fn() })
+    hooks.suggestions = ['Review this Payroll']
+    button(render(), 'Call your Closeout Agent').props.onClick!()
+    await vi.waitFor(() => expect(startCall).toHaveBeenCalled())
+    const tree = render()
+    const suggestion = elements(tree).find(element => element.type === Chip)!
+    expect(suggestion.props.disabled).toBe(true)
+    suggestion.props.onClick!()
+    hooks.effects.find(({ dependencies }) => dependencies?.[1] === router.setParams)!.effect()
+    const listener = vi.mocked(window.addEventListener).mock.calls.find(([type]) => type === CHAT_POST_EVENT)?.[1] as EventListener
+    listener({ detail: { text: 'Approve this item' } } as unknown as Event)
+    expect(router.setParams).not.toHaveBeenCalled()
+    expect(transport.stream).not.toHaveBeenCalled()
+    expect(getOnboarding().chat).toHaveLength(0)
+  })
+
+  it('shows dictation connecting, listening and finishing states with an outline error retry', async () => {
+    let options!: DictationOptions
+    let finish!: (text: string) => void
+    const stop = vi.fn(() => { options.onState?.('finishing'); return new Promise<string>(resolve => { finish = resolve }) })
+    vi.mocked(startDictation).mockImplementation(value => { options = value; return { stop, dispose: vi.fn() } })
+    button(render(), 'Dictate message').props.onClick!()
+    expect(button(render(), 'Stop dictation').props['aria-pressed']).toBe(true)
+    options.onState?.('connecting')
+    expect(elements(render()).some(element => element.props.children === 'Connecting…')).toBe(true)
+    expect(elements(button(render(), 'Stop dictation')).some(element => element.type === Loader2)).toBe(true)
+    options.onState?.('listening')
+    expect(elements(render()).some(element => element.props.children === 'Listening…')).toBe(true)
+    expect(elements(button(render(), 'Stop dictation')).some(element => element.type === Square)).toBe(true)
+    button(render(), 'Stop dictation').props.onClick!()
+    expect(elements(render()).some(element => element.props.children === 'Finishing…')).toBe(true)
+    expect(button(render(), 'Stop dictation').props.disabled).toBe(true)
+    finish('Please check')
+    await Promise.resolve()
+    options.onError('The dictation connection was interrupted.')
+    const retry = elements(render()).find(element => element.props.children === 'Retry')!
+    expect(retry.props.className).toBe('btn')
+  })
+
+  it('Enter waits for dictation commit completion before sending the corrected final transcript', async () => {
+    let options!: DictationOptions
+    let finish!: (text: string) => void
+    const stop = vi.fn(() => new Promise<string>(resolve => { finish = resolve }))
+    vi.mocked(startDictation).mockImplementation(value => { options = value; return { stop, dispose: vi.fn() } })
+    type('Please')
+    button(render(), 'Dictate message').props.onClick!()
+    options.onTranscript('approve the entry', false)
+    expect(textarea(render()).props.value).toBe('Please approve the entry')
+    textarea(render()).props.onKeyDown!({ key: 'Enter', shiftKey: false, nativeEvent: { isComposing: false }, preventDefault() {} })
+    expect(stop).toHaveBeenCalledOnce()
+    expect(transport.stream).not.toHaveBeenCalled()
+    options.onTranscript('approve the time entries.', true)
+    finish('approve the time entries.')
+    await vi.waitFor(() => expect(getOnboarding().chat).toHaveLength(2))
+    expect(getOnboarding().chat[0].text).toBe('Please approve the time entries.')
   })
 
   it('keeps existing conversation and session when sending and never offers Clear', async () => {
@@ -117,7 +200,7 @@ describe('permanent Closeout Agent conversation', () => {
     expect(getOnboarding().chat[1].actions).toBeUndefined()
     expect(getOnboarding().payDay).toBe(DEFAULTS.payDay)
     expect(getOnboarding().chatSessionId).toBe('saved-session')
-    expect(button(render(), 'Send message').props.disabled).toBe(true)
+    expect(button(render(), 'Call your Closeout Agent').props.disabled).toBe(false)
   })
 
   it('posts selected file names without discarding a draft or session', () => {

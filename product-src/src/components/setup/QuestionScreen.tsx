@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, ChevronLeft, Mic, Phone, Upload } from 'lucide-react'
+import { Check, ChevronLeft, Mic, Phone, Square, Upload } from 'lucide-react'
 import { ThinkingOrb } from 'thinking-orbs'
 import { PayrollCalendar } from '@/components/PayrollCalendar'
 import { Btn, Spinner } from '@/components/ui'
 import { VOICE_ENABLED } from '@/lib/flags'
 import type { QuestionCard } from '@/lib/chat'
 import { getOnboarding } from '@/lib/onboarding'
+import { useDictation } from '@/lib/useDictation'
 import { uploadOnboardingFiles } from '@/lib/onboardingFlow'
 
 const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -28,13 +29,14 @@ function TypedQuestion({ text, onDone }: { text: string; onDone(): void }) {
 }
 
 /** Input structure and wording come entirely from the agent's validated card. */
-export function QuestionScreen({ question, card, initialAnswer = '', busy = false, canBack, canForward = false, onBack, onForward, onAnswer }: {
+export function QuestionScreen({ question, card, initialAnswer = '', busy = false, canBack, canForward = false, onBack, onForward, onAnswer, onCall }: {
   question: string; card: QuestionCard; initialAnswer?: string; busy?: boolean; canBack: boolean; canForward?: boolean
-  onForward?(): void; onBack(): void; onAnswer(answer: string): void
+  onForward?(): void; onBack(): void; onAnswer(answer: string): void; onCall?(): void
 }) {
   const options = card.chips ?? (card.choice ? [card.choice.yours, card.choice.sample] : [])
   const answeredLines = initialAnswer.split('\n')
   const [draft, setDraft] = useState(() => answeredLines.filter((line) => !options.includes(line)).join('\n'))
+  const dictation = useDictation(draft, setDraft)
   const [selected, setSelected] = useState<string[]>(() => answeredLines.filter((line) => options.includes(line)))
   const [files, setFiles] = useState<string[]>([])
   const [calendarReady, setCalendarReady] = useState(false)
@@ -43,7 +45,7 @@ export function QuestionScreen({ question, card, initialAnswer = '', busy = fals
   const [uploadError, setUploadError] = useState('')
   const picker = useRef<HTMLInputElement>(null)
   const pendingFiles = useRef<File[]>([])
-  const locked = busy || typing || uploading
+  const locked = busy || typing || uploading || dictation.finishing
   const answered = !!(draft.trim() || selected.length || files.length || calendarReady)
 
   function pick(value: string) {
@@ -73,17 +75,22 @@ export function QuestionScreen({ question, card, initialAnswer = '', busy = fals
     finally { setUploading(false) }
   }
 
-  function submit() {
-    if (!answered || locked) return
+  function submit(dictated?: string) {
+    if ((!answered && !dictated?.trim()) || locked) return
     const state = getOnboarding()
     const calendar = calendarReady ? `Pay calendar: ${JSON.stringify({ frequency: state.frequency, periodEndDay: state.periodEndDay, payDay: state.payDay, payDatesOfMonth: state.payDatesOfMonth, cutoffDays: state.cutoffDays, deadlineDays: state.deadlineDays })}` : ''
-    onAnswer([...selected, files.length ? `Files: ${files.join(', ')}` : '', calendar, draft.trim()].filter(Boolean).join('\n'))
+    onAnswer([...selected, files.length ? `Files: ${files.join(', ')}` : '', calendar, (dictated ?? draft).trim()].filter(Boolean).join('\n'))
+  }
+
+  function submitAnswer() {
+    if (dictation.active) void dictation.stop().then(text => submit(text)).catch(() => {})
+    else submit()
   }
 
   return <section className="setup-question">
     <ThinkingOrb size={32} theme="light" state={busy ? 'working' : 'breathing'} />
     <TypedQuestion text={question} onDone={() => setTyping(false)} />
-    <form onSubmit={(event) => { event.preventDefault(); submit() }}>
+    <form onSubmit={(event) => { event.preventDefault(); submitAnswer() }}>
       <fieldset disabled={locked} className="setup-inputs">
         {(card.input === 'chips' || card.input === 'multi') && <div className="setup-chips">{card.chips?.map((chip, index) =>
           <button type="button" key={chip} className={`setup-chip${selected.includes(chip) ? ' selected' : ''}`} aria-pressed={selected.includes(chip)} onClick={() => pick(chip)}>
@@ -103,12 +110,14 @@ export function QuestionScreen({ question, card, initialAnswer = '', busy = fals
           {files.length > 0 && <ul className="setup-file-list">{files.map((file) => <li key={file}><Check size={13} aria-hidden />{file}</li>)}</ul>}
         </div>}
         <div className="setup-textarea">
-          <textarea aria-label="Your answer" placeholder={card.placeholder || 'Answer in your own words…'} value={draft} rows={3} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); submit() }
+          <textarea aria-label="Your answer" placeholder={card.placeholder || 'Answer in your own words…'} value={draft} rows={3} readOnly={dictation.active || dictation.finishing} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => {
+            if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); submitAnswer() }
           }} />
-          {VOICE_ENABLED && <div className="setup-voice"><Btn aria-label="Dictate your answer"><Mic size={16} /></Btn><Btn aria-label="Call your Closeout Agent"><Phone size={16} /></Btn></div>}
+          {VOICE_ENABLED && <div className="setup-voice"><Btn className="setup-dictate" aria-label={dictation.finishing ? 'Finishing dictation' : dictation.active ? 'Stop dictation' : 'Dictate your answer'} aria-pressed={dictation.active} disabled={dictation.finishing} onClick={() => { if (dictation.active) void dictation.stop().catch(() => {}); else dictation.start() }}>{dictation.finishing || dictation.state === 'connecting' ? <Spinner /> : dictation.active ? <Square size={14} fill="currentColor" aria-hidden /> : <Mic size={16} aria-hidden />}</Btn>{onCall && <Btn aria-label="Call your Closeout Agent" onClick={() => { dictation.dismiss(); onCall() }}><Phone size={16} /></Btn>}</div>}
         </div>
       </fieldset>
+      {dictation.status && <p className="setup-dictate-status" role="status">{dictation.status}</p>}
+      {dictation.error && <div className="setup-error" role="alert"><p>{dictation.error}</p><Btn onClick={dictation.start}>Retry</Btn><Btn onClick={dictation.dismiss}>Keep typing</Btn></div>}
       {uploadError && <div className="setup-error" role="alert"><p>{uploadError}</p><Btn onClick={() => void upload(pendingFiles.current)}>Retry</Btn></div>}
       <footer className="setup-controls">
         <Btn className="ghost" disabled={!canBack || locked} onClick={onBack}><ChevronLeft size={14} aria-hidden />Back</Btn>

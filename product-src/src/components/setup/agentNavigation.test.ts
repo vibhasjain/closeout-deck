@@ -3,11 +3,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Agent } from '@/pages/setup/Agent'
 import { QuestionScreen } from './QuestionScreen'
 import { DEFAULTS, type Onboarding } from '@/lib/onboarding'
+import type { CallSnapshot } from '@/lib/live'
+import { CallScreen } from '@/components/voice/CallScreen'
+import { Message } from '@/components/chat/Message'
 
 const hooks = vi.hoisted(() => ({ cursor: 0, slots: [] as unknown[] }))
 const store = vi.hoisted(() => ({ state: null as Onboarding | null }))
 const flow = vi.hoisted(() => ({ readFirm: vi.fn(), requestOnboarding: vi.fn(), applyOnboardReply: vi.fn(), finishOnboarding: vi.fn(), rollbackOnboardingAnswer: vi.fn() }))
 const navigate = vi.hoisted(() => vi.fn())
+const voice = vi.hoisted(() => ({ snapshot: null as CallSnapshot | null, start: vi.fn(), end: vi.fn(), dismiss: vi.fn(), retrySave: vi.fn(), retryTurn: vi.fn(), mute: vi.fn() }))
+vi.mock('@/lib/useVoiceCall', () => ({ useVoiceCall: () => voice }))
 vi.mock('react', async (original) => ({
   ...await original<typeof import('react')>(),
   useState: <T,>(initial: T | (() => T)) => {
@@ -19,7 +24,7 @@ vi.mock('react', async (original) => ({
   useCallback: <T,>(callback: T) => callback,
   useEffect: () => {},
 }))
-vi.mock('react-router-dom', () => ({ useNavigate: () => navigate }))
+vi.mock('react-router-dom', () => ({ useNavigate: () => navigate, useSearchParams: () => [new URLSearchParams(), vi.fn()] }))
 vi.mock('@/lib/onboarding', async (original) => ({
   ...await original<typeof import('@/lib/onboarding')>(),
   getOnboarding: () => store.state!,
@@ -30,7 +35,7 @@ vi.mock('@/lib/onboarding', async (original) => ({
 vi.mock('@/lib/onboardingFlow', () => flow)
 vi.mock('@/lib/viewerSession', () => ({ viewerSession: () => ({ name: 'Morgan Lee' }) }))
 
-type Props = { children?: ReactNode; footer?: ReactNode; className?: string; 'aria-label'?: string; onClick?(): void; onChange?(event: { target: { value: string } }): void; onSubmit?(event: { preventDefault(): void }): void; question?: string; onBack?(): void; onForward?(): void; onAnswer?(answer: string): void }
+type Props = { children?: ReactNode; footer?: ReactNode; className?: string; 'aria-label'?: string; onClick?(): void; onChange?(event: { target: { value: string } }): void; onSubmit?(event: { preventDefault(): void }): void; question?: string; onBack?(): void; onForward?(): void; onAnswer?(answer: string): void; onKeepTyping?(): void; onRetry?(): void; message?: Onboarding['chat'][number] }
 const elements = (tree: ReactNode): ReactElement<Props>[] => Children.toArray(tree).flatMap((node) => isValidElement<Props>(node) ? [node, ...elements(node.props.children), ...elements(node.props.footer)] : [])
 const render = () => { hooks.cursor = 0; return Agent() }
 const text = (tree: ReactNode, label: string) => elements(tree).find(({ props }) => props.children === label)!
@@ -45,6 +50,10 @@ beforeEach(() => {
   hooks.slots = []
   store.state = structuredClone(DEFAULTS)
   vi.clearAllMocks()
+  voice.snapshot = null
+  voice.dismiss.mockImplementation(() => { voice.snapshot = null })
+  voice.retrySave.mockResolvedValue(undefined)
+  voice.start.mockResolvedValue(undefined)
   vi.stubGlobal('window', { matchMedia: () => ({ matches: true }), requestAnimationFrame: (callback: () => void) => callback() })
   vi.stubGlobal('document', { activeElement: null })
   flow.requestOnboarding.mockResolvedValue({})
@@ -53,6 +62,27 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('onboarding navigation', () => {
+  it('leaves the call view immediately on Keep typing and sends the typing continuation independently', () => {
+    store.state!.setupStep = 'conversation'
+    store.state!.setupHistory = [{ question: 'How do worker hours arrive?', card: { kind: 'question', input: 'text', topics: ['workerHours'] } }]
+    store.state!.chat = [{ id: 'call-pending', role: 'agent', text: '', at: 1, cards: [{ kind: 'call', callId: 'pending', seconds: 8 }], callSaveError: 'Saving failed. Please try again.' }]
+    voice.snapshot = { status: 'ending', errorKind: 'save', orb: 'listening', stream: null, remoteStream: null, muted: false, seconds: 8, caption: '', transcript: [], level: 0 }
+    elements(render()).find(element => element.type === CallScreen)!.props.onKeepTyping!()
+    expect(voice.dismiss).toHaveBeenCalledOnce()
+    expect(elements(render()).some(element => element.type === CallScreen)).toBe(false)
+    expect(elements(render()).find(element => element.type === Message)?.props.message?.callSaveError).toBe('Saving failed. Please try again.')
+    expect(question().props.question).toBe('How do worker hours arrive?')
+    expect(flow.requestOnboarding).toHaveBeenCalledWith(expect.stringContaining('Continue our conversation by typing'), expect.any(AbortSignal))
+  })
+  it('routes Retry saving to saving and Retry the call to a new call', () => {
+    voice.snapshot = { status: 'error', errorKind: 'save', orb: 'listening', stream: null, remoteStream: null, muted: false, seconds: 8, caption: '', transcript: [], level: 0 }
+    elements(render()).find(element => element.type === CallScreen)!.props.onRetry!()
+    expect(voice.retrySave).toHaveBeenCalledOnce()
+    expect(voice.start).not.toHaveBeenCalled()
+    voice.snapshot.errorKind = 'call'
+    elements(render()).find(element => element.type === CallScreen)!.props.onRetry!()
+    expect(voice.start).toHaveBeenCalledOnce()
+  })
   it('opens consent immediately and keeps the domain fallback after a failed background pre-read', async () => {
     store.state!.setupStep = 'basics'
     let reject: (reason: Error) => void = () => {}

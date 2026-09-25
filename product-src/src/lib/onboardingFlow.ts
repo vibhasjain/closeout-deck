@@ -68,11 +68,11 @@ export async function requestOnboarding(message: string, signal?: AbortSignal): 
 }
 
 const skippedNote = (skipped: string[]) => skipped.length ? `Skipped: ${[...new Set(skipped)].join(', ')}.` : null
-const allowed = ['set_profile', 'set_firm', 'add_source', 'remove_source', 'remove_rule', 'set_authority', 'never_contact', 'cover_topic', 'set_calendar', 'add_cohort', 'add_rule', 'note']
+export const ONBOARD_ALLOWED_ACTIONS = ['set_profile', 'set_firm', 'add_source', 'remove_source', 'remove_rule', 'set_authority', 'never_contact', 'cover_topic', 'set_calendar', 'add_cohort', 'add_rule', 'note']
 function applyReplyActions(actions: Action[]) {
   let state = getOnboarding()
   for (const action of actions) {
-    if (!allowed.includes(action.type)) continue
+    if (!ONBOARD_ALLOWED_ACTIONS.includes(action.type)) continue
     applyAction(action, (patch) => { state = { ...state, ...(typeof patch === 'function' ? patch(state) : patch) } }, () => {}, new URLSearchParams())
   }
   return state

@@ -1,6 +1,6 @@
 import { useCallback, useSyncExternalStore } from 'react'
 import type { CustomRule, Proposal } from '@/lib/rules'
-import type { Card, QuestionCard } from '@/lib/chat'
+import type { CallTranscriptTurn, Card, QuestionCard } from '@/lib/chat'
 import { withPeriodEnd, type Cohort } from '@/lib/cohorts'
 import { API_BASE } from '@/lib/api'
 import { viewerSession, expireSession } from '@/lib/viewerSession'
@@ -54,6 +54,13 @@ export interface ChatMessage {
   /** Saved locally before execution; never rendered as applied or replayed after reload. */
   pendingActions?: unknown[]
   cards?: Card[]
+  /** Kept on this device; the canonical call transcript is saved separately by /live-session/:id/end. */
+  callTranscript?: CallTranscriptTurn[]
+  callSaveError?: string
+  callServerSaved?: boolean
+  /** Keep the provisional row local until consolidation and its action audit finish. */
+  callSaving?: boolean
+  callPurpose?: 'onboard' | 'desk'
   scope?: string
   contextChip?: string
   traces?: string[]

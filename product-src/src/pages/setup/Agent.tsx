@@ -12,6 +12,10 @@ import { RulebookModal } from '@/components/profile/RulebookModal'
 import { NeverContactInput } from '@/components/profile/NeverContactInput'
 import { sectionProgress } from '@/lib/coverage'
 import { VOICE_ENABLED } from '@/lib/flags'
+import { useVoiceCall } from '@/lib/useVoiceCall'
+import { CallScreen } from '@/components/voice/CallScreen'
+import { Message } from '@/components/chat/Message'
+import { ONBOARD_TOPICS } from '@/lib/onboarding'
 import { flushOnboarding, getOnboarding, updateOnboarding, useOnboarding, type Onboarding } from '@/lib/onboarding'
 import { applyOnboardReply, finishOnboarding, readFirm, requestOnboarding, rollbackOnboardingAnswer } from '@/lib/onboardingFlow'
 import { TRUST } from '@/lib/trust'
@@ -44,6 +48,10 @@ export function Agent() {
   const [historyIndex, setHistoryIndex] = useState(() => Math.max(0, state.setupHistory.length - 1))
   const [modal, setModal] = useState<'profile' | 'rulebook' | null>(null)
   const [names, setNames] = useState(state.neverContact ?? [])
+  const voice = useVoiceCall('onboard')
+  const thisCall = voice.snapshot?.callId ? state.chat.find(message => message.id === `call-${voice.snapshot?.callId}`) : undefined
+  const showCallSummary = voice.snapshot?.status === 'ended' && !!thisCall
+  const callsNeedingSave = state.chat.filter(message => message.callSaveError && message.cards?.some(card => card.kind === 'call') && (!showCallSummary || message.id !== thisCall?.id))
   const pending = useRef<AbortController | null>(null)
   const firmRead = useRef<AbortController | null>(null)
   const modalOpener = useRef<HTMLElement | null>(null)
@@ -81,6 +89,12 @@ export function Agent() {
     }, 0)
     return () => { window.clearTimeout(timer); pending.current?.abort(); pending.current = null; firmRead.current?.abort() }
   }, [ask])
+
+  function keepTyping() {
+    voice.dismiss()
+    const next = ONBOARD_TOPICS.find(topic => !getOnboarding().covered.includes(topic))
+    void ask(next ? `Continue our conversation by typing. Ask about the next uncovered goal: ${next}. Keep the answers from our call.` : 'We finished our call. Review the covered goals and finish my Payroll profile.')
+  }
 
   function submitFirm() {
     if (busy || !firmChoice || (firmChoice === 'yours' && !domain.trim())) return
@@ -142,6 +156,9 @@ export function Agent() {
       <span>{section.progress === 1 && <Check size={12} aria-hidden />}{section.label}</span>
     </div>)}</header>
     <div className="setup-stage" inert={modal !== null || neverContactOpen} aria-hidden={modal !== null || neverContactOpen || undefined}>
+      {voice.snapshot && voice.snapshot.status !== 'ended' ? <CallScreen snapshot={voice.snapshot} onboarding={state} onMute={voice.mute} onEnd={() => { void voice.end().catch(() => {}) }} onRetry={() => { void (voice.snapshot?.errorKind === 'save' ? voice.retrySave() : voice.start()).catch(() => {}) }} onRetryTurn={voice.retryTurn} onKeepTyping={keepTyping} /> : <>
+      {showCallSummary && thisCall && <section className="setup-call-summary"><h1>{thisCall.callSaveError || thisCall.callServerSaved === false ? 'Call ended' : 'Your call is saved'}</h1><Message message={thisCall} /><Btn className="primary" onClick={keepTyping}>{state.covered.length === ONBOARD_TOPICS.length ? 'Review my Payroll profile' : 'Keep typing'}</Btn></section>}
+      {callsNeedingSave.length > 0 && <section className="setup-call-summary" aria-label="Call notes awaiting saving">{callsNeedingSave.map(message => <Message key={message.id} message={message} />)}</section>}
       {step === 'welcome' && <section className="setup-centered setup-welcome"><ThinkingOrb size={64} theme="light" state="breathing" /><h1>Welcome, {first}</h1><p>Set up your Closeout Agent for weekly Payroll. Start with your firm and permissions, then build your Payroll profile together.</p><Btn className="primary" onClick={() => go('basics')}>Get started →</Btn></section>}
       {step === 'basics' && <section className="setup-centered setup-basics"><h1>Choose your staffing firm</h1>
         <form onSubmit={(event) => { event.preventDefault(); void submitFirm() }}>
@@ -155,19 +172,20 @@ export function Agent() {
         </form>
       </section>}
       {step === 'trust' && <section className="setup-centered"><ThinkingOrb size={32} theme="light" state="breathing" /><h1>Your data and permissions</h1><ul className="setup-trust">{TRUST.map((line) => <li key={line}><Lock size={14} aria-hidden />{line}</li>)}</ul><Btn className="primary" onClick={() => go('intro')}>I agree</Btn></section>}
-      {step === 'intro' && <section className="setup-split"><div className="setup-copy"><ThinkingOrb size={32} theme="light" state="breathing" /><h1>Build your Payroll profile</h1><p>Your Closeout Agent uses this profile before every pay run. The conversation will fill in the gaps about {state.firm?.name || 'your firm'}.</p>
-        <div className="setup-bottom">{VOICE_ENABLED && <Btn className="primary"><Phone size={15} aria-hidden />Jump on a call with your Closeout Agent</Btn>}<Btn className={VOICE_ENABLED ? '' : 'primary'} onClick={() => void ask('Start onboarding')}>Keep typing</Btn></div>
+      {step === 'intro' && !showCallSummary && <section className="setup-split"><div className="setup-copy"><ThinkingOrb size={32} theme="light" state="breathing" /><h1>Build your Payroll profile</h1><p>Your Closeout Agent uses this profile before every pay run. The conversation will fill in the gaps about {state.firm?.name || 'your firm'}.</p>
+        <div className="setup-bottom">{VOICE_ENABLED && <Btn className="primary" onClick={() => { void voice.start() }}><Phone size={15} aria-hidden />Jump on a call with your Closeout Agent</Btn>}<Btn className={VOICE_ENABLED ? '' : 'primary'} onClick={() => void ask('Start onboarding')}>Keep typing</Btn></div>
       </div><div className="setup-profile-preview"><ProfileCard state={state} /></div></section>}
-      {step === 'conversation' && <div className="setup-conversation"><div>
+      {step === 'conversation' && !showCallSummary && <div className="setup-conversation"><div>
         {error && <div className="setup-error" role="alert"><p>{error}</p><Btn disabled={busy} onClick={() => void ask(getOnboarding().setupRequest || 'Start onboarding')}>Retry</Btn>{!current && <div className="setup-controls"><Btn onClick={() => go('intro')}>Back</Btn><Btn disabled={busy} onClick={() => void ask('Skip this question and continue onboarding.')}>Skip</Btn></div>}</div>}
         {state.setupNotice && <p className="setup-notice" role="status">{state.setupNotice}</p>}
-        {current ? <QuestionScreen key={`${historyIndex}:${current.question}`} question={current.question} card={current.card} initialAnswer={current.answer} busy={busy} canBack={historyIndex > 0 || !!error} canForward={historyIndex < state.setupHistory.length - 1} onForward={() => { setError(''); setHistoryIndex(state.setupHistory.length - 1) }} onBack={() => { if (historyIndex === 0) go('intro'); else { setError(''); setHistoryIndex((index) => Math.max(0, index - 1)) } }} onAnswer={answer} />
+        {current ? <QuestionScreen key={`${historyIndex}:${current.question}`} question={current.question} card={current.card} initialAnswer={current.answer} busy={busy} onCall={() => { void voice.start() }} canBack={historyIndex > 0 || !!error} canForward={historyIndex < state.setupHistory.length - 1} onForward={() => { setError(''); setHistoryIndex(state.setupHistory.length - 1) }} onBack={() => { if (historyIndex === 0) go('intro'); else { setError(''); setHistoryIndex((index) => Math.max(0, index - 1)) } }} onAnswer={answer} />
           : !error && <section className="setup-centered"><ThinkingOrb size={32} theme="light" state="working" /><p role="status">Your Closeout Agent is reading your profile…</p></section>}
 
         {busy && current && <p className="setup-reply-status" role="status"><Spinner />Your Closeout Agent is thinking…</p>}
       </div><aside className="setup-conversation-profile" aria-label="Your live Payroll profile"><ProfileCard state={state} /></aside></div>}
       {step === 'writing' && <WritingProfile state={state} onDone={() => go('ready')} />}
       {(step === 'ready' || step === 'never-contact') && ready}
+      </>}
     </div>
     {neverContactOpen && <ProfileDialog title="People to never contact" description="Add anyone the Closeout Agent should never contact. All outreach requires your permission; this list can be changed any time." className="setup-contact-dialog" closeDisabled={busy} onClose={() => {
       go('ready'); window.requestAnimationFrame(() => (modalOpener.current ?? document.querySelector<HTMLElement>('[data-setup-finish]'))?.focus())

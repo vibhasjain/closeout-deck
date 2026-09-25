@@ -2,10 +2,14 @@
 import { createContext, Fragment, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { Loader2, Plus, Send, Square } from 'lucide-react'
+import { Loader2, Mic, Phone, Plus, Send, Square } from 'lucide-react'
 import { ThinkingOrb } from 'thinking-orbs'
 import { Chip } from '@/components/ui'
 import { Message } from '@/components/chat/Message'
+import { CallBar } from '@/components/voice/CallBar'
+import { useVoiceCall } from '@/lib/useVoiceCall'
+import { useDictation } from '@/lib/useDictation'
+import { VOICE_ENABLED } from '@/lib/flags'
 import { dayDivider } from '@/components/chat/dayDivider'
 import { appendTrace, limitCards, parseActions, parseCards, stream } from '@/lib/chat'
 import type { ChatContext } from '@/lib/chat'
@@ -97,7 +101,7 @@ function selectionScope(selection?: object): string | undefined {
   return undefined
 }
 
-export function ChatPane({ scope: explicitScope, headerAction }: { scope?: string; headerAction?: ReactNode } = {}) {
+export function ChatPane({ scope: explicitScope, headerAction, onCallingChange }: { scope?: string; headerAction?: ReactNode; onCallingChange?(calling: boolean): void } = {}) {
   const [state, write] = useOnboarding()
   const context = useChatContext()
   const suggestions = useChatSuggestions()
@@ -120,11 +124,15 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
   const filePicker = useRef<HTMLInputElement>(null)
   const activeRequest = useRef<{ controller: AbortController; text: string; scope?: string; fileIds: string[]; traces: string[]; agentId?: string } | null>(null)
   const scope = explicitScope ?? selectionScope(context.selection)
+  const voice = useVoiceCall('desk', context.cycle?.id, scope, () => context)
+  const dictation = useDictation(draft, setDraft)
+  const calling = !!voice.snapshot && voice.snapshot.status !== 'ended'
   // Keep "Show all" in the URL, but only for the case where it was chosen.
   const showAll = !scope || (params.get('chat') === 'all' && params.get('chatScope') === scope)
   const messages = showAll ? state.chat : state.chat.filter((message) => message.scope === scope)
   const showRequest = showAll || requestScope === scope
 
+  useEffect(() => { onCallingChange?.(calling) }, [calling, onCallingChange])
   useEffect(() => { latest.current = state }, [state])
   useEffect(() => () => {
     request.current += 1
@@ -171,7 +179,7 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
 
   const send = useCallback(async (text: string, options?: ChatPost) => {
     const message = text.trim()
-    if (!message) return
+    if (!message || calling) return
     if (busy.current) { if (options) queued.current.push(options); return }
     const previous = latest.current.chat.at(-1)
     const fileIds = options?.mode === 'ingest' && options.context && 'fileIds' in options.context
@@ -284,11 +292,12 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
         if (next) void sendRef.current(next.text, next)
       }
     }
-  }, [context, navigate, params, scope, update])
+  }, [calling, context, navigate, params, scope, update])
 
   useEffect(() => { sendRef.current = send }, [send])
   useEffect(() => {
     const post = (event: Event) => {
+      if (calling) return
       const turn = (event as CustomEvent<ChatPost>).detail
       if (turn && typeof turn.text === 'string') {
         setParams((current) => { const next = new URLSearchParams(current); next.set('agent', '1'); return next })
@@ -297,7 +306,17 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
     }
     window.addEventListener(CHAT_POST_EVENT, post)
     return () => window.removeEventListener(CHAT_POST_EVENT, post)
-  }, [setParams])
+  }, [calling, setParams])
+
+  function submitDraft() {
+    if (dictation.finishing || calling) return
+    if (dictation.active) void dictation.stop().then(text => send(text)).catch(() => {})
+    else void send(draft)
+  }
+  function startDeskCall() {
+    dictation.dismiss()
+    void voice.start()
+  }
 
   function stop() {
     const pending = activeRequest.current
@@ -349,6 +368,7 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
         </div>
         {headerAction && <div className="chat-header-actions">{headerAction}</div>}
       </header>
+      {calling && voice.snapshot && <CallBar snapshot={voice.snapshot} onMute={voice.mute} onEnd={() => { void voice.end().catch(() => {}) }} onRetry={() => { if (voice.snapshot?.errorKind === 'save') void voice.retrySave().catch(() => {}); else startDeskCall() }} onRetryTurn={voice.retryTurn} onKeepTyping={() => { voice.dismiss(); composer.current?.focus() }} />}
       <div ref={scrollRef} className="chat-log" role="log" aria-live="polite" aria-label="Conversation with Closeout Agent">
         {scope && (
           <div className="flex shrink-0 items-center justify-between gap-2">
@@ -367,7 +387,7 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
           return (
             <Fragment key={message.id}>
               {divider && <div className="chat-day-divider"><span>{divider}</span></div>}
-              <Message message={message} onAnswer={index === messages.length - 1 && !sending ? (answer) => { void send(answer) } : undefined} />
+              <Message message={message} onAnswer={index === messages.length - 1 && !sending && !calling ? (answer) => { void send(answer) } : undefined} />
             </Fragment>
           )
         })}
@@ -383,31 +403,34 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
       {suggestions.length > 0 && (
         <div className="chips chat-suggestions">
           {suggestions.map((suggestion) => (
-            <Chip key={suggestion} disabled={sending} onClick={() => { void send(suggestion) }}>{suggestion}</Chip>
+            <Chip key={suggestion} disabled={sending || calling} onClick={() => { void send(suggestion) }}>{suggestion}</Chip>
           ))}
         </div>
       )}
-      <form className="chat-composer" onSubmit={(event) => { event.preventDefault(); void send(draft) }}>
+      {dictation.error && <div className="call-error" role="alert"><p>{dictation.error}</p><div className="call-error-actions"><button type="button" className="btn" onClick={dictation.start}>Retry</button><button type="button" className="btn" onClick={() => { dictation.dismiss(); composer.current?.focus() }}>Keep typing</button></div></div>}
+      {dictation.status && <p className="chat-dictate-status" role="status">{dictation.status}</p>}
+      <form className="chat-composer" onSubmit={(event) => { event.preventDefault(); submitDraft() }}>
         <input ref={filePicker} className="chat-file-input" type="file" multiple tabIndex={-1} aria-label="Attach files"
           onChange={(event) => { attach(event.target.files); event.target.value = '' }} />
-        <button type="button" className="icon-btn chat-attach" aria-label="Attach files" disabled={sending}
+        <button type="button" className="icon-btn chat-attach" aria-label="Attach files" disabled={sending || calling}
           onClick={() => filePicker.current?.click()}>
           <Plus size={16} aria-hidden="true" />
         </button>
         <textarea
-          ref={composer} className="chat-input" aria-label="Message the Closeout Agent" placeholder="Ask the Closeout Agent anything…" rows={1} value={draft}
+          ref={composer} className="chat-input" aria-label="Message the Closeout Agent" placeholder="Ask the Closeout Agent anything…" rows={1} value={draft} readOnly={dictation.active || dictation.finishing || calling}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
               event.preventDefault()
-              void send(draft)
+              submitDraft()
             }
           }}
         />
-        {/* P6 can add the phone state here; the composer keeps one trailing action. */}
-        <button type={sending ? 'button' : 'submit'} className="icon-btn chat-send" aria-label={sending ? 'Stop reply' : 'Send message'}
-          disabled={!sending && !draft.trim()} onClick={sending ? stop : undefined}>
-          {sending ? <Square size={14} fill="currentColor" aria-hidden="true" /> : <Send size={16} aria-hidden="true" />}
+        {VOICE_ENABLED && <button type="button" className="icon-btn chat-dictate" aria-label={dictation.active ? 'Stop dictation' : 'Dictate message'} aria-pressed={dictation.active}
+          disabled={sending || calling || dictation.finishing} onClick={() => { if (dictation.active) void dictation.stop().catch(() => {}); else dictation.start() }}>{dictation.finishing || dictation.state === 'connecting' ? <Loader2 className="chat-dictate-spinner" size={16} aria-hidden /> : dictation.active ? <Square size={14} fill="currentColor" aria-hidden /> : <Mic size={16} aria-hidden />}</button>}
+        <button type={sending || !draft.trim() ? 'button' : 'submit'} className="icon-btn chat-send" aria-label={sending ? 'Stop reply' : draft.trim() || !VOICE_ENABLED ? 'Send message' : 'Call your Closeout Agent'}
+          disabled={!sending && (dictation.finishing || calling || (!VOICE_ENABLED && !draft.trim()))} onClick={sending ? stop : !draft.trim() && VOICE_ENABLED ? startDeskCall : undefined}>
+          {sending ? <Square size={14} fill="currentColor" aria-hidden="true" /> : draft.trim() || !VOICE_ENABLED ? <Send size={16} aria-hidden="true" /> : <Phone size={16} aria-hidden="true" />}
         </button>
       </form>
     </section>

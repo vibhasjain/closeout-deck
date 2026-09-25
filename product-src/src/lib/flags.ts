@@ -1,2 +1,2 @@
 /** P8 supplies the call and dictation transports. */
-export const VOICE_ENABLED = false
+export const VOICE_ENABLED = true

@@ -29,8 +29,15 @@ function union(...lists: ChatMessage[][]): ChatMessage[] {
   for (const list of lists) for (const message of list) {
     const previous = byId.get(message.id)
     if (!previous) byId.set(message.id, message)
-    // Older history services omit traces. Preserve locally received evidence on refresh.
-    else if (!previous.traces?.length && message.traces?.length) byId.set(message.id, { ...previous, traces: message.traces })
+    // The history service omits call transcripts and local save state; older versions also omit traces.
+    // Keep locally received evidence when canonical rows are refreshed.
+    else byId.set(message.id, { ...previous,
+      ...(!previous.traces?.length && message.traces?.length ? { traces: message.traces } : {}),
+      ...(!previous.callTranscript?.length && message.callTranscript?.length ? { callTranscript: message.callTranscript } : {}),
+      ...(!Object.hasOwn(previous, 'callServerSaved') && Object.hasOwn(message, 'callServerSaved') ? { callServerSaved: message.callServerSaved } : {}),
+      ...(!Object.hasOwn(previous, 'callSaveError') && Object.hasOwn(message, 'callSaveError') ? { callSaveError: message.callSaveError } : {}),
+      ...(!Object.hasOwn(previous, 'callSaving') && Object.hasOwn(message, 'callSaving') ? { callSaving: message.callSaving } : {}),
+    })
   }
   return [...byId.values()].sort((a, b) => a.at - b.at)
 }
@@ -52,7 +59,7 @@ export function createChatHistory(options: Options) {
     if (sending) return sending
     sending = (async () => {
       for (;;) {
-        const batch = batchOf(pending().filter(message => !message.pendingActions?.length))
+        const batch = batchOf(pending().filter(message => !message.pendingActions?.length && !message.callSaving))
         if (!batch.length) break
         const response = await options.request('POST', { messages: batch })
         if (response.status === 400 && batch.length > 1) {
@@ -76,7 +83,7 @@ export function createChatHistory(options: Options) {
   /** Called with the store's transcript before and after every write. */
   function appended(previous: ChatMessage[], next: ChatMessage[]) {
     const known = new Map(previous.map((message) => [message.id, message]))
-    const added = next.filter((message) => !known.has(message.id) || !!known.get(message.id)?.pendingActions?.length)
+    const added = next.filter((message) => !known.has(message.id) || !!known.get(message.id)?.pendingActions?.length || !!known.get(message.id)?.callSaving)
     if (!added.length) return
     for (const message of added) {
       if (message.pendingActions?.length) active.add(message.id)

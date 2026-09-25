@@ -120,3 +120,6 @@ button.setup-option { display: flex; align-items: center; justify-content: cente
 .setup-writing-lists .not-yet { align-items: flex-start; flex-wrap: wrap; gap: 6px; color: #777; }
 .setup-writing-lists .not-yet .tag { white-space: nowrap; }
 .setup-notice { font-size: 12px; }
+
+.setup-call-summary { width: min(100%, 620px); margin: 30px auto; }
+.setup-call-summary > .btn { margin-top: 24px; }

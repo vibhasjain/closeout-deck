@@ -43,6 +43,63 @@ describe('separate append-only chat history', () => {
     await h.history.load()
     expect(h.chat()).toEqual([local])
   })
+  it('keeps the expandable call transcript through server hydration and a local reload', async () => {
+    const card = { kind: 'call' as const, callId: '6b7fef17-4651-40b3-9d88-58621a81b4ca', seconds: 276 }
+    const server = { ...line('call'), cards: [card] }
+    const local: ChatMessage = { ...server, callTranscript: [{ role: 'user', text: 'We run Payroll weekly.', startMs: 1000 }] }
+    const h = harness([local])
+    h.request.mockResolvedValueOnce(Response.json({ messages: [server] }))
+    await h.history.load()
+    expect(h.chat()).toEqual([local])
+    const reload = harness(JSON.parse(JSON.stringify(h.chat())) as ChatMessage[])
+    reload.request.mockResolvedValueOnce(Response.json({ messages: [server] }))
+    await reload.history.load()
+    expect(reload.chat()).toEqual([local])
+  })
+  it('keeps the terminal 404 unsaved-server marker through canonical hydration and local reload', async () => {
+    const server = { ...line('call-not-saved'), cards: [{ kind: 'call' as const, callId: '6b7fef17-4651-40b3-9d88-58621a81b4ca', seconds: 18 }] }
+    const local: ChatMessage = { ...server, callServerSaved: false, callSaving: false, callTranscript: [{ role: 'user', text: 'Retain this locally.', startMs: 0 }] }
+    const h = harness([local])
+    h.request.mockResolvedValueOnce(Response.json({ messages: [server] }))
+    await h.history.load()
+    expect(h.chat()).toEqual([local])
+    const reload = harness(JSON.parse(JSON.stringify(h.chat())) as ChatMessage[])
+    reload.request.mockResolvedValueOnce(Response.json({ messages: [server] }))
+    await reload.history.load()
+    expect(reload.chat()[0].callServerSaved).toBe(false)
+    expect(reload.request).toHaveBeenCalledTimes(1)
+  })
+  it('retains local saving errors when the server already knows the call row', async () => {
+    const server = line('call-retry')
+    const local: ChatMessage = { ...server, callServerSaved: false, callSaveError: 'Saving is temporarily unavailable.', callSaving: true }
+    const h = harness([local], [local])
+    h.request.mockResolvedValueOnce(Response.json({ messages: [server] }))
+    await h.history.load()
+    expect(h.chat()).toEqual([local])
+    expect(h.pending()).toEqual([local])
+    expect(h.request).toHaveBeenCalledTimes(1)
+  })
+  it('holds provisional calls through reload, then uploads the final audit exactly once', async () => {
+    const provisional: ChatMessage = { ...line('call-pending'), callSaving: true, callSaveError: 'Please retry saving.', callServerSaved: false, actions: [] }
+    const h = harness()
+    h.history.appended([], [provisional])
+    await h.history.flush()
+    expect(h.request).not.toHaveBeenCalled()
+    const reload = harness([], h.pending())
+    await reload.history.load()
+    expect(reload.chat()).toEqual([provisional])
+    expect(reload.pending()).toEqual([provisional])
+    expect(reload.request.mock.calls.map(([method]) => method)).toEqual(['GET'])
+    const complete: ChatMessage = { ...provisional, text: 'Saved the call.', callSaving: false, callSaveError: undefined, callServerSaved: true,
+      actions: [{ type: 'note', text: 'Payroll is weekly.' }], skipped: ['approve: confirmation failed'] }
+    reload.history.appended([provisional], [complete])
+    await reload.history.flush()
+    expect(reload.request.mock.calls.filter(([method]) => method === 'POST')).toEqual([['POST', { messages: [complete] }]])
+    expect(reload.pending()).toEqual([])
+    reload.history.appended([complete], [{ ...complete }])
+    await reload.history.flush()
+    expect(reload.request.mock.calls.filter(([method]) => method === 'POST')).toHaveLength(1)
+  })
   it('hydrates server rows and migrates local and legacy history once by id', async () => {
     const h = harness([line('local', 3), line('same', 1)])
     h.request.mockResolvedValueOnce(Response.json({ messages: [line('remote', 2), line('same', 1)] }))

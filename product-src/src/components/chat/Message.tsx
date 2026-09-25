@@ -6,6 +6,8 @@ import { FactQuestion } from './FactQuestion'
 import { TaskCard } from '@/components/journey/TaskCard'
 import { FindingsCard } from '@/components/journey/FindingsCard'
 import { FormCard } from '@/components/journey/FormCard'
+import { CallCard } from './CallCard'
+import { retryCallSave } from '@/lib/callRecovery'
 import './journey-chat.css'
 
 export function Message({ message, onAnswer }: { message: ChatMessage; onAnswer?(answer: string): void }) {
@@ -17,6 +19,7 @@ export function Message({ message, onAnswer }: { message: ChatMessage; onAnswer?
         {!!message.traces?.length && <div className="chat-traces" role="group" aria-label="Agent trace">{message.traces.map((trace, index) => <div key={index}>✓ {trace}</div>)}</div>}
         {message.text && <div className="chat-text">{message.text}</div>}
         {message.cards?.map((card, index) => {
+          if (card.kind === 'call') return <CallCard key={card.callId} card={card} transcript={message.callTranscript} saveError={message.callSaveError} onRetrySave={() => { void retryCallSave(card.callId).catch(() => {}) }} />
           if (card.kind === 'task') return <TaskCard key={index} cycleId={card.cycleId} onAnswer={onAnswer} />
           if (card.kind === 'findings') return <FindingsCard key={index} cycleId={card.cycleId} />
           if (card.kind === 'form') return <FormCard key={index} {...card} />

@@ -6,12 +6,15 @@ import { Agent, WritingProfile } from '@/pages/setup/Agent'
 import { QuestionScreen } from './QuestionScreen'
 import { DEFAULTS, type Onboarding } from '@/lib/onboarding'
 import type { QuestionCard } from '@/lib/chat'
+import type { CallSnapshot } from '@/lib/live'
 
 const state = vi.hoisted(() => ({ value: {} as Onboarding }))
+const voice = vi.hoisted(() => ({ snapshot: null as CallSnapshot | null, start: vi.fn(), end: vi.fn(), dismiss: vi.fn(), retrySave: vi.fn(), retryTurn: vi.fn(), mute: vi.fn() }))
+vi.mock('@/lib/useVoiceCall', () => ({ useVoiceCall: () => voice }))
 vi.mock('@/lib/onboarding', async (original) => ({ ...await original<typeof import('@/lib/onboarding')>(), useOnboarding: () => [state.value, vi.fn()] }))
 vi.mock('@/lib/viewerSession', () => ({ viewerSession: () => ({ name: 'Morgan Lee' }) }))
 const primaryCount = (html: string) => (html.match(/class="btn primary(?:\s[^"]*)?"/g) ?? []).length
-beforeEach(() => { state.value = structuredClone(DEFAULTS); vi.stubGlobal('window', { matchMedia: () => ({ matches: true }) }) })
+beforeEach(() => { state.value = structuredClone(DEFAULTS); voice.snapshot = null; vi.stubGlobal('window', { matchMedia: () => ({ matches: true }) }) })
 
 describe('one black next step per setup pane', () => {
   it.each(['welcome', 'basics', 'trust', 'intro', 'conversation', 'writing', 'ready', 'never-contact'] as const)('%s respects the single primary contract', (step) => {
@@ -19,7 +22,7 @@ describe('one black next step per setup pane', () => {
     const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(Agent)))
     expect(primaryCount(html)).toBeLessThanOrEqual(1)
     if (step === 'basics' || step === 'conversation' || step === 'writing') expect(primaryCount(html)).toBe(0)
-    expect(html).not.toContain('Jump on a call')
+    if (step === 'intro') expect(html).toContain('Jump on a call with your Closeout Agent')
   })
   it('keeps the ready screen visible and inert under the never-contact dialog', () => {
     state.value.setupStep = 'never-contact'
@@ -44,6 +47,44 @@ describe('one black next step per setup pane', () => {
   it('personalizes the welcome from the viewer session', () => {
     expect(renderToStaticMarkup(createElement(MemoryRouter, null, createElement(Agent)))).toContain('Welcome, Morgan')
   })
+  it('never shows a previous call summary for an unconnected call, and shows only this call once it is carded', () => {
+    state.value.setupStep = 'intro'
+    state.value.chat = [{ id: 'call-old', role: 'agent', text: 'Previous call summary', at: 1, cards: [{ kind: 'call', callId: 'old', seconds: 24 }] }]
+    voice.snapshot = { status: 'ended', callId: 'new', orb: 'listening', stream: null, remoteStream: null, muted: false, seconds: 0, caption: '', transcript: [], level: 0 }
+    const render = () => renderToStaticMarkup(createElement(MemoryRouter, null, createElement(Agent)))
+    expect(render()).not.toContain('Your call is saved')
+    expect(render()).not.toContain('Previous call summary')
+    expect(render()).toContain('Build your Payroll profile')
+    state.value.chat.push({ id: 'call-new', role: 'agent', text: 'This call summary', at: 2, cards: [{ kind: 'call', callId: 'new', seconds: 12 }] })
+    expect(render()).toContain('Your call is saved')
+    expect(render()).toContain('This call summary')
+    expect(render()).not.toContain('Previous call summary')
+    state.value.chat[1].callServerSaved = false
+    expect(render()).toContain('Call ended')
+    expect(render()).not.toContain('Your call is saved')
+  })
+  it('keeps failed call cards and Retry saving visible beside typing after dismissal, without showing previous calls or duplicating the summary', () => {
+    state.value.setupStep = 'conversation'
+    state.value.setupHistory = [{ question: 'How do worker hours arrive?', card: { kind: 'question', input: 'text', topics: ['workerHours'] } }]
+    state.value.chat = [
+      { id: 'call-old', role: 'agent', text: 'Previous saved call', at: 1, cards: [{ kind: 'call', callId: 'old', seconds: 24 }] },
+      { id: 'call-pending', role: 'agent', text: '', at: 2, cards: [{ kind: 'call', callId: 'pending', seconds: 12 }], callSaveError: 'The notes could not be saved. Please try again.', callServerSaved: false },
+    ]
+    const render = () => renderToStaticMarkup(createElement(MemoryRouter, null, createElement(Agent)))
+    const html = render()
+    expect(html).toContain('aria-label="Call notes awaiting saving"')
+    expect(html).toContain('data-call-id="pending"')
+    expect(html).toContain('The notes could not be saved. Please try again.')
+    expect(html).toContain('Retry saving')
+    expect(html).toContain('How do worker hours arrive?')
+    expect(html).not.toContain('Previous saved call')
+    expect(html).not.toContain('Your call is saved')
+    voice.snapshot = { status: 'ended', callId: 'pending', orb: 'listening', stream: null, remoteStream: null, muted: false, seconds: 12, caption: '', transcript: [], level: 0 }
+    expect(render().match(/data-call-id="pending"/g)).toHaveLength(1)
+    expect(render()).not.toContain('Your call is saved')
+    voice.snapshot.status = 'active'
+    expect(render()).not.toContain('data-call-id="pending"')
+  })
   it('restores previous chips as selections so a replacement does not retain stale free text', () => {
     const html = renderToStaticMarkup(createElement(QuestionScreen, { question: 'Where should I pick those up?', card: { kind: 'question', input: 'chips', topics: ['workerHours'], chips: ['Email', 'Shared sheet'] }, initialAnswer: 'Email', canBack: true, onBack: () => {}, onAnswer: () => {} }))
     expect(html).toContain('aria-pressed="true"')
@@ -56,6 +97,6 @@ describe('one black next step per setup pane', () => {
     expect(primaryCount(render('Forward them to you'))).toBe(1)
     expect(primaryCount(render('Forward them to you', true))).toBe(0)
     expect(render()).toContain('<textarea')
-    expect(render()).not.toContain('Dictate your answer')
+    expect(render()).toContain('Dictate your answer')
   })
 })

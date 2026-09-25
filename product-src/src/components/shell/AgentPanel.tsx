@@ -8,12 +8,16 @@ type Phase = 'closed' | 'entering' | 'open' | 'closing'
 
 export function AgentPanel({ docked = false, suppressed = false }: { docked?: boolean; suppressed?: boolean }) {
   const [params, setParams] = useSearchParams()
-  const open = params.get('agent') === '1'
+  const [calling, setCalling] = useState(false)
+  // A live call keeps its timer and End control visible even if another control changes the URL.
+  const open = params.get('agent') === '1' || calling
+  const hiddenByPage = suppressed && !calling
   const [phase, setPhase] = useState<Phase>(open ? 'entering' : 'closed')
   const dialog = useRef<HTMLDivElement>(null)
   const trigger = useRef<HTMLElement | null>(null)
   const restoreFocus = useRef(0)
   const close = useCallback(() => {
+    if (calling) return
     setParams((previous) => {
       const next = new URLSearchParams(previous)
       next.delete('agent')
@@ -28,12 +32,12 @@ export function AgentPanel({ docked = false, suppressed = false }: { docked?: bo
       const target = trigger.current && visible(trigger.current) ? trigger.current : toggles.find(visible)
       target?.focus()
     })
-  }, [setParams])
+  }, [calling, setParams])
 
   useEffect(() => () => cancelAnimationFrame(restoreFocus.current), [])
 
   useEffect(() => {
-    if (docked || suppressed) return
+    if (docked || hiddenByPage) return
     let frame = requestAnimationFrame(() => {
       setPhase((current) => open ? current === 'open' ? 'open' : 'entering' : current === 'closed' ? 'closed' : 'closing')
       if (open) frame = requestAnimationFrame(() => setPhase('open'))
@@ -43,10 +47,10 @@ export function AgentPanel({ docked = false, suppressed = false }: { docked?: bo
       cancelAnimationFrame(frame)
       clearTimeout(timer)
     }
-  }, [open, docked, suppressed])
+  }, [open, docked, hiddenByPage])
 
   useEffect(() => {
-    if (!open || docked || suppressed || phase !== 'open') return
+    if (!open || docked || hiddenByPage || phase !== 'open') return
     if (document.activeElement instanceof HTMLElement && document.activeElement.matches('[data-agent-toggle]')) {
       trigger.current = document.activeElement
     }
@@ -76,17 +80,17 @@ export function AgentPanel({ docked = false, suppressed = false }: { docked?: bo
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [open, close, docked, suppressed, phase])
+  }, [open, close, docked, hiddenByPage, phase])
 
   const stateClass = phase === 'open' ? ' open' : phase === 'closing' ? ' closing' : ''
-  const hidden = suppressed || (!docked && !open && phase === 'closed')
+  const hidden = hiddenByPage || (!docked && !open && phase === 'closed')
   return <>
-    {!docked && !suppressed && <div className={`scrim agent-scrim${stateClass}`} hidden={hidden} onClick={close} aria-hidden="true" />}
-    <div id="agent-panel" ref={dialog} className={`agent-panel${docked ? ' agent-docked' : ` drawer${stateClass}`}`} hidden={hidden} inert={docked ? undefined : !open || suppressed}
+    {!docked && !hiddenByPage && <div className={`scrim agent-scrim${stateClass}`} hidden={hidden} onClick={close} aria-hidden="true" />}
+    <div id="agent-panel" ref={dialog} className={`agent-panel${docked ? ' agent-docked' : ` drawer${stateClass}`}`} hidden={hidden} inert={docked ? undefined : !open || hiddenByPage}
       role={docked ? 'complementary' : 'dialog'} aria-modal={docked ? undefined : true} aria-label="Closeout Agent" tabIndex={docked ? undefined : -1}>
-      <ChatPane headerAction={!docked ? <button type="button" className="btn icon-btn" aria-label="Close agent" onClick={close}><X aria-hidden="true" /></button> : undefined} />
+      <ChatPane onCallingChange={setCalling} headerAction={!docked ? <button type="button" className="btn icon-btn" aria-label="Close agent" disabled={calling} title={calling ? 'End the call or choose Keep typing to close the agent' : undefined} onClick={close}><X aria-hidden="true" /></button> : undefined} />
     </div>
-    {!suppressed && <button type="button" className="agent-fab" data-agent-toggle aria-label="Open Closeout Agent" aria-expanded={open} aria-controls="agent-panel" onClick={(event) => {
+    {!hiddenByPage && <button type="button" className="agent-fab" data-agent-toggle aria-label="Open Closeout Agent" aria-expanded={open} aria-controls="agent-panel" onClick={(event) => {
       trigger.current = event.currentTarget
       setParams((previous) => {
         const next = new URLSearchParams(previous)
