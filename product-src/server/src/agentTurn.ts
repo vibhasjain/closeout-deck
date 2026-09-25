@@ -32,6 +32,8 @@ export async function runDataTurn(input: {
   options: Omit<RunOptions, 'onEvent'>; runAgent: (options: RunOptions) => Promise<void>
   service: DataService; email: string; doc: Record<string, unknown>; fileIds?: string[]
   sync: () => Promise<unknown>; emit: (event: DataEvent) => void
+  /** Held only while this turn writes data, so the desk's own data requests never wait on the model. */
+  lock?: () => Promise<() => void>
 }): Promise<void> {
   const { options, service, email, doc, emit } = input
   const pending = new Set(input.fileIds ?? [])
@@ -71,37 +73,40 @@ export async function runDataTurn(input: {
     })
     allText += (allText ? '\n\n' : '') + safeReply
     if (held.error) break
-    for (const raw of blocks(reply, 'action')) {
-      if (!isPlainObject(raw) || raw.type !== 'set_fact') {
-        if (raw === null) console.warn('Ignored malformed agent action JSON')
-        continue
+    const release = input.lock ? await input.lock() : () => {}
+    try {
+      for (const raw of blocks(reply, 'action')) {
+        if (!isPlainObject(raw) || raw.type !== 'set_fact') {
+          if (raw === null) console.warn('Ignored malformed agent action JSON')
+          continue
+        }
+        const fact = Object.fromEntries(Object.entries(raw).filter(([key]) => key !== 'type'))
+        if (!validateFact(fact).ok) { console.warn('Ignored invalid agent set_fact'); continue }
+        const result = await service.setFact(email, fact, doc, new Date(), 'agent')
+        result.cycles.forEach(id => factCycles.add(id)); applied++; changed = true
       }
-      const fact = Object.fromEntries(Object.entries(raw).filter(([key]) => key !== 'type'))
-      if (!validateFact(fact).ok) { console.warn('Ignored invalid agent set_fact'); continue }
-      const result = await service.setFact(email, fact, doc, new Date(), 'agent')
-      result.cycles.forEach(id => factCycles.add(id)); applied++; changed = true
-    }
-    if (!pending.size) break
-    const mappings = blocks(reply, 'mapping')
-    for (const id of pending) failures.set(id, ['No mapping was supplied; clarification is needed'])
-    for (const raw of mappings) {
-      if (!isPlainObject(raw) || typeof raw.file !== 'string' || !pending.has(raw.file)) {
-        for (const id of pending) failures.set(id, ['Mapping must be valid JSON and name a requested file'])
-        continue
+      if (!pending.size) break
+      const mappings = blocks(reply, 'mapping')
+      for (const id of pending) failures.set(id, ['No mapping was supplied; clarification is needed'])
+      for (const raw of mappings) {
+        if (!isPlainObject(raw) || typeof raw.file !== 'string' || !pending.has(raw.file)) {
+          for (const id of pending) failures.set(id, ['Mapping must be valid JSON and name a requested file'])
+          continue
+        }
+        const result = await service.applyAgentMapping(email, raw.file, raw, doc)
+        if (!result.ok) { failures.set(raw.file, result.errors); continue }
+        changed = true
+        // One accepted layout may normalize several requested files at once.
+        for (const id of [...pending]) {
+          const file = await service.store.getFile(email, id)
+          if (file?.status !== 'normalized') continue
+          emit({ ingest: { fileId: id, status: 'normalized', entries: file.entryCount ?? 0, rows: file.rowCount ?? 0, unparsed: file.unparsed.length, cycles: result.cycles, gaps: result.gaps } })
+          pending.delete(id); failures.delete(id)
+        }
       }
-      const result = await service.applyAgentMapping(email, raw.file, raw, doc)
-      if (!result.ok) { failures.set(raw.file, result.errors); continue }
-      changed = true
-      // One accepted layout may normalize several requested files at once.
-      for (const id of [...pending]) {
-        const file = await service.store.getFile(email, id)
-        if (file?.status !== 'normalized') continue
-        emit({ ingest: { fileId: id, status: 'normalized', entries: file.entryCount ?? 0, rows: file.rowCount ?? 0, unparsed: file.unparsed.length, cycles: result.cycles, gaps: result.gaps } })
-        pending.delete(id); failures.delete(id)
-      }
-    }
-    if (!pending.size || !mappings.length || attempt === 1 || Date.now() >= deadline) break
-    if (changed) await input.sync()
+      if (!pending.size || !mappings.length || attempt === 1 || Date.now() >= deadline) break
+      if (changed) await input.sync()
+    } finally { release() }
     emit({ text: '\n\n' })
     message = [...pending].map(id => `Mapping for ${id} rejected:\n${(failures.get(id) ?? []).join('\n')}`).join('\n\n')
       + '\nReply with a corrected mapping block for each pending file. If the layout is genuinely ambiguous, ask one question with a P6 card and emit no mapping.'

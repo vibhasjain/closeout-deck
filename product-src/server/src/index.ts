@@ -9,7 +9,7 @@ import { runDataTurn, scribeOutput, spokenAnswer } from './agentTurn.ts'
 import { createLiveSession, LiveSessions, LiveUpstreamError, validateCallEnd, validateLiveBody, validateSdp, VOICE_ERROR } from './live.ts'
 import { createDictation, DictateUpstreamError, DICTATE_ERROR } from './dictate.ts'
 import { FirmError, FirmReader, extractFirm, firmCacheFromEnv } from './firm.ts'
-import { GlobalSemaphore, QueueFullError, TurnRateLimit, UserQueue } from './queue.ts'
+import { GlobalSemaphore, KeyedMutex, QueueFullError, TurnRateLimit, UserQueue } from './queue.ts'
 import { stateStoreFromEnv } from './state.ts'
 import type { StateStore } from './state.ts'
 import { chatMessage, isPlainObject, MAX_DOC_BYTES, validateChatBody, validateChatHistory, validateStateBody, ValidationError } from './validation.ts'
@@ -117,6 +117,8 @@ export function createServer(options: ServerOptions = {}) {
   const runAgent = options.runAgent ?? runClaude
   const workspace = options.workspace ?? prepareWorkspace
   const queue = new UserQueue()
+  // Data requests serialize among themselves, not behind chat turns: a page load fires several at once.
+  const dataLocks = new KeyedMutex()
   const capacity = new GlobalSemaphore()
   const rateLimit = new TurnRateLimit()
   // ponytail: a call scribes every user pause, so voice turns get their own window; the account queue still serializes them.
@@ -264,11 +266,8 @@ export function createServer(options: ServerOptions = {}) {
     }
     if (path === '/files' || path.startsWith('/files/') || path.startsWith('/data/')) {
       const store = getDataStore(), service = new DataService(store)
-      const abort = new AbortController()
-      const onClose = () => { if (!response.writableEnded) abort.abort() }
-      response.once('close', onClose)
-      // GET of a stale run can also publish. Serialize it with uploads and chat turns.
-      const release = await queue.reserve(user.email, abort.signal)
+      // GET of a stale run can also publish. Serialize it with uploads and the chat turn's own data writes.
+      const release = await dataLocks.acquire(user.email)
       try {
         const doc = await stateDoc(user.email)
         const url = new URL(request.url!, 'http://localhost')
@@ -368,7 +367,7 @@ export function createServer(options: ServerOptions = {}) {
           return
         }
         json(response, 404, { error: 'not_found' }); return
-      } finally { release(); response.off('close', onClose) }
+      } finally { release() }
     }
     if (request.method === 'POST' && path === '/chat') {
       const body = validateChatBody(await readJson(request, 300_000))
@@ -427,7 +426,7 @@ export function createServer(options: ServerOptions = {}) {
           env,
           signal: abort.signal,
           timeoutMs: turnTimeoutMs(body.mode, env),
-          }, runAgent, service: new DataService(store), email: user.email, doc,
+          }, runAgent, service: new DataService(store), email: user.email, doc, lock: () => dataLocks.acquire(user.email),
           fileIds: body.mode === 'ingest' ? body.context.fileIds as string[] : undefined,
           sync: () => options.workspace ? workspace(user, env) : materialize(user, env, store, doc, body.context, { journey: getJourneyStore() }),
           emit(event) {

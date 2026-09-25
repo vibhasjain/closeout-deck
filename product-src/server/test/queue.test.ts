@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { GlobalSemaphore, QueueFullError, TurnRateLimit, UserQueue } from '../src/queue.js'
+import { GlobalSemaphore, KeyedMutex, QueueFullError, TurnRateLimit, UserQueue } from '../src/queue.js'
 
 test('one turn runs, one waits, and a third receives 429', async () => {
   const queue = new UserQueue()
@@ -85,4 +85,18 @@ test('a disconnected waiter frees its waiting place without releasing the active
   ;(await replacement)()
   await assert.rejects(queue.acquire('person@hypertrack.io', controller.signal), { name: 'AbortError' })
   ;(await queue.acquire('person@hypertrack.io'))()
+})
+
+test('KeyedMutex runs one holder per account in FIFO order and never rejects waiters', async () => {
+  const lock = new KeyedMutex()
+  const order: number[] = []
+  const first = await lock.acquire('A@hypertrack.io')
+  const waiters = [1, 2, 3].map(n => lock.acquire('a@hypertrack.io').then(release => { order.push(n); release() }))
+  const other = await lock.acquire('b@hypertrack.io')
+  other()
+  await new Promise<void>(resolve => setImmediate(resolve))
+  assert.deepEqual(order, [])
+  first()
+  await Promise.all(waiters)
+  assert.deepEqual(order, [1, 2, 3])
 })

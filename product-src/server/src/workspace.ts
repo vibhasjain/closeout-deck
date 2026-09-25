@@ -8,6 +8,7 @@ import { RULES } from '../../src/bench/engine.js'
 import { calendarSummary } from '../../src/lib/cycles.ts'
 import { inboxAddress } from '../../src/lib/inbox.ts'
 import { verifyRebuiltEntries } from './datastore.ts'
+import { KeyedMutex } from './queue.ts'
 import type { CallRecord, DataStore, DataManifest, FileRecord, MappingRecord, FactRecord, RunRecord, SourceRecord } from './datastore.ts'
 import { normalize, parseFile, sanitizeFileName } from './ingest.ts'
 import type { TimeEntry } from './ingest.ts'
@@ -58,7 +59,7 @@ export async function prepareWorkspace(
     '- Use sentence case.',
     '',
   ].join('\n')
-  await writeFile(join(cwd, 'CLAUDE.md'), account, { mode: 0o600 })
+  await atomicWrite(join(cwd, 'CLAUDE.md'), account)
   const files = await readdir(handbooksSource, { withFileTypes: true })
   await Promise.all(files.filter(file => file.isFile() && file.name.endsWith('.md')).map(file =>
     (async () => {
@@ -121,7 +122,13 @@ export async function workspaceFile(cwd: string, name: string): Promise<string> 
 async function cacheWrite(cwd: string, name: string, value: string | Uint8Array): Promise<void> {
   const file = await workspaceFile(cwd, name)
   await mkdir(resolve(file, '..'), { recursive: true, mode: 0o700 })
-  await writeFile(file, value, { mode: 0o600 })
+  await atomicWrite(file, value)
+}
+/** Write, then rename: a turn reading its workspace never sees a half-written file while a data sync runs. */
+async function atomicWrite(file: string, value: string | Uint8Array): Promise<void> {
+  const temporary = join(resolve(file, '..'), `.w-${randomUUID()}`)
+  await writeFile(temporary, value, { mode: 0o600 })
+  await rename(temporary, file)
 }
 async function present(cwd: string, name: string): Promise<boolean> {
   try { await stat(await workspaceFile(cwd, name)); return true } catch (error) {
@@ -156,7 +163,13 @@ export async function writeCallFile(email: string, env: NodeJS.ProcessEnv, call:
 }
 
 /** Supabase is canonical. Only three version queries are needed on an unchanged turn. */
-export async function materialize(
+const materializing = new KeyedMutex()
+/** Chat turns and data writes both rebuild the workspace; one rebuild per account at a time. */
+export async function materialize(...args: Parameters<typeof materializeNow>): Promise<string> {
+  const release = await materializing.acquire(args[0].email)
+  try { return await materializeNow(...args) } finally { release() }
+}
+async function materializeNow(
   user: WorkspaceUser, env: NodeJS.ProcessEnv = process.env, store?: DataStore,
   doc: Record<string, unknown> = {}, context: Record<string, unknown> = {},
   options: { maxBytes?: number; maxCycles?: number; journey?: JourneyStore } = {},

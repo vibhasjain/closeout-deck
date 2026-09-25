@@ -386,3 +386,21 @@ test('chat history appends idempotently in closeout_chat and stays out of the st
   assert.ok(Buffer.byteLength(JSON.stringify(savedDoc)) < MAX_DOC_BYTES / 100)
   assert.deepEqual(await (await fetch(`${url}/chat/history`)).json(), { messages })
 })
+
+test('data requests fired together never queue behind a chat turn or fail with 429', async t => {
+  let active = 0
+  const controller = new AbortController()
+  t.after(() => controller.abort())
+  const url = await serve(t, {
+    dataStore: createMemoryDataStore(),
+    workspace: async () => '/test/workspace',
+    runAgent: async options => {
+      active += 1
+      await new Promise<void>(resolve => options.signal?.addEventListener('abort', () => resolve(), { once: true }))
+    },
+  })
+  void fetch(`${url}/chat`, { ...post(chatBody), signal: controller.signal }).catch(() => {})
+  await waitFor(() => active === 1)
+  const reads = await Promise.all(Array.from({ length: 4 }, () => fetch(`${url}/files`, { signal: AbortSignal.timeout(5_000) }).catch(() => ({ status: 0 }))))
+  assert.deepEqual(reads.map(r => r.status), [200, 200, 200, 200])
+})

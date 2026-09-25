@@ -138,3 +138,19 @@ export class TurnRateLimit {
     this.turns.set(key, recent)
   }
 }
+
+/** Per-account FIFO lock with unbounded waiters: data requests and workspace writes wait their turn, never 429. */
+// ponytail: single process only, like UserQueue. Multiple machines need a database advisory lock.
+export class KeyedMutex {
+  private readonly tails = new Map<string, Promise<void>>()
+
+  async acquire(email: string): Promise<Release> {
+    const key = email.trim().toLowerCase()
+    const previous = this.tails.get(key) ?? Promise.resolve()
+    let open!: () => void
+    const tail = previous.then(() => new Promise<void>(resolve => { open = resolve }))
+    this.tails.set(key, tail)
+    await previous
+    return () => { open(); if (this.tails.get(key) === tail) this.tails.delete(key) }
+  }
+}
