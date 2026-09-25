@@ -13,6 +13,8 @@ import { normalize, parseFile, sanitizeFileName } from './ingest.ts'
 import type { TimeEntry } from './ingest.ts'
 import { calendarFrom, engineSha } from './pipeline.ts'
 import { localToday, normalizationContext, dateKey, applyEntryVersions, mappingForFile } from './data.ts'
+import { writeJourney } from './journeyRoutes.ts'
+import type { JourneyStore } from './journeyStore.ts'
 
 export interface WorkspaceUser {
   email: string
@@ -140,7 +142,7 @@ async function diskSize(directory: string): Promise<number> {
 export async function materialize(
   user: WorkspaceUser, env: NodeJS.ProcessEnv = process.env, store?: DataStore,
   doc: Record<string, unknown> = {}, context: Record<string, unknown> = {},
-  options: { maxBytes?: number; maxCycles?: number } = {},
+  options: { maxBytes?: number; maxCycles?: number; journey?: JourneyStore } = {},
 ): Promise<string> {
   const cwd = await prepareWorkspace(user, env)
   if (!store) return cwd
@@ -244,7 +246,12 @@ export async function materialize(
     Object.entries(shifts).map(([shiftId, decision]) => ({ cycleId, shiftId, decision,
       reason: (doc.reasons as Record<string, unknown> | undefined)?.[`${cycleId}:${shiftId}`],
       at: (doc.decisionTimes as Record<string, unknown> | undefined)?.[`${cycleId}:${shiftId}`] })))
-  await cacheWrite(cwd, 'data/decisions.jsonl', decisions.map(compact).join('\n') + '\n')
+  if (options.journey) await writeJourney({ email: user.email, store, journey: options.journey, doc, runs: sorted, legacy: decisions, io: {
+    write: (path, value) => cacheWrite(cwd, path, value), present: path => present(cwd, path),
+    list: async dir => { try { return await readdir(await workspaceFile(cwd, dir)) } catch { return [] } },
+    remove: async path => rm(await workspaceFile(cwd, path), { recursive: true, force: true }),
+  } })
+  else await cacheWrite(cwd, 'data/decisions.jsonl', decisions.map(compact).join('\n') + '\n')
   // The total cache cap is enforced after each materialization; old cycle artifacts go first.
   const cap = options.maxBytes ?? 200 * 1024 * 1024
   let size = await diskSize(cwd)

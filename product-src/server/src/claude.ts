@@ -1,16 +1,17 @@
 import { execFile, spawn } from 'node:child_process'
+import { realpathSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
-import { delimiter, normalize, sep } from 'node:path'
+import { delimiter, isAbsolute, normalize, relative, sep } from 'node:path'
 import { promisify } from 'node:util'
 import { readSessionId, writeSessionId } from './workspace.js'
 
 export const AGENT_ERROR = 'The Closeout Agent hit a problem. Try again in a moment.'
-export type ClaudeEvent = { text: string } | { done: true; sessionId: string; final?: string; error?: string }
+export type ClaudeEvent = { text: string } | { trace: string } | { done: true; sessionId: string; final?: string; error?: string }
 type DoneEvent = Extract<ClaudeEvent, { done: true }>
 type StreamState = { hasText: boolean }
 
 /** Ignore non-text CLI events and never expose provider errors to the browser. */
-export function mapStreamLine(line: string, sessionId: string, state: StreamState = { hasText: false }): ClaudeEvent | null {
+export function mapStreamLine(line: string, sessionId: string, state: StreamState = { hasText: false }): { text: string } | DoneEvent | null {
   let value: unknown
   try { value = JSON.parse(line) } catch { return null }
   if (!value || typeof value !== 'object') return null
@@ -42,8 +43,39 @@ export function mapStreamLine(line: string, sessionId: string, state: StreamStat
   return null
 }
 
+/**
+ * Quiet trace frames for the chat: each Read of a workspace handbook becomes "Read handbooks/x.md",
+ * and Reads under data/ become "Read data/<path>", at most 3 of those per attempt. Paths are shown
+ * relative to the account workspace, never absolute, and each trace is emitted once.
+ */
+export function createTraceMapper(cwd: string): (line: string) => { trace: string }[] {
+  const seen = new Set<string>()
+  // The CLI may report the resolved path (macOS /var → /private/var).
+  let real = cwd
+  try { real = realpathSync(cwd) } catch { /* the workspace always exists during a turn */ }
+  let dataTraces = 0
+  return line => {
+    if (!line.includes('"tool_use"')) return []
+    let value: { type?: string; message?: { content?: { type?: string; name?: string; input?: { file_path?: unknown } }[] } }
+    try { value = JSON.parse(line) } catch { return [] }
+    if (value?.type !== 'assistant' || !Array.isArray(value.message?.content)) return []
+    const frames: { trace: string }[] = []
+    for (const block of value.message.content) {
+      if (block?.type !== 'tool_use' || block.name !== 'Read' || typeof block.input?.file_path !== 'string') continue
+      const file = block.input.file_path
+      const rel = normalize(!isAbsolute(file) ? file : relative(file.startsWith(real + sep) ? real : cwd, file)).split(sep).join('/')
+      const kind = /^handbooks\/[^/]+\.md$/.test(rel) ? 'handbook' : /^data\/./.test(rel) ? 'data' : null
+      if (!kind || seen.has(rel) || (kind === 'data' && dataTraces >= 3)) continue
+      seen.add(rel)
+      if (kind === 'data') dataTraces++
+      frames.push({ trace: `Read ${rel}` })
+    }
+    return frames
+  }
+}
+
 /** Each CLI attempt has its own text-block state, including across tool calls. */
-export function createStreamMapper(sessionId: string): (line: string) => ClaudeEvent | null {
+export function createStreamMapper(sessionId: string): (line: string) => { text: string } | DoneEvent | null {
   const state: StreamState = { hasText: false }
   return line => mapStreamLine(line, sessionId, state)
 }
@@ -122,7 +154,7 @@ function runAttempt(options: RunOptions, sessionId: string, resume: boolean): Pr
       options.prompt, sessionId, resume, options.model ?? env.CLOSEOUT_AGENT_MODEL ?? 'opus',
       env.CLOSEOUT_TURN_BUDGET_USD ?? '2',
     ), { cwd: options.cwd, env: claudeEnv(env), stdio: ['pipe', 'pipe', 'pipe'] })
-    const mapLine = createStreamMapper(sessionId)
+    const mapLine = createStreamMapper(sessionId), traceLine = createTraceMapper(options.cwd)
     let buffer = ''
     let stderr = ''
     let failureReason: string | undefined
@@ -132,6 +164,7 @@ function runAttempt(options: RunOptions, sessionId: string, resume: boolean): Pr
     let killTimer: ReturnType<typeof setTimeout> | undefined
     let exitTimer: ReturnType<typeof setTimeout> | undefined
     const parseLine = (line: string) => {
+      if (!options.signal?.aborted) for (const frame of traceLine(line)) options.onEvent(frame)
       const event = mapLine(line)
       if (!event || options.signal?.aborted) return
       if ('done' in event) {

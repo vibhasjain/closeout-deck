@@ -29,6 +29,7 @@ export async function runDataTurn(input: {
     await input.runAgent({ ...options, message, timeoutMs: Math.max(1, deadline - Date.now()), onEvent(event) {
       if (options.signal?.aborted) return
       if ('done' in event) terminal = event
+      else if ('trace' in event) emit(event)
       else { streamed += event.text; emit(event) }
     } })
     if (options.signal?.aborted) return

@@ -14,6 +14,9 @@ import { chatMessage, isPlainObject, MAX_DOC_BYTES, validateChatBody, validateCh
 import type { ChatMode } from './validation.ts'
 import { prepareWorkspace, materialize } from './workspace.ts'
 import { DataError, DataService, cycleDates, localToday } from './data.ts'
+import { handleJourney } from './journeyRoutes.ts'
+import { createMemoryJourneyStore, journeyStoreFromEnv } from './journeyStore.ts'
+import type { JourneyStore } from './journeyStore.ts'
 import { dataStoreFromEnv, DuplicateFileError, createMemoryDataStore } from './datastore.ts'
 import type { DataStore } from './datastore.ts'
 import { calendarFrom, engineSha } from './pipeline.ts'
@@ -41,6 +44,7 @@ interface ServerOptions {
   env?: NodeJS.ProcessEnv
   stateStore?: StateStore
   dataStore?: DataStore
+  journeyStore?: JourneyStore
   verifyGoogle?: typeof verifyGoogleIdToken
   claudeVersion?: () => Promise<string | null>
   runAgent?: typeof runClaude
@@ -122,6 +126,9 @@ export function createServer(options: ServerOptions = {}) {
     }
     return dataStore
   }
+  let journeyStore = options.journeyStore
+  // P7 records live beside the data: Supabase when the data store is, otherwise in memory (tests, development).
+  const getJourneyStore = () => journeyStore ??= options.dataStore || !(env.SUPABASE_URL && env.SUPABASE_SERVICE_KEY) ? createMemoryJourneyStore() : journeyStoreFromEnv(env)
   async function stateDoc(email: string): Promise<Record<string, unknown>> {
     if (!stateStore && env.SUPABASE_URL && env.SUPABASE_SERVICE_KEY) stateStore = stateStoreFromEnv(env)
     const row = await stateStore?.get(email)
@@ -216,7 +223,7 @@ export function createServer(options: ServerOptions = {}) {
       try {
         const doc = await stateDoc(user.email)
         const url = new URL(request.url!, 'http://localhost')
-        const sync = () => materialize(user, env, store, doc)
+        const sync = () => materialize(user, env, store, doc, {}, { journey: getJourneyStore() })
         if (path === '/files' && request.method === 'POST') {
           let name: string
           try { name = decodeURIComponent(String(request.headers['x-file-name'] ?? 'upload.csv')) }
@@ -259,7 +266,9 @@ export function createServer(options: ServerOptions = {}) {
           await sync(); json(response, 200, result); return
         }
         if (path === '/data/sample' && request.method === 'DELETE') {
+          const sampleCycles = (await store.listRuns(user.email)).filter(run => run.sample).map(run => run.cycleId)
           await store.deleteSample(user.email)
+          await getJourneyStore().deleteCycles(user.email, sampleCycles)
           await service.renormalizeOriginals(user.email, doc)
           const cycles = await service.recompute(user.email, doc)
           await sync(); json(response, 200, { ok: true, cycles }); return
@@ -284,16 +293,9 @@ export function createServer(options: ServerOptions = {}) {
           })
           json(response, 200, { cycles, sources }); return
         }
-        const cyclePath = /^\/data\/cycles\/(\d{4}-\d{2}-\d{2})$/.exec(path)
-        if (cyclePath && request.method === 'GET') {
-          await service.recompute(user.email, doc)
-          const run = await store.getRun(user.email, cyclePath[1])
-          if (!run) { json(response, 404, { error: 'not_found' }); return }
-          const bytes = await store.getObject(user.email, run.storagePath)
-          if (!bytes) throw new DataError(404, 'not_found')
-          response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Encoding': 'gzip', 'Cache-Control': 'no-store' })
-          response.end(bytes); return
-        }
+        // GET /data/cycles/:id (+ decisions, batch, nextStep) and the P7 journey routes.
+        if (await handleJourney({ method: request.method!, path, url, email: user.email, doc, store, service, journey: getJourneyStore(),
+          response, readBody: max => readJson(request, max), sync })) return
         if (request.method === 'GET' && (path === '/data/entries' || path === '/data/findings')) {
           const cycleId = url.searchParams.get('cycle')
           if (!cycleId || !/^\d{4}-\d{2}-\d{2}$/.test(cycleId)) throw new DataError(400, 'invalid_cycle')
@@ -361,7 +363,7 @@ export function createServer(options: ServerOptions = {}) {
         if (abort.signal.aborted) return
         const doc = await stateDoc(user.email), store = getDataStore()
         if (body.mode === 'ingest' && (await Promise.all((body.context.fileIds as string[]).map(id => store.getFile(user.email, id)))).some(file => !file || file.status !== 'needs_mapping')) throw new ValidationError()
-        const cwd = options.workspace ? await workspace(user, env) : await materialize(user, env, store, doc, body.context)
+        const cwd = options.workspace ? await workspace(user, env) : await materialize(user, env, store, doc, body.context, { journey: getJourneyStore() })
         if (abort.signal.aborted) return
         await runDataTurn({ options: {
           cwd,
@@ -373,7 +375,7 @@ export function createServer(options: ServerOptions = {}) {
           timeoutMs: turnTimeoutMs(body.mode, env),
           }, runAgent, service: new DataService(store), email: user.email, doc,
           fileIds: body.mode === 'ingest' ? body.context.fileIds as string[] : undefined,
-          sync: () => options.workspace ? workspace(user, env) : materialize(user, env, store, doc, body.context),
+          sync: () => options.workspace ? workspace(user, env) : materialize(user, env, store, doc, body.context, { journey: getJourneyStore() }),
           emit(event) {
             if (abort.signal.aborted || done) return
             if ('done' in event) {

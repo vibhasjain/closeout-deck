@@ -29,7 +29,7 @@ test('workspace refreshes account context and server-owned handbooks including i
     assert.ok(account.includes(required), required)
   }
   assert.deepEqual((await readdir(join(cwd, 'handbooks'))).sort(), [
-    'chase-missing-time.md', 'connect-a-source.md', 'ingest.md', 'mediation.md', 'send-to-payroll.md',
+    'chase-missing-time.md', 'connect-a-source.md', 'disputes.md', 'ingest.md', 'mediation.md', 'send-to-payroll.md',
   ])
   await writeFile(join(cwd, 'handbooks', 'mediation.md'), 'stale')
   await prepareWorkspace({ email: 'person@hypertrack.io', name: 'New name' }, env)
