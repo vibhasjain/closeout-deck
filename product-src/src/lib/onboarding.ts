@@ -48,13 +48,16 @@ export interface ChatMessage {
   actions?: unknown[]
   cards?: Card[]
   scope?: string
+  contextChip?: string
+  ingestFileIds?: string[]
 }
 
 /** A timesheet source or payroll destination the user has wired up. */
 export interface Connection {
   status: 'connected' | 'available'
-  method?: 'api' | 'browser' | 'email'
+  method?: 'api' | 'browser' | 'email' | 'sheet'
   lastSync?: string
+  sample?: boolean
 }
 
 /** A rule the user wrote, or the agent compiled from something they said. */
@@ -82,6 +85,8 @@ export interface Note {
 }
 
 export interface Onboarding {
+  dataSource: 'synthetic' | 'server'
+  timezone: string
   firm: FirmFacts | null
   profile: PayrollProfile
   covered: OnboardTopic[]
@@ -150,7 +155,7 @@ export interface Onboarding {
 }
 
 const KEY = 'closeout-onboarding-v2'
-export const DEFAULTS: Onboarding = { firm: null, profile: {}, covered: [], sources: [], neverContact: null, setupStep: 'welcome', setupHistory: [], setupRequest: null, frequency: 'Weekly', periodEndDay: 'Sunday', payDay: 'Friday', payDatesOfMonth: [20, 5], cutoffDays: 1, deadlineDays: 2, cohorts: [], intake: [], approver: null, fileName: null, entries: 212, baseRate: null, system: null, forwarded: false, sidebar: 'full', checklistDismissed: false, rules: [], proposals: [], resolutions: {}, payrollConnected: false, sentCycles: [], uploads: {}, threads: {}, chat: [], chatSessionId: null, connections: {}, approvedCycles: [], batches: {}, customRules: [], reasons: {}, decisionTimes: {}, mediation: {}, acceptedGaps: {}, undone: {}, discovery: { period: '', payouts: '', payroll: '', billing: '', vms: [], workerChannels: [], clientTime: [], approved: [] }, authorityConfigured: false, authority: { autoFix: true, limit: 100, weeklyCap: 1000, textSupervisors: true, textWorkers: false, briefing: 'Email' } }
+export const DEFAULTS: Onboarding = { dataSource: 'synthetic', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, firm: null, profile: {}, covered: [], sources: [], neverContact: null, setupStep: 'welcome', setupHistory: [], setupRequest: null, frequency: 'Weekly', periodEndDay: 'Sunday', payDay: 'Friday', payDatesOfMonth: [20, 5], cutoffDays: 1, deadlineDays: 2, cohorts: [], intake: [], approver: null, fileName: null, entries: 212, baseRate: null, system: null, forwarded: false, sidebar: 'full', checklistDismissed: false, rules: [], proposals: [], resolutions: {}, payrollConnected: false, sentCycles: [], uploads: {}, threads: {}, chat: [], chatSessionId: null, connections: {}, approvedCycles: [], batches: {}, customRules: [], reasons: {}, decisionTimes: {}, mediation: {}, acceptedGaps: {}, undone: {}, discovery: { period: '', payouts: '', payroll: '', billing: '', vms: [], workerChannels: [], clientTime: [], approved: [] }, authorityConfigured: false, authority: { autoFix: true, limit: 100, weeklyCap: 1000, textSupervisors: true, textWorkers: false, briefing: 'Email' } }
 const listeners = new Set<() => void>()
 let cache: Onboarding | null = null
 

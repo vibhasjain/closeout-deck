@@ -1,5 +1,5 @@
 import { CLIENTS } from '@/lib/sample'
-import { rowResolution, type DeskCycle } from '@/lib/desk'
+import { appliedCorrection, rowResolution, type DeskCycle } from '@/lib/desk'
 import type { Onboarding } from '@/lib/onboarding'
 
 /**
@@ -37,7 +37,9 @@ const IMPERATIVE: Record<string, string> = { Paid: 'Pay', Removed: 'Remove', Add
 export const proposalFor = (ruleId: string) => actionFor(ruleId).replace(/^\w+/, (verb) => IMPERATIVE[verb] ?? verb)
 
 /** Who the agent asked, with their role, so a supervisor never reads as a worker. */
-const askedAt = (site: string) => {
+const askedAt = (site: string, cycle: DeskCycle) => {
+  const supervisor = cycle.sites?.find(item => item.name === site)?.supervisor
+  if (supervisor) return `${supervisor.name}, ${site}'s ${supervisor.role ?? 'site supervisor'},`
   const client = Object.values(CLIENTS).find((item) => item.name === site)
   return client ? `${client.supervisor}, ${client.name}'s site supervisor,` : 'the site supervisor'
 }
@@ -53,7 +55,7 @@ export function resolutionGroups(c: DeskCycle, res: Onboarding['resolutions'], u
       if (seen.has(row.ruleId)) continue
       const decision = rowResolution(c, rs.shift.id, row.ruleId, res)
       let state: ResolutionState | null = null
-      if (row.status === 'applied' && row.effect) state = undone.includes(row.ruleId) && !res[c.id]?.[rs.shift.id] ? 'proposed' : 'fixed'
+      if (appliedCorrection(c, row)) state = undone.includes(row.ruleId) && !res[c.id]?.[rs.shift.id] ? 'proposed' : 'fixed'
       else if (row.status === 'flag' || row.status === 'held') {
         if (decision === 'applied') state = 'fixed'
         else if (!decision) state = JUDGMENT[row.ruleId] ? 'judgment' : WAITING.has(row.ruleId) || row.status === 'held' ? 'waiting' : 'proposed'
@@ -64,7 +66,7 @@ export function resolutionGroups(c: DeskCycle, res: Onboarding['resolutions'], u
       const key = `${state}:${row.ruleId}:${approved}`
       const group = groups.get(key) ?? { state, ruleId: row.ruleId, cases: [], current: 0, resolved: 0, ...(approved ? { approved } : {}),
         ...(JUDGMENT[row.ruleId] ? { owner: JUDGMENT[row.ruleId] } : {}),
-        ...(state === 'waiting' ? { asked: askedAt(rs.shift.fac.name) } : {}) }
+        ...(state === 'waiting' ? { asked: askedAt(rs.shift.fac.name, c) } : {}) }
       group.cases.push({ shiftId: rs.shift.id, worker: rs.shift.worker, day: c.days[rs.shift.day] ?? '', site: rs.shift.fac.name, note: row.note, before: rs.naive, after: rs.pay })
       group.current += rs.naive
       group.resolved += rs.pay

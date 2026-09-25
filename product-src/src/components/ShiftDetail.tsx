@@ -80,7 +80,7 @@ function ShiftEvidence({ cycle, rs, primaryRuleId, showHeading = true, showSourc
   const source = provenance(cycle, s, cycle.week.findIndex((shift) => shift.id === s.id))
   const fired = rs.rows.filter((row) => row.status === 'flag' || row.status === 'held' || row.status === 'applied')
   // Each timesheet row carries the mark of the system that reported it.
-  const vendor = SOURCES.find((candidate) => candidate.sites.includes(s.fac.name) && !candidate.builtin && candidate.id !== 'upload')
+  const vendor = cycle.server ? undefined : SOURCES.find((candidate) => candidate.sites.includes(s.fac.name) && !candidate.builtin && candidate.id !== 'upload')
   const vendorName = vendor?.short ?? source.system
   const vendorMark = vendor?.tile ? <img src={vendor.tile} alt="" /> : <FileClock size={13} aria-hidden="true" />
   const delta = rs.pay - rs.naive
@@ -98,19 +98,21 @@ function ShiftEvidence({ cycle, rs, primaryRuleId, showHeading = true, showSourc
 
   return <div className="shift-evidence">
     <div className="shift-evidence-scroll">
-    {showHeading && <div className="flex items-center gap-2">
-      <div className="count">#{s.id} · {cycle.days[s.day]}</div>
+    {(showHeading || source.sample || cycle.sample) && <div className="flex items-center gap-2">
+      {showHeading && <div className="count">#{s.id} · {cycle.days[s.day]}</div>}
+      {(source.sample || cycle.sample) && <Tag>Sample</Tag>}
     </div>}
     {timeOnly && rules}
     {timeOnly && <Lbl>Time entry</Lbl>}
     <Kv rows={[
       ['Worker', <span key="worker">{s.worker} · {s.role}</span>],
       ['Site', <span key="site">{s.fac.name}<span className="block">{s.fac.city}, {s.fac.state}</span></span>],
+      ...(cycle.server ? [['Source', <span key="source">{source.file}{source.sheet ? ` · ${source.sheet}` : ''} · row {source.row}</span>] as [string, ReactNode]] : []),
       ['Scheduled', <Via key="sched" mark={vendorMark} title={`From ${vendorName}`}>{s.sched ? `${fmtT(s.sched[0])} to ${fmtT(s.sched[1])}` : null}</Via>],
-      ['Punched', <Via key="punched" mark={vendorMark} title={`From ${vendorName}`}><span>{s.punches.map((punch, index) => <span className="block num" key={index}>{fmtT(punch.in)} to {punch.out == null ? '—' : fmtT(punch.out)}</span>)}</span></Via>],
+      [source.hoursOnly ? 'Reported hours' : 'Punched', <Via key="punched" mark={vendorMark} title={`From ${vendorName}`}>{source.hoursOnly ? `${(rs.payableMin / 60).toLocaleString()}h · clock times not supplied` : <span>{s.punches.map((punch, index) => <span className="block num" key={index}>{fmtT(punch.in)} to {punch.out == null ? '—' : fmtT(punch.out)}</span>)}</span>}</Via>],
       ['Geofence', <Via key="geo" mark={<MapPin size={13} aria-hidden="true" />} title="HyperTrack location">{s.geo ? `${fmtT(s.geo[0])} to ${fmtT(s.geo[1])}` : s.fac.geofence ? 'No location evidence' : 'Not used at this site'}</Via>],
       ['Badge', <Via key="badge" mark={<IdCard size={13} aria-hidden="true" />} title="Door badge">{s.badgeIn != null || s.badgeOut != null ? `${s.badgeIn == null ? '—' : fmtT(s.badgeIn)} to ${s.badgeOut == null ? '—' : fmtT(s.badgeOut)}` : null}</Via>],
-      ['Meal break', <Via key="meal" mark={vendorMark} title={`From ${vendorName}`}>{s.meal ? `${fmtT(s.meal[0])} to ${fmtT(s.meal[1])} · ${s.meal[1] - s.meal[0]} min` : 'No meal punch'}</Via>],
+      ['Meal break', <Via key="meal" mark={vendorMark} title={`From ${vendorName}`}>{s.meal ? `${fmtT(s.meal[0])} to ${fmtT(s.meal[1])} · ${s.meal[1] - s.meal[0]} min` : s.mealMin != null ? `${s.mealMin} min · break times not supplied` : 'No meal punch'}</Via>],
       ...(timeOnly ? [] : [['Rate', <span className="block num" key="rate">{money(rs.rate)}/h</span>] as [string, ReactNode]]),
     ]} />
     {!timeOnly && rules}

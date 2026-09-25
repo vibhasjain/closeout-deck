@@ -2,14 +2,17 @@ import { FirstCloseoutChoice } from './FirstCloseoutChoice'
 import { Tag } from '@/components/ui'
 import type { ChatMessage } from '@/lib/onboarding'
 import { actionSummary } from '@/lib/chatActions'
+import { FactQuestion } from './FactQuestion'
 
-export function Message({ message }: { message: ChatMessage }) {
+export function Message({ message, onAnswer }: { message: ChatMessage; onAnswer?(answer: string): void }) {
   const user = message.role === 'user'
   return (
     <article className={`chat-message${user ? ' user' : ''}`} aria-label={user ? 'You' : 'Closeout Agent'}>
       <div className={user ? 'chat-bubble' : 'chat-agent-text'}>
+        {message.contextChip && <span className="chat-context-chip">{message.contextChip}</span>}
         {message.text && <div className="chat-text">{message.text}</div>}
-        {message.cards?.map((card, index) => card.kind === 'question' && card.input === 'choice' && card.choice ? <FirstCloseoutChoice key={index} choice={card.choice} /> : null)}
+        {message.cards?.map((card, index) => card.kind !== 'question' ? null : card.input === 'choice' && card.choice
+          ? <FirstCloseoutChoice key={index} choice={card.choice} /> : onAnswer ? <FactQuestion key={index} card={card} onAnswer={onAnswer} /> : null)}
         {message.actions?.map((action, index) => {
           const summary = actionSummary(action)
           return summary === null ? null : (

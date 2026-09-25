@@ -1,27 +1,37 @@
 import { useState, type JSX } from 'react'
 import { X } from 'lucide-react'
 import type { Source } from '@/bench/vendors'
-import { ConnectModal } from '@/components/ConnectModal'
 import { InboxAddress } from '@/components/InboxAddress'
 import { VendorTile, vendorKey } from '@/components/SourcesTable'
 import { useOverlay } from '@/components/shell/Overlay'
-import { Btn } from '@/components/ui'
-import { inboxAddress, useOnboarding } from '@/lib/onboarding'
+import { Btn, Chip, Tag } from '@/components/ui'
+import { getOnboarding, inboxAddress, useOnboarding } from '@/lib/onboarding'
 import { useCurrentEmail } from '@/lib/useCurrentEmail'
 import { METHODS, type Method } from '@/lib/connectMethods'
+import { connectSource } from '@/lib/data'
 
 /** Pick how the agent reaches a system: browser sign-in, API key, or forwarded email. */
 export function ConnectMethod({ vendor }: { vendor: Source }): JSX.Element {
   const [state, update] = useOnboarding()
-  const { close, openModal, toast } = useOverlay()
+  const { close, toast } = useOverlay()
   const email = useCurrentEmail()
   const key = vendorKey(vendor)
   const current = state.connections[key]?.method
   const [picked, setPicked] = useState<Method | null>(null)
-  const save = (method: Method) => {
-    update({ connections: { ...state.connections, [key]: { status: 'connected', method, lastSync: new Date().toISOString() } } })
-    close()
-    toast(`${vendor.name} connected`)
+  const [set, setSet] = useState<1 | 2>(vendor.set === 1 ? 1 : 2)
+  const [busy, setBusy] = useState(false)
+  const [done, setDone] = useState(false)
+  const [error, setError] = useState('')
+  const save = async (method: Method) => {
+    if (busy) return
+    setPicked(method); setBusy(true); setError('')
+    try {
+      await connectSource({ set: vendor.set === 3 || vendor.builtin ? 3 : set, system: vendor.name, site: vendor.sites[0] })
+      update({ connections: { ...getOnboarding().connections, [key]: { status: 'connected', method, sample: true, lastSync: new Date().toISOString() } } })
+      setDone(true)
+      toast(`${vendor.name} connected · Sample`)
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'The sample connection could not be loaded. Try again.') }
+    finally { setBusy(false) }
   }
   const disconnect = () => {
     const connections = { ...state.connections }
@@ -35,20 +45,25 @@ export function ConnectMethod({ vendor }: { vendor: Source }): JSX.Element {
       <div className="vendor-title"><VendorTile vendor={vendor} /><h3 className="drawer-title">{vendor.name}</h3></div>
       <button className="icon-btn" type="button" aria-label="Close" onClick={close}><X aria-hidden="true" /></button>
     </div>
-    {picked === 'api' ? <form className="connect-method-body" onSubmit={(event) => { event.preventDefault(); save('api') }}>
-      <label className="setup-field"><span className="lbl">Read-only API key</span><input className="q-input" required placeholder="Paste key" /></label>
-      <Btn type="submit" className="primary">Connect</Btn>
-    </form> : picked === 'email' ? <div className="connect-method-body">
-      <p className="r-note">Forward {vendor.name} exports here, or BCC this address</p>
-      <InboxAddress address={inboxAddress(email)} />
-      <Btn className="primary" onClick={() => save('email')}>Done</Btn>
+    {done ? <div className="connect-method-body">
+      <p>Connected <Tag>Sample</Tag></p>
+      <p className="r-note">{vendor.name} time entries are ready in Payroll. This is a simulated connection.</p>
+      {picked === 'email' && <InboxAddress address={inboxAddress(email)} />}
+      <Btn className="primary" onClick={close}>Done</Btn>
     </div> : <div className="connect-method-options">
-      {METHODS.map(({ id, label, hint, Icon }) => <button key={id} type="button" className={`connect-method-option${current === id ? ' active' : ''}`}
-        onClick={() => id === 'browser' ? openModal(<ConnectModal vendor={vendor} onDone={() => undefined} />) : setPicked(id)}>
+      <p>How do you want to connect?</p>
+      <p className="r-note">Simulated connector · loads Sample time entries</p>
+      {!vendor.builtin && vendor.set !== 3 && <div className="chips" role="group" aria-label="Time entry source">
+        <Chip disabled={busy} active={set === 1} aria-pressed={set === 1} onClick={() => setSet(1)}>Worker-reported</Chip>
+        <Chip disabled={busy} active={set === 2} aria-pressed={set === 2} onClick={() => setSet(2)}>Client-approved</Chip>
+      </div>}
+      {METHODS.map(({ id, label, hint, Icon }) => <button key={id} type="button" disabled={busy} className={`connect-method-option${current === id ? ' active' : ''}`}
+        onClick={() => void save(id)}>
         <Icon size={18} aria-hidden="true" />
-        <span className="connect-method-label">{label}</span>
+        <span className="connect-method-label">{busy && picked === id ? 'Connecting…' : label}</span>
         <span className="connect-method-hint">{hint}</span>
       </button>)}
+      {error && <p className="r-note" role="alert">{error}</p>}
       {current && <button type="button" className="lnk" onClick={disconnect}>Disconnect</button>}
     </div>}
   </div>

@@ -4,6 +4,7 @@ import { agentHref } from '@/lib/navigation'
 import { cycleNamed, saveCycle, slugId } from '@/lib/cohorts'
 import { FREQUENCIES, WEEKDAYS, ONBOARD_TOPICS, PROFILE_FIELDS } from '@/lib/onboarding'
 import type { CustomDeskRule, Onboarding } from '@/lib/onboarding'
+import { invalidate } from '@/lib/data'
 
 export type ChatUpdate = (patch: Partial<Onboarding> | ((state: Onboarding) => Partial<Onboarding>)) => void
 
@@ -33,6 +34,9 @@ function isFirmPatch(value: unknown) {
 export function isAction(value: unknown): value is Action {
   if (!isRecord(value)) return false
   switch (value.type) {
+    case 'set_fact':
+      return ['site', 'rate', 'differential', 'alias', 'account'].includes(String(value.kind))
+        && meaningfulString(value.key) && isRecord(value.value)
     case 'set_profile':
       return PROFILE_FIELDS.some((field) => field === value.field) && (shortString(value.value) || (isRecord(value.value)
         && Object.keys(value.value).length <= 10 && Object.entries(value.value).every(([key, item]) => meaningfulString(key) && !['__proto__', 'constructor', 'prototype'].includes(key) && shortString(item))))
@@ -84,6 +88,10 @@ export function isAction(value: unknown): value is Action {
 
 export function applyAction(action: Action, update: ChatUpdate, navigate: NavigateFunction, params: URLSearchParams, cycleId?: string) {
   switch (action.type) {
+    case 'set_fact':
+      // Facts are validated and saved by the server before its done event.
+      void invalidate()
+      break
     case 'set_profile':
       update((state) => ({ profile: { ...state.profile, [action.field]: action.value } }))
       break
@@ -152,6 +160,7 @@ export function actionSummary(value: unknown): string | null {
   if (!value || typeof value !== 'object' || !('type' in value)) return null
   const action = value as Record<string, unknown>
   switch (action.type) {
+    case 'set_fact': return `Saved ${String(action.kind)} details: ${String(action.key)}`
     case 'set_profile': return `Payroll profile: ${String(action.field)}`
     case 'set_firm': return 'Updated firm details'
     case 'add_source': return `Added source: ${String(action.label)}`
@@ -170,4 +179,3 @@ export function actionSummary(value: unknown): string | null {
     default: return null
   }
 }
-

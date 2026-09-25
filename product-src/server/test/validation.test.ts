@@ -4,7 +4,7 @@ import { MAX_CONTEXT_CHARS, MAX_DOC_BYTES, MODES, validateChatBody, validateStat
 
 test('chat validation accepts each known mode and keeps message and context intact', () => {
   for (const mode of MODES) {
-    const body = { mode, message: ' Hi ', context: { page: '/payroll', count: 3 } }
+    const body = { mode, message: ' Hi ', context: { page: '/payroll', count: 3, ...(mode === 'ingest' ? { fileIds: ['f_abcdefghijkl'] } : {}) } }
     assert.deepEqual(validateChatBody(body), body)
   }
 })

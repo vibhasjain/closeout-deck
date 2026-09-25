@@ -4,6 +4,8 @@ import { FACILITIES, fmtT } from './engine.js'
 export interface SendSchedule { day?: number; at: number }
 
 export interface Source {
+  set?: 1 | 2 | 3
+  sample?: boolean
   id: string
   name: string
   short: string

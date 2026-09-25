@@ -215,7 +215,7 @@ test('CORS only allows the production and local app origins', async t => {
     })
     assert.equal(preflight.status, 204)
     assert.equal(preflight.headers.get('Access-Control-Allow-Origin'), 'https://closeoutcopilot.com')
-    assert.equal(preflight.headers.get('Access-Control-Allow-Headers'), 'Authorization, Content-Type, X-File-Name, X-Set')
+    assert.equal(preflight.headers.get('Access-Control-Allow-Headers'), 'Authorization, Content-Type, X-File-Name, X-Set, X-System, X-Site')
     assert.ok(preflight.headers.get('Access-Control-Allow-Methods')?.split(', ').includes(method))
     assert.equal(preflight.headers.get('Vary'), 'Origin')
   }

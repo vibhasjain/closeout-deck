@@ -1,0 +1,219 @@
+import { createElement as h } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { MemoryRouter } from 'react-router-dom'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { ShiftTable } from '@/components/ShiftTable'
+import { PayrollSummary } from '@/components/PayrollSummary'
+import { PayRuns } from '@/components/shell/PayRuns'
+import { OverlayProvider } from '@/components/shell/Overlay'
+import { AuxProvider } from '@/components/shell/Aux'
+import * as api from '@/lib/api'
+import * as onboarding from '@/lib/onboarding'
+import * as sessions from '@/lib/viewerSession'
+import { DEFAULTS, type Onboarding } from '@/lib/onboarding'
+import { activeCycles, applyKind, buildCycles, cycleStats, discrepancies, kinds, provenance, useDesk } from '@/lib/desk'
+import { cycleIntake } from '@/lib/intake'
+import { payTotals } from '@/lib/payroll'
+import { resolutionGroups } from '@/lib/resolution'
+import { getCycle, getEntries, getFindings, getDataSnapshot, hydrate, invalidate, seedSample, setFact, uploadFile, type CyclePayload, type FileRecord, type SourceRecord } from '@/lib/data'
+import recorded from '@/lib/fixtures/server-cycle.json'
+
+const payload = recorded.payload as unknown as CyclePayload
+const files = recorded.files as FileRecord[]
+const sources = recorded.sources as SourceRecord[]
+let state: Onboarding
+const response = (body: unknown) => new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } })
+const summary = { ...payload.cycle, runAt: payload.runAt, sample: payload.sample, totals: payload.totals, counts: payload.counts, findings: payload.groups.length }
+const request = (path: string) => {
+  if (path === '/data/cycles') return Promise.resolve(response({ cycles: [summary], sources }))
+  if (path === '/files') return Promise.resolve(response({ files }))
+  if (path === `/data/cycles/${payload.cycle.id}`) return Promise.resolve(response(payload))
+  throw new Error(`Unexpected test request ${path}`)
+}
+beforeEach(() => {
+  state = { ...structuredClone(DEFAULTS) }
+  vi.spyOn(onboarding, 'getOnboarding').mockImplementation(() => state)
+  vi.spyOn(onboarding, 'useOnboarding').mockImplementation(() => [state, patch => { state = { ...state, ...patch } }])
+  vi.spyOn(onboarding, 'updateOnboarding').mockImplementation(patch => { state = { ...state, ...patch } })
+  vi.spyOn(onboarding, 'flushOnboarding').mockResolvedValue()
+  vi.spyOn(api, 'authedFetch').mockImplementation(request)
+})
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals() })
+
+describe('recorded server cycle', () => {
+  it('keeps the existing synthetic fallback before the account has data', () => {
+    const cycles = activeCycles(state)
+    expect(cycles).toBe(buildCycles(state))
+    expect(cycles).toHaveLength(26)
+  })
+  it('restores dates, facilities, every result and callable context without recomputing server pay', () => {
+    const before = JSON.stringify(payload)
+    const cycle = hydrate(payload, state, files)
+    expect(cycle.server).toBe(true)
+    expect(cycle.sample).toBe(true)
+    expect(cycle.week).toHaveLength(11)
+    expect(cycle.run.totals).toEqual(payload.totals)
+    expect(cycle.run.shifts.map(result => Object.fromEntries(Object.entries(result).filter(([key]) => key !== 'shift')))).toEqual(payload.results)
+    expect(cycle.run.shifts[0].shift).toBe(cycle.week[0])
+    expect(cycle.week[0].fac.name).toBe('Pacific Cold Storage')
+    expect(cycle.start).toBeInstanceOf(Date)
+    expect(cycle.groups).toEqual(payload.groups)
+    expect(cycle.extraGroups).toEqual(payload.extraGroups)
+    expect(cycleStats(cycle)).toMatchObject({ payments: 11, gross: 1600, needsReview: 2 })
+    expect(payTotals(cycle)).toMatchObject({ gross: 1600, naive: 1760 })
+    expect(kinds(cycle, {}).map(kind => kind.ruleId)).toEqual(expect.arrayContaining(['CS-01', 'TS-COMPLETE']))
+    expect(resolutionGroups(cycle, {}).map(group => group.ruleId)).toContain('CS-01')
+    expect(cycle.run.ctx.workedMin(cycle.week[0])).toBe(480)
+    expect(cycle.run.ctx.dupGap(cycle.week[0])).toBeNull()
+    expect(cycle.run.ctx.byWorker.get(cycle.week[0].worker)?.[0]).toBe(cycle.week[0])
+    expect(cycle.run.ctx.overlap(cycle.week[0])).toBeNull()
+    expect(provenance(cycle, cycle.week[0], 999)).toMatchObject({ system: 'Bullhorn', file: 'bullhorn_2026-09-20.csv', fileId: payload.week[0].prov.file, row: payload.week[0].prov.row, sample: true })
+    expect(JSON.stringify(payload)).toBe(before)
+  })
+  it('keeps an applied wrong-week correction beside overtime extras without inventing effects or counting pay twice', () => {
+    const wire = structuredClone(payload)
+    wire.week = wire.week.slice(0, 1)
+    const wrongWeek = { ruleId: 'SRC-WEEK-01', status: 'applied' as const, note: 'Location confirms the overnight belongs in this week' }
+    wire.results = [{ ...wire.results[0], rows: [
+      { ruleId: 'FED-OT-40', status: 'applied', note: 'Weekly overtime restored', effect: { otPremiumMin: 60 } },
+      { ruleId: 'FED-RR-01', status: 'applied', note: 'Differential restored', effect: { premiumAmt: 4.5 } },
+      wrongWeek, wrongWeek,
+    ] }]
+    wire.groups = [{ ...wire.groups[0], ruleId: wrongWeek.ruleId, cases: 1 }]
+    wire.extraGroups = ['FED-OT-40', 'FED-RR-01'].map(ruleId => ({ ...wire.groups[0], ruleId }))
+    const cycle = hydrate(wire, state, files)
+    const groups = resolutionGroups(cycle, {})
+    expect(groups.map(group => group.ruleId)).toEqual(expect.arrayContaining(['SRC-WEEK-01', 'FED-OT-40', 'FED-RR-01']))
+    expect(groups.every(group => group.cases.length === 1)).toBe(true)
+    expect(cycleStats(cycle)).toMatchObject({ total: 1, agentResolved: 1, needsReview: 0, gross: wire.results[0].pay })
+    expect(payTotals(cycle).gross).toBe(wire.results[0].pay)
+    expect(discrepancies(cycle, {}).some(item => item.ruleId === 'SRC-WEEK-01')).toBe(true)
+    expect(cycle.run.shifts[0].rows.find(row => row.ruleId === wrongWeek.ruleId)?.effect).toBeUndefined()
+    const html = renderToStaticMarkup(h(MemoryRouter, null, h(OverlayProvider, null, h(AuxProvider, null, h(PayrollSummary, { cycle })))))
+    expect(html).toContain('data-rule="SRC-WEEK-01"')
+    expect(html).toContain('data-rule="FED-OT-40"')
+    expect(resolutionGroups(cycle, {}, ['SRC-WEEK-01']).find(group => group.ruleId === wrongWeek.ruleId)?.state).toBe('proposed')
+    expect(cycleStats(cycle, {}, ['SRC-WEEK-01'])).toMatchObject({ total: 1, agentResolved: 0, needsReview: 1 })
+
+    // A source correction remains visible even without an accompanying engine premium.
+    cycle.run.shifts[0].rows = [wrongWeek]
+    expect(cycleStats(cycle)).toMatchObject({ total: 1, agentResolved: 1 })
+    const table = renderToStaticMarkup(h(MemoryRouter, null, h(ShiftTable, { cycle, filterMode: 'discrepancies', defaultFilter: 'agent-resolved', onSelect: () => {} })))
+    expect(table).toContain('Ana Peña')
+    const synthetic = { ...cycle, server: false }
+    expect(cycleStats(synthetic).total).toBe(0)
+    expect(resolutionGroups(synthetic, {})).toEqual([])
+  })
+  it('uses server intake and source ids without planted gaps or a synthetic wall clock', () => {
+    const cycle = hydrate(payload, state, files)
+    const intake = cycleIntake(cycle, state, new Date('2026-09-22T12:00:00Z'))
+    expect(intake.expected).toBe(payload.intake.expected.length)
+    expect(intake.received).toBe(payload.intake.received.length)
+    expect(intake.clients.map(client => client.name)).toEqual(['Pacific Cold Storage'])
+    expect(intake.clients.flatMap(client => client.sources).every(row => sources.some(source => source.id === row.source.id))).toBe(true)
+    expect(intake.clients.flatMap(client => client.sources).every(row => row.source.sample)).toBe(true)
+  })
+  it('switches the desk on discovered data and applies decisions to the server shift ids', async () => {
+    await invalidate()
+    expect(state.dataSource).toBe('server')
+    const cycles = activeCycles(state)
+    expect(cycles.map(cycle => cycle.id)).toEqual(['2026-09-20'])
+    expect(cycles[0].week.map(shift => shift.id)).toEqual(payload.week.map(shift => shift.id))
+    const targets = kinds(cycles[0], {}).find(kind => kind.ruleId === 'CS-01')!.cases
+    expect(applyKind(cycles[0].id, 'CS-01')).toBe(targets.length)
+    expect(state.resolutions[cycles[0].id][targets[0].shiftId]).toBe('applied')
+  })
+  it('renders the server groups, workers, totals and Sample tag in the desk and pay-run sidebar', async () => {
+    await invalidate()
+    function DeskFixture() {
+      const { current } = useDesk()
+      return h('div', null, h(PayRuns), h(PayrollSummary, { cycle: current }))
+    }
+    const html = renderToStaticMarkup(h(MemoryRouter, null, h(OverlayProvider, null, h(AuxProvider, null, h(DeskFixture)))))
+    expect(html).toContain('data-rule="CS-01"')
+    expect(html).toContain('data-rule="TS-COMPLETE"')
+    expect(html).toContain('Pacific Cold Storage')
+    expect(html).toContain('11 payouts, $1,600')
+    expect(html).toContain('Sample')
+    expect(html).not.toContain('Bayview Warehouse')
+    expect(html).not.toContain('6,278')
+  })
+  it('keeps server data on a failed refresh and exposes the retry error', async () => {
+    await invalidate()
+    vi.mocked(api.authedFetch).mockRejectedValue(new Error('Network unavailable'))
+    await invalidate()
+    expect(getDataSnapshot().error).toBe('Network unavailable')
+    expect(activeCycles(state)[0].week).toHaveLength(11)
+  })
+  it('waits for a fresh pass when another invalidation arrives during an in-flight read', async () => {
+    let release!: (response: Response) => void
+    let reads = 0
+    vi.mocked(api.authedFetch).mockImplementation(path => {
+      if (path === '/data/cycles' && ++reads === 1) return new Promise<Response>(resolve => { release = resolve })
+      return request(path)
+    })
+    const first = invalidate()
+    const second = invalidate()
+    release(response({ cycles: [], sources: [] }))
+    await second
+    expect(getDataSnapshot().payloads).toHaveLength(1)
+    expect(getDataSnapshot().loading).toBe(false)
+    await first
+  })
+  it('never returns a cached cycle belonging to another signed-in account', async () => {
+    await invalidate()
+    const previous = activeCycles(state)
+    expect(previous[0].week).toHaveLength(11)
+    vi.spyOn(sessions, 'viewerSession').mockReturnValue({ email: 'another@example.com', sessionToken: 'new-account', exp: 9999999999 })
+    const next = activeCycles(state)
+    expect(next).not.toBe(previous)
+    expect(next.every(cycle => cycle.week.length === 0)).toBe(true)
+  })
+  it('does not fall back to generated rows when server mode has no runs', async () => {
+    vi.mocked(api.authedFetch).mockImplementation(path => Promise.resolve(response(path === '/files' ? { files: [] } : { cycles: [], sources: [] })))
+    state.dataSource = 'server'
+    await invalidate()
+    const cycles = activeCycles(state)
+    expect(cycles.length).toBeGreaterThan(0)
+    expect(cycles.every(cycle => cycle.server && cycle.week.length === 0)).toBe(true)
+    expect(cycles.every(cycle => cycleIntake(cycle, state).expected === 0)).toBe(true)
+  })
+})
+
+describe('typed data requests', () => {
+  it('uses the cycle, entries and findings routes with encoded query fields', async () => {
+    vi.mocked(api.authedFetch).mockImplementation(async () => response({ entries: [], groups: [], cases: [] }))
+    await getCycle('2026-09-20')
+    await getEntries('2026-09-20', { shift: 's/a b', offset: 2000 })
+    await getFindings('2026-09-20')
+    expect(api.authedFetch).toHaveBeenCalledWith('/data/cycles/2026-09-20', undefined)
+    expect(api.authedFetch).toHaveBeenCalledWith('/data/entries?cycle=2026-09-20&shift=s%2Fa+b&offset=2000', undefined)
+    expect(api.authedFetch).toHaveBeenCalledWith('/data/findings?cycle=2026-09-20', undefined)
+  })
+  it('flushes the calendar before raw uploads, activates server mode and refreshes data', async () => {
+    const file = new File(['Staff,Start\nAna,6:00 AM\n'], 'export (new).csv', { type: 'text/csv' })
+    const uploaded = { ...files[0], rows: 1, entries: 1, cycles: ['2026-09-20'], gaps: [], replaced: 0 }
+    vi.mocked(api.authedFetch).mockImplementation((path, init) => init?.method === 'POST' ? Promise.resolve(response({ file: uploaded })) : request(path))
+    expect((await uploadFile(file, { set: 2, system: 'UKG', site: 'Pacific Cold Storage' })).file).toMatchObject({ rows: 1, entries: 1 })
+    const init = vi.mocked(api.authedFetch).mock.calls.find(([, init]) => init?.method === 'POST')![1]!
+    expect(init.body).toBe(file)
+    expect(new Headers(init.headers).get('X-Set')).toBe('2')
+    expect(new Headers(init.headers).get('X-Site')).toBe('Pacific%20Cold%20Storage')
+    expect(new Headers(init.headers).get('X-File-Name')).toBe('export%20(new).csv')
+    expect(onboarding.flushOnboarding).toHaveBeenCalledOnce()
+    expect(state.dataSource).toBe('server')
+    expect(getDataSnapshot().payloads).toHaveLength(1)
+  })
+  it('seeds sample data and saves a fact through the same refresh path', async () => {
+    vi.mocked(api.authedFetch).mockImplementation((path, init) => init?.method === 'POST' ? Promise.resolve(response(path === '/data/sample' ? { cycleId: payload.cycle.id, files: [], entries: 16, groups: payload.groups } : { ok: true, cycles: [payload.cycle.id] })) : request(path))
+    expect((await seedSample()).cycleId).toBe('2026-09-20')
+    await setFact({ kind: 'site', key: 'pacific cold storage', value: { state: 'CA' } })
+    expect(api.authedFetch).toHaveBeenCalledWith('/data/facts', expect.objectContaining({ method: 'POST', body: JSON.stringify({ kind: 'site', key: 'pacific cold storage', value: { state: 'CA' } }) }))
+    expect(state.dataSource).toBe('server')
+  })
+  it('reports duplicate uploads without activating or replacing data', async () => {
+    vi.mocked(api.authedFetch).mockResolvedValue(new Response(JSON.stringify({ error: 'duplicate_file' }), { status: 409 }))
+    await expect(uploadFile(new File(['a'], 'a.csv'), { set: 1 })).rejects.toThrow('already been uploaded')
+    expect(onboarding.updateOnboarding).not.toHaveBeenCalled()
+  })
+})

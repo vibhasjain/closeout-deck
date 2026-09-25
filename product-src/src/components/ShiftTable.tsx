@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import type { RunShift } from '@/bench/engine.js'
 import { Sheet } from '@/components/Sheet'
-import { rowResolution, type DeskCycle } from '@/lib/desk'
+import { appliedCorrection, rowResolution, type DeskCycle } from '@/lib/desk'
 import { useOnboarding } from '@/lib/onboarding'
 
 /** Payroll's ledger. The stats row above owns its discrepancy filter; there is no search. */
@@ -19,8 +19,8 @@ export function ShiftTable({ cycle, children, shifts = cycle.run.shifts, flag = 
   const matches = (shift: RunShift) => {
     if (filterMode !== 'discrepancies' || !['total', 'agent-resolved', 'needs-review'].includes(filter)) return true
     return shift.rows.some((row) => {
-      // A zero-effect applied row (e.g. exact-minute rounding) is not a discrepancy.
-      if (row.status === 'applied') return !!row.effect && (filter === 'total' || filter === 'agent-resolved')
+      // Server cross-source corrections also count when the engine has no pay effect.
+      if (row.status === 'applied') return appliedCorrection(cycle, row) && (filter === 'total' || filter === 'agent-resolved')
       if (row.status !== 'flag' && row.status !== 'held') return false
       const resolved = rowResolution(cycle, shift.shift.id, row.ruleId, state.resolutions)
       if (resolved === 'dismissed') return false

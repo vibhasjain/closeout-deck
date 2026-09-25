@@ -18,7 +18,7 @@ test('workspace paths are stable hashes and never contain the raw email', () => 
   assert.notEqual(path, workspacePath('different@hypertrack.io', { NODE_ENV: 'production' }))
 })
 
-test('workspace refreshes account context and all four server-owned handbooks', async t => {
+test('workspace refreshes account context and server-owned handbooks including ingestion', async t => {
   const root = await mkdtemp(join(tmpdir(), 'closeout-workspace-test-'))
   t.after(() => rm(root, { recursive: true, force: true }))
   const env = { NODE_ENV: 'test', CLOSEOUT_DATA_DIR: root }
@@ -29,7 +29,7 @@ test('workspace refreshes account context and all four server-owned handbooks', 
     assert.ok(account.includes(required), required)
   }
   assert.deepEqual((await readdir(join(cwd, 'handbooks'))).sort(), [
-    'chase-missing-time.md', 'connect-a-source.md', 'mediation.md', 'send-to-payroll.md',
+    'chase-missing-time.md', 'connect-a-source.md', 'ingest.md', 'mediation.md', 'send-to-payroll.md',
   ])
   await writeFile(join(cwd, 'handbooks', 'mediation.md'), 'stale')
   await prepareWorkspace({ email: 'person@hypertrack.io', name: 'New name' }, env)

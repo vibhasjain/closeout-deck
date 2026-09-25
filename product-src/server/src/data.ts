@@ -2,9 +2,9 @@ import { createHash, randomBytes } from 'node:crypto'
 import { recentCycles } from '../../src/lib/cycles.ts'
 import type { Cycle } from '../../src/lib/cycles.ts'
 import { accountHash, DuplicateFileError, validateFact } from './datastore.ts'
-import type { DataStore, FactRecord, FileRecord } from './datastore.ts'
+import type { DataStore, FactRecord, FileRecord, SourceRecord } from './datastore.ts'
 import { libraryMapping, normalize, parseFile, sanitizeFileName, validateMapping, inferPeriod } from './ingest.ts'
-import type { NormalizeMeta, TimeEntry } from './ingest.ts'
+import type { MappingSpec, NormalizeMeta, TimeEntry } from './ingest.ts'
 import { buildCycle, calendarFrom, engineSha, pipelineInputHash } from './pipeline.ts'
 import { generateSample } from './sampledata.ts'
 
@@ -35,6 +35,11 @@ export function normalizationContext(file: FileRecord, facts: FactRecord[], doc:
 export interface UploadOptions {
   name: string; bytes: Uint8Array; set?: 1 | 2 | 3; sample?: boolean; method?: 'upload' | 'simulated'
   system?: string; site?: string; deferRun?: boolean
+}
+
+export function mappingForFile(spec: MappingSpec, file: FileRecord, source?: SourceRecord): MappingSpec {
+  return { ...spec, file: file.id, period: file.periodEnd ? { end: file.periodEnd } : undefined,
+    source: { ...spec.source, ...(source ? { system: source.system } : {}), ...(source?.site ? { site: source.site } : {}) } }
 }
 
 /** Coordinates publication: originals first, normalized entries next, current run pointer last. */
@@ -114,30 +119,74 @@ export class DataService {
     await this.store.upsertFile(email, file)
     const cycles = input.deferRun ? [] : await this.recompute(email, doc, now)
     const runs = cycles.length ? await this.store.listRuns(email) : []
-    return { ...file, set, rows: file.rowCount, entries: file.entryCount, replaced, cycles,
+    return { ...file, mappingAuthor: file.mappingId ? storedMapping?.author ?? 'library' : null, set, rows: file.rowCount, entries: file.entryCount, replaced, cycles,
       gaps: runs.filter(r => cycles.includes(r.cycleId)).flatMap(r => r.gaps) }
   }
 
-  async renormalizeOriginals(email: string, doc: Record<string, unknown> = {}, now = new Date()): Promise<void> {
-    const [files, mappings, facts] = await Promise.all([this.store.listFiles(email), this.store.listMappings(email), this.store.listFacts(email)])
+  async renormalizeOriginals(email: string, doc: Record<string, unknown> = {}, now = new Date(), pending: string[] = []): Promise<void> {
+    const [files, mappings, facts, sources] = await Promise.all([this.store.listFiles(email), this.store.listMappings(email), this.store.listFacts(email), this.store.listSources(email)])
     const ordered = []
-    for (const file of files.filter(f => f.status === 'normalized').sort((a, b) => a.receivedAt.localeCompare(b.receivedAt))) {
+    for (const file of files.filter(f => f.status === 'normalized' || pending.includes(f.id)).sort((a, b) => a.receivedAt.localeCompare(b.receivedAt))) {
       const mapping = mappings.find(m => m.id === file.mappingId)
       const bytes = await this.store.getObject(email, file.storagePath)
       if (!mapping || !bytes || hash(bytes) !== file.sha256) throw new DataError(500, 'original_unavailable')
       const parsed = parseFile(bytes, file.name)
       const grid = parsed.sheets.find(s => s.name === mapping.spec.sheet)?.grid ?? parsed.grid
-      const result = normalize(grid, { ...mapping.spec, file: file.id, period: file.periodEnd ? { end: file.periodEnd } : undefined }, normalizationContext(file, facts, doc))
+      const result = normalize(grid, mappingForFile(mapping.spec, file, sources.find(s => s.id === file.sourceId)), normalizationContext(file, facts, doc))
       ordered.push({ file, result, fileId: file.id, entries: result.entries })
     }
     applyEntryVersions(ordered)
     for (const { file, result } of ordered) {
       await this.store.replaceEntries(email, file.id, result.entries)
       const dates = result.entries.map(e => e.workDate).sort()
-      await this.store.upsertFile(email, { ...file, firstDate: dates[0] ?? null, lastDate: dates.at(-1) ?? null,
+      await this.store.upsertFile(email, { ...file, status: 'normalized', firstDate: dates[0] ?? null, lastDate: dates.at(-1) ?? null,
         rowCount: result.rowCount, entryCount: result.entries.length, unparsed: result.unparsed.slice(0, 200),
         normalizedAt: new Date(Math.max(now.getTime(), Date.parse(file.normalizedAt ?? '1970-01-01') + 1)).toISOString() })
     }
+  }
+
+  /** Compile once, validate every affected original before publishing, and replay re-exports in order. */
+  async applyAgentMapping(email: string, fileId: string, raw: unknown, doc: Record<string, unknown> = {}, now = new Date()) {
+    const target = await this.store.getFile(email, fileId)
+    if (!target || target.status !== 'needs_mapping' || !target.fingerprint) return { ok: false as const, errors: ['File is not awaiting a mapping'] }
+    const [files, facts, sources] = await Promise.all([this.store.listFiles(email), this.store.listFacts(email), this.store.listSources(email)])
+    const prepared = []
+    for (const file of files.filter(f => f.fingerprint === target.fingerprint && ['needs_mapping', 'normalized'].includes(f.status))) {
+      const bytes = await this.store.getObject(email, file.storagePath)
+      if (!bytes || hash(bytes) !== file.sha256) throw new DataError(500, 'original_unavailable')
+      const parsed = parseFile(bytes, file.name), source = sources.find(s => s.id === file.sourceId)
+      const candidate = raw && typeof raw === 'object' && !Array.isArray(raw) ? { ...raw as Record<string, unknown> } : raw
+      if (candidate && typeof candidate === 'object' && !Array.isArray(candidate) && file.id !== fileId) {
+        Object.assign(candidate, { file: file.id, period: file.periodEnd ? { end: file.periodEnd } : inferPeriod(file.name) })
+        if (source && (candidate as MappingSpec).source) (candidate as MappingSpec).source = {
+          ...(candidate as MappingSpec).source, ...(source.system !== 'Spreadsheet' ? { system: source.system } : {}), ...(source.site ? { site: source.site } : {}),
+        }
+        if ((candidate as MappingSpec).period === undefined) delete (candidate as MappingSpec).period
+      }
+      const sheet = candidate && typeof candidate === 'object' ? (candidate as MappingSpec).sheet : undefined
+      const grid = parsed.sheets.find(s => s.name === sheet)?.grid ?? parsed.grid
+      const checked = validateMapping(candidate, grid, { ...normalizationContext(file, facts, doc), status: 'needs_mapping', name: file.name,
+        setHint: file.setHint, method: source?.method ?? 'upload', sheets: parsed.sheets.map(s => s.name), today: dateKey(localToday(facts, doc, now)) })
+      if (!checked.ok || !checked.spec) return { ok: false as const, errors: checked.errors.map(error => `${file.name}: ${error}`) }
+      const spec = checked.spec
+      const sourceId = file.sourceId ?? 'src_' + hash(`${email}|${spec.set}|${spec.source.system}|${spec.source.site ?? ''}`).slice(0, 12)
+      prepared.push({ file, source, sourceId, spec })
+    }
+    const old = await this.store.getMapping(email, target.fingerprint)
+    const mappingId = old?.id ?? 'map_' + hash(`${email}|${target.fingerprint}`).slice(0, 16)
+    await this.store.upsertMapping(email, { id: mappingId, fingerprint: target.fingerprint, spec: prepared.find(p => p.file.id === fileId)!.spec,
+      author: 'agent', version: (old?.version ?? 0) + 1, updatedAt: now.toISOString() })
+    for (const { file, source, sourceId, spec } of prepared) {
+      await this.store.upsertSource(email, { id: sourceId, set: spec.set, system: source?.system && source.system !== 'Spreadsheet' ? source.system : spec.source.system,
+        site: source?.site ?? spec.source.site ?? null, method: source?.method ?? 'upload', sample: source ? source.sample && file.sample : file.sample,
+        createdAt: source?.createdAt ?? file.receivedAt, lastReceivedAt: source?.lastReceivedAt ?? file.receivedAt })
+      await this.store.upsertFile(email, { ...file, sourceId, mappingId, periodEnd: spec.period?.end ?? null, status: 'received' })
+    }
+    await this.renormalizeOriginals(email, doc, now, prepared.map(p => p.file.id))
+    const cycles = await this.recompute(email, doc, now), saved = await this.store.getFile(email, fileId)
+    const runs = await this.store.listRuns(email)
+    return { ok: true as const, fileId, status: 'normalized' as const, entries: saved!.entryCount ?? 0, unparsed: saved!.unparsed.length,
+      cycles, gaps: runs.filter(run => cycles.includes(run.cycleId)).flatMap(run => run.gaps) }
   }
 
   async recompute(email: string, doc: Record<string, unknown> = {}, now = new Date()): Promise<string[]> {
@@ -161,9 +210,9 @@ export class DataService {
       const start = dateKey(cycle.start), end = dateKey(cycle.end)
       if (!files.some(f => f.status === 'normalized' && f.firstDate && f.lastDate && f.firstDate <= end && f.lastDate >= start) && !prior.some(r => r.cycleId === cycle.id)) continue
       const old = prior.find(r => r.cycleId === cycle.id)
-      if (old?.inputHash === pipelineInputHash({ cycle, calendar, files, facts, engineSha })) continue
+      if (old?.inputHash === pipelineInputHash({ cycle, calendar, files, facts, engineSha, timezone: typeof doc.timezone === 'string' ? doc.timezone : undefined })) continue
       entries ??= await this.store.listEntries(email)
-      const built = buildCycle({ email, cycle, calendar, entries, files, facts, sources, engineSha, now })
+      const built = buildCycle({ email, cycle, calendar, entries, files, facts, sources, engineSha, now, timezone: typeof doc.timezone === 'string' ? doc.timezone : undefined })
       const { payload } = built
       if (!payload.week.length) { if (old) await this.store.deleteRun(email, cycle.id); continue }
       await this.store.saveRun(email, { cycleId: cycle.id, runId: payload.runId, periodStart: start,
@@ -199,11 +248,12 @@ export class DataService {
     return { cycleId: payCycle.id, files: files.map(f => f.id), entries: files.reduce((n, f) => n + (f.entryCount ?? 0), 0), groups: run?.groups ?? [] }
   }
 
-  async setFact(email: string, body: unknown, doc: Record<string, unknown> = {}, now = new Date()) {
+  async setFact(email: string, body: unknown, doc: Record<string, unknown> = {}, now = new Date(), source: 'user' | 'agent' = 'user') {
     const checked = validateFact(body)
     if (!checked.ok) throw new DataError(400, 'invalid_fact')
     await this.store.ensureAccount(email)
-    await this.store.upsertFact(email, { ...checked.fact, source: 'user', sample: false, updatedAt: now.toISOString() })
+    const prior = (await this.store.listFacts(email)).find(f => f.kind === checked.fact.kind && f.key === checked.fact.key)
+    await this.store.upsertFact(email, { ...checked.fact, value: { ...prior?.value, ...checked.fact.value }, source, sample: false, updatedAt: now.toISOString() })
     if (checked.fact.kind === 'alias' || checked.fact.kind === 'site' || (checked.fact.kind === 'account' && checked.fact.key === 'timezone')) await this.renormalizeOriginals(email, doc, now)
     return { ok: true, cycles: await this.recompute(email, doc, now) }
   }
@@ -216,14 +266,31 @@ export class DataService {
     const facts = await this.store.listFacts(email), calendar = calendarFrom(doc)
     const cycles = recentCycles(calendar, 2, localToday(facts, doc, now))
     if (set !== 3) {
+      await this.store.ensureAccount(email)
       const generated = generateSample(cycles[1])
-      const selected = generated.files.filter(f => f.set === set && (!body.system || f.name.toLowerCase().startsWith(String(body.system).toLowerCase())))
-      if (!selected.length) throw new DataError(400, 'unsupported_simulated_system')
+      const systemKey = /\b(adp|ukg|bullhorn)\b/i.exec(String(body.system ?? ''))?.[1].toLowerCase()
+      const matching = generated.files.filter(f => f.set === set && systemKey && f.name.toLowerCase().startsWith(systemKey))
+      const selected = matching.length ? matching : [generated.files.find(f => f.set === set && (set === 1 || f.name.startsWith(String(body.site ?? '').toLowerCase().includes('lonestar') ? 'adp' : 'ukg')))!]
+      for (const fact of generated.facts) if (!facts.some(f => f.kind === fact.kind && f.key === fact.key)) {
+        const checked = validateFact(fact)
+        if (checked.ok) await this.store.upsertFact(email, { ...checked.fact, source: 'sample', sample: true, updatedAt: now.toISOString() })
+      }
       const files = []
       for (const input of selected) {
-        const existing = await this.store.getFileBySha(email, hash(input.bytes))
+        // A simulated sheet/inbox has this source's sample shape and its own identity.
+        const parsed = parseFile(input.bytes, input.name), grid = parsed.grid
+        const siteColumn = grid[0].findIndex(h => h === 'Client')
+        let rows = grid.slice(1)
+        if (body.site && siteColumn >= 0) {
+          const exact = rows.filter(row => row[siteColumn] === body.site)
+          rows = (exact.length ? exact : rows.filter(row => row[siteColumn] === rows[0]?.[siteColumn])).map(row => row.map((cell, i) => i === siteColumn ? String(body.site) : cell))
+        }
+        // A harmless skipped footer gives identical sample shapes distinct upload hashes per connector.
+        const bytes = Buffer.from([grid[0], ...rows, [`Total: Sample ${String(body.system ?? 'connection')} ${String(body.site ?? '')}`]].map(row => row.map(csvCell).join(',')).join('\r\n') + '\r\n')
+        const existing = await this.store.getFileBySha(email, hash(bytes))
         if (existing) { files.push(existing); continue }
-        files.push(await this.ingestFile(email, { ...input, sample: true, method: 'simulated', deferRun: true }, doc, now))
+        files.push(await this.ingestFile(email, { ...input, bytes, system: typeof body.system === 'string' ? body.system : undefined,
+          site: typeof body.site === 'string' ? body.site : undefined, sample: true, method: 'simulated', deferRun: true }, doc, now))
       }
       return { files, cycles: await this.recompute(email, doc, now) }
     }

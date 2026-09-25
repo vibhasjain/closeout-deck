@@ -26,6 +26,7 @@ export function ConnectorGrid() {
             onClick={() => openModal(<ConnectMethod vendor={item} />)}>
             <VendorTile vendor={item} large />
             {Mark && <span className="source-tile-method"><Mark size={11} aria-hidden="true" /></span>}
+            {state.connections[vendorKey(item)]?.sample && <span className="tag">Sample</span>}
           </button>
         })}
       </div>

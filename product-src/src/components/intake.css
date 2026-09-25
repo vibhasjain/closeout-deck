@@ -56,3 +56,14 @@
 /* A client with everything in keeps its card, ghosted. */
 .intake-client-done { opacity: .5; }
 .intake-client-done .intake-client-head .num { display: inline-flex; align-items: center; gap: .25rem; }
+.intake-upload-bar { display: flex; justify-content: space-between; gap: .5rem; flex-wrap: wrap; }
+.intake-upload-bar .chip-row { display: flex; gap: .375rem; flex-wrap: wrap; }
+.intake-upload-results { margin: 0; padding: 0; list-style: none; display: grid; gap: .75rem; }
+.intake-upload-results > li { border-bottom: 1px solid hsl(var(--border)); padding-bottom: .75rem; overflow-wrap: anywhere; }
+.intake-upload-results > li > div { display: flex; flex-wrap: wrap; gap: .5rem; align-items: baseline; }
+.intake-upload-results p { margin: .25rem 0; }
+.intake-upload-results ul { padding-left: 1.25rem; color: hsl(var(--muted-foreground)); }
+.intake-source-head { flex-wrap: wrap; padding-bottom: .5rem; }
+.intake-source-head > .btn { margin-left: auto; }
+.intake-client-head { flex-wrap: wrap; }
+.intake-client-head b { overflow-wrap: anywhere; }

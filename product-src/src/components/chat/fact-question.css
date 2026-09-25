@@ -1,0 +1,6 @@
+.chat-question { display: flex; flex-direction: column; gap: .5rem; margin-top: .75rem; min-width: 0; }
+.chat-question .chips { display: flex; flex-wrap: wrap; gap: .375rem; }
+.chat-question-answer { display: flex; align-items: center; gap: .375rem; min-width: 0; }
+.chat-question-answer .q-input { flex: 1; min-width: 0; width: 0; }
+.chat-question > .btn { height: auto; min-height: 2rem; white-space: normal; text-align: left; }
+.chat-context-chip { display: inline-flex; max-width: 100%; margin-bottom: .375rem; padding: .125rem .5rem; border: 1px solid hsl(var(--border)); border-radius: 999px; font-size: 11px; overflow-wrap: anywhere; }

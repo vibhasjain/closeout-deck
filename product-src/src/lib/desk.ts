@@ -7,9 +7,19 @@ import type { Cycle } from '@/lib/cycles'
 import { getOnboarding, updateOnboarding, useOnboarding } from '@/lib/onboarding'
 import { sampleCycle } from '@/lib/sample'
 import type { Onboarding } from '@/lib/onboarding'
+import { serverCycles, useData, getDataSnapshot, type CyclePayload, type DataProvenance, type DataSite } from '@/lib/data'
+import { viewerSession } from '@/lib/viewerSession'
 
+export type DeskShift = Shift & { prov?: DataProvenance; entryIds?: string[]; sample?: boolean }
 export interface DeskCycle extends Cycle {
-  week: Shift[]
+  server?: boolean
+  sample?: boolean
+  sites?: DataSite[]
+  groups?: CyclePayload['groups']
+  extraGroups?: CyclePayload['extraGroups']
+  gaps?: CyclePayload['gaps']
+  intake?: CyclePayload['intake']
+  week: DeskShift[]
   run: Run
   days: string[]
   scripted: boolean
@@ -46,7 +56,7 @@ export interface Kind {
   whyStopped: string
 }
 
-export interface Provenance { system: string; file: string; row: number }
+export interface Provenance extends DataProvenance { system: string; fileId?: string; sample?: boolean }
 
 let cached: { hash: string; currentId: string; cycles: DeskCycle[] } | undefined
 
@@ -119,6 +129,12 @@ export function effectiveResolutions(c: DeskCycle, res: Onboarding['resolutions'
   return { ...res, [c.id]: decisions }
 }
 
+/** Cross-source corrections can move an entry without emitting an engine pay effect. */
+export function appliedCorrection(c: DeskCycle, row: Row): boolean {
+  return row.status === 'applied' && (!!row.effect || !!(c.server
+    && (c.groups?.some(group => group.ruleId === row.ruleId) || c.extraGroups?.some(group => group.ruleId === row.ruleId))))
+}
+
 /** `undone`: rules whose automatic fixes a person took back; those fixes wait for approval again. */
 export function cycleStats(c: DeskCycle, res: Onboarding['resolutions'] = {}, undone: readonly string[] = []) {
   // Counted per shift, like his "payments": a shift with any undecided flag or hold needs
@@ -131,7 +147,7 @@ export function cycleStats(c: DeskCycle, res: Onboarding['resolutions'] = {}, un
     let corrected = false
     for (const row of shift.rows) {
       if (row.status === 'applied') {
-        if (!row.effect) continue
+        if (!appliedCorrection(c, row)) continue
         if (undone.includes(row.ruleId) && !res[c.id]?.[shift.shift.id]) open = true
         else corrected = true
       }
@@ -157,7 +173,7 @@ export function cycleStats(c: DeskCycle, res: Onboarding['resolutions'] = {}, un
 
 export function discrepancies(c: DeskCycle, res: Onboarding['resolutions']): Discrepancy[] {
   return c.run.shifts.flatMap((r) => r.rows.flatMap((row): Discrepancy[] => {
-    if (row.status !== 'flag' && row.status !== 'held' && !(row.status === 'applied' && row.effect)) return []
+    if (row.status !== 'flag' && row.status !== 'held' && !(row.status === 'applied' && appliedCorrection(c, row))) return []
     return [{
       cycleId: c.id,
       shiftId: r.shift.id,
@@ -295,8 +311,8 @@ export function kinds(c: DeskCycle, res: Onboarding['resolutions'], cycles: Desk
   return [...groups].map(([ruleId, cases]): Kind => {
     const rule = RULES.find((r) => r.id === ruleId)
     const shifts = c.run.shifts.filter((rs) => cases.some((item) => item.shiftId === rs.shift.id))
-    const proposal = shifts.flatMap((rs) => rs.rows).find((row) => row.ruleId === ruleId && row.status === 'applied' && row.effect)
-      ?? shifts.flatMap((rs) => rs.rows).find((row) => row.status === 'applied' && row.effect)
+    const proposal = shifts.flatMap((rs) => rs.rows).find((row) => row.ruleId === ruleId && appliedCorrection(c, row))
+      ?? shifts.flatMap((rs) => rs.rows).find((row) => appliedCorrection(c, row))
     const stops = cases.filter((item) => item.status === 'flag' || item.status === 'held').map((item) => item.note)
     // Automatic corrections can share a held shift. Explain its actual stop as evidence.
     const relatedStops = shifts.flatMap((rs) => rs.rows.filter((row) => row.status === 'flag' || row.status === 'held').map((row) => row.note))
@@ -332,7 +348,7 @@ export function kinds(c: DeskCycle, res: Onboarding['resolutions'], cycles: Desk
 /** Accept every case in one bucket with a single persisted store update. */
 export function applyKind(cycleId: string, ruleId: string): number {
   const state = getOnboarding()
-  const cycle = buildCycles(state).find((item) => item.id === cycleId)
+  const cycle = activeCycles(state).find((item) => item.id === cycleId)
   const kind = cycle && kinds(cycle, state.resolutions).find((item) => item.ruleId === ruleId)
   if (!kind) return 0
   const decisions = { ...state.resolutions[cycleId] }
@@ -352,7 +368,7 @@ export function rememberKind(ruleId: string): void {
   if (!rule) return
   const state = getOnboarding()
   if (state.customRules.some((item) => item.sourceRuleId === ruleId && item.autoApply && !item.draft)) return
-  const current = buildCycles(state)[0]
+  const current = activeCycles(state)[0]
   const effectiveCycleStart = `${current.start.getFullYear()}-${String(current.start.getMonth() + 1).padStart(2, '0')}-${String(current.start.getDate()).padStart(2, '0')}`
   updateOnboarding({ customRules: [...state.customRules, {
     id: `remember-${ruleId}-${Date.now()}`,
@@ -374,6 +390,12 @@ export function shortShiftId(id: string): string {
 }
 
 export function provenance(c: DeskCycle, s: Shift, index: number): Provenance {
+  const prov = (s as DeskShift).prov
+  if (prov) {
+    const sourceId = c.intake?.expected.find(entry => entry.worker === s.worker && entry.client === s.fac.name && entry.day === s.day)?.source
+    const source = c.intake?.sources.find(item => item.id === sourceId)
+    return { ...prov, system: prov.system ?? source?.short ?? 'Time export', sample: (s as DeskShift).sample ?? prov.sample ?? c.sample }
+  }
   const facilityKey = Object.keys(FACILITIES).find((key) => FACILITIES[key].name === s.fac.name)
     ?? s.fac.name.toLowerCase().replace(/[^a-z0-9]+/g, '_')
   const source = sourceFor(facilityKey)
@@ -383,6 +405,7 @@ export function provenance(c: DeskCycle, s: Shift, index: number): Provenance {
     file: `${(source?.id ?? 'timesheet').replace(/-/g, '_')}_${facilityKey}_${cycleWeeks(c)[0]}.csv`,
     // Row 1 is the export header; use source order, independent of table sorting/filtering.
     row: (sourceIndex >= 0 ? sourceIndex : index) + 2,
+    cols: {},
   }
 }
 
@@ -400,8 +423,15 @@ export function topstats(c: DeskCycle, res: Onboarding['resolutions'] = {}): str
   return `${c.label} · ${flags} flagged · ${held} held · +${money(under)} / −${money(over)}`
 }
 
-export function useDesk(): { cycles: DeskCycle[]; current: DeskCycle; byId(id: string): DeskCycle | undefined } {
+export function activeCycles(cal: Onboarding): DeskCycle[] {
+  const data = getDataSnapshot()
+  const account = viewerSession()?.email ?? 'development'
+  return cal.dataSource === 'server' || (data.owner === account && (data.payloads.length > 0 || data.sources.length > 0 || data.files.length > 0)) ? serverCycles(cal) : buildCycles(cal)
+}
+
+export function useDesk(): { cycles: DeskCycle[]; current: DeskCycle; loading?: boolean; error?: string | null; byId(id: string): DeskCycle | undefined } {
   const [cal] = useOnboarding()
-  const cycles = buildCycles(cal)
-  return useMemo(() => ({ cycles, current: cycles[0], byId: (id: string) => cycles.find((c) => c.id === id) }), [cycles])
+  const data = useData(cal.dataSource === 'server' || !!viewerSession())
+  const cycles = activeCycles(cal)
+  return useMemo(() => ({ cycles, current: cycles[0], loading: data.loading, error: data.error, byId: (id: string) => cycles.find((c) => c.id === id) }), [cycles, data.loading, data.error])
 }

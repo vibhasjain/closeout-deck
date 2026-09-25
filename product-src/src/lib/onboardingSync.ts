@@ -3,6 +3,7 @@ import type { Onboarding } from '@/lib/onboarding'
 /** P6 owns these fields; existing server data outside this set survives every write. */
 export const SYNC_FIELDS = ['firm', 'profile', 'covered', 'sources', 'neverContact', 'setupStep', 'setupHistory', 'setupRequest',
   'forwarded', 'frequency', 'periodEndDay', 'payDay', 'payDatesOfMonth', 'cutoffDays', 'deadlineDays', 'cohorts',
+  'dataSource', 'timezone', 'resolutions', 'reasons', 'decisionTimes', 'acceptedGaps', 'undone', 'approvedCycles',
   'authority', 'authorityConfigured', 'rules', 'proposals', 'customRules', 'chat', 'chatSessionId'] as const satisfies readonly (keyof Onboarding)[]
 export type SyncPatch = Partial<Pick<Onboarding, typeof SYNC_FIELDS[number]>>
 export interface SyncStatus { ready: boolean; loading: boolean; saving: boolean; error: string | null }

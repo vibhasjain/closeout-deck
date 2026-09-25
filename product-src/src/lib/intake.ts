@@ -2,6 +2,7 @@ import { FACILITIES } from '@/bench/engine.js'
 import { SOURCES, sourceFor, type SendSchedule, type Source } from '@/bench/vendors'
 import type { Cycle } from '@/lib/cycles'
 import type { Onboarding } from '@/lib/onboarding'
+import type { CyclePayload } from '@/lib/data'
 import { CLIENTS } from '@/lib/sample'
 
 /** A time entry someone scheduled, and the source it should arrive from. */
@@ -14,7 +15,7 @@ export interface ClientIntake { name: string; expected: number; received: number
 export interface Intake { expected: number; received: number; open: number; clients: ClientIntake[]; closed: (Gap & { reason: string })[] }
 export type Step = 'intake' | 'review'
 type AcceptedGaps = Onboarding['acceptedGaps']
-type IntakeCycle = Pick<Cycle, 'id' | 'start' | 'end' | 'cutoff' | 'status'> & { week: { worker: string; day: number; fac: { name: string } }[] }
+type IntakeCycle = Pick<Cycle, 'id' | 'start' | 'end' | 'cutoff' | 'status'> & { week: { worker: string; day: number; fac: { name: string } }[]; server?: boolean; sample?: boolean; intake?: CyclePayload['intake'] }
 
 const DAY = 86_400_000
 const at = (d: Date, days: number, minutes = 0) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + days, 0, minutes)
@@ -39,9 +40,9 @@ export const isLate = (lastReceived: Date, schedule: SendSchedule, now: Date) =>
  * Expected entries against received ones, by client then source. An entry a source hasn't sent since that day ended is
  * pending on the source; one the source skipped after that is missing. Accepted gaps leave the count.
  */
-export function buildIntake({ cycleId, start, expected, received, lastReceived, accepted = {}, now }: {
+export function buildIntake({ cycleId, start, expected, received, lastReceived, accepted = {}, now, sourceLookup = SOURCES }: {
   cycleId: string; start: Date; expected: Expected[]; received: Set<string>
-  lastReceived: Record<string, Date>; accepted?: AcceptedGaps; now: Date
+  lastReceived: Record<string, Date>; accepted?: AcceptedGaps; now: Date; sourceLookup?: Source[]
 }): Intake {
   const closed: Intake['closed'] = []
   const clients = new Map<string, Map<string, SourceIntake>>()
@@ -52,7 +53,7 @@ export function buildIntake({ cycleId, start, expected, received, lastReceived, 
     const sources = clients.get(entry.client) ?? new Map<string, SourceIntake>()
     clients.set(entry.client, sources)
     const last = lastReceived[entry.source] ?? now
-    const row = sources.get(entry.source) ?? { source: SOURCES.find((item) => item.id === entry.source)!, expected: 0, received: 0, pending: 0, late: false, lastReceived: last, missing: [] }
+    const row = sources.get(entry.source) ?? { source: sourceLookup.find((item) => item.id === entry.source) ?? { id: entry.source, name: 'Time export', short: 'Time export', group: 'Time & attendance', status: 'connected', method: 'Upload', sites: [entry.client], pulls: [], lastSync: null }, expected: 0, received: 0, pending: 0, late: false, lastReceived: last, missing: [] }
     sources.set(entry.source, row)
     row.expected++
     if (received.has(id)) row.received++
@@ -88,6 +89,12 @@ export const WALL_CLOCK: Expected[] = WALL_CLOCK_CREW.flatMap((worker, i) =>
 
 /** Intake for one cycle. Only the week awaiting review is still collecting; earlier weeks arrived in full. */
 export function cycleIntake(cycle: IntakeCycle, state: Pick<Onboarding, 'acceptedGaps' | 'uploads'>, now = new Date()): Intake {
+  if (cycle.server || cycle.intake) {
+    const payload = cycle.intake ?? { sources: [], expected: [], received: [] }
+    const sourceLookup: Source[] = payload.sources.map(source => ({ ...source, sample: source.sample ?? cycle.sample, group: 'Time & attendance', status: 'connected', sites: [...new Set(payload.expected.filter(entry => entry.source === source.id).map(entry => entry.client))], pulls: [], lastSync: source.lastReceived }))
+    return buildIntake({ cycleId: cycle.id, start: cycle.start, now, expected: payload.expected, received: new Set(payload.received),
+      lastReceived: Object.fromEntries(payload.sources.map(source => [source.id, source.lastReceived ? new Date(source.lastReceived) : new Date(0)])), accepted: state.acceptedGaps, sourceLookup })
+  }
   const sourceAt = new Map<string, string>()
   const week = cycle.week.map((shift) => {
     const client = shift.fac.name

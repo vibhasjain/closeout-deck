@@ -151,6 +151,7 @@ export function ShiftPage() {
         description="Review the evidence, conversation, and decisions for this time entry."
         sub={rs.shift.fac.name}
         right={<>
+          {(cycle.sample || cycle.week.find(shift => shift.id === rs.shift.id)?.sample) && <Tag>Sample</Tag>}
           <Btn className="icon-btn sm" aria-label="Export these rows"
             title="Export these rows" onClick={() => exportShiftRows(cycle, rs)}><Download size={14} aria-hidden="true" /></Btn>
         </>} />

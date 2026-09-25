@@ -9,6 +9,14 @@ describe('parseActions', () => {
     expect(r.text).toBe('Done, weekly it is.'); expect(r.actions).toEqual([{ type: 'set_calendar', patch: { frequency: 'Weekly' } }])
   })
   it('ignores malformed blocks', () => { expect(parseActions('x\n```action\n{nope\n```').actions).toEqual([]) })
+  it('hides complete and streaming mapping fences without treating them as client actions', () => {
+    expect(parseActions('I read the clock times.\n```mapping\n{"file":"f_one","v":1}\n```')).toEqual({ text: 'I read the clock times.', actions: [] })
+    expect(parseActions('I read the clock times.\n```mapping\n{"file":')).toEqual({ text: 'I read the clock times.', actions: [] })
+  })
+  it('preserves a server-applied fact action', () => {
+    expect(parseActions('Saved.\n```action\n{"type":"set_fact","kind":"account","key":"timezone","value":{"value":"America/New_York"}}\n```'))
+      .toEqual({ text: 'Saved.', actions: [{ type: 'set_fact', kind: 'account', key: 'timezone', value: { value: 'America/New_York' } }] })
+  })
   it('extracts two actions and strips both blocks', () => {
     const r = parseActions('Done.\n```action\n{"type":"set_calendar","patch":{"frequency":"Weekly"}}\n```\n```action\n{"type":"go","to":"/timesheets"}\n```')
     expect(r.text).toBe('Done.')
@@ -40,10 +48,11 @@ describe('chat transport', () => {
     for await (const event of stream('Hi', context)) events.push(event)
     expect(fetch).toHaveBeenCalledWith('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer closeout-token' },
+      headers: expect.any(Headers),
       body: JSON.stringify({ mode: 'chat', message: 'Hi', context }),
       signal: undefined,
     })
+    expect(Object.fromEntries(fetch.mock.calls[0][1].headers)).toEqual({ 'content-type': 'application/json', authorization: 'Bearer closeout-token' })
     expect(events).toEqual([{ text: 'Hello there' }, { done: true, sessionId: 'server-session', final: 'Final answer' }])
   })
 
@@ -54,10 +63,11 @@ describe('chat transport', () => {
     const events = []
     for await (const event of stream('Hi', context, 'scribe')) events.push(event)
     expect(fetch).toHaveBeenCalledWith('/api/chat', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: expect.any(Headers),
       body: JSON.stringify({ mode: 'scribe', message: 'Hi', context }),
       signal: undefined,
     })
+    expect(Object.fromEntries(fetch.mock.calls[0][1].headers)).toEqual({ 'content-type': 'application/json' })
     expect(events).toEqual([{ done: true, error: 'Chat is unavailable right now' }])
   })
 

@@ -1,5 +1,4 @@
-import { signOut, viewerSession } from '@/lib/viewerSession'
-import { API_BASE } from '@/lib/api'
+import { authedFetch } from '@/lib/api'
 import type { FirmFacts, Onboarding, OnboardingSource, OnboardTopic, PayrollProfile, ProfileField, ProfileValue } from '@/lib/onboarding'
 
 export type Action =
@@ -15,6 +14,7 @@ export type Action =
   | { type: 'go'; to: string }                         // a route, e.g. '/payroll/4821?cycle=2026-08-24'
   | { type: 'decide'; cycleId: string; shiftId: string; decision: 'applied' | 'dismissed'; reason?: string }
   | { type: 'note'; text: string }                     // free text the UI shows as a quiet line
+  | { type: 'set_fact'; kind: 'site' | 'rate' | 'differential' | 'alias' | 'account'; key: string; value: Record<string, unknown> }
 
 /** Pulls ```action fenced JSON blocks out of a reply. Returns clean text + actions. */
 export function parseActions(text: string): { text: string; actions: Action[] } {
@@ -22,7 +22,7 @@ export function parseActions(text: string): { text: string; actions: Action[] } 
   const clean = text.replace(/```action\s+([\s\S]*?)```/g, (_, json) => {
     try { actions.push(JSON.parse(json)) } catch { /* leave malformed blocks out */ }
     return ''
-  }).trim()
+  }).replace(/```mapping\b[\s\S]*?(?:```|$)/g, '').trim()
   return { text: clean, actions }
 }
 
@@ -69,15 +69,18 @@ export function parseCards(text: string): { text: string; cards: Card[]; invalid
 }
 
 export interface OnboardContext { firm: FirmFacts | null; profile: PayrollProfile; covered: OnboardTopic[] }
+export interface IngestContext { fileIds: string[] }
+export type ChatMode = 'chat' | 'onboard' | 'scribe' | 'delegate' | 'consolidate' | 'ingest'
+export type TurnContext = ChatContext | OnboardContext | IngestContext
+export interface IngestEvent { fileId: string; status: 'normalized' | 'needs_mapping'; rows?: number; entries?: number; unparsed?: number; cycles?: string[]; gaps?: { ask: string }[]; errors?: string[] }
 
 export interface ChatContext { page: string; step?: string; calendar: object; cycle?: { id: string; label: string; stats: string }; selection?: object; discrepancies?: object[]; rules?: { id: string; sentence: string }[]; connections?: object }
 
-export interface ChatEvent { text?: string; done?: boolean; sessionId?: string; error?: string; final?: string }
+export interface ChatEvent { text?: string; done?: boolean; sessionId?: string; error?: string; final?: string; ingest?: IngestEvent; facts?: { applied: number; cycles: string[] } }
 
-export async function* stream(message: string, context: ChatContext | OnboardContext, mode: 'chat' | 'onboard' | 'scribe' | 'delegate' | 'consolidate' = 'chat', signal?: AbortSignal): AsyncGenerator<ChatEvent> {
-  const token = viewerSession()?.sessionToken
-  const res = await fetch(`${API_BASE}/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ mode, message, context }), signal })
-  if (res.status === 401) { signOut(); return }
+export async function* stream(message: string, context: TurnContext, mode: ChatMode = 'chat', signal?: AbortSignal): AsyncGenerator<ChatEvent> {
+  const res = await authedFetch('/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode, message, context }), signal })
+  if (res.status === 401) return
   if (!res.ok || !res.body) { yield { done: true, error: 'Chat is unavailable right now' }; return }
   const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = ''
   try {

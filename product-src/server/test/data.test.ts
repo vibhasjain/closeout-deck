@@ -106,3 +106,47 @@ test('a contradictory upload hint is preserved and the cached library mapping is
   assert.equal((await store.listEntries(email, { fileId: file.id })).length, 0)
   assert.equal((await store.getSource(email, file.sourceId!))?.set, 2)
 })
+
+test('simulated sheet and inbox connectors load their source sample shape and remain idempotent', async () => {
+  const { store, service } = setup()
+  const first = await service.connect(email, { set: 2, system: 'Shared sheet', site: 'Pacific Cold Storage' }, {}, now)
+  assert.equal(first.files.length, 1); assert.equal(first.files[0].status, 'normalized'); assert.equal(first.files[0].sample, true)
+  const source = (await store.listSources(email)).find(s => s.system === 'Shared sheet')
+  assert.equal(source?.method, 'simulated'); assert.equal(source?.site, 'Pacific Cold Storage'); assert.equal(source?.sample, true)
+  const repeat = await service.connect(email, { set: 2, system: 'Shared sheet', site: 'Pacific Cold Storage' }, {}, now)
+  assert.equal(repeat.files[0].id, first.files[0].id)
+  const adp = await service.connect(email, { set: 2, system: 'ADP Workforce Now', site: 'Mercy General' }, {}, now)
+  assert.equal(adp.files[0].status, 'normalized'); assert.match(adp.files[0].name, /^adp/)
+  assert.ok((await store.listEntries(email, { fileId: adp.files[0].id })).every(e => e.site === 'Mercy General'))
+  const inbox = await service.connect(email, { set: 1, system: 'Forwarding inbox', site: 'Pacific Cold Storage' }, {}, now)
+  assert.equal(inbox.files[0].status, 'normalized')
+  assert.ok((await store.listEntries(email, { fileId: inbox.files[0].id })).every(e => e.site === 'Pacific Cold Storage' && e.sample))
+})
+
+test('agent mapping stores validator-expanded datetime punches for deterministic replay', async () => {
+  const { store, service } = setup()
+  const file = await service.ingestFile(email, { name: 'events.csv', set: 1, bytes: Buffer.from('Person,When,Direction\nAda,2026-09-14T08:00:00Z,IN\nAda,2026-09-14T16:00:00Z,OUT\n') }, {}, now)
+  const result = await service.applyAgentMapping(email, file.id, { v: 1, file: file.id, set: 1, source: { system: 'Clock', site: 'Warehouse' }, grain: 'punch', headerRow: 1, overnight: 'next-day', columns: {
+    worker: { col: 'Person', name: 'first last' }, start: { col: 'When', format: 'ISO' }, direction: { col: 'Direction', map: { IN: 'in', OUT: 'out' } },
+  } }, {}, now)
+  assert.equal(result.ok, true)
+  assert.equal((await store.listMappings(email))[0].spec.columns.date.col, 'When')
+  assert.equal((await store.listEntries(email))[0].end! - (await store.listEntries(email))[0].start!, 480)
+  await service.renormalizeOriginals(email, {}, now)
+  assert.equal((await store.listEntries(email)).length, 1)
+})
+
+test('one agent layout preserves source-specific sites across validation, normalization and replay', async () => {
+  const { store, service } = setup()
+  const fileBytes = (worker: string) => Buffer.from(`Person,Date,Hours\n${worker},09/14/2026,8\n`)
+  const one = await service.ingestFile(email, { name: 'west.csv', bytes: fileBytes('Ada'), set: 1, site: 'West', system: 'Clock' }, {}, now)
+  const two = await service.ingestFile(email, { name: 'east.csv', bytes: fileBytes('Ben'), set: 1, site: 'East', system: 'Clock' }, {}, now)
+  const result = await service.applyAgentMapping(email, one.id, { v: 1, file: one.id, set: 1, source: { system: 'Clock', site: 'West' }, grain: 'daily', headerRow: 1, overnight: 'next-day', columns: {
+    worker: { col: 'Person', name: 'first last' }, date: { col: 'Date', format: 'MM/DD/YYYY' }, hours: { col: 'Hours', unit: 'decimal', per: 'row' },
+  } }, {}, now)
+  assert.equal(result.ok, true)
+  const entries = await store.listEntries(email)
+  assert.equal(entries.find(e => e.fileId === one.id)?.site, 'West'); assert.equal(entries.find(e => e.fileId === two.id)?.site, 'East')
+  await service.renormalizeOriginals(email, {}, now)
+  assert.equal((await store.listEntries(email)).find(e => e.fileId === two.id)?.site, 'East')
+})

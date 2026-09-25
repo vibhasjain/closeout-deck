@@ -51,7 +51,7 @@ export function PayRuns({ onNavigate }: { onNavigate?: () => void } = {}) {
         const count = payouts.workers.length.toLocaleString()
         const total = money(payouts.gross)
         return {
-          id: item.id, label: item.label, count: item.week.length, status: item.statusTag,
+          id: item.id, label: item.label, count: item.week.length, status: item.sample ? `${item.statusTag} · Sample` : item.week.some(shift => shift.sample) ? `${item.statusTag} · Includes Sample` : item.statusTag,
           tone: item.statusTag === 'Pending' ? 'amber' as const : undefined,
           sentence: <span role="img" aria-label={`${count} payouts, ${total}`}><Banknote aria-hidden="true" />{count} · {total}</span>,
         }

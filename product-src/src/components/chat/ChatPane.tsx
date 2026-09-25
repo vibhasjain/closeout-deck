@@ -7,12 +7,15 @@ import { ThinkingOrb } from 'thinking-orbs'
 import { Chip } from '@/components/ui'
 import { Message } from '@/components/chat/Message'
 import { dayDivider } from '@/components/chat/dayDivider'
-import { parseActions, stream } from '@/lib/chat'
+import { parseActions, parseCards, stream } from '@/lib/chat'
 import type { ChatContext } from '@/lib/chat'
+import { CHAT_POST_EVENT, reportIngest, type ChatPost } from '@/lib/chatBus'
+import { invalidate } from '@/lib/data'
 import { FREQUENCIES, WEEKDAYS, flushOnboarding, useOnboarding } from '@/lib/onboarding'
 import type { ChatMessage } from '@/lib/onboarding'
 import { applyAction, isAction, type ChatUpdate } from '@/lib/chatActions'
 export { applyAction, isAction, actionSummary } from '@/lib/chatActions'
+export { postToChat } from '@/lib/chatBus'
 
 const PageContext = createContext<Partial<ChatContext>>({})
 const SetPageContext = createContext<Dispatch<SetStateAction<Partial<ChatContext>>>>(() => {})
@@ -106,10 +109,12 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
   const latest = useRef(state)
   const request = useRef(0)
   const busy = useRef(false)
+  const queued = useRef<ChatPost[]>([])
+  const sendRef = useRef<(text: string, options?: ChatPost) => Promise<void>>(async () => {})
   const scrollRef = useRef<HTMLDivElement>(null)
   const composer = useRef<HTMLTextAreaElement>(null)
   const filePicker = useRef<HTMLInputElement>(null)
-  const activeRequest = useRef<{ controller: AbortController; text: string; scope?: string } | null>(null)
+  const activeRequest = useRef<{ controller: AbortController; text: string; scope?: string; fileIds: string[] } | null>(null)
   const scope = explicitScope ?? selectionScope(context.selection)
   // Keep "Show all" in the URL, but only for the case where it was chosen.
   const showAll = !scope || (params.get('chat') === 'all' && params.get('chatScope') === scope)
@@ -159,13 +164,20 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
     write(next)
   }, [write])
 
-  const send = useCallback(async (text: string) => {
+  const send = useCallback(async (text: string, options?: ChatPost) => {
     const message = text.trim()
-    if (!message || busy.current) return
+    if (!message) return
+    if (busy.current) { if (options) queued.current.push(options); return }
+    const previous = latest.current.chat.at(-1)
+    const fileIds = options?.mode === 'ingest' && options.context && 'fileIds' in options.context
+      ? [...options.context.fileIds] : options?.mode ? [] : [...(previous?.ingestFileIds ?? [])]
+    const mode = options?.mode ?? (fileIds.length ? 'ingest' : 'chat')
+    const turnContext = options?.context ?? (mode === 'ingest' ? { fileIds } : context)
     const requestId = ++request.current
-    const user: ChatMessage = { id: crypto.randomUUID(), role: 'user', text: message, at: Date.now(), scope }
+    const user: ChatMessage = { id: crypto.randomUUID(), role: 'user', text: message, at: Date.now(), scope,
+      ...(options?.contextChip ? { contextChip: options.contextChip } : {}), ...(fileIds.length ? { ingestFileIds: [...fileIds] } : {}) }
     busy.current = true
-    const pending = { controller: new AbortController(), text: '', scope }
+    const pending = { controller: new AbortController(), text: '', scope, fileIds }
     activeRequest.current = pending
     update((current) => ({ chat: [...current.chat, user] }))
     setDraft('')
@@ -182,8 +194,17 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
     try {
       await flushOnboarding()
       if (request.current !== requestId || pending.controller.signal.aborted) return
-      for await (const event of stream(message, context, 'chat', pending.controller.signal)) {
+      for await (const event of stream(message, turnContext, mode, pending.controller.signal)) {
         if (request.current !== requestId) return
+        if (event.ingest) {
+          if (event.ingest.status === 'normalized') {
+            const at = fileIds.indexOf(event.ingest.fileId)
+            if (at >= 0) fileIds.splice(at, 1)
+          }
+          reportIngest(event.ingest)
+          void invalidate()
+        }
+        if (event.facts) void invalidate()
         if (event.text) {
           textSoFar += event.text
           pending.text = textSoFar
@@ -191,9 +212,13 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
         }
         if (event.error) throw new Error(event.error)
         if (event.done) {
-          const parsed = parseActions(event.final ?? textSoFar)
+          const cards = parseCards(event.final ?? textSoFar)
+          const parsed = parseActions(cards.text)
+          parsed.actions = parsed.actions.filter((action) => action?.type !== 'set_fact' || isAction(action))
           if (!parsed.actions.every(isAction)) throw new Error('The agent returned an invalid change. Please ask it to try again.')
-          const agent: ChatMessage = { id: crypto.randomUUID(), role: 'agent', ...parsed, at: Date.now(), scope }
+          if (cards.invalid) throw new Error('The agent returned an incomplete question. Please ask it to try again.')
+          const agent: ChatMessage = { id: crypto.randomUUID(), role: 'agent', ...parsed, cards: cards.cards.slice(0, 1), at: Date.now(), scope,
+            ...(fileIds.length ? { ingestFileIds: [...fileIds] } : {}) }
           update((current) => ({
             chat: [...current.chat, agent], chatSessionId: event.sessionId ?? current.chatSessionId,
           }))
@@ -213,18 +238,34 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
         busy.current = false
         setSending(false)
         setThinking(false)
+        const next = queued.current.shift()
+        if (next) void sendRef.current(next.text, next)
       }
     }
   }, [context, navigate, params, scope, update])
+
+  useEffect(() => { sendRef.current = send }, [send])
+  useEffect(() => {
+    const post = (event: Event) => {
+      const turn = (event as CustomEvent<ChatPost>).detail
+      if (turn && typeof turn.text === 'string') {
+        setParams((current) => { const next = new URLSearchParams(current); next.set('agent', '1'); return next })
+        void sendRef.current(turn.text, turn)
+      }
+    }
+    window.addEventListener(CHAT_POST_EVENT, post)
+    return () => window.removeEventListener(CHAT_POST_EVENT, post)
+  }, [setParams])
 
   function stop() {
     const pending = activeRequest.current
     request.current += 1
     pending?.controller.abort()
     // A stopped reply stays in the conversation, but never applies unfinished actions.
-    const text = parseActions(pending?.text ?? '').text.replace(/```action[\s\S]*$/, '').trim()
+    const text = parseCards(parseActions(pending?.text ?? '').text).text.replace(/```(?:action|card)[\s\S]*$/, '').trim()
     if (text) update((current) => ({ chat: [...current.chat, {
       id: crypto.randomUUID(), role: 'agent', text, at: Date.now(), scope: pending?.scope,
+      ...(pending?.fileIds.length ? { ingestFileIds: [...pending.fileIds] } : {}),
     }] }))
     activeRequest.current = null
     busy.current = false
@@ -283,11 +324,11 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
           return (
             <Fragment key={message.id}>
               {divider && <div className="chat-day-divider"><span>{divider}</span></div>}
-              <Message message={message} />
+              <Message message={message} onAnswer={index === messages.length - 1 && !sending ? (answer) => { void send(answer) } : undefined} />
             </Fragment>
           )
         })}
-        {showRequest && reply && <Message message={{ id: 'streaming', role: 'agent', text: reply, at: 0, scope: requestScope }} />}
+        {showRequest && reply && <Message message={{ id: 'streaming', role: 'agent', text: parseCards(parseActions(reply).text).text.replace(/```(?:action|card)[\s\S]*$/, '').trim(), at: 0, scope: requestScope }} />}
         {showRequest && sending && thinking && (
           <div className="chat-busy">
             <Loader2 size={12} aria-hidden="true" />

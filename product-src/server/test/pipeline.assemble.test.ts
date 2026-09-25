@@ -115,3 +115,24 @@ test('unparsed rows remain gaps even if the file has no surviving entries', () =
   const { gaps } = assemble(input([], { files: [{ id: 'empty', unparsed: [{ row: 3, reason: 'missing date' }] }] }))
   assert.deepEqual(gaps[0].example, { file: 'empty', row: 3 }); assert.equal(gaps[0].kind, 'unparsed')
 })
+
+test('site state, minimum wage and timezone gaps appear only until the respective facts are known', () => {
+  const row = entry(), initial = assemble(input([row], { facts: [] }))
+  assert.ok(initial.gaps.some(g => g.kind === 'site'))
+  const stateOnly = [{ kind: 'site', key: 'test site', value: { state: 'CA' } }]
+  const missing = assemble(input([row], { facts: stateOnly }))
+  assert.equal(missing.gaps.some(g => g.kind === 'site'), false)
+  assert.ok(missing.gaps.some(g => g.kind === 'min_wage')); assert.ok(missing.gaps.some(g => g.kind === 'timezone'))
+  const known = assemble(input([row], { facts: [{ kind: 'site', key: 'test site', value: { state: 'CA', minWage: 18, tz: 'America/Los_Angeles' } }] }))
+  assert.equal(known.gaps.some(g => ['site', 'min_wage', 'timezone'].includes(g.kind)), false)
+  assert.equal(known.sites[0].minWage, 18)
+  assert.equal(assemble(input([row], { facts: stateOnly, timezone: 'America/Los_Angeles' })).gaps.some(g => g.kind === 'timezone'), false)
+})
+
+test('mixed cycles retain Sample tags on individual time entries and intake sources', () => {
+  const { payload } = buildCycle(input([entry(), entry({ set: 2, fileId: 'f2', sourceId: 'sample', sample: true })], {
+    sources: [{ id: 'src1', system: 'Real', set: 1, method: 'upload', sample: false }, { id: 'sample', system: 'Sheet', set: 2, method: 'simulated', sample: true, site: 'Test site' }],
+  }))
+  assert.equal(payload.sample, false); assert.equal(payload.week[0].sample, true)
+  assert.equal(payload.intake.sources[1].sample, true); assert.equal(payload.intake.sources[1].site, 'Test site')
+})

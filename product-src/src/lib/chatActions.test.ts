@@ -3,6 +3,8 @@ import { actionSummary, applyAction, isAction } from '@/components/chat/ChatPane
 import { DEFAULTS, getOnboarding, updateOnboarding } from '@/lib/onboarding'
 import type { Onboarding } from '@/lib/onboarding'
 import type { Action } from '@/lib/chat'
+import { invalidate } from '@/lib/data'
+vi.mock('@/lib/data', () => ({ invalidate: vi.fn(async () => {}) }))
 
 const valid: Action[] = [
   { type: 'set_profile', field: 'workerHours', value: 'Email from workers' },
@@ -38,6 +40,20 @@ const invalid: unknown[] = [
 ]
 
 describe('onboarding action validation', () => {
+  it('accepts server-applied facts and rejects malformed envelopes', () => {
+    expect(isAction({ type: 'set_fact', kind: 'site', key: 'pacific', value: { state: 'CA', minWage: 16.9 } })).toBe(true)
+    for (const action of [
+      { type: 'set_fact', kind: 'unknown', key: 'x', value: {} },
+      { type: 'set_fact', kind: 'account', key: '', value: {} },
+      { type: 'set_fact', kind: 'account', key: 'timezone', value: 'UTC' },
+    ]) expect(isAction(action)).toBe(false)
+  })
+  it('refreshes server-applied facts without rewriting the state doc', () => {
+    const update = vi.fn()
+    applyAction({ type: 'set_fact', kind: 'account', key: 'timezone', value: { value: 'UTC' } }, update, vi.fn(), new URLSearchParams())
+    expect(update).not.toHaveBeenCalled()
+    expect(invalidate).toHaveBeenCalled()
+  })
   it.each(valid)('accepts $type', (action) => expect(isAction(action)).toBe(true))
   it.each(invalid)('rejects malformed action %#', (action) => expect(isAction(action)).toBe(false))
   it('accepts both endpoints of the authority ranges', () => {

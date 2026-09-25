@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ChatPane } from './ChatPane'
 import { stream, type ChatEvent } from '@/lib/chat'
 import { DEFAULTS, getOnboarding, updateOnboarding } from '@/lib/onboarding'
+import { CHAT_POST_EVENT, postToChat } from '@/lib/chatBus'
+import { invalidate } from '@/lib/data'
 
 // Exercise the real send handler and effect cleanup without requiring a browser.
 const hooks = vi.hoisted(() => ({ cursor: 0, context: 0, slots: [] as unknown[], effects: [] as EffectCallback[] }))
@@ -38,6 +40,7 @@ vi.mock('@/lib/onboarding', async (importOriginal) => {
 vi.mock('@/lib/chat', async (importOriginal) => ({
   ...await importOriginal<typeof import('@/lib/chat')>(), stream: vi.fn(),
 }))
+vi.mock('@/lib/data', () => ({ invalidate: vi.fn(async () => {}) }))
 
 type Props = {
   children?: ReactNode
@@ -70,6 +73,35 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals() })
 
 describe('chat conversation lifetime', () => {
+  it('posts an upload chip, preserves ingest mode for one question, then refreshes before the completed reply', async () => {
+    const target = new EventTarget()
+    vi.stubGlobal('window', Object.assign(target, { setTimeout, clearTimeout, cancelAnimationFrame: vi.fn() }))
+    vi.mocked(stream).mockImplementation(async function* (_message, context) {
+      expect(context).toEqual({ fileIds: ['f_csv'] })
+      yield { done: true, final: 'Are these actual clock times?\n```card\n{"kind":"question","input":"chips","chips":["Actual","Scheduled"],"topics":["workerHours"]}\n```' }
+    })
+    render()
+    const cleanup = hooks.effects.map((effect) => effect())
+    postToChat({ text: 'Uploaded fresh.csv for Pacific Cold Storage', mode: 'ingest', context: { fileIds: ['f_csv'] }, contextChip: 'Pacific Cold Storage · fresh.csv' })
+    await vi.waitFor(() => expect(getOnboarding().chat).toHaveLength(2))
+    expect(vi.mocked(stream).mock.calls[0][2]).toBe('ingest')
+    expect(getOnboarding().chat[0]).toMatchObject({ contextChip: 'Pacific Cold Storage · fresh.csv', text: 'Uploaded fresh.csv for Pacific Cold Storage' })
+    expect(getOnboarding().chat[1]).toMatchObject({ text: 'Are these actual clock times?', ingestFileIds: ['f_csv'], cards: [{ kind: 'question', input: 'chips' }] })
+    vi.mocked(stream).mockImplementation(async function* () {
+      yield { ingest: { fileId: 'f_csv', status: 'normalized', entries: 3, cycles: ['2026-09-20'], gaps: [] } }
+      yield { facts: { applied: 1, cycles: ['2026-09-20'] } }
+      yield { done: true, final: 'Three time entries are ready.\n```mapping\n{"file":"f_csv"}\n```' }
+    })
+    send('Actual')
+    await vi.waitFor(() => expect(getOnboarding().chat).toHaveLength(4))
+    expect(vi.mocked(stream).mock.calls[1][2]).toBe('ingest')
+    expect(getOnboarding().chat[3]).toMatchObject({ text: 'Three time entries are ready.' })
+    expect(getOnboarding().chat[3].ingestFileIds).toBeUndefined()
+    expect(invalidate).toHaveBeenCalledTimes(2)
+    cleanup.forEach((dispose) => { if (typeof dispose === 'function') dispose() })
+    target.dispatchEvent(new CustomEvent(CHAT_POST_EVENT, { detail: { text: 'Unmounted' } }))
+    expect(getOnboarding().chat).toHaveLength(4)
+  })
   it('has no Clear control even when the conversation has messages', () => {
     updateOnboarding({ chat: [{ id: 'saved', role: 'agent', text: 'Saved conversation', at: 0 }] })
     const controls = elements(render()).filter(({ type }) => type === 'button')

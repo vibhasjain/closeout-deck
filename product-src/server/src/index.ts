@@ -4,7 +4,8 @@ import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { authenticate, AuthError, InviteOnlyError, isAllowedEmail, signSession, validateSessionSecret, verifyGoogleIdToken } from './auth.ts'
 import { AGENT_ERROR, getClaudeVersion, runClaude } from './claude.ts'
-import { systemPrompt, onboardPrompt } from './prompts.ts'
+import { systemPrompt, onboardPrompt, ingestPrompt } from './prompts.ts'
+import { runDataTurn } from './agentTurn.ts'
 import { FirmError, FirmReader, extractFirm, firmCacheFromEnv } from './firm.ts'
 import { GlobalSemaphore, QueueFullError, TurnRateLimit, UserQueue } from './queue.ts'
 import { stateStoreFromEnv } from './state.ts'
@@ -25,7 +26,7 @@ export function listenHost(env: NodeJS.ProcessEnv): string {
   return env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1'
 }
 
-export const MODE_TIMEOUTS = { chat: 180_000, onboard: 180_000, firm: 60_000, scribe: 180_000, delegate: 180_000, consolidate: 180_000 } as const
+export const MODE_TIMEOUTS = { chat: 180_000, onboard: 180_000, ingest: 300_000, firm: 60_000, scribe: 180_000, delegate: 180_000, consolidate: 180_000 } as const
 export function turnTimeoutMs(mode: ChatMode | 'firm', env: NodeJS.ProcessEnv): number {
   const configured = Number(env[`CLOSEOUT_${mode.toUpperCase()}_TIMEOUT_MS`])
   return Number.isFinite(configured) && configured > 0 ? configured : MODE_TIMEOUTS[mode]
@@ -136,7 +137,7 @@ export function createServer(options: ServerOptions = {}) {
         return
       }
       response.setHeader('Access-Control-Allow-Origin', origin)
-      response.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-File-Name, X-Set')
+      response.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-File-Name, X-Set, X-System, X-Site')
       response.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
     }
     if (request.method === 'OPTIONS') {
@@ -209,8 +210,18 @@ export function createServer(options: ServerOptions = {}) {
           catch { throw new DataError(400, 'invalid_file_name') }
           const hint = request.headers['x-set']
           if (hint !== undefined && hint !== '1' && hint !== '2') throw new DataError(400, 'invalid_set')
+          const sourceHeader = (key: string, max: number) => {
+            const value = request.headers[key]
+            if (value === undefined) return undefined
+            if (typeof value !== 'string') throw new DataError(400, 'invalid_source')
+            let decoded: string
+            try { decoded = decodeURIComponent(value).trim() } catch { throw new DataError(400, 'invalid_source') }
+            if (!decoded || decoded.length > max || /[\r\n]/.test(decoded)) throw new DataError(400, 'invalid_source')
+            return decoded
+          }
           const bytes = await readBytes(request, 10 * 1024 * 1024)
-          const file = await service.ingestFile(user.email, { name, bytes, set: hint ? Number(hint) as 1 | 2 : undefined }, doc)
+          const file = await service.ingestFile(user.email, { name, bytes, set: hint ? Number(hint) as 1 | 2 : undefined,
+            system: sourceHeader('x-system', 80), site: sourceHeader('x-site', 200) }, doc)
           await sync()
           json(response, 201, { file })
           return
@@ -297,10 +308,12 @@ export function createServer(options: ServerOptions = {}) {
     }
     if (request.method === 'POST' && path === '/chat') {
       const body = validateChatBody(await readJson(request, 300_000))
-      if (body.mode !== 'chat' && body.mode !== 'onboard') {
+      if (body.mode !== 'chat' && body.mode !== 'onboard' && body.mode !== 'ingest') {
         json(response, 501, { error: 'not_yet' })
         return
       }
+      const ingestFiles = body.mode === 'ingest' ? await Promise.all((body.context.fileIds as string[]).map(id => getDataStore().getFile(user.email, id))) : []
+      if (ingestFiles.some(file => !file || file.status !== 'needs_mapping')) throw new ValidationError()
       rateLimit.consume(user.email)
       const abort = new AbortController()
       let heartbeat: ReturnType<typeof setInterval> | undefined
@@ -333,17 +346,22 @@ export function createServer(options: ServerOptions = {}) {
         }, 15_000)
         release = await accountSlot
         if (abort.signal.aborted) return
-        const cwd = options.workspace ? await workspace(user, env) : await materialize(user, env, getDataStore(), await stateDoc(user.email), body.context)
+        const doc = await stateDoc(user.email), store = getDataStore()
+        if (body.mode === 'ingest' && (await Promise.all((body.context.fileIds as string[]).map(id => store.getFile(user.email, id)))).some(file => !file || file.status !== 'needs_mapping')) throw new ValidationError()
+        const cwd = options.workspace ? await workspace(user, env) : await materialize(user, env, store, doc, body.context)
         if (abort.signal.aborted) return
-        await runAgent({
+        await runDataTurn({ options: {
           cwd,
           message: body.message,
-          prompt: body.mode === 'onboard' ? onboardPrompt(body.context) : systemPrompt(body.context),
+          prompt: body.mode === 'onboard' ? onboardPrompt(body.context) : body.mode === 'ingest' ? ingestPrompt(ingestFiles.filter(file => file !== null), body.context) : systemPrompt(body.context),
           model: env.CLOSEOUT_AGENT_MODEL ?? 'opus',
           env,
           signal: abort.signal,
           timeoutMs: turnTimeoutMs(body.mode, env),
-          onEvent(event) {
+          }, runAgent, service: new DataService(store), email: user.email, doc,
+          fileIds: body.mode === 'ingest' ? body.context.fileIds as string[] : undefined,
+          sync: () => options.workspace ? workspace(user, env) : materialize(user, env, store, doc, body.context),
+          emit(event) {
             if (abort.signal.aborted || done) return
             if ('done' in event) {
               done = true

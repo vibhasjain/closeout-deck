@@ -10,7 +10,8 @@ import { ShiftTable } from '@/components/ShiftTable'
 import { useSetChatContext, useSetChatSuggestions } from '@/components/chat/ChatPane'
 import { useOverlay } from '@/components/shell/Overlay'
 import { PageTitle } from '@/components/shell/PageTitle'
-import { Tag } from '@/components/ui'
+import { invalidate } from '@/lib/data'
+import { Btn, Tag } from '@/components/ui'
 import { shortDate } from '@/lib/cycles'
 import { cycleStats, useDesk } from '@/lib/desk'
 import { cycleIntake, stepOf, type Step } from '@/lib/intake'
@@ -27,7 +28,7 @@ const batchDestination = (batch: PayrollBatch) => destinations.find((destination
 const batchTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
 export function Payroll() {
-  const { cycles, current, byId } = useDesk()
+  const { cycles, current, byId, loading, error } = useDesk()
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const shiftOpen = useLocation().pathname !== '/payroll'
@@ -84,7 +85,7 @@ export function Payroll() {
       <PageTitle title="Payroll" description="Collect time entries, resolve discrepancies, and prepare each pay run." />
       <div className="payroll-head">
         <div className="payroll-head-title">
-          <h2>{cycle.label}</h2><Tag tone={cycle.statusTag === 'Pending' ? 'amber' : undefined}>{cycle.statusTag}</Tag>
+          <h2>{cycle.label}</h2>{(cycle.sample || cycle.week.some(shift => shift.sample)) && <Tag>{cycle.sample ? 'Sample' : 'Includes Sample'}</Tag>}<Tag tone={cycle.statusTag === 'Pending' ? 'amber' : undefined}>{cycle.statusTag}</Tag>
         </div>
         <nav className="cycle-steps" aria-label="Pay cycle steps">
           <button type="button" className="cycle-step" aria-current={step === 'intake' ? 'step' : undefined} onClick={() => showStep('intake')}>Collect</button>
@@ -97,6 +98,8 @@ export function Payroll() {
             <span className="payroll-date" role="img" title={`Pay date ${payDate}`} aria-label={`Pay date ${payDate}`}><Banknote size={14} aria-hidden="true" />{payDate}</span>
           </>}</span>
       </div>
+      {error && <div role="alert"><p>{error}</p><Btn onClick={() => void invalidate()}>Retry</Btn></div>}
+      {loading && cycle.server && !cycle.week.length && <p role="status" className="r-note">Loading time entries…</p>}
       {step === 'intake' ? <Intake cycle={cycle} intake={intake} /> : <>
         <CycleKpis cycle={cycle} stats={stats} />
         {isTableView(view)

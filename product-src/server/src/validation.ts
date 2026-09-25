@@ -1,7 +1,7 @@
 export const MAX_MESSAGE_CHARS = 8_000
 export const MAX_CONTEXT_CHARS = 60_000
 export const MAX_DOC_BYTES = 1024 * 1024
-export const MODES = ['chat', 'onboard', 'scribe', 'delegate', 'consolidate'] as const
+export const MODES = ['chat', 'onboard', 'ingest', 'scribe', 'delegate', 'consolidate'] as const
 export type ChatMode = typeof MODES[number]
 
 export interface ChatBody {
@@ -45,6 +45,9 @@ export function validateChatBody(body: unknown): ChatBody {
     || jsonString(body.context).length > MAX_CONTEXT_CHARS) {
     throw new ValidationError()
   }
+  if (body.mode === 'ingest' && (!Array.isArray(body.context.fileIds) || body.context.fileIds.length < 1
+    || body.context.fileIds.length > 5 || new Set(body.context.fileIds).size !== body.context.fileIds.length
+    || !body.context.fileIds.every(id => typeof id === 'string' && /^f_[a-z2-7]{12}$/.test(id)))) throw new ValidationError()
   return { mode: body.mode as ChatMode, message: body.message, context: body.context }
 }
 
