@@ -8,7 +8,7 @@ vi.mock('react-router-dom', async (importOriginal) => ({
   ...await importOriginal<typeof import('react-router-dom')>(),
   Navigate: ({ to }: { to: To }) => h('a', { 'data-navigate': to }),
 }))
-vi.mock('@/lib/onboarding', async (importOriginal) => ({ ...await importOriginal<typeof import('@/lib/onboarding')>(), useOnboarding: vi.fn() }))
+vi.mock('@/lib/onboarding', async (importOriginal) => ({ ...await importOriginal<typeof import('@/lib/onboarding')>(), useOnboarding: vi.fn(), useOnboardingSyncStatus: () => ({ ready: true, loading: false, saving: false, error: null }) }))
 vi.mock('@/components/shell/AppShell', () => ({ AppShell: ({ children }: { children: ReactNode }) => h('main', null, children) }))
 vi.mock('@/pages/setup/Agent', () => ({ Agent: () => h('div', { 'data-setup-agent': true }) }))
 

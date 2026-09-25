@@ -35,7 +35,7 @@ vi.mock('react-router-dom', () => ({
 }))
 vi.mock('@/lib/onboarding', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/lib/onboarding')>()
-  return { ...original, useOnboarding: () => [original.getOnboarding(), original.updateOnboarding] }
+  return { ...original, flushOnboarding: vi.fn(async () => {}), useOnboarding: () => [original.getOnboarding(), original.updateOnboarding] }
 })
 vi.mock('@/lib/chat', async (importOriginal) => ({
   ...await importOriginal<typeof import('@/lib/chat')>(), stream: transport.stream,
@@ -43,6 +43,7 @@ vi.mock('@/lib/chat', async (importOriginal) => ({
 
 type Props = {
   children?: ReactNode
+  message?: { text: string }
   className?: string
   disabled?: boolean
   value?: string
@@ -108,7 +109,7 @@ describe('permanent Closeout Agent conversation', () => {
     type('Check my run')
     submit()
     await vi.waitFor(() => expect(elements(render()).some(({ props }) => props.className === 'icon-btn chat-send' && props['aria-label'] === 'Stop reply')).toBe(true))
-    await Promise.resolve()
+    await vi.waitFor(() => expect(elements(render()).some(({ props }) => props.message?.text.startsWith('Checking your run.'))).toBe(true))
     button(render(), 'Stop reply').props.onClick!()
     await vi.waitFor(() => expect(getOnboarding().chat).toHaveLength(2))
     expect(signal?.aborted).toBe(true)

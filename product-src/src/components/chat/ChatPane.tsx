@@ -2,18 +2,17 @@
 import { createContext, Fragment, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import type { NavigateFunction } from 'react-router-dom'
 import { Loader2, Plus, Send, Square } from 'lucide-react'
 import { ThinkingOrb } from 'thinking-orbs'
 import { Chip } from '@/components/ui'
 import { Message } from '@/components/chat/Message'
 import { dayDivider } from '@/components/chat/dayDivider'
 import { parseActions, stream } from '@/lib/chat'
-import type { Action, ChatContext } from '@/lib/chat'
-import { agentHref } from '@/lib/navigation'
-import { cycleNamed, saveCycle, slugId } from '@/lib/cohorts'
-import { FREQUENCIES, WEEKDAYS, useOnboarding } from '@/lib/onboarding'
-import type { ChatMessage, CustomDeskRule, Onboarding } from '@/lib/onboarding'
+import type { ChatContext } from '@/lib/chat'
+import { FREQUENCIES, WEEKDAYS, flushOnboarding, useOnboarding } from '@/lib/onboarding'
+import type { ChatMessage } from '@/lib/onboarding'
+import { applyAction, isAction, type ChatUpdate } from '@/lib/chatActions'
+export { applyAction, isAction, actionSummary } from '@/lib/chatActions'
 
 const PageContext = createContext<Partial<ChatContext>>({})
 const SetPageContext = createContext<Dispatch<SetStateAction<Partial<ChatContext>>>>(() => {})
@@ -82,91 +81,6 @@ export function useSetChatSuggestions(suggestions: string[], active = true) {
     setSuggestions(JSON.parse(serialized) as string[])
     return () => setSuggestions([])
   }, [serialized, setSuggestions, active])
-}
-
-type ChatUpdate = (patch: Partial<Onboarding> | ((state: Onboarding) => Partial<Onboarding>)) => void
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value)
-}
-
-// parseActions follows the wire format; check model-provided values before writing the store.
-export function isAction(value: unknown): value is Action {
-  if (!isRecord(value)) return false
-  switch (value.type) {
-    case 'set_calendar':
-      return isRecord(value.patch) && Object.entries(value.patch).every(([key, field]) => {
-        switch (key) {
-          case 'frequency': return FREQUENCIES.some((item) => item === field)
-          case 'periodEndDay':
-          case 'payDay': return WEEKDAYS.some((item) => item === field)
-          case 'payDatesOfMonth': return Array.isArray(field) && field.every((item) => typeof item === 'number' && Number.isFinite(item))
-          case 'cutoffDays':
-          case 'deadlineDays': return typeof field === 'number' && Number.isFinite(field)
-          default: return false
-        }
-      })
-    case 'add_cohort': {
-      const cohort = value.cohort
-      return isRecord(cohort) && typeof cohort.name === 'string' && cohort.name.trim() !== '' && typeof cohort.frequency === 'string'
-        && (cohort.payDay === undefined || typeof cohort.payDay === 'string')
-        && (cohort.periodEndDay === undefined || WEEKDAYS.some((item) => item === cohort.periodEndDay))
-    }
-    case 'add_rule':
-      return typeof value.sentence === 'string' && (value.bucket === undefined || typeof value.bucket === 'string')
-        && (value.kind === undefined || value.kind === 'det' || value.kind === 'llm' || value.kind === 'both')
-    case 'go': return typeof value.to === 'string'
-    case 'decide':
-      return typeof value.cycleId === 'string' && typeof value.shiftId === 'string'
-        && (value.decision === 'applied' || value.decision === 'dismissed')
-        && (value.reason === undefined || typeof value.reason === 'string')
-        && (value.decision !== 'dismissed' || (typeof value.reason === 'string' && value.reason.trim().length > 0))
-    case 'note': return typeof value.text === 'string'
-    default: return false
-  }
-}
-
-export function applyAction(action: Action, update: ChatUpdate, navigate: NavigateFunction, params: URLSearchParams, cycleId?: string) {
-  switch (action.type) {
-    case 'set_calendar':
-      update(action.patch)
-      break
-    case 'add_cohort':
-      // A name already on file updates that cycle instead of adding a duplicate.
-      update((state) => ({ cohorts: saveCycle(state.cohorts, {
-        name: action.cohort.name,
-        frequency: FREQUENCIES.find((value) => value === action.cohort.frequency) ?? state.frequency,
-        periodEndDay: WEEKDAYS.find((value) => value === action.cohort.periodEndDay) ?? state.periodEndDay,
-        payDay: WEEKDAYS.find((value) => value === action.cohort.payDay) ?? state.payDay,
-        payDatesOfMonth: [...state.payDatesOfMonth],
-      }, cycleNamed(state.cohorts, action.cohort.name)?.id) }))
-      break
-    case 'add_rule': {
-      const rule: CustomDeskRule = {
-        id: slugId('rule', crypto.randomUUID()), bucket: 'Custom', kind: action.kind ?? 'both',
-        sentence: action.sentence, source: { doc: 'You told the agent' }, draft: false, at: Date.now(),
-      }
-      update((state) => ({ customRules: [...state.customRules, rule] }))
-      break
-    }
-    case 'go':
-      navigate(agentHref(action.to, params, cycleId))
-      break
-    case 'decide':
-      update((state) => ({
-        decisionTimes: { ...state.decisionTimes, [`${action.cycleId}:${action.shiftId}`]: new Date().toISOString() },
-        resolutions: {
-          ...state.resolutions,
-          [action.cycleId]: { ...state.resolutions[action.cycleId], [action.shiftId]: action.decision },
-        },
-        ...(action.reason === undefined ? {} : {
-          reasons: { ...state.reasons, [`${action.cycleId}:${action.shiftId}`]: action.reason.trim() },
-        }),
-      }))
-      break
-    case 'note':
-      break
-  }
 }
 
 function selectionScope(selection?: object): string | undefined {
@@ -266,6 +180,8 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
     let textSoFar = ''
     let completed = false
     try {
+      await flushOnboarding()
+      if (request.current !== requestId || pending.controller.signal.aborted) return
       for await (const event of stream(message, context, 'chat', pending.controller.signal)) {
         if (request.current !== requestId) return
         if (event.text) {

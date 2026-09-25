@@ -1,0 +1,95 @@
+.payroll-profile-card, .profile-modal, .payroll-profile-editor, .never-contact-input { font-family: Inter, sans-serif; font-size: 13px; line-height: 1.55; color: hsl(var(--foreground)); }
+.payroll-profile-card { width: 100%; max-width: 440px; background: hsl(var(--background)); border: 1px solid hsl(var(--border)); border-radius: 7px; padding: 24px; }
+.profile-card-firm { display: flex; gap: 14px; align-items: flex-start; padding-bottom: 20px; }
+.profile-card-firm > div { min-width: 0; }
+.profile-card-firm p { margin: 0 0 5px; color: hsl(var(--muted-foreground)); font-size: 11px; }
+.profile-card-firm h2 { margin: 0 0 5px; font-size: 19px; font-weight: 550; line-height: 1.25; overflow-wrap: anywhere; }
+.profile-firm-details { display: block; color: hsl(var(--muted-foreground)); font-size: 11px; overflow-wrap: anywhere; }
+.profile-favicon { position: relative; width: 42px; height: 42px; flex: 0 0 42px; display: grid; place-items: center; background: hsl(var(--muted)); border: 1px solid hsl(var(--border)); border-radius: 8px; }
+.profile-favicon img { position: absolute; width: 30px; height: 30px; border-radius: 4px; object-fit: contain; background: hsl(var(--background)); }
+.payroll-profile-card dl { margin: 0; }
+.profile-card-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr); gap: 15px; border-top: 1px solid hsl(var(--border)); padding: 12px 0; }
+.profile-card-row:last-child { padding-bottom: 0; }
+.profile-card-row dt { font-size: 11px; color: hsl(var(--muted-foreground)); }
+.profile-card-row dd { margin: 0; font-size: 12px; overflow-wrap: anywhere; }
+.profile-not-yet { background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); font-size: 10px; text-transform: none; }
+.profile-value-arrived { animation: profile-value-arrive 1.4s ease-out; }
+@keyframes profile-value-arrive { from { background: hsl(var(--muted)); } to { background: transparent; } }
+.profile-modal-backdrop { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 24px; background: rgb(20 20 19 / .52); }
+.profile-modal { display: flex; flex-direction: column; width: min(100%, 710px); max-height: min(850px, calc(100dvh - 48px)); background: hsl(var(--background)); border: 1px solid hsl(var(--border)); border-radius: 8px; outline: none; overflow: hidden; }
+.profile-modal-header { flex: none; display: flex; justify-content: space-between; align-items: flex-start; padding: 20px 24px; gap: 16px; border-bottom: 1px solid hsl(var(--border)); }
+.profile-modal-header h2 { margin: 0 0 5px; font-size: 16px; font-weight: 550; }
+.profile-modal-header p { margin: 0; color: hsl(var(--muted-foreground)); font-size: 12px; }
+.profile-modal-body { overflow-y: auto; overscroll-behavior: contain; padding: 0 24px; }
+.profile-modal-footer { display: flex; justify-content: flex-end; flex: none; padding: 14px 24px; border-top: 1px solid hsl(var(--border)); }
+.profile-modal-footer .btn { min-width: 80px; }
+.setup-contact-dialog { width: min(100%, 480px); }
+.setup-contact-dialog .profile-modal-body { padding-block: 22px; }
+.setup-contact-dialog .profile-modal-footer { flex-direction: column; gap: 9px; }
+.profile-icon-button { flex: none; min-width: 44px; min-height: 44px; padding: 0; border: 0; display: inline-flex; align-items: center; justify-content: center; background: transparent; color: inherit; border-radius: 5px; cursor: pointer; }
+.profile-icon-button:hover { background: hsl(var(--muted)); }
+.profile-icon-button:disabled { cursor: default; opacity: .4; }
+.profile-modal button:focus-visible, .payroll-profile-editor button:focus-visible, .never-contact-input button:focus-visible { outline: 2px solid hsl(var(--foreground) / .5); outline-offset: 2px; }
+.profile-modal .btn, .payroll-profile-editor .btn, .profile-modal .q-input, .payroll-profile-editor .q-input, .never-contact-input .q-input { min-height: 44px; height: auto; }
+.profile-modal .q-input, .payroll-profile-editor .q-input, .never-contact-input .q-input { width: 100%; min-width: 0; padding: 11px 12px; font-size: 13px; font-family: inherit; }
+.profile-modal .q-input:focus, .payroll-profile-editor .q-input:focus, .never-contact-input .q-input:focus { outline: 2px solid hsl(var(--foreground) / .35); outline-offset: 2px; }
+.profile-edit-section { padding: 23px 0; border-bottom: 1px solid hsl(var(--border)); }
+.profile-edit-section:last-child { border: 0; }
+.profile-edit-section h3, .rulebook-content > h3 { margin: 0 0 15px; font-size: 14px; font-weight: 550; }
+.profile-edit-section p { margin: 0 0 15px; }
+.profile-edit-section .calendar-fields { display: grid; gap: 16px; margin-bottom: 18px; }
+.profile-edit-section .calendar-field > .r-note { display: none; }
+.profile-edit-section .lbl { font-family: inherit; font-size: 12px; text-transform: none; letter-spacing: 0; }
+.profile-textarea { resize: vertical; min-height: 90px !important; line-height: 1.6; }
+.profile-field-stack { display: grid; gap: 10px; }
+.profile-cohort { margin: 20px 0; padding-top: 15px; border-top: 1px solid hsl(var(--border)); }
+.profile-cohort h4 { margin: 0 0 12px; font-weight: 500; }
+.profile-muted { color: hsl(var(--muted-foreground)); font-size: 12px; }
+.rulebook-modal { width: min(100%, 810px); }
+.rulebook-modal-body { display: grid; grid-template-columns: 184px minmax(0, 1fr); min-height: 400px; overflow: hidden; }
+.rulebook-rail { display: flex; flex-direction: column; padding: 20px 12px; gap: 4px; border-right: 1px solid hsl(var(--border)); overflow-y: auto; }
+.rulebook-rail button { text-align: left; font: inherit; color: hsl(var(--muted-foreground)); border: 0; background: transparent; padding: 11px 12px; min-height: 44px; border-radius: 4px; cursor: pointer; }
+.rulebook-rail button:hover, .rulebook-rail button[aria-current] { color: hsl(var(--foreground)); background: hsl(var(--muted)); }
+.rulebook-content { padding: 24px; overflow-y: auto; overscroll-behavior: contain; min-width: 0; }
+.rulebook-jurisdictions section + section { margin-top: 24px; }
+.rulebook-jurisdictions h4 { font-weight: 500; margin: 0 0 12px; }
+.profile-rule-list { list-style: none; padding: 0; margin: 0; }
+.profile-rule-list > li { padding: 14px 0; border-top: 1px solid hsl(var(--border)); overflow-wrap: anywhere; }
+.profile-rule-list p { margin: 0 0 7px; }
+.profile-rule-list li > span:not(.tag) { display: block; color: hsl(var(--muted-foreground)); font-size: 11px; }
+.profile-rule-title { display: flex; align-items: flex-start; gap: 8px; }
+.profile-rule-title p { flex: 1; }
+.profile-contract-drop { display: flex; width: 100%; min-height: 150px; flex-direction: column; justify-content: center; align-items: center; gap: 9px; border: 1px dashed hsl(var(--border)); border-radius: 5px; background: hsl(var(--background)); color: inherit; font: inherit; cursor: pointer; padding: 20px; }
+.profile-contract-drop:hover, .profile-contract-drop.dragging { background: hsl(var(--muted)); border-color: hsl(var(--muted-foreground)); }
+.profile-contract-drop:disabled { opacity: .55; cursor: wait; }
+.profile-proposal-list { margin-top: 18px; }
+.profile-proposal-list .tag { margin-bottom: 8px; }
+.profile-proposal-actions { display: flex; gap: 8px; margin-top: 12px; }
+.profile-toggle { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 60px; padding: 6px 0; border-bottom: 1px solid hsl(var(--border)); cursor: pointer; }
+.profile-toggle input { width: 44px; height: 44px; accent-color: hsl(var(--foreground)); cursor: pointer; }
+.profile-authority-limits { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px 0; border-bottom: 1px solid hsl(var(--border)); }
+.profile-authority-limits label { display: grid; min-width: 0; gap: 7px; }
+.profile-authority-limits label > span { font-size: 12px; color: hsl(var(--muted-foreground)); }
+.profile-add-line { display: flex; align-items: flex-start; gap: 8px; }
+.profile-add-line .q-input { min-width: 0; flex: 1; }
+.profile-add-line .profile-icon-button { border: 1px solid hsl(var(--border)); }
+.profile-refinements > .profile-rule-list { margin-top: 18px; }
+.never-contact-input ul { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; padding: 0; list-style: none; }
+.never-contact-input li { display: flex; align-items: center; padding-left: 12px; border: 1px solid hsl(var(--border)); border-radius: 5px; min-width: 0; max-width: 100%; background: hsl(var(--muted)); }
+.never-contact-input li > span { min-width: 0; overflow-wrap: anywhere; }
+.profile-modal [hidden], .payroll-profile-editor [hidden] { display: none !important; }
+@media (max-width: 600px) {
+  .profile-modal-backdrop { padding: 10px; }
+  .profile-modal { max-height: calc(100dvh - 20px); }
+  .profile-modal-header { padding: 15px; gap: 8px; }
+  .profile-modal-body { padding: 0 17px; }
+  .profile-modal-footer { padding: 12px 17px; }
+  .rulebook-modal-body { display: flex; flex-direction: column; min-height: 0; }
+  .rulebook-rail { flex-direction: row; flex: none; padding: 8px; overflow-x: auto; border-right: 0; border-bottom: 1px solid hsl(var(--border)); }
+  .rulebook-rail button { white-space: nowrap; flex: none; padding-inline: 12px; }
+  .rulebook-content { padding: 20px 17px; }
+  .profile-authority-limits { grid-template-columns: 1fr; }
+  .payroll-profile-card { padding: 18px; }
+  .profile-card-row { gap: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .profile-value-arrived { animation: none; } }

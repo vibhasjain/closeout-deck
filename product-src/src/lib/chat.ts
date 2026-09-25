@@ -1,8 +1,14 @@
 import { signOut, viewerSession } from '@/lib/viewerSession'
 import { API_BASE } from '@/lib/api'
-import type { Onboarding } from '@/lib/onboarding'
+import type { FirmFacts, Onboarding, OnboardingSource, OnboardTopic, PayrollProfile, ProfileField, ProfileValue } from '@/lib/onboarding'
 
 export type Action =
+  | { type: 'set_profile'; field: ProfileField; value: ProfileValue }
+  | { type: 'set_firm'; patch: Partial<FirmFacts> }
+  | ({ type: 'add_source' } & OnboardingSource)
+  | { type: 'set_authority'; patch: Partial<Onboarding['authority']> }
+  | { type: 'never_contact'; name: string }
+  | { type: 'cover_topic'; topic: OnboardTopic }
   | { type: 'set_calendar'; patch: Partial<Pick<Onboarding, 'frequency' | 'periodEndDay' | 'payDay' | 'payDatesOfMonth' | 'cutoffDays' | 'deadlineDays'>> }
   | { type: 'add_cohort'; cohort: { name: string; frequency: string; periodEndDay?: string; payDay?: string } }
   | { type: 'add_rule'; sentence: string; bucket?: string; kind?: 'det' | 'llm' | 'both' }
@@ -13,18 +19,62 @@ export type Action =
 /** Pulls ```action fenced JSON blocks out of a reply. Returns clean text + actions. */
 export function parseActions(text: string): { text: string; actions: Action[] } {
   const actions: Action[] = []
-  const clean = text.replace(/```action\s*\n([\s\S]*?)```/g, (_, json) => {
+  const clean = text.replace(/```action\s+([\s\S]*?)```/g, (_, json) => {
     try { actions.push(JSON.parse(json)) } catch { /* leave malformed blocks out */ }
     return ''
   }).trim()
   return { text: clean, actions }
 }
 
+export interface QuestionCard {
+  kind: 'question'
+  input: 'text' | 'chips' | 'multi' | 'calendar' | 'files' | 'choice'
+  chips?: string[]
+  placeholder?: string
+  topics: string[]
+  choice?: { yours: string; sample: string }
+}
+export type Card = QuestionCard | { kind: 'onboard_complete' }
+
+const record = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value)
+const cardString = (value: unknown): value is string => typeof value === 'string' && value.length <= 200
+
+/** Cards carry presentation, never a client-side question script. Validate before rendering. */
+export function isCard(value: unknown): value is Card {
+  if (!record(value)) return false
+  if (value.kind === 'onboard_complete') return Object.keys(value).every((key) => key === 'kind')
+  if (value.kind !== 'question' || !['text', 'chips', 'multi', 'calendar', 'files', 'choice'].includes(String(value.input))) return false
+  if (!Object.keys(value).every((key) => ['kind', 'input', 'chips', 'placeholder', 'topics', 'choice'].includes(key))) return false
+  if (!Array.isArray(value.topics) || !value.topics.every(cardString)) return false
+  if (value.chips !== undefined && (!Array.isArray(value.chips) || value.chips.length > 8 || !value.chips.every(cardString))) return false
+  if (value.placeholder !== undefined && !cardString(value.placeholder)) return false
+  if (value.choice !== undefined && (!record(value.choice) || !cardString(value.choice.yours) || !cardString(value.choice.sample)
+    || !Object.keys(value.choice).every((key) => key === 'yours' || key === 'sample'))) return false
+  return value.input !== 'choice' || value.choice !== undefined
+}
+
+/** As with actions, callers validate parsed JSON before rendering any card. */
+export function parseCards(text: string): { text: string; cards: Card[]; invalid: boolean } {
+  const cards: Card[] = []
+  let invalid = false
+  const clean = text.replace(/```card\s+([\s\S]*?)```/g, (_, json) => {
+    try {
+      const card: unknown = JSON.parse(json)
+      if (isCard(card)) cards.push(card)
+      else invalid = true
+    } catch { invalid = true }
+    return ''
+  }).trim()
+  return { text: clean, cards, invalid: invalid || /```card\b/.test(clean) }
+}
+
+export interface OnboardContext { firm: FirmFacts | null; profile: PayrollProfile; covered: OnboardTopic[] }
+
 export interface ChatContext { page: string; step?: string; calendar: object; cycle?: { id: string; label: string; stats: string }; selection?: object; discrepancies?: object[]; rules?: { id: string; sentence: string }[]; connections?: object }
 
 export interface ChatEvent { text?: string; done?: boolean; sessionId?: string; error?: string; final?: string }
 
-export async function* stream(message: string, context: ChatContext, mode: 'chat' | 'scribe' | 'delegate' | 'consolidate' = 'chat', signal?: AbortSignal): AsyncGenerator<ChatEvent> {
+export async function* stream(message: string, context: ChatContext | OnboardContext, mode: 'chat' | 'onboard' | 'scribe' | 'delegate' | 'consolidate' = 'chat', signal?: AbortSignal): AsyncGenerator<ChatEvent> {
   const token = viewerSession()?.sessionToken
   const res = await fetch(`${API_BASE}/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ mode, message, context }), signal })
   if (res.status === 401) { signOut(); return }

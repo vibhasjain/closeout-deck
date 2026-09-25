@@ -65,7 +65,9 @@ export function claudeArgs(prompt: string, sessionId: string, resume: boolean, m
 
 export function claudeEnv(env: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
   const childEnv: NodeJS.ProcessEnv = {}
-  for (const key of ['PATH', 'HOME', 'LANG', 'TZ', 'CLAUDE_CODE_OAUTH_TOKEN']) {
+  // USER selects the macOS keychain account. Omitting it can select stale
+  // standalone credentials even while the local CLI is correctly signed in.
+  for (const key of ['PATH', 'HOME', 'USER', 'LANG', 'TZ', 'CLAUDE_CODE_OAUTH_TOKEN']) {
     if (env[key] !== undefined) childEnv[key] = env[key]
   }
   // npm run prepends local dependency bins, which can shadow the pinned/global

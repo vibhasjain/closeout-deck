@@ -6,6 +6,7 @@ import { Agent } from '@/pages/setup/Agent'
 import { Payroll } from '@/pages/Payroll'
 import { ShiftPage } from '@/pages/ShiftPage'
 import { Rules } from '@/pages/Rules'
+import { Profile } from '@/pages/Profile'
 import { Settings } from '@/pages/Settings'
 import { canonicalHref } from '@/lib/navigation'
 
@@ -61,6 +62,7 @@ export function AppRoutes() {
           <Route path=":shiftId" element={<ShiftPage />} />
         </Route>
         <Route path="/rules" element={<RailLayout><Rules /></RailLayout>} />
+        <Route path="/profile" element={<Profile />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<Navigate to="/payroll" replace />} />

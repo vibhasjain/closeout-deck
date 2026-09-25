@@ -61,6 +61,16 @@ test('materialize rebuilds superseding exports with stable IDs and only current 
   assert.equal(entries[0].fileId, second.id)
 })
 
+test('materialize preserves the saved Payroll profile and never-contact instructions for later chat', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'closeout-profile-'))
+  t.after(() => rm(root, { recursive: true, force: true }))
+  const saved = { firm: { name: 'Acme', states: ['CA'] }, profile: { workerHours: 'Forwarded email' }, covered: ['workerHours'],
+    sources: [{ set: 1, kind: 'email', label: 'Worker hours' }], authority: { autoFix: false }, neverContact: ['Jane'] }
+  const cwd = await materialize({ email }, { NODE_ENV: 'test', CLOSEOUT_DATA_DIR: root }, createMemoryDataStore(), saved)
+  assert.deepEqual(JSON.parse(await readFile(join(cwd, 'payroll-profile.json'), 'utf8')), saved)
+  assert.match(await readFile(join(cwd, 'CLAUDE.md'), 'utf8'), /Read payroll-profile.json/)
+})
+
 test('cache limits evict oldest cycle data first and paths cannot escape cwd', async t => {
   const root = await mkdtemp(join(tmpdir(), 'closeout-cache-cap-'))
   t.after(() => rm(root, { recursive: true, force: true }))

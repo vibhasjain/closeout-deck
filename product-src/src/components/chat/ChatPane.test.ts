@@ -33,7 +33,7 @@ vi.mock('react-router-dom', async (importOriginal) => ({
 }))
 vi.mock('@/lib/onboarding', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/lib/onboarding')>()
-  return { ...original, useOnboarding: () => [original.getOnboarding(), original.updateOnboarding] }
+  return { ...original, flushOnboarding: vi.fn(async () => {}), useOnboarding: () => [original.getOnboarding(), original.updateOnboarding] }
 })
 vi.mock('@/lib/chat', async (importOriginal) => ({
   ...await importOriginal<typeof import('@/lib/chat')>(), stream: vi.fn(),
@@ -101,7 +101,7 @@ describe('chat conversation lifetime', () => {
     render()
     const cleanup = hooks.effects.map((effect) => effect())
     send('Keep this question')
-    expect(signal?.aborted).toBe(false)
+    await vi.waitFor(() => expect(signal?.aborted).toBe(false))
     cleanup.forEach((dispose) => { if (typeof dispose === 'function') dispose() })
     expect(signal?.aborted).toBe(true)
     await vi.waitFor(() => expect(finished).toBe(true))

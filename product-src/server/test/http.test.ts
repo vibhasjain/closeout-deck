@@ -55,6 +55,10 @@ test('server startup rejects short secrets and uses loopback outside production'
   assert.equal(turnTimeoutMs('chat', {}), 180_000)
   assert.equal(turnTimeoutMs('chat', { CLOSEOUT_CHAT_TIMEOUT_MS: '2000' }), 2_000)
   assert.equal(turnTimeoutMs('scribe', { CLOSEOUT_SCRIBE_TIMEOUT_MS: '4000' }), 4_000)
+  assert.equal(turnTimeoutMs('onboard', {}), 180_000)
+  assert.equal(turnTimeoutMs('firm', {}), 60_000)
+  assert.equal(turnTimeoutMs('onboard', { CLOSEOUT_ONBOARD_TIMEOUT_MS: '5000' }), 5_000)
+  assert.equal(turnTimeoutMs('firm', { CLOSEOUT_FIRM_TIMEOUT_MS: '6000' }), 6_000)
 })
 
 test('account-queued requests receive early headers and a keepalive by 15 seconds', { timeout: 5_000 }, async t => {
@@ -180,8 +184,9 @@ test('session exchanges a Google identity for a signed session and rejects wrong
   assert.equal(session.email, user.email)
   assert.ok(session.exp > Date.now() / 1000)
   assert.deepEqual(await verifySession(session.sessionToken, env.SESSION_SECRET), user)
-  const authenticated = await fetch(`${url}/firm`, { method: 'POST', headers: { Authorization: `Bearer ${session.sessionToken}` } })
-  assert.equal(authenticated.status, 501)
+  const authenticated = await fetch(`${url}/firm`, { ...post({ domain: 'sample' }), headers: { Authorization: `Bearer ${session.sessionToken}` } })
+  assert.equal(authenticated.status, 200)
+  assert.equal((await authenticated.json() as { firm: { domain: string } }).firm.domain, 'sample')
   for (const [idToken, status, error] of [['wrong-domain', 403, 'invite_only'], ['unlisted-hd', 403, 'invite_only'], ['bad', 401, 'invalid_token']] as const) {
     const response = await fetch(`${url}/session`, post({ idToken }))
     assert.equal(response.status, status)
@@ -229,7 +234,7 @@ test('chat validates bodies and unimplemented modes and endpoints remain authent
   }
   assert.equal((await fetch(`${url}/chat`, post({ ...chatBody, message: 'x'.repeat(8_001) }))).status, 400)
   assert.equal((await fetch(`${url}/chat`, post({ ...chatBody, mode: 'other' }))).status, 400)
-  for (const path of ['/live-session', '/dictate', '/firm']) {
+  for (const path of ['/live-session', '/dictate']) {
     const response = await fetch(`${url}${path}`, { method: 'POST' })
     assert.equal(response.status, 501)
     assert.deepEqual(await response.json(), { error: 'not_yet' })
@@ -254,6 +259,41 @@ test('chat streams the exact SSE contract with a server-owned prompt', async t =
   assert.equal(response.status, 200)
   assert.match(response.headers.get('Content-Type') ?? '', /text\/event-stream/)
   assert.equal(await response.text(), 'data: {"text":"Hello"}\n\ndata: {"done":true,"sessionId":"test-session"}\n\n')
+})
+
+test('onboard uses the chat account workspace and server-owned evidence prompt', async t => {
+  const paths: string[] = []
+  const url = await serve(t, {
+    workspace: async user => { const path = `/accounts/${user.email}`; paths.push(path); return path },
+    runAgent: async options => {
+      if (options.message === 'Start onboarding') {
+        assert.match(options.prompt, /no fixed question list, fixed order, or fixed wording/)
+        assert.match(options.prompt, /calendar.*workerHours.*clientHours.*whoseHours.*rates.*complaints.*authority/s)
+        assert.match(options.prompt, /never pay a worker less than they reported without evidence/)
+        assert.match(options.prompt, /onboard_complete/)
+        assert.match(options.prompt, /Email\/photos\/paper can be forwarded/)
+      }
+      options.onEvent({ done: true, sessionId: 'same-session', final: 'Ready' })
+    },
+  })
+  for (const body of [chatBody, { mode: 'onboard', message: 'Start onboarding', context: { firm: SAMPLE_CONTEXT_FIRM, profile: {}, covered: [] } }]) {
+    const response = await fetch(`${url}/chat`, post(body)); assert.equal(response.status, 200)
+    assert.match(await response.text(), /same-session/)
+  }
+  assert.equal(paths[0], paths[1])
+})
+
+const SAMPLE_CONTEXT_FIRM = { name: 'Acme', states: ['CA'] }
+
+test('firm HTTP validates requests, serves sample and enforces its own rate limit', async t => {
+  const url = await serve(t)
+  assert.equal((await fetch(`${url}/firm`, post({ domain: 'http://example.com' }))).status, 400)
+  const sample = await fetch(`${url}/firm`, post({ domain: 'sample' }))
+  assert.equal(sample.status, 200)
+  assert.deepEqual((await sample.json() as { firm: { states: string[] } }).firm.states, ['CA', 'TX'])
+  for (let n = 0; n < 8; n += 1) assert.equal((await fetch(`${url}/firm`, post({ domain: 'sample' }))).status, 200)
+  const limited = await fetch(`${url}/firm`, post({ domain: 'sample' }))
+  assert.equal(limited.status, 429); assert.deepEqual(await limited.json(), { error: 'firm_rate_limit' })
 })
 
 test('disconnecting chat aborts the runner and releases the account queue', { timeout: 5_000 }, async t => {

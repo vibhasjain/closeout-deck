@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { APPROVED, CATALOG_STATES, list, RULEBOOK, SAMPLE_CONTRACT, SOURCE_PHRASES, sourcesLine, split, STAGES, TURNS, turnOf, typedPick, typedPicks, WORKER_CHANNELS } from '@/lib/agentOnboarding'
+import { CATALOG_STATES, list, RULEBOOK, SAMPLE_CONTRACT, split } from '@/lib/agentOnboarding'
 import { acceptProposal, clarify, propose } from '@/lib/ruleIntake'
 import { DEFAULTS } from '@/lib/onboarding'
 import { buildSample, findings } from '@/lib/sample'
@@ -33,44 +33,13 @@ describe('agent authority split', () => {
   })
 })
 
-describe('agent setup turns', () => {
-  it('reads the turn from the URL and lists answers the way the agent says them', () => {
-    expect([turnOf(null), turnOf('0'), turnOf('7'), turnOf('99'), turnOf('x')]).toEqual([1, 1, 7, 15, 1])
+describe('agent-driven setup support', () => {
+  it('formats user supplied facts without deciding a question or a next turn', () => {
     expect([list([]), list(['Beeline']), list(['Beeline', 'SAP Fieldglass', 'Utmost'])]).toEqual(['', 'Beeline', 'Beeline, SAP Fieldglass and Utmost'])
   })
 
-  it('asks how time arrives before the demo, and the systems after it', () => {
-    expect(TURNS).toBe(15)
-    expect(STAGES.map((stage, i) => `${i + 1} ${stage}`).filter((_, i) => STAGES[i] !== STAGES[i - 1])).toEqual(['1 Welcome', '2 Pay cycle', '6 How time gets reported',
-      '9 See it work', '11 Systems of record', '14 Your rules', '15 Access'])
-    expect(STAGES.lastIndexOf('How time gets reported')).toBeLessThan(STAGES.indexOf('See it work'))
-  })
-
-  it('reads a typed reply as the answer it names, a plain yes or no, or nothing when unclear', () => {
-    const periods = ['Daily', 'Weekly', 'Bi-weekly (every 2 weeks)', 'Semi-monthly (twice a month)', 'Monthly', 'Varies by client', 'Other', 'Not sure']
-    expect(['weekly', 'Biweekly', 'semi-monthly', 'varies', 'monthly please'].map((text) => typedPick(text, periods))).toEqual([1, 2, 3, 5, 4])
-    expect(['yes', 'Yep, looks right.', 'no', 'nope'].map((text) => typedPick(text, ["That's right", 'Change']))).toEqual([0, 0, 1, 1])
-    expect(['no', "that's all", 'Yes'].map((text) => typedPick(text, ['Add another', "That's all"]))).toEqual([1, 1, 0])
-    expect(typedPick('no', ['No, just this one', 'Add another'])).toBe(0)
-    expect(typedPick('none', ['SAP Fieldglass', 'Other', 'Not applicable'])).toBe(2)
-    expect(typedPicks('text and email, Bullhorn T&A; plus text', WORKER_CHANNELS)).toEqual(['Text / SMS', 'Email (photo or PDF of timesheet)', 'Bullhorn T&A'])
-    expect(typedPicks('Bullhorn T&A', WORKER_CHANNELS)).toEqual(['Bullhorn T&A'])
-    expect(['ADP', 'Clerical', '', 'no'].map((text) => typedPick(text, ['ADP Workforce Now', 'ADP Vantage HCM / Enterprise', 'Not sure']))).toEqual([-1, -1, -1, -1])
-  })
-
-  it.each(['Show Me the Magic', 'show me the magic', 'SHOW ME THE MAGIC', 'yes', 'Yep, looks right.'])('starts the demo from a typed reply: %s', (text) => {
-    expect(typedPick(text, ['Show Me the Magic'])).toBe(0)
-  })
-
-  it('opens the demo with the user\'s first real time sources', () => {
-    expect(sourcesLine({ workerChannels: ['Text / SMS', 'Our own mobile app'], approved: ['VMS export or VMS approval feed'] }))
-      .toBe('You get time from texts and approved time from the VMS.')
-    expect(sourcesLine({ workerChannels: ["They don't - we take time from the client's system"], approved: ['Other', 'PDF timesheet emailed by the client'] }))
-      .toBe('You get approved time from emailed PDFs.')
-    expect(sourcesLine({ workerChannels: ['Not sure'], approved: [] })).toBe('')
-    expect(sourcesLine({ workerChannels: ['Other', 'Bullhorn T&A'], approved: ['Not applicable'] })).toBe('You get time from Bullhorn T&A.')
-    expect(sourcesLine({ workerChannels: ['Varies by client'], approved: [] })).toBe('')
-    expect(Object.keys(SOURCE_PHRASES).filter((pick) => !WORKER_CHANNELS.includes(pick) && !APPROVED.includes(pick))).toEqual([])
+  it('starts with no assumed firm, covered topics, or operator profile', () => {
+    expect(DEFAULTS).toMatchObject({ firm: null, profile: {}, covered: [], sources: [], neverContact: null, setupStep: 'welcome', setupHistory: [], setupRequest: null })
   })
 })
 

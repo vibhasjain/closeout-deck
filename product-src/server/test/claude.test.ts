@@ -61,8 +61,8 @@ test('CLI arguments confine read tools, refresh resumed context and cap the turn
   assert.ok(!args.includes('--session-id'))
 })
 
-test('child env only contains the five allowed keys; server secrets never reach it', () => {
-  const allowed = { PATH: '/usr/bin', HOME: '/data', LANG: 'en_US.UTF-8', TZ: 'UTC', CLAUDE_CODE_OAUTH_TOKEN: 'test-token' }
+test('child env only contains six allowed keys, including keychain account identity; server secrets never reach it', () => {
+  const allowed = { PATH: '/usr/bin', HOME: '/data', USER: 'dev', LANG: 'en_US.UTF-8', TZ: 'UTC', CLAUDE_CODE_OAUTH_TOKEN: 'test-token' }
   const secrets = {
     CLAUDECODE: 'nested', SESSION_SECRET: 'session', SUPABASE_URL: 'url', SUPABASE_SERVICE_KEY: 'service',
     SUPABASE_ANON_KEY: 'anon', OPENAI_API_KEY: 'openai', GOOGLE_CLIENT_ID: 'google', UNLISTED_SECRET: 'other',

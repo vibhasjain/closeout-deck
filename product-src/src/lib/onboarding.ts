@@ -1,12 +1,42 @@
 import { useCallback, useSyncExternalStore } from 'react'
 import type { CustomRule, Proposal } from '@/lib/rules'
+import type { Card, QuestionCard } from '@/lib/chat'
 import { withPeriodEnd, type Cohort } from '@/lib/cohorts'
+import { API_BASE } from '@/lib/api'
+import { viewerSession, signOut } from '@/lib/viewerSession'
+import { createOnboardingSync, type SyncPatch, type SyncStatus } from '@/lib/onboardingSync'
 
 export const FREQUENCIES = ['Weekly', 'Biweekly', 'Semi-monthly', 'Monthly'] as const
 import { WEEKDAYS } from './cycles'
 export { WEEKDAYS, byWeekday, isMonthly } from './cycles'
 /** Semi-monthly and monthly payroll runs on calendar dates, not weekdays. 0 means the last day of the month. */
 export const DAYS_OF_MONTH = [0, 1, 5, 10, 15, 20, 25, 28] as const
+
+export const ONBOARD_TOPICS = ['calendar', 'workerHours', 'clientHours', 'whoseHours', 'rates', 'complaints', 'authority'] as const
+export type OnboardTopic = (typeof ONBOARD_TOPICS)[number]
+export const PROFILE_FIELDS = ['whoseHours', 'complaints', 'ratesWhere', 'workerHours', 'clientHours', 'payrollRunBy', 'notes'] as const
+export type ProfileField = (typeof PROFILE_FIELDS)[number]
+export type ProfileValue = string | Record<string, string>
+export type PayrollProfile = Partial<Record<ProfileField, ProfileValue>>
+export interface FirmFacts {
+  domain?: string
+  name: string
+  summary: string
+  states: string[]
+  verticals: string[]
+  clientTypes: string[]
+  size: string
+  staffing: boolean
+  icon?: string
+}
+export interface OnboardingSource {
+  set: 1 | 2 | 3
+  kind: 'email' | 'sheet' | 'system' | 'upload' | 'location' | 'sample'
+  label: string
+  how?: string
+}
+export type SetupStep = 'welcome' | 'basics' | 'trust' | 'intro' | 'conversation' | 'writing' | 'ready' | 'never-contact'
+export interface SetupHistoryEntry { question: string; card: QuestionCard; answer?: string }
 
 /** One line of the left-pane transcript. `scope` (e.g. 'shift:4821') makes per-case threads a filter, not a second store. */
 export interface ChatMessage {
@@ -16,6 +46,7 @@ export interface ChatMessage {
   at: number
   /** What the agent changed, rendered under the message as a quiet Applied line. */
   actions?: unknown[]
+  cards?: Card[]
   scope?: string
 }
 
@@ -51,6 +82,14 @@ export interface Note {
 }
 
 export interface Onboarding {
+  firm: FirmFacts | null
+  profile: PayrollProfile
+  covered: OnboardTopic[]
+  sources: OnboardingSource[]
+  neverContact: string[] | null
+  setupStep: SetupStep
+  setupHistory: SetupHistoryEntry[]
+  setupRequest: string | null
   frequency: (typeof FREQUENCIES)[number]
   /** Weekly and biweekly only; semi-monthly and monthly boundaries are calendar dates. */
   periodEndDay: (typeof WEEKDAYS)[number]
@@ -106,11 +145,12 @@ export interface Onboarding {
   /** Discovery intake answers from agent setup, in the sales team's intake sheet terms. */
   discovery: { period: string; payouts: string; payroll: string; billing: string; vms: string[]
     workerChannels: string[]; clientTime: string[]; approved: string[] }
+  authorityConfigured: boolean
   authority: { autoFix: boolean; limit: number; weeklyCap: number; textSupervisors: boolean; textWorkers: boolean; briefing: 'Email' | 'Slack' }
 }
 
 const KEY = 'closeout-onboarding-v2'
-export const DEFAULTS: Onboarding = { frequency: 'Weekly', periodEndDay: 'Sunday', payDay: 'Friday', payDatesOfMonth: [20, 5], cutoffDays: 1, deadlineDays: 2, cohorts: [], intake: [], approver: null, fileName: null, entries: 212, baseRate: null, system: null, forwarded: false, sidebar: 'full', checklistDismissed: false, rules: [], proposals: [], resolutions: {}, payrollConnected: false, sentCycles: [], uploads: {}, threads: {}, chat: [], chatSessionId: null, connections: {}, approvedCycles: [], batches: {}, customRules: [], reasons: {}, decisionTimes: {}, mediation: {}, acceptedGaps: {}, undone: {}, discovery: { period: '', payouts: '', payroll: '', billing: '', vms: [], workerChannels: [], clientTime: [], approved: [] }, authority: { autoFix: true, limit: 100, weeklyCap: 1000, textSupervisors: true, textWorkers: false, briefing: 'Email' } }
+export const DEFAULTS: Onboarding = { firm: null, profile: {}, covered: [], sources: [], neverContact: null, setupStep: 'welcome', setupHistory: [], setupRequest: null, frequency: 'Weekly', periodEndDay: 'Sunday', payDay: 'Friday', payDatesOfMonth: [20, 5], cutoffDays: 1, deadlineDays: 2, cohorts: [], intake: [], approver: null, fileName: null, entries: 212, baseRate: null, system: null, forwarded: false, sidebar: 'full', checklistDismissed: false, rules: [], proposals: [], resolutions: {}, payrollConnected: false, sentCycles: [], uploads: {}, threads: {}, chat: [], chatSessionId: null, connections: {}, approvedCycles: [], batches: {}, customRules: [], reasons: {}, decisionTimes: {}, mediation: {}, acceptedGaps: {}, undone: {}, discovery: { period: '', payouts: '', payroll: '', billing: '', vms: [], workerChannels: [], clientTime: [], approved: [] }, authorityConfigured: false, authority: { autoFix: true, limit: 100, weeklyCap: 1000, textSupervisors: true, textWorkers: false, briefing: 'Email' } }
 const listeners = new Set<() => void>()
 let cache: Onboarding | null = null
 
@@ -153,6 +193,46 @@ function write(patch: Partial<Onboarding>) {
   cache = { ...read(), ...patch }
   localStorage.setItem(KEY, JSON.stringify(cache))
   listeners.forEach((l) => l())
+  canonical.changed(patch)
+}
+
+const syncListeners = new Set<() => void>()
+let syncStatus: SyncStatus = { ready: false, loading: false, saving: false, error: null }
+const syncOwner = () => viewerSession()?.email ?? 'development'
+const pendingKey = () => `closeout-onboarding-pending-v1:${syncOwner()}`
+const canonical = createOnboardingSync({
+  read,
+  apply(patch) {
+    cache = { ...read(), ...patch }
+    localStorage.setItem(KEY, JSON.stringify(cache))
+    listeners.forEach((listener) => listener())
+  },
+  loadPending() {
+    const owner = localStorage.getItem('closeout-onboarding-owner')
+    if (owner && owner !== syncOwner()) cache = structuredClone(DEFAULTS)
+    localStorage.setItem('closeout-onboarding-owner', syncOwner())
+    try {
+      const saved: unknown = JSON.parse(localStorage.getItem(pendingKey()) ?? '{}')
+      return saved && typeof saved === 'object' && !Array.isArray(saved) ? saved as SyncPatch : {}
+    } catch { return {} }
+  },
+  savePending(patch) { localStorage.setItem(pendingKey(), JSON.stringify(patch)) },
+  async request(method, body) {
+    const token = viewerSession()?.sessionToken
+    const response = await fetch(`${API_BASE}/state`, { method, headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      ...(body ? { body: JSON.stringify(body) } : {}) })
+    if (response.status === 401) signOut()
+    return response
+  },
+  status(next) { syncStatus = next; syncListeners.forEach((listener) => listener()) },
+})
+
+/** Load the canonical profile before enabling setup edits. */
+export const hydrateOnboarding = canonical.hydrate
+/** Await this before chat/ingestion or leaving setup so the agent reads the latest profile. */
+export const flushOnboarding = canonical.flush
+export function useOnboardingSyncStatus() {
+  return useSyncExternalStore((listener) => { syncListeners.add(listener); return () => syncListeners.delete(listener) }, () => syncStatus, () => syncStatus)
 }
 
 /** One atomic store update for decisions that affect several payments. */

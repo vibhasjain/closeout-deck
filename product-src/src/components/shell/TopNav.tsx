@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
-import { Banknote, ClipboardList, Ellipsis, ListChecks, LogOut, Menu, MessageSquare, PanelLeft, Settings, X } from 'lucide-react'
+import { Banknote, ClipboardList, Ellipsis, ListChecks, LogOut, Menu, MessageSquare, PanelLeft, Settings, UserRound, X } from 'lucide-react'
 import { NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Btn } from '@/components/ui'
 import { recentCycles } from '@/lib/cycles'
@@ -14,6 +14,7 @@ import { useOverlay } from './Overlay'
 const tabs = [
   { to: '/payroll', label: 'Payroll', icon: Banknote },
   { to: '/rules', label: 'Rules', icon: ListChecks },
+  { to: '/profile', label: 'Payroll profile', icon: UserRound },
 ]
 const focusableSelector = 'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]'
 

@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, vi } from 'vitest'
-import { parseActions, stream } from './chat'
+import { isCard, parseCards, parseActions, stream } from './chat'
 import type { ChatContext } from './chat'
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals() })
@@ -103,5 +103,37 @@ describe('chat transport', () => {
     expect(events).toEqual([])
     expect(removeItem).toHaveBeenCalledExactlyOnceWith('closeout:session:v1')
     expect(reload).toHaveBeenCalledOnce()
+  })
+})
+
+describe('onboarding cards', () => {
+  it.each(['text', 'chips', 'multi', 'calendar', 'files', 'choice'])('validates the %s input', (input) => {
+    expect(isCard({ kind: 'question', input, topics: ['calendar'], chips: ['Weekly', 'Biweekly'], placeholder: 'Tell me more', ...(input === 'choice' ? { choice: { yours: 'Your files / connection', sample: 'Use sample' } } : {}) })).toBe(true)
+  })
+  it('accepts completion and enforces lengths and card shape', () => {
+    expect(isCard({ kind: 'onboard_complete' })).toBe(true)
+    for (const card of [null, {}, { kind: 'onboard_complete', input: 'text' },
+      { kind: 'question', input: 'unknown', topics: [] }, { kind: 'question', input: 'text' },
+      { kind: 'question', input: 'chips', topics: [], chips: Array(9).fill('a') },
+      { kind: 'question', input: 'text', topics: [false] },
+      { kind: 'question', input: 'text', topics: [], placeholder: 'x'.repeat(201) },
+      { kind: 'question', input: 'chips', topics: [], chips: ['x'.repeat(201)] },
+      { kind: 'question', input: 'choice', topics: [], choice: { yours: 'Files' } },
+      { kind: 'question', input: 'choice', topics: [], choice: { yours: 'Files', sample: 'x'.repeat(201) } },
+    ]) expect(isCard(card)).toBe(false)
+  })
+  it('extracts valid cards in inline or multiline fences, leaving actions for their parser', () => {
+    const reply = 'How does time reach you?\n```card\n{"kind":"question","input":"text","topics":["workerHours"]}\n```\n```action {"type":"cover_topic","topic":"calendar"}```'
+    const parsed = parseCards(reply)
+    expect(parsed).toMatchObject({ invalid: false, cards: [{ kind: 'question', input: 'text', topics: ['workerHours'] }] })
+    expect(parseActions(parsed.text)).toEqual({ text: 'How does time reach you?', actions: [{ type: 'cover_topic', topic: 'calendar' }] })
+    expect(parseCards('```card {"kind":"onboard_complete"}```').cards).toEqual([{ kind: 'onboard_complete' }])
+  })
+  it('reports malformed, invalid and unfinished cards even beside a valid card', () => {
+    for (const block of ['```card {bad}```', '```card {"kind":"unknown"}```', '```card {']) {
+      const parsed = parseCards(`Retry this.\n${block}\n\n\`\`\`card {"kind":"onboard_complete"}\`\`\``)
+      expect(parsed.invalid).toBe(true)
+    }
+    expect(parseCards('No card yet')).toEqual({ text: 'No card yet', cards: [], invalid: false })
   })
 })

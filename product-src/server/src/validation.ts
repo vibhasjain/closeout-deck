@@ -1,7 +1,7 @@
 export const MAX_MESSAGE_CHARS = 8_000
 export const MAX_CONTEXT_CHARS = 60_000
 export const MAX_DOC_BYTES = 1024 * 1024
-export const MODES = ['chat', 'scribe', 'delegate', 'consolidate'] as const
+export const MODES = ['chat', 'onboard', 'scribe', 'delegate', 'consolidate'] as const
 export type ChatMode = typeof MODES[number]
 
 export interface ChatBody {

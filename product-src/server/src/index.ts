@@ -4,7 +4,8 @@ import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { authenticate, AuthError, InviteOnlyError, isAllowedEmail, signSession, validateSessionSecret, verifyGoogleIdToken } from './auth.ts'
 import { AGENT_ERROR, getClaudeVersion, runClaude } from './claude.ts'
-import { systemPrompt } from './prompts.ts'
+import { systemPrompt, onboardPrompt } from './prompts.ts'
+import { FirmError, FirmReader, extractFirm, firmCacheFromEnv } from './firm.ts'
 import { GlobalSemaphore, QueueFullError, TurnRateLimit, UserQueue } from './queue.ts'
 import { stateStoreFromEnv } from './state.ts'
 import type { StateStore } from './state.ts'
@@ -24,9 +25,10 @@ export function listenHost(env: NodeJS.ProcessEnv): string {
   return env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1'
 }
 
-export function turnTimeoutMs(mode: ChatMode, env: NodeJS.ProcessEnv): number {
+export const MODE_TIMEOUTS = { chat: 180_000, onboard: 180_000, firm: 60_000, scribe: 180_000, delegate: 180_000, consolidate: 180_000 } as const
+export function turnTimeoutMs(mode: ChatMode | 'firm', env: NodeJS.ProcessEnv): number {
   const configured = Number(env[`CLOSEOUT_${mode.toUpperCase()}_TIMEOUT_MS`])
-  return Number.isFinite(configured) && configured > 0 ? configured : 180_000
+  return Number.isFinite(configured) && configured > 0 ? configured : MODE_TIMEOUTS[mode]
 }
 
 function logFailure(error: unknown): void {
@@ -41,6 +43,7 @@ interface ServerOptions {
   claudeVersion?: () => Promise<string | null>
   runAgent?: typeof runClaude
   workspace?: typeof prepareWorkspace
+  firmReader?: FirmReader
 }
 
 function json(response: ServerResponse, status: number, body: unknown): void {
@@ -108,6 +111,7 @@ export function createServer(options: ServerOptions = {}) {
   const rateLimit = new TurnRateLimit()
   let stateStore = options.stateStore
   let dataStore = options.dataStore
+  let firmReader = options.firmReader
   const getDataStore = () => {
     if (!dataStore) {
       if (env.SUPABASE_URL && env.SUPABASE_SERVICE_KEY) dataStore = dataStoreFromEnv(env)
@@ -162,8 +166,13 @@ export function createServer(options: ServerOptions = {}) {
     }
 
     const user = await authenticate(request.headers.authorization, env, request.socket.remoteAddress)
-    if (request.method === 'POST' && ['/live-session', '/dictate', '/firm'].includes(path)) {
+    if (request.method === 'POST' && ['/live-session', '/dictate'].includes(path)) {
       json(response, 501, { error: 'not_yet' })
+      return
+    }
+    if (request.method === 'POST' && path === '/firm') {
+      firmReader ??= new FirmReader(firmCacheFromEnv(env), text => extractFirm(text, env, turnTimeoutMs('firm', env)))
+      json(response, 200, await firmReader.read(user.email, await readJson(request, 4096)))
       return
     }
     if (path === '/state' && (request.method === 'GET' || request.method === 'PUT')) {
@@ -288,7 +297,7 @@ export function createServer(options: ServerOptions = {}) {
     }
     if (request.method === 'POST' && path === '/chat') {
       const body = validateChatBody(await readJson(request, 300_000))
-      if (body.mode !== 'chat') {
+      if (body.mode !== 'chat' && body.mode !== 'onboard') {
         json(response, 501, { error: 'not_yet' })
         return
       }
@@ -329,7 +338,7 @@ export function createServer(options: ServerOptions = {}) {
         await runAgent({
           cwd,
           message: body.message,
-          prompt: systemPrompt(body.context),
+          prompt: body.mode === 'onboard' ? onboardPrompt(body.context) : systemPrompt(body.context),
           model: env.CLOSEOUT_AGENT_MODEL ?? 'opus',
           env,
           signal: abort.signal,
@@ -373,6 +382,7 @@ export function createServer(options: ServerOptions = {}) {
       else if (error instanceof AuthError) json(response, 401, { error: 'invalid_token' })
       else if (error instanceof DuplicateFileError) json(response, 409, { error: 'duplicate_file', id: error.id })
       else if (error instanceof DataError) json(response, error.status, { error: error.message })
+      else if (error instanceof FirmError) json(response, error.status, { error: error.message })
       else if (error instanceof IngestError) json(response, error.status, { error: error.status === 415 ? 'unsupported_file_type' : 'invalid_file' })
       else if (error instanceof ValidationError) json(response, 400, { error: 'invalid_body' })
       else if (error instanceof QueueFullError) json(response, 429, { error: 'queue_full' })
