@@ -8,3 +8,7 @@
 .payroll-dates { display: inline-flex; align-items: center; justify-content: flex-end; justify-self: end; min-width: 0; flex-wrap: wrap; gap: .75rem; margin: 0; }
 .payroll-date { display: inline-flex; align-items: center; gap: .375rem; white-space: nowrap; }
 .payroll-date svg { width: 14px; height: 14px; flex-shrink: 0; color: hsl(var(--muted-foreground)); }
+@container payroll (max-width: 640px) {
+  .payroll-head { grid-template-columns: minmax(0, 1fr) auto; }
+  .payroll-dates { grid-column: 1 / -1; justify-self: start; justify-content: flex-start; }
+}

@@ -7,6 +7,7 @@ import { RuleDetail } from '@/components/RuleDetail'
 import { useSetChatContext, useSetChatSuggestions } from '@/components/chat/ChatPane'
 import { useAux } from '@/components/shell/Aux'
 import { useOverlay } from '@/components/shell/Overlay'
+import { PageTitle } from '@/components/shell/PageTitle'
 import { Btn, Lbl, Toolbar } from '@/components/ui'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -169,6 +170,7 @@ export function Rules() {
       setDragging(false)
       ingest(event.dataTransfer.files)
     }}>
+    <PageTitle title="Rules" description="Manage the rules used to check time entries and calculate Payroll." />
     <Toolbar className="rules-toolbar">
       {searchOpen || query ? <input autoFocus className="q-input rules-search" type="search" aria-label="Search rules" placeholder="Search rules…" value={query} onChange={(event) => filter('q', event.target.value)} onBlur={() => { if (!query) setSearchOpen(false) }} onKeyDown={(event) => { if (event.key === 'Escape') { filter('q', ''); setSearchOpen(false) } }} /> : <button type="button" className="icon-btn sm dim" aria-label="Search rules" onClick={() => setSearchOpen(true)}><Search size={14} /></button>}
       <div className="flex-1" />

@@ -1,4 +1,4 @@
-import { Mono, Tag } from '@/components/ui'
+import { Tag } from '@/components/ui'
 import type { ChatMessage } from '@/lib/onboarding'
 
 function actionSummary(value: unknown): string | null {
@@ -21,15 +21,15 @@ function actionSummary(value: unknown): string | null {
 export function Message({ message }: { message: ChatMessage }) {
   const user = message.role === 'user'
   return (
-    <article className={`chat-message${user ? ' user' : ''}`} aria-label={user ? 'You' : 'Agent'}>
-      <div className="chat-bubble">
+    <article className={`chat-message${user ? ' user' : ''}`} aria-label={user ? 'You' : 'Closeout Agent'}>
+      <div className={user ? 'chat-bubble' : 'chat-agent-text'}>
         {message.text && <div className="chat-text">{message.text}</div>}
         {message.actions?.map((action, index) => {
           const summary = actionSummary(action)
           return summary === null ? null : (
             <div key={index} className="chat-action">
               <Tag tone="blue">Applied</Tag>
-              <Mono>{summary}</Mono>
+              <span>{summary}</span>
             </div>
           )
         })}

@@ -1,0 +1,15 @@
+.page-title-row { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: .75rem; min-height: 3.25rem; padding: .5rem 1.25rem; border-bottom: 1px solid hsl(var(--border)); }
+.page-title-text { min-width: 0; }
+.page-title-heading { display: flex; align-items: center; gap: .25rem; min-width: 0; }
+.page-title-heading h2 { margin: 0; min-width: 0; font-size: 14.5px; font-weight: 600; line-height: 1.4; }
+.page-title-info { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 1.75rem; height: 1.75rem; padding: 0; border: 0; border-radius: 50%; background: transparent; color: hsl(var(--muted-foreground)); cursor: pointer; }
+.page-title-info:hover { color: hsl(var(--foreground)); background: hsl(var(--muted)); }
+.page-title-info:focus-visible { outline: 2px solid hsl(var(--foreground) / .4); outline-offset: 2px; }
+.page-title-sub { margin: .125rem 0 0; color: hsl(var(--muted-foreground)); font-size: 12px; }
+.page-title-actions { display: flex; flex: 0 0 auto; align-items: center; gap: .625rem; }
+.page-title-tooltip { z-index: 90; max-width: min(20rem, calc(100vw - 2rem)); padding: .5rem .625rem; border: 1px solid hsl(var(--border)); border-radius: .375rem; background: hsl(var(--background)); color: hsl(var(--foreground)); font-size: 12px; line-height: 1.5; box-shadow: 0 2px 8px #0000000d; }
+.page-title-tooltip-arrow { fill: hsl(var(--border)); }
+@media (max-width: 600px) {
+  .page-title-row { padding-inline: 1rem; }
+  .page-title-info { width: 44px; height: 44px; }
+}

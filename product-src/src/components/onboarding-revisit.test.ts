@@ -3,10 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { PayCycleForm } from '@/components/PayCycles'
 import { CycleFields } from '@/components/PayrollCalendar'
 import { TopNav } from '@/components/shell/TopNav'
+import { GettingStarted } from '@/components/shell/GettingStarted'
+import { PayRuns } from '@/components/shell/PayRuns'
 import { Settings } from '@/pages/Settings'
 import { Agent } from '@/pages/setup/Agent'
 import { sourcesLine, STAGES, TURNS } from '@/lib/agentOnboarding'
 import { buildCycles } from '@/lib/desk'
+import { recentCycles } from '@/lib/cycles'
 import { HANDOFF_LINE, intakeHref } from '@/lib/intake'
 import { DEFAULTS, getOnboarding, updateOnboarding, type Onboarding } from '@/lib/onboarding'
 import { stream } from '@/lib/chat'
@@ -94,6 +97,11 @@ function mount(component: () => ReactNode) {
     hooks.effects = []
     return component()
   }
+}
+
+function openAccount(render: () => ReactNode) {
+  button(render(), 'Account menu')!.props.onClick!()
+  return render()
 }
 
 beforeEach(() => {
@@ -225,7 +233,8 @@ describe('revisiting onboarding', () => {
 
   it.each([true, false])('disables setup navigation only for an unfinished account (forwarded %s)', (forwarded) => {
     updateOnboarding({ forwarded })
-    const tree = mount(TopNav)()
+    const render = mount(TopNav)
+    const tree = render()
     for (const to of ['/payroll', '/rules']) {
       const tab = elements(tree).find(({ props }) => props.to === to)
       expect(tab).toBeDefined()
@@ -237,15 +246,17 @@ describe('revisiting onboarding', () => {
       expect(button(tree, name)!.props.disabled).toBe(!forwarded)
     }
     // Logging out is never locked, even mid-setup.
-    expect(button(tree, 'Log Out')!.props.disabled).toBe(false)
+    expect(button(openAccount(render), 'Log Out')!.props.disabled).toBe(false)
   })
 
   it('keeps navigation available outside setup', () => {
     updateOnboarding({ forwarded: false })
     router.pathname = '/settings'
-    const tree = mount(TopNav)()
+    const render = mount(TopNav)
+    const tree = render()
     expect(elements(tree).filter(({ props }) => props.to).every(({ props }) => !props['aria-disabled'])).toBe(true)
-    for (const name of ['Settings', 'Agent', 'Log Out']) expect(button(tree, name)!.props.disabled).toBe(false)
+    for (const name of ['Settings', 'Agent']) expect(button(tree, name)!.props.disabled).toBe(false)
+    expect(button(openAccount(render), 'Log Out')!.props.disabled).toBe(false)
   })
 
   it('lets a returning user open Settings, toggle the agent, and see Log Out', () => {
@@ -257,8 +268,75 @@ describe('revisiting onboarding', () => {
     button(tree, 'Agent')!.props.onClick!()
     expect(router.params.get('agent')).toBeNull()
     expect(router.params.get('step')).toBe('2')
-    expect(button(render(), 'Log Out')).toBeDefined()
+    expect(button(openAccount(render), 'Log Out')).toBeDefined()
     expect(store.update).not.toHaveBeenCalled()
+  })
+
+  it('reopens onboarding from the account menu without changing saved answers', () => {
+    router.pathname = '/payroll'
+    const before = getOnboarding()
+    const tree = openAccount(mount(TopNav))
+    button(tree, 'Onboarding')!.props.onClick!()
+    expect(router.navigate).toHaveBeenCalledWith('/setup/agent')
+    expect(store.update).not.toHaveBeenCalled()
+    expect(getOnboarding()).toBe(before)
+  })
+
+  it('persists sidebar collapse and keeps the sidebar children out of the plain function harness', () => {
+    router.pathname = '/payroll'
+    const render = mount(TopNav)
+    const tree = render()
+    expect(elements(tree).some((element) => element.type === PayRuns)).toBe(true)
+    expect(elements(tree).some((element) => element.type === GettingStarted)).toBe(true)
+    button(tree, 'Collapse sidebar')!.props.onClick!()
+    expect(getOnboarding().sidebar).toBe('rail')
+    button(render(), 'Expand sidebar')!.props.onClick!()
+    expect(getOnboarding().sidebar).toBe('full')
+    expect(store.update.mock.calls).toEqual([[{ sidebar: 'rail' }], [{ sidebar: 'full' }]])
+  })
+
+  it('links Timesheets to the current pending cycle intake and preserves the agent drawer', () => {
+    router.pathname = '/payroll'
+    router.params = new URLSearchParams('agent=1')
+    const pending = recentCycles(getOnboarding(), 2)[1]
+    const tree = mount(TopNav)()
+    const link = elements(tree).find(({ props }) => props['aria-label'] === 'Timesheets')!
+    expect(link.props.to).toBe(`${intakeHref(pending.id)}&agent=1`)
+    expect(link.props['aria-disabled']).toBeUndefined()
+  })
+
+  it('shows the signed-in name, initial, and email in the account row', () => {
+    vi.mocked(localStorage.getItem).mockReturnValue(JSON.stringify({ sessionToken: 'test-token', exp: Date.now() / 1000 + 3600, email: 'morgan@example.com', name: 'Morgan Lee' }))
+    const tree = mount(TopNav)()
+    expect(label(button(tree, 'Account menu'))).toBe('MMorgan Leemorgan@example.com')
+  })
+
+  it('opens and closes the narrow sidebar while keeping its navigation mounted', () => {
+    router.pathname = '/payroll'
+    const render = mount(() => TopNav({ wide: false }))
+    const before = render()
+    expect(button(before, 'Open sidebar')!.props['aria-expanded']).toBe(false)
+    button(before, 'Open sidebar')!.props.onClick!()
+    expect(button(render(), 'Open sidebar')!.props['aria-expanded']).toBe(true)
+    expect(elements(render()).some((element) => element.type === PayRuns)).toBe(true)
+    button(render(), 'Close sidebar')!.props.onClick!()
+    expect(button(render(), 'Open sidebar')!.props['aria-expanded']).toBe(false)
+  })
+
+  it('forgets an open mobile sidebar after docking and returning to mobile', () => {
+    router.pathname = '/payroll'
+    let wide = false
+    const render = mount(() => TopNav({ wide }))
+    button(render(), 'Open sidebar')!.props.onClick!()
+    expect(button(render(), 'Open sidebar')!.props['aria-expanded']).toBe(true)
+    wide = true
+    expect(button(render(), 'Open sidebar')!.props['aria-expanded']).toBe(false)
+    wide = false
+    const returned = render()
+    expect(button(returned, 'Open sidebar')!.props['aria-expanded']).toBe(false)
+    expect(elements(returned).some(({ props }) => props.className === 'sidebar-scrim')).toBe(false)
+    button(returned, 'Open sidebar')!.props.onClick!()
+    expect(button(render(), 'Open sidebar')!.props['aria-expanded']).toBe(true)
   })
 
   it('offers a single Skip in the conversation header that returns a finished account to Settings', () => {

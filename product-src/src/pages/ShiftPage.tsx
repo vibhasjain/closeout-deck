@@ -9,7 +9,8 @@ import { exportShiftRows } from '@/lib/exportShift'
 import { Thread } from '@/components/Thread'
 import { useSetChatContext, useSetChatSuggestions } from '@/components/chat/ChatPane'
 import { useOverlay } from '@/components/shell/Overlay'
-import { Btn, Empty, InfoBar, Lbl, PayDelta, Tag } from '@/components/ui'
+import { PageTitle } from '@/components/shell/PageTitle'
+import { Btn, Empty, Lbl, PayDelta, Tag } from '@/components/ui'
 import { discrepancies, effectiveResolutions, provenance, shortShiftId, topstats, useDesk, type DeskCycle } from '@/lib/desk'
 import { getOnboarding, useOnboarding } from '@/lib/onboarding'
 import { shiftListHref } from '@/lib/navigation'
@@ -140,13 +141,14 @@ export function ShiftPage() {
   }
 
   if (!rs) return <ShiftShell onClose={close}><section className="shift-page-missing scroll">
-    <InfoBar title="Not found" sub={`#${shortShiftId(shiftId)} is not in ${cycle.label}`} />
+    <PageTitle title="Not found" label="this time entry" description="Open a time entry from the selected pay run to review its details." sub={`#${shortShiftId(shiftId)} is not in ${cycle.label}`} />
     <Empty>This is not in the selected pay cycle <Link className="lnk" to={allPayments}>Back to all payments</Link></Empty>
   </section></ShiftShell>
 
   return <ShiftShell onClose={close}><div className="shift-page">
     <section className="shift-page-column" aria-label="Time entry evidence">
-      <InfoBar title={<>{rs.shift.worker} · {cycle.days[rs.shift.day]}</>}
+      <PageTitle title={<>{rs.shift.worker} · {cycle.days[rs.shift.day]}</>} label="this time entry"
+        description="Review the evidence, conversation, and decisions for this time entry."
         sub={rs.shift.fac.name}
         right={<>
           <Btn className="icon-btn sm" aria-label="Export these rows"

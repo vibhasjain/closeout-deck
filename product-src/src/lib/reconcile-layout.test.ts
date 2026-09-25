@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { OverlayProvider } from '@/components/shell/Overlay'
 import { AuxProvider } from '@/components/shell/Aux'
+import { PayRuns } from '@/components/shell/PayRuns'
 import { Payroll } from '@/pages/Payroll'
 import { Settings } from '@/pages/Settings'
 import { Sheet } from '@/components/Sheet'
@@ -27,6 +28,11 @@ function render(url: string) {
       h(Route, { path: '/settings', element: h(Settings) }),
     ),
   ))))
+}
+function renderSidebar(url: string) {
+  return renderToStaticMarkup(h(MemoryRouter, { initialEntries: [url] },
+    h('aside', { 'aria-label': 'Primary sidebar' }, h(PayRuns)),
+  ))
 }
 const rowIds = (html: string) => [...html.matchAll(/data-shift="([^"]+)"/g)].map((match) => match[1])
 // Every cycle is listed together; there are no Upcoming/Completed filters.
@@ -74,6 +80,7 @@ describe('Payroll review composition', () => {
     const cycle = cycles[0]
     const groups = kinds(cycle, {}, cycles)
     const html = render(`/payroll?cycle=${cycle.id}&filter=needs-review`)
+    const sidebar = renderSidebar(`/payroll?cycle=${cycle.id}&filter=needs-review`)
     expect(groups.length).toBeGreaterThan(0)
     expect(bucketRules(html)).toEqual(ruleIds(groups))
     expect(rowIds(html)).toEqual([])
@@ -93,9 +100,10 @@ describe('Payroll review composition', () => {
     expect(html).not.toContain('aria-label="Search"')
     expect(html).not.toContain('class="toolbar reconcile-toolbar"')
     expect(html).not.toContain('sheet-group-row')
-    expect(html).toContain('aria-label="Pay cycles"')
-    expect(cycleIds(html)).toEqual(allCycles())
-    expect(selectedCycles(html)).toEqual([cycle.id])
+    expect(html).not.toContain('aria-label="Pay cycles"')
+    expect(sidebar).toContain('aria-label="Pay cycles"')
+    expect(cycleIds(sidebar)).toEqual(allCycles())
+    expect(selectedCycles(sidebar)).toEqual([cycle.id])
     expect(selectedMetrics(html)).toEqual(['Review'])
   })
 
@@ -116,6 +124,7 @@ describe('Payroll review composition', () => {
     vi.useFakeTimers().setSystemTime(today)
     const cycles = buildCycles(DEFAULTS, today)
     const html = render('/payroll?filter=all')
+    const sidebar = renderSidebar('/payroll?filter=all')
     expect(html).not.toContain('aria-label="Flags"')
     expect(html).not.toContain('Approve cycle')
     expect(html).not.toContain('Send to Payroll')
@@ -124,13 +133,15 @@ describe('Payroll review composition', () => {
     expect(html).not.toContain('aria-label="Search time entries"')
     expect(html).not.toContain('aria-label="Payroll destination"')
     expect(html).not.toContain('Connection settings')
-    expect(html).toContain('aria-label="Pay cycles"')
-    expect(html).toContain('queue flags-pane pay-cycles-pane')
-    expect(html).not.toContain('aria-label="Search pay cycles"')
-    expect(html).not.toContain('aria-label="Show cycles"')
-    expect(html).not.toMatch(/>(Upcoming|Completed)<\/button>/)
-    expect(cycleIds(html)).toEqual(allCycles())
-    expect(selectedCycles(html)).toEqual([cycles[1].id])
+    expect(html).not.toContain('aria-label="Pay cycles"')
+    expect(html).not.toContain('queue flags-pane pay-cycles-pane')
+    expect(sidebar).toContain('aria-label="Pay cycles"')
+    expect(sidebar).toContain('queue flags-pane pay-cycles-pane')
+    expect(sidebar).not.toContain('aria-label="Search pay cycles"')
+    expect(sidebar).not.toContain('aria-label="Show cycles"')
+    expect(sidebar).not.toMatch(/>(Upcoming|Completed)<\/button>/)
+    expect(cycleIds(sidebar)).toEqual(allCycles())
+    expect(selectedCycles(sidebar)).toEqual([cycles[1].id])
     expect(rowIds(html).sort()).toEqual(firstChunk(cycles[1].run.shifts).sort())
     expect(html).toContain(sentinel)
     expect([...html.matchAll(/<th scope="col"[^>]*>(.*?)<\/th>/g)].map((match) => match[1])).toEqual(['Day', 'Worker', 'Site', 'Hours', 'Pay', 'Delta', 'Status'])
@@ -166,7 +177,8 @@ describe('Payroll review composition', () => {
     expect(html).not.toContain('aria-label="Worker pay run"')
     expect(html).not.toContain('class="aux"')
     expect(html).not.toContain('rail-layout')
-    expect(html).not.toMatch(/<h[1-6]\b[^>]*>Payroll<\/h[1-6]>/)
+    expect(html).toContain('<h2>Payroll</h2>')
+    expect(html).toContain('aria-label="About Payroll"')
   })
 
   it('shows Review in the summary design: only what a person acts on, each row with its amounts and action', () => {
@@ -369,11 +381,12 @@ describe('payroll and settings separation', () => {
     const cycles = buildCycles(DEFAULTS, today)
     const cycle = cycles[2]
     const html = render(`/payroll?cycle=${cycle.id}&filter=all`)
+    const sidebar = renderSidebar(`/payroll?cycle=${cycle.id}&filter=all`)
     expect(html).toContain('aria-label="Time entries by worker"')
     expect(html).toContain('class="grp"')
     expect(rowIds(html).sort()).toEqual(firstChunk(cycle.run.shifts).sort())
-    expect(selectedCycles(html)).toEqual([cycle.id])
-    expect(cycleIds(html)).toEqual(allCycles())
+    expect(selectedCycles(sidebar)).toEqual([cycle.id])
+    expect(cycleIds(sidebar)).toEqual(allCycles())
     expect(html).toContain(cycle.label)
     expect(html).not.toContain('aria-label="Worker pay run"')
     expect(html).not.toContain('<tfoot>')
@@ -474,7 +487,7 @@ describe('payroll and settings separation', () => {
     vi.useFakeTimers().setSystemTime(today)
     const cycle = buildCycles(DEFAULTS, today)[1]
     const html = render('/payroll?cycle=unknown-cycle&view=list')
-    expect(selectedCycles(html)).toEqual([cycle.id])
+    expect(selectedCycles(renderSidebar('/payroll?cycle=unknown-cycle&view=list'))).toEqual([cycle.id])
     const expected = shiftTable(render(`/payroll?cycle=${cycle.id}&view=list`))
     expect(expected).toBeDefined()
     expect(shiftTable(html)).toEqual(expected)
@@ -514,14 +527,17 @@ describe('payroll and settings separation', () => {
     const cycle = buildCycles(DEFAULTS, today)[2]
     const shift = cycle.run.shifts.find((row) => !row.flagged && !row.held)!.shift
     const html = render(`/payroll/${encodeURIComponent(shift.id)}?cycle=${cycle.id}&filter=all`)
-    expect(html).toContain('aria-label="Pay cycles"')
+    const sidebar = renderSidebar(`/payroll/${encodeURIComponent(shift.id)}?cycle=${cycle.id}&filter=all`)
+    expect(html).not.toContain('aria-label="Pay cycles"')
+    expect(sidebar).toContain('aria-label="Pay cycles"')
     expect(html).toContain('aria-label="Time entries by worker"')
-    expect(selectedCycles(html)).toEqual([cycle.id])
+    expect(selectedCycles(sidebar)).toEqual([cycle.id])
     expect(rowIds(html).sort()).toEqual(firstChunk(cycle.run.shifts).sort())
     expect(html).toContain('class="shift-modal open"')
     expect(html).toContain('aria-label="Close time entry"')
     expect([...html.matchAll(/class="shift-page-column(?: shift-conversation)?"/g)]).toHaveLength(3)
     for (const label of ['Time entry evidence', 'Time entry conversation', 'Time entry rules and trail']) expect(html).toContain(`aria-label="${label}"`)
+    expect(html).toContain('aria-label="About this time entry"')
     expect(html).toContain(shift.worker)
     expect(html).not.toContain('Shift not found')
   })
@@ -560,6 +576,7 @@ describe('payroll and settings separation', () => {
   it('shows Settings as connectors beside the payroll calendar under an Onboarding replay', () => {
     const html = render('/settings')
     expect(html).toContain('<h2>Settings</h2>')
+    expect(html).toContain('aria-label="About Settings"')
     expect(html).toContain('title="Replays the setup steps. Your Payroll calendar and rulebook stay as they are."')
     expect(html.indexOf('>Onboarding<')).toBeLessThan(html.indexOf('settings-columns'))
     // Inbox address first, then one logo tile per timesheet source, grouped.

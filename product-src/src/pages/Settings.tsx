@@ -2,7 +2,9 @@ import { useNavigate } from 'react-router-dom'
 import { ConnectorGrid } from '@/components/ConnectorGrid'
 import { PayCycles } from '@/components/PayCycles'
 import { PayrollCalendar } from '@/components/PayrollCalendar'
-import { Btn, InfoBar } from '@/components/ui'
+import { PageTitle } from '@/components/shell/PageTitle'
+import { Btn } from '@/components/ui'
+import './settings.css'
 
 /** Settings is your connectors, with the payroll calendar beside them. Nothing else. */
 export function Settings() {
@@ -10,7 +12,7 @@ export function Settings() {
 
   return (
     <div className="settings-layout">
-      <InfoBar title="Settings" right={
+      <PageTitle title="Settings" description="Manage your connected sources and Payroll calendar." right={
         <Btn title="Replays the setup steps. Your Payroll calendar and rulebook stay as they are."
           onClick={() => navigate('/setup/agent')}>
           Onboarding

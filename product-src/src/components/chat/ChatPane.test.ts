@@ -55,7 +55,7 @@ function render() {
   return ChatPane()
 }
 function send(text: string) {
-  elements(render()).find(({ props }) => props['aria-label'] === 'Message the agent')!.props.onChange!({ target: { value: text } })
+  elements(render()).find(({ props }) => props['aria-label'] === 'Message the Closeout Agent')!.props.onChange!({ target: { value: text } })
   elements(render()).find(({ type }) => type === 'form')!.props.onSubmit!({ preventDefault() {} })
 }
 

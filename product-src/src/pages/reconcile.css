@@ -38,7 +38,8 @@
   .reconcile-payments .reconcile-toolbar { height: auto; min-height: 3.5rem; padding-block: .5rem; flex-wrap: wrap; }
 }
 @media (max-width: 600px) {
-  .reconcile-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(140px, 30%) minmax(0, 1fr); }
+  .reconcile-layout { grid-template-columns: minmax(0, 1fr); }
+  .reconcile-layout:has(> .queue) { grid-template-rows: minmax(140px, 30%) minmax(0, 1fr); }
 }
 
 /* Pay cycle rows: the date range reads as a title, not a chip. */

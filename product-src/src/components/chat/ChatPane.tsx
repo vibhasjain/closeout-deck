@@ -1,11 +1,13 @@
 /* eslint-disable react-refresh/only-export-components -- The scoped chat module exports its provider and page hooks together. */
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createContext, Fragment, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import type { NavigateFunction } from 'react-router-dom'
-import { Loader2, Send } from 'lucide-react'
+import { Loader2, Plus, Send, Square } from 'lucide-react'
+import { ThinkingOrb } from 'thinking-orbs'
 import { Chip } from '@/components/ui'
 import { Message } from '@/components/chat/Message'
+import { dayDivider } from '@/components/chat/dayDivider'
 import { parseActions, stream } from '@/lib/chat'
 import type { Action, ChatContext } from '@/lib/chat'
 import { agentHref } from '@/lib/navigation'
@@ -175,7 +177,7 @@ function selectionScope(selection?: object): string | undefined {
   return undefined
 }
 
-export function ChatPane({ scope: explicitScope }: { scope?: string } = {}) {
+export function ChatPane({ scope: explicitScope, headerAction }: { scope?: string; headerAction?: ReactNode } = {}) {
   const [state, write] = useOnboarding()
   const context = useChatContext()
   const suggestions = useChatSuggestions()
@@ -189,10 +191,11 @@ export function ChatPane({ scope: explicitScope }: { scope?: string } = {}) {
   const [requestScope, setRequestScope] = useState<string | undefined>()
   const latest = useRef(state)
   const request = useRef(0)
-  const activeRequest = useRef<AbortController | null>(null)
   const busy = useRef(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const composer = useRef<HTMLTextAreaElement>(null)
+  const filePicker = useRef<HTMLInputElement>(null)
+  const activeRequest = useRef<{ controller: AbortController; text: string; scope?: string } | null>(null)
   const scope = explicitScope ?? selectionScope(context.selection)
   // Keep "Show all" in the URL, but only for the case where it was chosen.
   const showAll = !scope || (params.get('chat') === 'all' && params.get('chatScope') === scope)
@@ -200,7 +203,10 @@ export function ChatPane({ scope: explicitScope }: { scope?: string } = {}) {
   const showRequest = showAll || requestScope === scope
 
   useEffect(() => { latest.current = state }, [state])
-  useEffect(() => () => { request.current += 1; activeRequest.current?.abort() }, [])
+  useEffect(() => () => {
+    request.current += 1
+    activeRequest.current?.controller.abort()
+  }, [])
   useEffect(() => {
     let focusFrame = 0
     function focus(event: Event) {
@@ -243,11 +249,11 @@ export function ChatPane({ scope: explicitScope }: { scope?: string } = {}) {
     const message = text.trim()
     if (!message || busy.current) return
     const requestId = ++request.current
-    const controller = new AbortController()
-    activeRequest.current = controller
     const user: ChatMessage = { id: crypto.randomUUID(), role: 'user', text: message, at: Date.now(), scope }
     busy.current = true
-    update((current) => ({ chat: [...current.chat, user].slice(-200) }))
+    const pending = { controller: new AbortController(), text: '', scope }
+    activeRequest.current = pending
+    update((current) => ({ chat: [...current.chat, user] }))
     setDraft('')
     setError(null)
     setReply('')
@@ -260,10 +266,11 @@ export function ChatPane({ scope: explicitScope }: { scope?: string } = {}) {
     let textSoFar = ''
     let completed = false
     try {
-      for await (const event of stream(message, context, 'chat', controller.signal)) {
+      for await (const event of stream(message, context, 'chat', pending.controller.signal)) {
         if (request.current !== requestId) return
         if (event.text) {
           textSoFar += event.text
+          pending.text = textSoFar
           setReply(textSoFar)
         }
         if (event.error) throw new Error(event.error)
@@ -272,7 +279,7 @@ export function ChatPane({ scope: explicitScope }: { scope?: string } = {}) {
           if (!parsed.actions.every(isAction)) throw new Error('The agent returned an invalid change. Please ask it to try again.')
           const agent: ChatMessage = { id: crypto.randomUUID(), role: 'agent', ...parsed, at: Date.now(), scope }
           update((current) => ({
-            chat: [...current.chat, agent].slice(-200), chatSessionId: event.sessionId ?? current.chatSessionId,
+            chat: [...current.chat, agent], chatSessionId: event.sessionId ?? current.chatSessionId,
           }))
           for (const action of parsed.actions) applyAction(action, update, navigate, params, context.cycle?.id)
           completed = true
@@ -290,10 +297,34 @@ export function ChatPane({ scope: explicitScope }: { scope?: string } = {}) {
         busy.current = false
         setSending(false)
         setThinking(false)
-        composer.current?.focus()
       }
     }
   }, [context, navigate, params, scope, update])
+
+  function stop() {
+    const pending = activeRequest.current
+    request.current += 1
+    pending?.controller.abort()
+    // A stopped reply stays in the conversation, but never applies unfinished actions.
+    const text = parseActions(pending?.text ?? '').text.replace(/```action[\s\S]*$/, '').trim()
+    if (text) update((current) => ({ chat: [...current.chat, {
+      id: crypto.randomUUID(), role: 'agent', text, at: Date.now(), scope: pending?.scope,
+    }] }))
+    activeRequest.current = null
+    busy.current = false
+    setReply('')
+    setError(null)
+    setSending(false)
+    setThinking(false)
+  }
+
+  function attach(files: FileList | null) {
+    if (!files?.length) return
+    const names = Array.from(files, (file) => file.name).join(', ')
+    update((current) => ({ chat: [...current.chat, {
+      id: crypto.randomUUID(), role: 'user', text: `Attached ${names}`, at: Date.now(), scope,
+    }] }))
+  }
 
   function toggleScope() {
     setParams((current) => {
@@ -310,18 +341,36 @@ export function ChatPane({ scope: explicitScope }: { scope?: string } = {}) {
   }
 
   return (
-    <aside className="queue chat" aria-label="Agent">
-      <div ref={scrollRef} className="chat-log" role="log" aria-live="polite" aria-label="Conversation with Agent">
+    <section className="queue chat" aria-label="Closeout Agent conversation">
+      <header className="chat-header">
+        <div className="chat-heading">
+          <ThinkingOrb size={20} theme="light" state={sending ? 'working' : 'breathing'} />
+          <h2>Closeout Agent</h2>
+        </div>
+        {headerAction && <div className="chat-header-actions">{headerAction}</div>}
+      </header>
+      <div ref={scrollRef} className="chat-log" role="log" aria-live="polite" aria-label="Conversation with Closeout Agent">
         {scope && (
           <div className="flex shrink-0 items-center justify-between gap-2">
-            <span className="lbl">This case</span>
-            <button type="button" className="lnk" onClick={toggleScope}>{showAll ? 'Show This Case' : 'Show All'}</button>
+            <span className="chat-scope-label">This case</span>
+            <button type="button" className="lnk" onClick={toggleScope}>{showAll ? 'Show this case' : 'Show all'}</button>
           </div>
         )}
         {messages.length === 0 && !(showRequest && (sending || reply || error)) && (
-          <div className="chat-empty">Ask the agent about your Payroll</div>
+          <div className="chat-empty">
+            <ThinkingOrb size={32} theme="light" state="breathing" />
+            <p>Ask the Closeout Agent about your Payroll</p>
+          </div>
         )}
-        {messages.map((message) => <Message key={message.id} message={message} />)}
+        {messages.map((message, index) => {
+          const divider = dayDivider(message.at, messages[index - 1]?.at)
+          return (
+            <Fragment key={message.id}>
+              {divider && <div className="chat-day-divider"><span>{divider}</span></div>}
+              <Message message={message} />
+            </Fragment>
+          )
+        })}
         {showRequest && reply && <Message message={{ id: 'streaming', role: 'agent', text: reply, at: 0, scope: requestScope }} />}
         {showRequest && sending && thinking && (
           <div className="chat-busy">
@@ -339,8 +388,14 @@ export function ChatPane({ scope: explicitScope }: { scope?: string } = {}) {
         </div>
       )}
       <form className="chat-composer" onSubmit={(event) => { event.preventDefault(); void send(draft) }}>
+        <input ref={filePicker} className="chat-file-input" type="file" multiple tabIndex={-1} aria-label="Attach files"
+          onChange={(event) => { attach(event.target.files); event.target.value = '' }} />
+        <button type="button" className="icon-btn chat-attach" aria-label="Attach files" disabled={sending}
+          onClick={() => filePicker.current?.click()}>
+          <Plus size={16} aria-hidden="true" />
+        </button>
         <textarea
-          ref={composer} className="chat-input" aria-label="Message the agent" placeholder="Tell the agent…" rows={1} value={draft}
+          ref={composer} className="chat-input" aria-label="Message the Closeout Agent" placeholder="Ask the Closeout Agent anything…" rows={1} value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
@@ -349,10 +404,12 @@ export function ChatPane({ scope: explicitScope }: { scope?: string } = {}) {
             }
           }}
         />
-        <button type="submit" className="icon-btn chat-send" aria-label="Send message" disabled={sending || !draft.trim()}>
-          <Send size={16} aria-hidden="true" />
+        {/* P6 can add the phone state here; the composer keeps one trailing action. */}
+        <button type={sending ? 'button' : 'submit'} className="icon-btn chat-send" aria-label={sending ? 'Stop reply' : 'Send message'}
+          disabled={!sending && !draft.trim()} onClick={sending ? stop : undefined}>
+          {sending ? <Square size={14} fill="currentColor" aria-hidden="true" /> : <Send size={16} aria-hidden="true" />}
         </button>
       </form>
-    </aside>
+    </section>
   )
 }

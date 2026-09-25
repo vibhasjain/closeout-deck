@@ -74,6 +74,24 @@ describe('chat transport', () => {
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
   })
 
+  it('passes cancellation to fetch and releases the reader when the consumer stops', async () => {
+    vi.stubGlobal('localStorage', { getItem: () => null })
+    const cancel = vi.fn()
+    const response = new Response(new ReadableStream({
+      start(controller) { controller.enqueue(new TextEncoder().encode('data: {"text":"Partial"}\n\n')) },
+      cancel,
+    }))
+    const fetch = vi.fn().mockResolvedValue(response)
+    vi.stubGlobal('fetch', fetch)
+    const controller = new AbortController()
+    const reply = stream('Hi', context, 'chat', controller.signal)
+    expect(await reply.next()).toEqual({ done: false, value: { text: 'Partial' } })
+    await reply.return(undefined)
+    expect(fetch.mock.calls[0][1].signal).toBe(controller.signal)
+    expect(cancel).toHaveBeenCalledOnce()
+    expect(response.body?.locked).toBe(false)
+  })
+
   it('clears the Closeout session and reloads on an unauthorized response', async () => {
     const removeItem = vi.fn()
     const reload = vi.fn()

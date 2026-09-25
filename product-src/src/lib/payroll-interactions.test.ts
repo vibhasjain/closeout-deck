@@ -10,6 +10,7 @@ import { PayrollSummary } from '@/components/PayrollSummary'
 import { ShiftDetail } from '@/components/ShiftDetail'
 import { ShiftTable } from '@/components/ShiftTable'
 import { StatRow } from '@/components/StatRow'
+import { PayRuns } from '@/components/shell/PayRuns'
 import { Btn } from '@/components/ui'
 import { buildCycles, cycleStats, kinds } from '@/lib/desk'
 import { DEFAULTS, getOnboarding, updateOnboarding } from '@/lib/onboarding'
@@ -296,15 +297,18 @@ describe('Payroll cycle steps', () => {
     expect(button(payroll, 'Collect').props['aria-current']).toBe('step')
     expect(button(payroll, 'Review').props['aria-current']).toBeUndefined()
     const totals = payTotals(pending)
-    const sentence = component(payroll, ClusterList).props.items.find((item) => item.id === pending.id)!.sentence
+    const sidebar = PayRuns()
+    expect(elements(payroll).some((element) => element.type === ClusterList)).toBe(false)
+    const sentence = component(sidebar, ClusterList).props.items.find((item) => item.id === pending.id)!.sentence
     expect(content(sentence)).toBe(`${totals.workers.length.toLocaleString()} · ${money(totals.gross)}`)
     expect(elements(sentence)[0].props).toMatchObject({ role: 'img', 'aria-label': `${totals.workers.length.toLocaleString()} payouts, ${money(totals.gross)}` })
     expect(elements(sentence)[1].type).toBe(Banknote)
-    component(payroll, ClusterList).props.onSelect(cycles[0].id)
+    component(sidebar, ClusterList).props.onSelect(cycles[0].id)
     expect(router.params.has('step')).toBe(false)
+    expect(router.pathname).toBe('/payroll')
     // One list, no period filters above it.
-    expect(component(Payroll(), ClusterList).props.header).toBeUndefined()
-    expect(component(Payroll(), ClusterList).props.items.map((item) => item.id)).toEqual(cycles.map((cycle) => cycle.id))
+    expect(component(PayRuns(), ClusterList).props.header).toBeUndefined()
+    expect(component(PayRuns(), ClusterList).props.items.map((item) => item.id)).toEqual(cycles.map((cycle) => cycle.id))
     // Without a step a cycle opens on Collect while anything is pending, otherwise on Review; a view param opens Review.
     for (const cycle of cycles) {
       router.params = new URLSearchParams({ cycle: cycle.id })

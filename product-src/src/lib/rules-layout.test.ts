@@ -68,6 +68,8 @@ describe('rules table', () => {
     expect(visibleText(html)).not.toMatch(/\b(?:Live|Pack|Draft|Expiring)\b/i)
     expect(html).not.toContain('engine rules')
     expect(html).not.toContain('class="info-bar"')
+    expect(html).toContain('<h2>Rules</h2>')
+    expect(html).toContain('aria-label="About Rules"')
     expect(html).not.toContain(cycle.label)
     for (const rule of CATALOG) expect(rowIds(table)).not.toContain(rule.id)
   })

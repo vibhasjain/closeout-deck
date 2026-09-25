@@ -3,13 +3,13 @@ import { Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-
 import { Banknote, CircleCheck, Lock } from 'lucide-react'
 import { money } from '@/bench/engine.js'
 import { DESTS } from '@/bench/vendors'
-import { ClusterList } from '@/components/ClusterList'
 import { CycleKpis } from '@/components/CycleKpis'
 import { Intake } from '@/components/Intake'
 import { PayrollSummary } from '@/components/PayrollSummary'
 import { ShiftTable } from '@/components/ShiftTable'
 import { useSetChatContext, useSetChatSuggestions } from '@/components/chat/ChatPane'
 import { useOverlay } from '@/components/shell/Overlay'
+import { PageTitle } from '@/components/shell/PageTitle'
 import { Tag } from '@/components/ui'
 import { shortDate } from '@/lib/cycles'
 import { cycleStats, useDesk } from '@/lib/desk'
@@ -25,7 +25,6 @@ const destinations = DESTS.filter((destination) => destination.group !== 'Billin
 const batchDestination = (batch: PayrollBatch) => destinations.find((destination) => batch.id.startsWith(`${destination.id.toUpperCase()}-`))
 // A send belongs to its cycle. Leaving Payroll must not cancel or duplicate it.
 const batchTimers = new Map<string, ReturnType<typeof setTimeout>>()
-/** Left-panel filters: the cycle waiting on review, and paid ones. The open cycle is left out for now. */
 
 export function Payroll() {
   const { cycles, current, byId } = useDesk()
@@ -34,7 +33,7 @@ export function Payroll() {
   const shiftOpen = useLocation().pathname !== '/payroll'
   const [state, update] = useOnboarding()
   const { toast } = useOverlay()
-  // Payroll opens on the cycle waiting for review. The open cycle isn't listed, but a direct link still opens it.
+  // Payroll opens on the cycle waiting for review; a direct link can open any cycle.
   const cycle = byId(params.get('cycle') ?? '') ?? cycles.find((item) => item.status === 'needs-review') ?? current
   const closeDate = shortDate(cycle.deadline)
   const payDate = shortDate(cycle.payDate)
@@ -75,36 +74,14 @@ export function Payroll() {
     setParams((previous) => { const params = new URLSearchParams(previous); params.set('step', next); return params })
   }
 
-  function selectCycle(id: string) {
-    setParams((previous) => {
-      const next = new URLSearchParams(previous)
-      next.set('cycle', id)
-      if (id !== cycle.id) for (const key of ['destination', 'filter', 'flag', 'review', 'cases', 'page', 'step']) next.delete(key)
-      return next
-    })
-  }
-
   useSetChatSuggestions(['What needs my review?', 'Why does gross differ from the spreadsheet?', 'Which payments are on hold?'], !shiftOpen)
   useSetChatContext({ page: '/payroll', step: 'sheet', cycle: { id: cycle.id, label: cycle.label, stats: `${cycle.statusTag} · ${totals.workers.length} workers · ${money(totals.gross)} gross` },
     selection: { vendorId: destination.id, name: destination.name, workers: totals.workers.length, gross: totals.gross, held: totals.held.length },
     connections: state.connections }, !shiftOpen)
 
   return <div className="reconcile-layout payroll-layout">
-    {/* Every cycle in one list; the status tags tell upcoming from paid. */}
-    <ClusterList kind="cycles" selected={cycle.id} onSelect={selectCycle}
-      items={cycles.map((item) => {
-        const payouts = payTotals(item)
-        const count = payouts.workers.length.toLocaleString()
-        const total = money(payouts.gross)
-        return {
-          // The chip carries the cycle's identity the way the flags pane's chip carries a rule
-          // id — the readable label, not the raw ISO key, and never repeated underneath.
-          id: item.id, label: item.label, count: item.week.length, status: item.statusTag,
-          tone: item.statusTag === 'Pending' ? 'amber' as const : undefined,
-          sentence: <span role="img" aria-label={`${count} payouts, ${total}`}><Banknote aria-hidden="true" />{count} · {total}</span>,
-        }
-      })} />
     <section className="detail reconcile-payments" aria-label="Payroll">
+      <PageTitle title="Payroll" description="Collect time entries, resolve discrepancies, and prepare each pay run." />
       <div className="payroll-head">
         <div className="payroll-head-title">
           <h2>{cycle.label}</h2><Tag tone={cycle.statusTag === 'Pending' ? 'amber' : undefined}>{cycle.statusTag}</Tag>
