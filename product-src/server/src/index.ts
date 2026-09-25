@@ -12,7 +12,7 @@ import { FirmError, FirmReader, extractFirm, firmCacheFromEnv } from './firm.ts'
 import { GlobalSemaphore, KeyedMutex, QueueFullError, TurnRateLimit, UserQueue } from './queue.ts'
 import { stateStoreFromEnv } from './state.ts'
 import type { StateStore } from './state.ts'
-import { chatMessage, isPlainObject, MAX_DOC_BYTES, validateChatBody, validateChatHistory, validateStateBody, ValidationError } from './validation.ts'
+import { CALL_ID, chatMessage, isPlainObject, MAX_DOC_BYTES, validateChatBody, validateChatHistory, validateStateBody, ValidationError } from './validation.ts'
 import type { ChatMode } from './validation.ts'
 import { prepareWorkspace, materialize, writeCallFile } from './workspace.ts'
 import { DataError, DataService, cycleDates, localToday } from './data.ts'
@@ -215,6 +215,14 @@ export function createServer(options: ServerOptions = {}) {
       await writeCallFile(user.email, env, record)
       live.release(user.email, call.id)
       json(response, 200, { callId: call.id })
+      return
+    }
+    // The saved call, so its transcript opens on any device, not only the one that made the call.
+    const callPath = /^\/calls\/([^/]+)$/.exec(path)
+    if (request.method === 'GET' && callPath) {
+      const call = CALL_ID.test(callPath[1]) ? await getDataStore().getCall(user.email, callPath[1]) : null
+      if (!call) { json(response, 404, { error: 'not_found' }); return }
+      json(response, 200, { call })
       return
     }
     if (request.method === 'POST' && path === '/dictate') {

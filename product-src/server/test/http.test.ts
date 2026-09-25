@@ -404,3 +404,15 @@ test('data requests fired together never queue behind a chat turn or fail with 4
   const reads = await Promise.all(Array.from({ length: 4 }, () => fetch(`${url}/files`, { signal: AbortSignal.timeout(5_000) }).catch(() => ({ status: 0 }))))
   assert.deepEqual(reads.map(r => r.status), [200, 200, 200, 200])
 })
+
+test('a saved call opens from any device, only for its own account', async t => {
+  const dataStore = createMemoryDataStore()
+  const id = '3e48b96a-2d57-4b13-8326-4ef9c0e73479'
+  const call = { id, startedAt: '2026-09-25T20:00:00.000Z', seconds: 100, transcript: [{ role: 'user' as const, text: 'Weekly, paid Friday', startMs: 1200 }], summary: null }
+  await dataStore.putCall(devEnv.CLOSEOUT_DEV_EMAIL, call)
+  const url = await serve(t, { dataStore })
+  assert.deepEqual(await (await fetch(`${url}/calls/${id}`)).json(), { call })
+  await dataStore.putCall('someone-else@hypertrack.io', { ...call, id: '00000000-0000-4000-8000-000000000000' })
+  assert.equal((await fetch(`${url}/calls/00000000-0000-4000-8000-000000000000`)).status, 404)
+  assert.equal((await fetch(`${url}/calls/not-a-uuid`)).status, 404)
+})
