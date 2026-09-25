@@ -28,6 +28,20 @@ The container entrypoint briefly runs as root to create and chown the persistent
 
 The server exposes authenticated `GET /state` and conditional `PUT /state` endpoints backed by Supabase. The app's current prototype state still lives under `closeout-onboarding-v2` in localStorage; server synchronization is not connected in this phase.
 
+## Data backbone and deployment
+
+The authenticated `/files` and `/data/*` routes normalize uploaded timesheets, persist entries and run the engine per workweek. `POST /data/sample` renders CSV files and sends them through the same pipeline. The desk UI still uses its existing synthetic path until session B. `GET /health` includes the imported engine's `engineSha`.
+
+Migration `server/supabase/migrations/0002_closeout_data.sql` creates the data tables and private `closeout-files` Storage bucket. Apply it separately before using the Supabase datastore; all new tables have RLS enabled with no policies. Local tests use the in-memory datastore.
+
+The Docker build context is this `product-src/` directory. From here, the exact deployment command is:
+
+```bash
+fly deploy . -c server/fly.toml --dockerfile server/Dockerfile
+```
+
+The context whitelist includes only the server and the shared engine, cycle and sample modules; it excludes environment files, dependencies, tests and migrations. The production entrypoint still drops to the `node` user, and the CLI environment allowlist and `NODE_ENV=production` remain in place.
+
 ## Checks
 
 ```bash

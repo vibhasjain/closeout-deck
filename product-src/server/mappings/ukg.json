@@ -1,0 +1,8 @@
+{
+  "v": 1, "set": 2, "source": { "system": "UKG", "site": "Pacific Cold Storage" }, "headerRow": 1, "grain": "pair", "overnight": "next-day",
+  "columns": {
+    "worker": { "col": "Employee", "name": "first last" }, "workerId": { "col": "ID" }, "date": { "col": "Date", "format": "MM/DD/YYYY" },
+    "start": { "col": "In", "format": "h:mm A" }, "end": { "col": "Out", "format": "h:mm A" },
+    "schedule": { "col": "Schedule", "format": "h:mm A to h:mm A" }, "hours": { "col": "Daily", "unit": "decimal", "per": "day" }
+  }, "fillDown": ["worker", "date"]
+}

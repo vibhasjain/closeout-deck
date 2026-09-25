@@ -1,0 +1,11 @@
+{
+  "v": 1, "set": 1, "source": { "system": "Bullhorn" }, "headerRow": 1, "grain": "shift", "overnight": "next-day",
+  "columns": {
+    "worker": { "col": "Candidate", "name": "first last" }, "workerId": { "col": "Placement ID" }, "site": { "col": "Client" },
+    "role": { "col": "Job Title" }, "date": { "col": "Date", "format": "MM/DD/YYYY" }, "start": { "col": "Start", "format": "h:mm A" },
+    "end": { "col": "End", "format": "h:mm A" }, "breakMin": { "col": "Break (min)", "unit": "minutes" },
+    "hours": { "col": "Hours", "unit": "decimal", "per": "row" }, "payRate": { "col": "Pay Rate" }, "billRate": { "col": "Bill Rate" },
+    "capture": { "col": "Entered Via", "map": { "Web time entry": "web", "Clock import": "clock", "Entered by staff": "manual" } },
+    "approvedBy": { "col": "Approved By" }, "comment": { "col": "Comment" }
+  }
+}

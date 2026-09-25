@@ -79,17 +79,14 @@ Plan file: website/PLAN-r5.md (self-contained; run after /clear with permissions
 - Dropped by owner: the story-deck asset zip for Kashyap (superseded by /retail).
 
 # Closeout rebuild: J&J-style agent app (2026-09-25)
-Plan: ~/.claude/plans/okay-huge-message-incoming-flickering-clock.md (A1–A3 amendments: stays at /product, Fly verifies Google ID tokens, psql migrations)
-- [x] P0 inputs archived (~/Documents/closeout-archive-2026-09-25), untracked + dirty files backed up
-- [x] P0 secrets in Keychain (closeout-openai, closeout-supabase-*, closeout-session-secret)
-- [x] P0 Supabase alzxujpjpfqmoqplwfbh: closeout_* tables, RLS on, anon sees nothing
-- [x] P0 Fly app closeout-agent + volume closeout_data (sjc) + 9 staged secrets (Claude token from agent-keyboard)
-- [ ] P0 /answers questions → onboarding (OPERATE / STEER / NEED-FINDING) folded into P5
-- [ ] P1 publish whitelist (dist/), legacy nuke, docs non-public
-- [ ] P2 landing (homepage + /closeout) — Codex, worktree
-- [ ] P3 Fly backend (CLI chat, /session Google verify, /state) + /api proxy
-- [ ] P4 shell (sidebar, docked agent, Getting started)
-- [ ] P5 onboarding (coworker questions, your-data/sample, pre-read, profile, rulebook)
-- [ ] P6 voice (GPT-Live-1 + gpt-live-transcribe)
-- [ ] P7 first run + journey (task card, findings, next steps, Send to Payroll, disputes)
-- [ ] P8 memory (instincts, consolidate, sync)
+Plan: ~/.claude/plans/okay-huge-message-incoming-flickering-clock.md (rewritten around the owner's voice note NEbyRMIJ)
+- [x] P0 inputs archived, secrets in Keychain, Supabase alzxujpjpfqmoqplwfbh tables, Fly closeout-agent
+- [x] P1 publish whitelist (dist/), legacy retired, internal docs private: 29263ce
+- [x] P2 landing = hypertrack.com homepage + /closeout, no trackers, no Agent Keyboard: ff54517
+- [x] P3 Fly backend (Claude Code CLI) + Google sign-in + review fixes, live and signed-in verified: 2801926, 3042991
+- [x] P4 J&J shell: left nav + Getting started, agent in the middle, no Clear, live: 20aeecc
+- [ ] P5 real-data backbone: A (server, engine, migration, sample regression) running · B (agent ingest + desk switch)
+- [ ] P6 agent-driven onboarding (no question script) + /firm pre-read + profile/rulebook/never-contact
+- [ ] P7 journey on real/sample data: task card, carousel, next steps, mediation, Send to Payroll (real export), disputes
+- [ ] P8 voice: GPT-Live-1 + scribe + delegation + dictation
+- [ ] P9 memory: instincts, consolidation, what the agent knows

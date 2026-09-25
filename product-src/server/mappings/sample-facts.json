@@ -1,0 +1,9 @@
+[
+  {"kind":"site","key":"pacific cold storage","value":{"state":"CA","city":"Ontario","tz":"America/Los_Angeles","minWage":16.9,"vertical":"warehouse","autoDeduct":false,"lat":34.06,"lng":-117.65,"supervisor":{"name":"Maria Castillo","role":"site supervisor"}}},
+  {"kind":"site","key":"lonestar packaging","value":{"state":"TX","city":"Dallas","tz":"America/Chicago","minWage":7.25,"vertical":"warehouse","autoDeduct":false,"lat":32.78,"lng":-96.8,"supervisor":{"name":"Travis Reed","role":"site supervisor"}}},
+  {"kind":"differential","key":"lonestar packaging","value":{"perHour":1.5,"payCode":"NIGHT DIFF"}},
+  {"kind":"account","key":"burden","value":{"value":0.2}},
+  {"kind":"account","key":"offCycleCost","value":{"value":60}},
+  {"kind":"account","key":"workweekStart","value":{"value":"Monday"}},
+  {"kind":"account","key":"timezone","value":{"value":"America/New_York"}}
+]

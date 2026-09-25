@@ -52,7 +52,7 @@ const FEATURES = [
   ['resolved_pairs', 'Punch pairs after missing-out resolution', (s, c) => c.resolvedPairs(s)],
   ['punched_span_min', 'First in → last out, minutes (resolved)', (s, c) => { const p = c.resolvedPairs(s); return p.length ? p[p.length - 1].out - p[0].in : 0; }],
   ['worked_min', 'Payable worked minutes (merged, resolved, meal-adjusted)', (s, c) => c.workedMin(s)],
-  ['meal_taken', 'True if a meal punch pair exists', s => !!s.meal],
+  ['meal_taken', 'True if a meal punch pair or break length exists', s => !!(s.meal || s.mealMin)],
   ['meal_length_min', 'Meal length in minutes', s => s.meal ? s.meal[1] - s.meal[0] : null],
   ['meal_start_offset_min', 'Clock-in → meal start, minutes', (s, c) => { if (!s.meal) return null; const p = c.resolvedPairs(s); return p.length ? s.meal[0] - p[0].in : null; }],
   ['auto_deduct_applies', 'Site auto-deducts 30-min meal', s => s.fac.autoDeduct],
@@ -95,6 +95,7 @@ function makeCtx(week, params) {
       const pairs = ctx.resolvedPairs(s2);
       let m = pairs.reduce((t, p) => t + ((p.out ?? p.in) - p.in), 0);
       if (s2.meal) m -= (s2.meal[1] - s2.meal[0]);
+      else if (s2.mealMin) m -= s2.mealMin;
       else if (s2.fac.autoDeduct && m > MIN(6)) m -= 30; // site policy; FAC-AUTODED audits it
       return Math.max(0, m);
     }),
@@ -102,7 +103,7 @@ function makeCtx(week, params) {
     prevShift: s => { const arr = byWorker.get(s.worker) || []; const i = arr.indexOf(s); return i > 0 ? arr[i - 1] : null; },
     gapSincePrev: s => { const pv = ctx.prevShift(s); if (!pv) return null; const pvP = ctx.resolvedPairs(pv), cuP = ctx.resolvedPairs(s); if (!pvP.length || !cuP.length || pvP[pvP.length - 1].out == null) return null; return abs(s.day, cuP[0].in) - abs(pv.day, pvP[pvP.length - 1].out); },
     overlap: s => { const arr = byWorker.get(s.worker) || []; const cu = ctx.resolvedPairs(s); if (!cu.length) return null; const a0 = abs(s.day, cu[0].in), a1 = abs(s.day, cu[cu.length - 1].out ?? cu[0].in); for (const o of arr) { if (o === s) continue; const op = ctx.resolvedPairs(o); if (!op.length || op[op.length - 1].out == null) continue; const b0 = abs(o.day, op[0].in), b1 = abs(o.day, op[op.length - 1].out); if (a0 < b1 && b0 < a1) return o; } return null; },
-    travelSpeed: s => { const pv = ctx.prevShift(s); if (!pv || pv.fac === s.fac) return null; const gap = ctx.gapSincePrev(s); if (gap == null || gap <= 0) return Infinity; const d = distMi(pv.fac, s.fac); return d / (gap / 60); },
+    travelSpeed: s => { const pv = ctx.prevShift(s); if (!pv || pv.fac === s.fac || ![pv.fac.lat, pv.fac.lng, s.fac.lat, s.fac.lng].every(Number.isFinite)) return null; const gap = ctx.gapSincePrev(s); if (gap == null || gap <= 0) return Infinity; const d = distMi(pv.fac, s.fac); return d / (gap / 60); },
     exactStreak: s => { const arr = byWorker.get(s.worker) || []; const dur = x => { const p = ctx.resolvedPairs(x); return p.length ? (p[p.length - 1].out ?? 0) - p[0].in : 0; }; const i = arr.indexOf(s); let n = 1; for (let j = i - 1; j >= 0; j--) { if (dur(arr[j]) === dur(s) && dur(s) > 0) n++; else break; } return n; },
   };
   return ctx;
@@ -183,7 +184,7 @@ const RULES = [
     id: 'CS-EXACT', bucket: 'Common sense', kind: 'det',
     sentence: 'Punches are messy; a streak of identical exact durations means hand-entered time',
     source: { doc: 'Payroll-fraud detection guides', cite: 'Flag, don\'t auto-deny' },
-    scope: () => true,
+    scope: s => s.capture !== 'clock',
     params: { streak: p(3, 2, 7, 1, 'days', 'Streak length') },
     evaluate(s, ctx, P) {
       const n = ctx.exactStreak(s);
@@ -263,7 +264,7 @@ const RULES = [
     scope: s => s.fac.autoDeduct,
     params: {},
     evaluate(s, ctx) {
-      if (s.meal) return [{ status: 'pass', note: 'Meal punched — no auto-deduct' }];
+      if (s.meal || s.mealMin) return [{ status: 'pass', note: 'Meal recorded — no auto-deduct' }];
       if (ctx.workedMin(s) <= MIN(6)) return [{ status: 'na', note: 'Short day, no deduction' }];
       if (s.mealEvidence === false) return [
         { status: 'flag', note: 'A 30-minute break was taken off automatically, but location shows they never left the floor' },
@@ -296,6 +297,7 @@ const RULES = [
     evaluate(s, ctx, P) {
       const worked = ctx.workedMin(s);
       const dl = MIN(P('CA-MB-01', 'deadline_h'));
+      if (!s.meal && s.mealMin) return [{ status: 'na', note: 'Break length is in the files, not when it started' }];
       if (!s.meal) {
         if (s.fac.autoDeduct && s.mealEvidence !== false) return [{ status: 'pass', note: 'Auto-deducted break, break gap visible in location trace' }];
         if (worked <= MIN(P('CA-MB-01', 'waiver_cap_h')) && s.waiverOnFile) return [{ status: 'pass', note: 'No meal — valid waiver on file for a short day' }];
@@ -556,7 +558,7 @@ function runEngine(week, paramOverrides) {
     // naive spreadsheet pay: as-submitted punches (dups double-counted, missing out = assume sched end), base rate, no premiums
     let naiveMin = 0;
     for (const pr of s.punches) naiveMin += ((pr.out ?? (s.sched ? s.sched[1] : pr.in)) - pr.in);
-    if (s.meal) naiveMin -= (s.meal[1] - s.meal[0]); else if (s.fac.autoDeduct && naiveMin > MIN(6)) naiveMin -= 30;
+    if (s.meal) naiveMin -= (s.meal[1] - s.meal[0]); else if (s.mealMin) naiveMin -= s.mealMin; else if (s.fac.autoDeduct && naiveMin > MIN(6)) naiveMin -= 30;
     const naive = H(Math.max(0, naiveMin)) * s.rate;
     const flagged = rows.some(x => x.status === 'flag' || x.status === 'held');
     const held = holdAll || holdMin > 0;

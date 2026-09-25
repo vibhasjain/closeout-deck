@@ -10,7 +10,13 @@ import { stateStoreFromEnv } from './state.ts'
 import type { StateStore } from './state.ts'
 import { isPlainObject, MAX_DOC_BYTES, validateChatBody, validateStateBody, ValidationError } from './validation.ts'
 import type { ChatMode } from './validation.ts'
-import { prepareWorkspace } from './workspace.ts'
+import { prepareWorkspace, materialize } from './workspace.ts'
+import { DataError, DataService, cycleDates, localToday } from './data.ts'
+import { dataStoreFromEnv, DuplicateFileError, createMemoryDataStore } from './datastore.ts'
+import type { DataStore } from './datastore.ts'
+import { calendarFrom, engineSha } from './pipeline.ts'
+import { parseFile, IngestError } from './ingest.ts'
+import { recentCycles } from '../../src/lib/cycles.ts'
 
 const ALLOWED_ORIGINS = new Set(['https://closeoutcopilot.com', 'http://localhost:9000'])
 
@@ -24,12 +30,13 @@ export function turnTimeoutMs(mode: ChatMode, env: NodeJS.ProcessEnv): number {
 }
 
 function logFailure(error: unknown): void {
-  console.error('Request failed:', error instanceof Error ? error.message : JSON.stringify(error))
+  console.error('Request failed:', error instanceof Error ? error.name : 'Error')
 }
 
 interface ServerOptions {
   env?: NodeJS.ProcessEnv
   stateStore?: StateStore
+  dataStore?: DataStore
   verifyGoogle?: typeof verifyGoogleIdToken
   claudeVersion?: () => Promise<string | null>
   runAgent?: typeof runClaude
@@ -71,6 +78,24 @@ async function readJson(request: IncomingMessage, maxBytes: number): Promise<unk
   })
 }
 
+async function readBytes(request: IncomingMessage, maxBytes: number): Promise<Buffer> {
+  const declared = Number(request.headers['content-length'])
+  if (Number.isFinite(declared) && declared > maxBytes) { request.resume(); throw new DataError(413, 'file_too_large') }
+  return new Promise((resolveBody, reject) => {
+    const chunks: Buffer[] = []
+    let bytes = 0, failed = false
+    request.on('data', (chunk: Buffer) => {
+      if (failed) return
+      bytes += chunk.length
+      if (bytes > maxBytes) { failed = true; chunks.length = 0; reject(new DataError(413, 'file_too_large')); return }
+      chunks.push(chunk)
+    })
+    request.once('end', () => { if (!failed) resolveBody(Buffer.concat(chunks)) })
+    request.once('error', reject)
+    request.once('aborted', () => reject(new DataError(400, 'upload_aborted')))
+  })
+}
+
 export function createServer(options: ServerOptions = {}) {
   const env = options.env ?? process.env
   validateSessionSecret(env.SESSION_SECRET)
@@ -82,6 +107,20 @@ export function createServer(options: ServerOptions = {}) {
   const capacity = new GlobalSemaphore()
   const rateLimit = new TurnRateLimit()
   let stateStore = options.stateStore
+  let dataStore = options.dataStore
+  const getDataStore = () => {
+    if (!dataStore) {
+      if (env.SUPABASE_URL && env.SUPABASE_SERVICE_KEY) dataStore = dataStoreFromEnv(env)
+      else if (env.NODE_ENV !== 'production') dataStore = createMemoryDataStore()
+      else throw new DataError(503, 'data_unavailable')
+    }
+    return dataStore
+  }
+  async function stateDoc(email: string): Promise<Record<string, unknown>> {
+    if (!stateStore && env.SUPABASE_URL && env.SUPABASE_SERVICE_KEY) stateStore = stateStoreFromEnv(env)
+    const row = await stateStore?.get(email)
+    return isPlainObject(row?.doc) ? row.doc : {}
+  }
   let cachedVersion: Promise<string | null> | undefined
 
   async function handle(request: IncomingMessage, response: ServerResponse): Promise<void> {
@@ -93,8 +132,8 @@ export function createServer(options: ServerOptions = {}) {
         return
       }
       response.setHeader('Access-Control-Allow-Origin', origin)
-      response.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type')
-      response.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS')
+      response.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-File-Name, X-Set')
+      response.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
     }
     if (request.method === 'OPTIONS') {
       response.writeHead(204)
@@ -105,7 +144,7 @@ export function createServer(options: ServerOptions = {}) {
     const path = new URL(request.url ?? '/', 'http://localhost').pathname
     if (request.method === 'GET' && path === '/health') {
       cachedVersion ??= version().catch(() => null)
-      json(response, 200, { ok: true, claude: await cachedVersion })
+      json(response, 200, { ok: true, claude: await cachedVersion, engineSha })
       return
     }
     if (request.method === 'POST' && path === '/session') {
@@ -143,6 +182,109 @@ export function createServer(options: ServerOptions = {}) {
         json(response, result.status, result.row ?? { doc: null })
       }
       return
+    }
+    if (path === '/files' || path.startsWith('/files/') || path.startsWith('/data/')) {
+      const store = getDataStore(), service = new DataService(store)
+      const abort = new AbortController()
+      const onClose = () => { if (!response.writableEnded) abort.abort() }
+      response.once('close', onClose)
+      // GET of a stale run can also publish. Serialize it with uploads and chat turns.
+      const release = await queue.reserve(user.email, abort.signal)
+      try {
+        const doc = await stateDoc(user.email)
+        const url = new URL(request.url!, 'http://localhost')
+        const sync = () => materialize(user, env, store, doc)
+        if (path === '/files' && request.method === 'POST') {
+          let name: string
+          try { name = decodeURIComponent(String(request.headers['x-file-name'] ?? 'upload.csv')) }
+          catch { throw new DataError(400, 'invalid_file_name') }
+          const hint = request.headers['x-set']
+          if (hint !== undefined && hint !== '1' && hint !== '2') throw new DataError(400, 'invalid_set')
+          const bytes = await readBytes(request, 10 * 1024 * 1024)
+          const file = await service.ingestFile(user.email, { name, bytes, set: hint ? Number(hint) as 1 | 2 : undefined }, doc)
+          await sync()
+          json(response, 201, { file })
+          return
+        }
+        if (path === '/files' && request.method === 'GET') {
+          json(response, 200, { files: await store.listFiles(user.email) }); return
+        }
+        const filePath = /^\/files\/([^/]+)(\/raw)?$/.exec(path)
+        if (filePath && request.method === 'GET') {
+          const file = await store.getFile(user.email, filePath[1])
+          if (!file) { json(response, 404, { error: 'not_found' }); return }
+          const bytes = await store.getObject(user.email, file.storagePath)
+          if (!bytes) throw new DataError(404, 'not_found')
+          if (filePath[2]) {
+            response.writeHead(200, { 'Content-Type': file.mime, 'Content-Disposition': `attachment; filename="${file.name}"`, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' })
+            response.end(bytes)
+          } else json(response, 200, { file, profile: parseFile(bytes, file.name).profile, mappingId: file.mappingId })
+          return
+        }
+        if (path === '/data/sample' && request.method === 'POST') {
+          const result = await service.seed(user.email, doc)
+          await sync(); json(response, 200, result); return
+        }
+        if (path === '/data/sample' && request.method === 'DELETE') {
+          await store.deleteSample(user.email)
+          await service.renormalizeOriginals(user.email, doc)
+          const cycles = await service.recompute(user.email, doc)
+          await sync(); json(response, 200, { ok: true, cycles }); return
+        }
+        if (path === '/data/facts' && request.method === 'POST') {
+          const result = await service.setFact(user.email, await readJson(request, 65_536), doc)
+          await sync(); json(response, 200, result); return
+        }
+        if (path === '/data/connect' && request.method === 'POST') {
+          const body = await readJson(request, 16_384)
+          if (!isPlainObject(body)) throw new ValidationError()
+          const result = await service.connect(user.email, body, doc)
+          await sync(); json(response, 200, result); return
+        }
+        if (path === '/data/cycles' && request.method === 'GET') {
+          await service.recompute(user.email, doc)
+          const [runs, sources, facts] = await Promise.all([store.listRuns(user.email), store.listSources(user.email), store.listFacts(user.email)])
+          const cycles = recentCycles(calendarFrom(doc), 26, localToday(facts, doc)).map(c => {
+            const run = runs.find(r => r.cycleId === c.id)
+            return { ...cycleDates(c), sample: run?.sample ?? false, runAt: run?.runAt ?? null,
+              totals: run?.totals ?? null, counts: run?.counts ?? { set1: 0, set2: 0, set3: 0 }, findings: run?.groups.length ?? 0 }
+          })
+          json(response, 200, { cycles, sources }); return
+        }
+        const cyclePath = /^\/data\/cycles\/(\d{4}-\d{2}-\d{2})$/.exec(path)
+        if (cyclePath && request.method === 'GET') {
+          await service.recompute(user.email, doc)
+          const run = await store.getRun(user.email, cyclePath[1])
+          if (!run) { json(response, 404, { error: 'not_found' }); return }
+          const bytes = await store.getObject(user.email, run.storagePath)
+          if (!bytes) throw new DataError(404, 'not_found')
+          response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Encoding': 'gzip', 'Cache-Control': 'no-store' })
+          response.end(bytes); return
+        }
+        if (request.method === 'GET' && (path === '/data/entries' || path === '/data/findings')) {
+          const cycleId = url.searchParams.get('cycle')
+          if (!cycleId || !/^\d{4}-\d{2}-\d{2}$/.test(cycleId)) throw new DataError(400, 'invalid_cycle')
+          await service.recompute(user.email, doc)
+          const run = await store.getRun(user.email, cycleId)
+          if (!run) { json(response, 404, { error: 'not_found' }); return }
+          if (path === '/data/findings') json(response, 200, { groups: run.groups, cases: await store.listFindings(user.email, cycleId) })
+          else {
+            const offset = Number(url.searchParams.get('offset') ?? 0)
+            if (!Number.isSafeInteger(offset) || offset < 0) throw new DataError(400, 'invalid_offset')
+            const shiftId = url.searchParams.get('shift')
+            let ids: string[] | undefined
+            if (shiftId) {
+              const payload = await store.getRunPayload(user.email, run)
+              const shift = payload?.week.find(s => s.id === shiftId)
+              if (!shift) { json(response, 404, { error: 'not_found' }); return }
+              ids = shift.entryIds
+            }
+            json(response, 200, { entries: await store.listEntries(user.email, ids ? { ids, offset, limit: 2000 } : { from: run.periodStart, to: run.cycleId, offset, limit: 2000 }) })
+          }
+          return
+        }
+        json(response, 404, { error: 'not_found' }); return
+      } finally { release(); response.off('close', onClose) }
     }
     if (request.method === 'POST' && path === '/chat') {
       const body = validateChatBody(await readJson(request, 300_000))
@@ -182,7 +324,7 @@ export function createServer(options: ServerOptions = {}) {
         }, 15_000)
         release = await accountSlot
         if (abort.signal.aborted) return
-        const cwd = await workspace(user, env)
+        const cwd = options.workspace ? await workspace(user, env) : await materialize(user, env, getDataStore(), await stateDoc(user.email), body.context)
         if (abort.signal.aborted) return
         await runAgent({
           cwd,
@@ -229,6 +371,9 @@ export function createServer(options: ServerOptions = {}) {
     void handle(request, response).catch((error: unknown) => {
       if (error instanceof InviteOnlyError) json(response, 403, { error: 'invite_only' })
       else if (error instanceof AuthError) json(response, 401, { error: 'invalid_token' })
+      else if (error instanceof DuplicateFileError) json(response, 409, { error: 'duplicate_file', id: error.id })
+      else if (error instanceof DataError) json(response, error.status, { error: error.message })
+      else if (error instanceof IngestError) json(response, error.status, { error: error.status === 415 ? 'unsupported_file_type' : 'invalid_file' })
       else if (error instanceof ValidationError) json(response, 400, { error: 'invalid_body' })
       else if (error instanceof QueueFullError) json(response, 429, { error: 'queue_full' })
       else {

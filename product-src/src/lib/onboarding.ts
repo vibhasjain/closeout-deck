@@ -3,11 +3,10 @@ import type { CustomRule, Proposal } from '@/lib/rules'
 import { withPeriodEnd, type Cohort } from '@/lib/cohorts'
 
 export const FREQUENCIES = ['Weekly', 'Biweekly', 'Semi-monthly', 'Monthly'] as const
-export const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const
+import { WEEKDAYS } from './cycles'
+export { WEEKDAYS, byWeekday, isMonthly } from './cycles'
 /** Semi-monthly and monthly payroll runs on calendar dates, not weekdays. 0 means the last day of the month. */
 export const DAYS_OF_MONTH = [0, 1, 5, 10, 15, 20, 25, 28] as const
-export const byWeekday = (day: string) => WEEKDAYS.indexOf(day as (typeof WEEKDAYS)[number])
-export const isMonthly = (f: string) => f === 'Semi-monthly' || f === 'Monthly'
 
 /** One line of the left-pane transcript. `scope` (e.g. 'shift:4821') makes per-case threads a filter, not a second store. */
 export interface ChatMessage {

@@ -3,8 +3,8 @@ export interface Facility {
   city: string
   state: string
   vertical: string
-  lat: number
-  lng: number
+  lat?: number
+  lng?: number
   geofence: boolean
   badge: boolean
   autoDeduct: boolean
@@ -26,6 +26,8 @@ export interface Shift {
   sched: [number, number] | null
   punches: Punch[]
   meal: [number, number] | null
+  mealMin?: number
+  capture?: 'clock' | 'web' | 'manual' | 'import'
   geo: [number, number] | null
   badgeIn?: number | null
   badgeOut?: number | null

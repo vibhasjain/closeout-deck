@@ -6,6 +6,7 @@ import { AuthError, InviteOnlyError, signSession, verifySession } from '../src/a
 import { AGENT_ERROR } from '../src/claude.ts'
 import { createServer, listenHost, turnTimeoutMs } from '../src/index.ts'
 import { GlobalSemaphore } from '../src/queue.ts'
+import { engineSha } from '../src/pipeline.ts'
 import { MAX_DOC_BYTES } from '../src/validation.ts'
 
 const devEnv = {
@@ -37,7 +38,7 @@ test('health is public but production never enables the dev identity', async t =
   const url = await serve(t, { env: { ...devEnv, NODE_ENV: 'production' } })
   const health = await fetch(`${url}/health`)
   assert.equal(health.status, 200)
-  assert.deepEqual(await health.json(), { ok: true, claude: '2.1.282 (Claude Code)' })
+  assert.deepEqual(await health.json(), { ok: true, claude: '2.1.282 (Claude Code)', engineSha })
   for (const path of ['/chat', '/state', '/live-session', '/dictate', '/firm']) {
     const response = await fetch(`${url}${path}`, path === '/state' ? {} : post(chatBody))
     assert.equal(response.status, 401, path)
@@ -140,7 +141,7 @@ test('HTTP rate limit rejects the thirty-first turn and expires after ten minute
   await next.text()
 })
 
-test('unexpected failures log messages or plain objects but send fixed browser errors', async t => {
+test('unexpected failures log only error types and send fixed browser errors', async t => {
   const logged = t.mock.method(console, 'error', () => {})
   const url = await serve(t, {
     workspace: async () => '/test/workspace',
@@ -155,8 +156,8 @@ test('unexpected failures log messages or plain objects but send fixed browser e
   assert.equal(state.status, 500)
   assert.deepEqual(await state.json(), { error: 'internal_error' })
   assert.deepEqual(logged.mock.calls.map(call => call.arguments), [
-    ['Request failed:', 'runner diagnostic'],
-    ['Request failed:', '{"reason":"state diagnostic"}'],
+    ['Request failed:', 'Error'],
+    ['Request failed:', 'Error'],
   ])
 })
 
@@ -209,7 +210,7 @@ test('CORS only allows the production and local app origins', async t => {
     })
     assert.equal(preflight.status, 204)
     assert.equal(preflight.headers.get('Access-Control-Allow-Origin'), 'https://closeoutcopilot.com')
-    assert.equal(preflight.headers.get('Access-Control-Allow-Headers'), 'Authorization, Content-Type')
+    assert.equal(preflight.headers.get('Access-Control-Allow-Headers'), 'Authorization, Content-Type, X-File-Name, X-Set')
     assert.ok(preflight.headers.get('Access-Control-Allow-Methods')?.split(', ').includes(method))
     assert.equal(preflight.headers.get('Vary'), 'Origin')
   }

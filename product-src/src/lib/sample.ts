@@ -1,5 +1,5 @@
-import { FACILITIES, fmtHM, fmtT, runEngine, type Effect, type Row, type Run, type Shift as EngineShift } from '@/bench/engine.js'
-import type { Cycle } from '@/lib/cycles'
+import { FACILITIES, fmtHM, fmtT, runEngine, type Effect, type Row, type Run, type Shift as EngineShift } from '../bench/engine.js'
+import type { Cycle } from './cycles.ts'
 
 /**
  * The setup sample: one closed week at a staffing agency, as three files — the agency's Bullhorn time,

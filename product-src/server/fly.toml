@@ -1,3 +1,5 @@
+# Build context is product-src/, so the server can import shared engine/calendar/sample modules.
+# From product-src/: fly deploy . -c server/fly.toml --dockerfile server/Dockerfile
 app = "closeout-agent"
 primary_region = "sjc"
 

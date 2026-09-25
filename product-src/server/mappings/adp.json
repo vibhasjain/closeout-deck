@@ -1,0 +1,8 @@
+{
+  "v": 1, "set": 2, "source": { "system": "ADP", "site": "Lonestar Packaging" }, "headerRow": 1, "grain": "pair", "overnight": "next-day",
+  "columns": {
+    "worker": { "col": "Employee", "name": "first last" }, "workerId": { "col": "File #" }, "role": { "col": "Department" },
+    "date": { "col": "Date", "format": "MM/DD/YYYY" }, "start": { "col": "In Time", "format": "h:mm A" }, "end": { "col": "Out Time", "format": "h:mm A" },
+    "hours": { "col": "Total Hours", "unit": "decimal", "per": "row" }, "payCode": { "col": "Pay Code", "map": { "REG": "work", "NIGHT DIFF": "diff" } }
+  }
+}

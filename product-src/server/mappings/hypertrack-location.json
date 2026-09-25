@@ -1,0 +1,7 @@
+{
+  "v": 1, "set": 3, "source": { "system": "HyperTrack" }, "headerRow": 1, "grain": "shift", "overnight": "next-day",
+  "columns": {
+    "worker": { "col": "Worker", "name": "first last" }, "site": { "col": "Site" }, "date": { "col": "Date", "format": "MM/DD/YYYY" },
+    "start": { "col": "Entered", "format": "h:mm A" }, "end": { "col": "Exited", "format": "h:mm A" }
+  }
+}

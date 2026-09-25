@@ -1,5 +1,9 @@
-import { byWeekday, isMonthly, type Onboarding } from '@/lib/onboarding'
-import { ordinal } from '@/lib/utils'
+export const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const
+export const byWeekday = (day: string) => WEEKDAYS.indexOf(day as (typeof WEEKDAYS)[number])
+export const isMonthly = (f: string) => f === 'Semi-monthly' || f === 'Monthly'
+/** 1st, 15th, last day. 0 means the last day of the month. */
+export const ordinal = (n: number) =>
+  n === 0 ? 'last day' : `${n}${['th', 'st', 'nd', 'rd'][n % 100 > 10 && n % 100 < 14 ? 0 : Math.min(n % 10, 4)] ?? 'th'}`
 
 export interface Cycle {
   id: string
@@ -14,7 +18,14 @@ export interface Cycle {
   status: 'in-progress' | 'needs-review' | 'reviewed'
 }
 
-type Calendar = Pick<Onboarding, 'frequency' | 'periodEndDay' | 'payDay' | 'payDatesOfMonth' | 'cutoffDays' | 'deadlineDays'>
+export interface Calendar {
+  frequency: 'Weekly' | 'Biweekly' | 'Semi-monthly' | 'Monthly'
+  periodEndDay: (typeof WEEKDAYS)[number]
+  payDay: (typeof WEEKDAYS)[number]
+  payDatesOfMonth: number[]
+  cutoffDays: number
+  deadlineDays: number
+}
 
 const day = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n)
 const lastOfMonth = (y: number, m: number) => new Date(y, m + 1, 0)

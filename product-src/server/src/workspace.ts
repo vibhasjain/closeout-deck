@@ -1,8 +1,17 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { copyFile, mkdir, readFile, readdir, rename, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, readdir, rename, writeFile, rm, stat, lstat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+import { RULES } from '../../src/bench/engine.js'
+import { calendarSummary } from '../../src/lib/cycles.ts'
+import { verifyRebuiltEntries } from './datastore.ts'
+import type { DataStore, DataManifest, FileRecord, MappingRecord, FactRecord, RunRecord, SourceRecord } from './datastore.ts'
+import { normalize, parseFile, sanitizeFileName } from './ingest.ts'
+import type { TimeEntry } from './ingest.ts'
+import { calendarFrom, engineSha } from './pipeline.ts'
+import { localToday, normalizationContext, dateKey, applyEntryVersions } from './data.ts'
 
 export interface WorkspaceUser {
   email: string
@@ -48,7 +57,12 @@ export async function prepareWorkspace(
   await writeFile(join(cwd, 'CLAUDE.md'), account, { mode: 0o600 })
   const files = await readdir(handbooksSource, { withFileTypes: true })
   await Promise.all(files.filter(file => file.isFile() && file.name.endsWith('.md')).map(file =>
-    copyFile(join(handbooksSource, file.name), join(handbooks, file.name)),
+    (async () => {
+      const source = await readFile(join(handbooksSource, file.name))
+      let current: Buffer | null = null
+      try { current = await readFile(join(handbooks, file.name)) } catch { /* first materialization */ }
+      if (!current?.equals(source)) await copyFile(join(handbooksSource, file.name), join(handbooks, file.name))
+    })(),
   ))
   return cwd
 }
@@ -74,4 +88,192 @@ export async function writeSessionId(cwd: string, sessionId: string): Promise<vo
   const temporary = join(cwd, `.session-${randomUUID()}.json`)
   await writeFile(temporary, JSON.stringify({ sessionId }) + '\n', { mode: 0o600 })
   await rename(temporary, join(cwd, 'session.json'))
+}
+
+interface WorkspaceManifest extends DataManifest {
+  metadata: { files: FileRecord[]; mappings: MappingRecord[]; sources: SourceRecord[]; facts: FactRecord[]; runs: RunRecord[] }
+  materialized: Record<string, string>
+  rulesVersion: string
+}
+const compact = (value: unknown) => JSON.stringify(value)
+const bounded = (value: string, bytes: number): string => {
+  if (Buffer.byteLength(value) <= bytes) return value
+  return Buffer.from(value).subarray(0, bytes - 60).toString('utf8') + '\n… More details are available in the individual data files.\n'
+}
+
+/** Resolve only descendants and reject symlinks in server-owned cache paths. */
+export async function workspaceFile(cwd: string, name: string): Promise<string> {
+  const target = resolve(cwd, name)
+  const rel = relative(cwd, target)
+  if (!rel || rel === '..' || rel.startsWith(`..${sep}`) || rel.startsWith(sep)) throw new Error('invalid_workspace_path')
+  let part = cwd
+  for (const segment of rel.split(sep)) {
+    part = join(part, segment)
+    try { if ((await lstat(part)).isSymbolicLink()) throw new Error('invalid_workspace_symlink') }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }
+  }
+  return target
+}
+async function cacheWrite(cwd: string, name: string, value: string | Uint8Array): Promise<void> {
+  const file = await workspaceFile(cwd, name)
+  await mkdir(resolve(file, '..'), { recursive: true, mode: 0o700 })
+  await writeFile(file, value, { mode: 0o600 })
+}
+async function present(cwd: string, name: string): Promise<boolean> {
+  try { await stat(await workspaceFile(cwd, name)); return true } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false
+    throw error
+  }
+}
+async function diskSize(directory: string): Promise<number> {
+  let total = 0
+  for (const item of await readdir(directory, { withFileTypes: true })) {
+    const path = join(directory, item.name)
+    if (item.isDirectory()) total += await diskSize(path)
+    else if (item.isFile()) total += (await stat(path)).size
+  }
+  return total
+}
+
+/** Supabase is canonical. Only three version queries are needed on an unchanged turn. */
+export async function materialize(
+  user: WorkspaceUser, env: NodeJS.ProcessEnv = process.env, store?: DataStore,
+  doc: Record<string, unknown> = {}, context: Record<string, unknown> = {},
+  options: { maxBytes?: number; maxCycles?: number } = {},
+): Promise<string> {
+  const cwd = await prepareWorkspace(user, env)
+  if (!store) return cwd
+  let previous: WorkspaceManifest | null = null
+  try { previous = JSON.parse(await readFile(join(cwd, '.manifest.json'), 'utf8')) as WorkspaceManifest }
+  catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT' && !(error instanceof SyntaxError)) throw error }
+  const versions = await store.manifest(user.email)
+  const filesChanged = !previous || compact(previous.files) !== compact(versions.files)
+  const factsChanged = !previous || previous.factsUpdatedAt !== versions.factsUpdatedAt
+  const runsChanged = !previous || compact(previous.runs) !== compact(versions.runs)
+  const [files, mappings, sources, facts, runs] = await Promise.all([
+    filesChanged ? store.listFiles(user.email) : previous!.metadata.files,
+    filesChanged ? store.listMappings(user.email) : previous!.metadata.mappings,
+    filesChanged ? store.listSources(user.email) : previous!.metadata.sources,
+    factsChanged ? store.listFacts(user.email) : previous!.metadata.facts,
+    runsChanged ? store.listRuns(user.email) : previous!.metadata.runs,
+  ])
+  const manifest: WorkspaceManifest = { ...versions, metadata: { files, mappings, sources, facts, runs },
+    materialized: { ...previous?.materialized }, rulesVersion: compact([facts, doc.customRules ?? [], engineSha]) }
+  for (const old of previous?.metadata.files ?? []) {
+    if (!files.some(f => f.id === old.id)) await rm(await workspaceFile(cwd, `files/${old.id}`), { recursive: true, force: true })
+  }
+  for (const old of Object.keys(previous?.materialized ?? {})) {
+    if (!runs.some(r => r.cycleId === old)) {
+      for (const folder of ['entries', 'cycles', 'findings']) await rm(await workspaceFile(cwd, `data/${folder}/${old}.${folder === 'cycles' ? 'json' : 'jsonl'}`), { force: true })
+      delete manifest.materialized[old]
+    }
+  }
+  for (const file of files) {
+    const path = `files/${file.id}/${sanitizeFileName(file.name)}`
+    const version = versions.files.find(f => f.id === file.id)
+    const old = previous?.files.find(f => f.id === file.id)
+    if (compact(version) === compact(old) && await present(cwd, path) && await present(cwd, `files/${file.id}/profile.md`)) continue
+    const bytes = await store.getObject(user.email, file.storagePath)
+    if (!bytes || bytes.length > 10 * 1024 * 1024) throw new Error('original_unavailable')
+    if (createHash('sha256').update(bytes).digest('hex') !== file.sha256) throw new Error('original_hash_mismatch')
+    await cacheWrite(cwd, path, bytes)
+    const parsed = parseFile(bytes, file.name)
+    await cacheWrite(cwd, `files/${file.id}/profile.md`, parsed.profile + `\nStatus: ${file.status}\nMapping: ${file.mappingId ?? 'none'}\nUnparsed rows: ${compact(file.unparsed)}\n`)
+    if (parsed.kind === 'xlsx' || parsed.kind === 'xls') {
+      for (let i = 0; i < parsed.sheets.length; i++) {
+        const csv = parsed.sheets[i].grid.map(row => row.map(v => `"${v.replaceAll('"', '""')}"`).join(',')).join('\n')
+        await cacheWrite(cwd, `files/${file.id}/sheet-${i + 1}.csv`, csv)
+      }
+    }
+  }
+  if (filesChanged) for (const mapping of mappings) await cacheWrite(cwd, `mappings/${mapping.fingerprint}.json`, compact(mapping.spec) + '\n')
+  const sorted = [...runs].sort((a, b) => b.cycleId.localeCompare(a.cycleId))
+  const selected = new Set(sorted.filter(r => r.totals.shifts > 0).slice(0, options.maxCycles ?? 8).map(r => r.cycleId))
+  for (const value of [context.cycleId, context.cycle, typeof context.page === 'string' ? /(?:cycle=|cycles\/)(\d{4}-\d{2}-\d{2})/.exec(context.page)?.[1] : null]) {
+    if (typeof value === 'string' && runs.some(r => r.cycleId === value)) selected.add(value)
+  }
+  let rebuilt: TimeEntry[] | null = null
+  const rebuild = async () => {
+    if (rebuilt) return rebuilt
+    const ordered: { fileId: string; entries: TimeEntry[] }[] = []
+    // Original bytes + stored mappings regenerate the canonical rows without paging through PostgREST.
+    for (const file of [...files].filter(f => f.status === 'normalized').sort((a, b) => a.receivedAt.localeCompare(b.receivedAt))) {
+      const mapping = mappings.find(m => m.id === file.mappingId)
+      if (!mapping) throw new Error('mapping_unavailable')
+      const parsed = parseFile(await readFile(await workspaceFile(cwd, `files/${file.id}/${sanitizeFileName(file.name)}`)), file.name)
+      const grid = parsed.sheets.find(s => s.name === mapping.spec.sheet)?.grid ?? parsed.grid
+      const result = normalize(grid, { ...mapping.spec, file: file.id, period: file.periodEnd ? { end: file.periodEnd } : undefined }, normalizationContext(file, facts, doc))
+      ordered.push({ fileId: file.id, entries: result.entries })
+
+    }
+    applyEntryVersions(ordered)
+    const owned = await verifyRebuiltEntries(store, user.email, ordered)
+    rebuilt = owned.filter(e => !e.supersededBy)
+    return rebuilt
+  }
+  for (const run of sorted) {
+    if (!selected.has(run.cycleId)) continue
+    const cached = manifest.materialized[run.cycleId] === run.runId && await present(cwd, `data/entries/${run.cycleId}.jsonl`) && await present(cwd, `data/findings/${run.cycleId}.jsonl`)
+    if (cached && !filesChanged && !factsChanged) continue
+    const payload = await store.getRunPayload(user.email, run)
+    if (!payload) throw new Error('run_unavailable')
+    const entryIds = new Set(payload.week.flatMap(s => s.entryIds))
+    const entries = (await rebuild()).filter(e => entryIds.has(e.id) || (e.workDate >= run.periodStart && e.workDate <= run.cycleId))
+    const findings = await store.listFindings(user.email, run.cycleId)
+    await cacheWrite(cwd, `data/entries/${run.cycleId}.jsonl`, entries.map(compact).join('\n') + '\n')
+    await cacheWrite(cwd, `data/findings/${run.cycleId}.jsonl`, findings.slice(0, 20_000).map(compact).join('\n') + '\n')
+    const summary = { cycle: payload.cycle, sample: payload.sample, counts: run.counts, totals: payload.totals, groups: [...payload.groups], extraGroups: [...payload.extraGroups], gaps: [...payload.gaps], omitted: { groups: 0, extraGroups: 0, gaps: 0 } }
+    let summaryText = compact(summary)
+    while (Buffer.byteLength(summaryText) > 65_535) {
+      const field = summary.gaps.length ? 'gaps' : summary.extraGroups.length ? 'extraGroups' : 'groups'
+      if (!summary[field].length) throw new Error('cycle_summary_too_large')
+      summary[field].pop(); summary.omitted[field]++
+      summaryText = compact(summary)
+    }
+    await cacheWrite(cwd, `data/cycles/${run.cycleId}.json`, summaryText + '\n')
+    manifest.materialized[run.cycleId] = run.runId
+  }
+  if (!previous || previous.rulesVersion !== manifest.rulesVersion) {
+    const rules = RULES.map(rule => `${rule.id} [${rule.bucket}] ${rule.sentence}\nSource: ${compact(rule.source)}; parameters: ${compact(Object.fromEntries(Object.entries(rule.params).map(([key, p]) => [key, p.v])))}`)
+    await cacheWrite(cwd, 'rulebook.md', bounded(['# Rulebook', ...rules, '## Account facts', ...facts.map(compact), '## Custom rules', compact(doc.customRules ?? [])].join('\n\n'), 32_768))
+  }
+  const gaps = runs.flatMap(r => r.gaps.map(gap => ({ ...gap, cycleId: r.cycleId }))).sort((a, b) => b.count * b.blocks.length - a.count * a.blocks.length)
+  await cacheWrite(cwd, 'data/gaps.md', bounded('# Open gaps\n\n' + gaps.map(g => `${g.cycleId}: ${g.ask} (${g.count} time entries; blocks ${g.blocks.join(', ')})`).join('\n'), 8_192))
+  const decisions = Object.entries((doc.resolutions ?? {}) as Record<string, Record<string, unknown>>).flatMap(([cycleId, shifts]) =>
+    Object.entries(shifts).map(([shiftId, decision]) => ({ cycleId, shiftId, decision,
+      reason: (doc.reasons as Record<string, unknown> | undefined)?.[`${cycleId}:${shiftId}`],
+      at: (doc.decisionTimes as Record<string, unknown> | undefined)?.[`${cycleId}:${shiftId}`] })))
+  await cacheWrite(cwd, 'data/decisions.jsonl', decisions.map(compact).join('\n') + '\n')
+  // The total cache cap is enforced after each materialization; old cycle artifacts go first.
+  const cap = options.maxBytes ?? 200 * 1024 * 1024
+  let size = await diskSize(cwd)
+  for (const run of [...sorted].reverse()) {
+    if (size <= cap && selected.has(run.cycleId)) continue
+    for (const folder of ['entries', 'findings', 'cycles']) {
+      const path = await workspaceFile(cwd, `data/${folder}/${run.cycleId}.${folder === 'cycles' ? 'json' : 'jsonl'}`)
+      try { size -= (await stat(path)).size } catch { /* absent cache */ }
+      await rm(path, { force: true })
+    }
+    delete manifest.materialized[run.cycleId]
+  }
+  // Originals are canonical in Storage and can be restored when requested again.
+  for (const file of [...files].sort((a, b) => a.receivedAt.localeCompare(b.receivedAt))) {
+    if (size <= cap) break
+    const directory = await workspaceFile(cwd, `files/${file.id}`)
+    size -= await diskSize(directory)
+    await rm(directory, { recursive: true, force: true })
+  }
+  const omitted = runs.filter(r => !manifest.materialized[r.cycleId]).map(r => r.cycleId)
+  await cacheWrite(cwd, 'sources.md', bounded(['# Sources and files', ...sources.map(source =>
+    `Set ${source.set}: ${source.system}${source.site ? ` · ${source.site}` : ''} · ${source.method}${source.sample ? ' · Sample' : ''} · last received ${source.lastReceivedAt ?? 'never'}\n` +
+    files.filter(f => f.sourceId === source.id).map(f => `${f.id}: ${f.name} · ${f.status} · ${f.rowCount ?? 0} rows · ${f.entryCount ?? 0} entries · ${f.unparsed.length} unparsed · period ${f.periodEnd ?? 'unknown'} · ${f.firstDate ?? '?'}–${f.lastDate ?? '?'}`).join('\n')),
+    ...files.filter(f => !f.sourceId).map(f => `${f.id}: ${f.name} · ${f.status}`),
+    '## Sites and contacts', ...facts.filter(f => f.kind === 'site').map(compact), '## Missing', ...gaps.map(g => `${g.cycleId}: ${g.ask}`),
+    `Cycles not materialized (ask to load): ${omitted.join(', ') || 'none'}`].join('\n\n'), 16_384))
+  const account = await readFile(join(cwd, 'CLAUDE.md'), 'utf8')
+  await cacheWrite(cwd, 'CLAUDE.md', bounded(account.replace('Payroll profile not set up yet', `${calendarSummary(calendarFrom(doc))}\nAccount today: ${dateKey(localToday(facts, doc))}\n${runs.filter(r => r.totals.shifts > 0).length} cycles with data\n` +
+    runs.slice(0, 8).map(r => `${r.cycleId}: ${r.totals.shifts} time entries, ${r.groups.length} finding groups; ${r.gaps.length} open gaps`).join('\n')) +
+    '\nYour workspace has files/ (originals and profiles), sources.md, rulebook.md, data/cycles/, data/findings/, data/entries/ (with file and row), data/gaps.md and data/decisions.jsonl. Cite file and row.\n', 6_144))
+  await cacheWrite(cwd, '.manifest.json', compact(manifest) + '\n')
+  return cwd
 }

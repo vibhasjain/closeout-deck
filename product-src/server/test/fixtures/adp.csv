@@ -1,0 +1,6 @@
+Employee,File #,Department,Date,Pay Code,In Time,Out Time,Total Hours
+Ana Peña,100,Night Pick,09/14/2026,REG,10:01 PM,2:01 AM,4
+Ana Peña,100,Night Pick,09/14/2026,REG,2:31 AM,6:31 AM,4
+Ana Peña,100,Night Pick,09/14/2026,NIGHT DIFF,,,8
+Ben Smith,101,Night Pick,09/21/2026,REG,10:04 PM,2:04 AM,4
+Ben Smith,101,Night Pick,09/21/2026,REG,2:34 AM,6:34 AM,4
