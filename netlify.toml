@@ -57,11 +57,6 @@
   status = 301
 
 [[redirects]]
-  from = "/story/*"
-  to = "/"
-  status = 301
-
-[[redirects]]
   from = "/retail/*"
   to = "/"
   status = 301
@@ -143,11 +138,6 @@
 
 [[redirects]]
   from = "/shift-xray"
-  to = "/"
-  status = 301
-
-[[redirects]]
-  from = "/story"
   to = "/"
   status = 301
 
