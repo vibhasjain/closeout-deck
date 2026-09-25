@@ -323,7 +323,10 @@ export class DataService {
     const bytes = Buffer.from(rows.map(row => row.map(csvCell).join(',')).join('\r\n') + '\r\n')
     const existing = await this.store.getFileBySha(email, hash(bytes))
     if (existing) return { files: [existing], cycles: [] }
-    const file = await this.ingestFile(email, { name: `hypertrack_location_${cycles[0].id}.csv`, bytes, set: 3, sample: true, method: 'simulated' }, doc, now)
+    // The file name states its period; it must be the week its last row falls in, or ingest rejects the period.
+    const last = rows.slice(1).map(row => `${row[2].slice(6)}-${row[2].slice(0, 2)}-${row[2].slice(3, 5)}`).sort().at(-1)!
+    const period = last >= dateKey(cycles[0].start) ? cycles[0] : cycles[1]
+    const file = await this.ingestFile(email, { name: `hypertrack_location_${period.id}.csv`, bytes, set: 3, sample: true, method: 'simulated' }, doc, now)
     return { files: [file], cycles: file.cycles }
   }
 }

@@ -141,6 +141,17 @@ test('simulated sheet and inbox connectors load their source sample shape and re
   assert.ok((await store.listEntries(email, { fileId: inbox.files[0].id })).every(e => e.site === 'Pacific Cold Storage' && e.sample))
 })
 
+test('simulated location connector names its file after the week its rows fall in, so it normalizes', async () => {
+  const { service } = setup()
+  await service.connect(email, { set: 1, system: 'Forwarding inbox', site: 'Pacific Cold Storage' }, {}, now)
+  const location = await service.connect(email, { set: 3 }, {}, now)
+  const closing = recentCycles(calendarFrom({}), 2, localToday([], {}, now))[1]
+  assert.equal(location.files.length, 1)
+  assert.equal(location.files[0].name, `hypertrack_location_${closing.id}.csv`)
+  assert.equal(location.files[0].status, 'normalized')
+  assert.ok(location.cycles.includes(closing.id))
+})
+
 test('agent mapping stores validator-expanded datetime punches for deterministic replay', async () => {
   const { store, service } = setup()
   const file = await service.ingestFile(email, { name: 'events.csv', set: 1, bytes: Buffer.from('Person,When,Direction\nAda,2026-09-14T08:00:00Z,IN\nAda,2026-09-14T16:00:00Z,OUT\n') }, {}, now)
