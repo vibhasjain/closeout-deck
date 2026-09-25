@@ -36,31 +36,35 @@ export async function rememberAction(action: RememberAction): Promise<RememberRe
   }
 }
 
-interface Resolution { type: 'memory_resolution'; messageId: string; instinctId: string; state: 'active' | 'forgotten' }
+/** `revives`: the text of a tombstoned line (which has no id) that the owner remembered again as `instinctId`. */
+interface Resolution { type: 'memory_resolution'; messageId: string; instinctId: string; state: 'active' | 'forgotten'; revives?: string }
 function isResolution(value: unknown): value is Resolution {
   return record(value) && value.type === 'memory_resolution' && typeof value.messageId === 'string'
     && typeof value.instinctId === 'string' && (value.state === 'active' || value.state === 'forgotten')
+    && (value.revives === undefined || typeof value.revives === 'string')
 }
 
 /** History is append-only: fold subsequent receipts onto the original line without replaying an action. */
 export function memoryHistory(messages: ChatMessage[]): ChatMessage[] {
-  const resolutions = new Map<string, Resolution['state']>()
+  const resolutions = new Map<string, Resolution['state']>(), revived = new Map<string, string>()
   for (const message of messages) for (const action of message.actions ?? []) if (isResolution(action)) {
+    if (action.revives !== undefined) revived.set(`${action.messageId}:${action.revives}`, action.instinctId)
     const key = `${action.messageId}:${action.instinctId}`
     if (resolutions.get(key) !== 'forgotten') resolutions.set(key, action.state)
   }
   return messages.filter(message => message.text || !message.actions?.length || !message.actions.every(isResolution)).map(message => ({
     ...message, actions: message.actions?.map(action => {
-      if (!isRememberReceipt(action) || !action.memory.id) return action
-      const state = resolutions.get(`${message.id}:${action.memory.id}`)
-      return state ? { ...action, memory: { ...action.memory, state } } : action
+      if (!isRememberReceipt(action)) return action
+      const id = action.memory.id ?? (action.memory.state === 'tombstone' ? revived.get(`${message.id}:${action.text}`) : undefined)
+      const state = id && resolutions.get(`${message.id}:${id}`)
+      return id && state ? { ...action, memory: { id, state } } : action
     }),
   }))
 }
 
-export function recordMemoryResolution(messages: ChatMessage[], messageId: string, instinctId: string, state: Resolution['state']): ChatMessage[] {
+export function recordMemoryResolution(messages: ChatMessage[], messageId: string, instinctId: string, state: Resolution['state'], revives?: string): ChatMessage[] {
   const message = memoryHistory(messages).find(row => row.id === messageId)
   if (!message || message.actions?.some(action => isRememberReceipt(action) && action.memory.id === instinctId && (action.memory.state === state || action.memory.state === 'forgotten'))) return messages
   return [...messages, { id: crypto.randomUUID(), role: 'agent', text: '', at: Date.now(), scope: message.scope,
-    actions: [{ type: 'memory_resolution', messageId, instinctId, state } satisfies Resolution] }]
+    actions: [{ type: 'memory_resolution', messageId, instinctId, state, ...(revives === undefined ? {} : { revives }) } satisfies Resolution] }]
 }

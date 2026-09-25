@@ -6,7 +6,7 @@ import { DataError } from './data.ts'
 import type { DataStore } from './datastore.ts'
 import type { JourneyStore } from './journeyStore.ts'
 import {
-  KINDS, RULE_IDS, cleanText, live, newInstinctId, planOps, proposalText, proposals, publicInstinct, textConflict, validRuleId, validUntil,
+  KINDS, RULE_IDS, cleanText, live, newInstinctId, normalizeText, planOps, proposalText, proposals, publicInstinct, textConflict, validRuleId, validUntil,
 } from './memoryStore.ts'
 import type { InstinctRow, Kind, MemoryRun, MemoryStore, Source, Trigger } from './memoryStore.ts'
 import { memoryConsolidationPrompt } from './prompts.ts'
@@ -249,10 +249,16 @@ export async function handleMemory(req: MemoryRequest): Promise<boolean> {
     const status = source === 'chat' ? 'pending' : (b.status as 'pending' | 'active' | undefined) ?? 'active'
     const now = new Date().toISOString()
     const result = await locked<Written>(email, async () => {
-      const conflict = textConflict(fact, await req.memory.listInstincts(email))
-      if (conflict) return { conflict }
+      const rows = await req.memory.listInstincts(email), conflict = textConflict(fact, rows)
+      // Forget binds the agent, never the owner: the owner's own add lifts the tombstone. The forgotten rows stay for
+      // history as replaced by the new row. A chat remember, consolidation and proposals still refuse it.
+      const revived = conflict === 'tombstone' && source === 'user' && !textConflict(fact, rows.filter(live))
+        ? rows.filter(old => old.status === 'forgotten' && normalizeText(old.text) === normalizeText(fact)) : []
+      if (conflict && !revived.length) return { conflict }
       const row: InstinctRow = { id: newInstinctId(), kind: b.kind as Kind, text: fact, source, status, until: date,
         ruleId: absent(b.ruleId) ? null : b.ruleId as string, replacedBy: null, at: now, updatedAt: now }
+      // ponytail: two writes, no transaction. A failed insert leaves the tombstone lifted, which is what the owner asked for; the retry adds the row.
+      for (const old of revived) await req.memory.updateInstinct(email, old.id, { status: 'replaced', replacedBy: row.id, updatedAt: now }, ['forgotten'])
       await req.memory.insertInstinct(email, row)
       return { row }
     })

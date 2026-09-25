@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { forgetInstinct, isForgotten, keepInstinct, useMemory } from '@/lib/memory'
+import { createInstinct, forgetInstinct, isForgotten, keepInstinct, useMemory } from '@/lib/memory'
 import { getOnboarding, useOnboarding } from '@/lib/onboarding'
 import { recordMemoryResolution, type RememberReceipt } from './chatMemory'
 import { memoryText } from './memoryDisplay'
@@ -25,13 +25,15 @@ export function RememberLine({ receipt, messageId, at }: { receipt: RememberRece
     }
   }, [id, state, receipt.memory.state, messageId, update])
 
-  async function resolve(next: 'active' | 'forgotten') {
-    if (!id || busy) return
+  async function resolve(next: 'active' | 'forgotten' | 'again') {
+    if (busy || (!id && next !== 'again')) return
     setBusy(true); setError(null)
     try {
-      const instinct = next === 'active' ? await keepInstinct(id) : await forgetInstinct(id)
+      // Remember it again: the owner's own add lifts the tombstone the agent's remember could not.
+      const instinct = next === 'again' ? await createInstinct({ kind: receipt.kind, text: receipt.text, ...(receipt.until ? { until: receipt.until } : {}), source: 'user' })
+        : next === 'active' ? await keepInstinct(id!) : await forgetInstinct(id!)
       const resolved = instinct.status === 'active' ? 'active' : 'forgotten'
-      update({ chat: recordMemoryResolution(getOnboarding().chat, messageId, id, resolved) })
+      update({ chat: recordMemoryResolution(getOnboarding().chat, messageId, id ?? instinct.id, resolved, id ? undefined : receipt.text) })
       setConfirming(false)
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not save this memory. Try again.') }
     finally { setBusy(false) }
@@ -39,6 +41,7 @@ export function RememberLine({ receipt, messageId, at }: { receipt: RememberRece
 
   return <div className="memory-note memory-chat-line" role="group" aria-label="Agent memory">
     <span>{state === 'duplicate' ? 'Already known' : state === 'tombstone' ? 'You asked me to forget this' : state === 'forgotten' ? `Forgotten: ${memoryText(receipt.text)}` : state === 'changed' ? `Changed since: ${memoryText(receipt.text)} · see Rules` : `I'll remember: ${memoryText(text)}`}</span>
+    {state === 'tombstone' && <div className="memory-actions"><button type="button" className="btn memory-button" disabled={busy} onClick={() => { void resolve('again') }}>Remember it again</button></div>}
     {(state === 'pending' || state === 'active') && <div className="memory-actions">
       {state === 'pending' && <button type="button" className="btn memory-button" disabled={busy} onClick={() => { void resolve('active') }}>Keep</button>}
       {state === 'active' && <span>Kept</span>}

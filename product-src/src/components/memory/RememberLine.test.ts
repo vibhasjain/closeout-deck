@@ -63,11 +63,36 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('quiet chat memory line', () => {
-  it.each([['duplicate', 'Already known'], ['tombstone', 'You asked me to forget this']] as const)('renders the 409 %s line without actions', (state, copy) => {
+  it.each([['duplicate', 'Already known', []], ['tombstone', 'You asked me to forget this', ['Remember it again']]] as const)('renders the 409 %s line', (state, copy, buttons) => {
     const tree = render({ ...receipt, memory: { state } })
-    expect(label(tree)).toBe(copy)
-    expect(elements(tree).filter(node => node.type === 'button')).toEqual([])
+    expect(label(elements(tree).find(node => node.type === 'span')!.props.children)).toBe(copy)
+    expect(elements(tree).filter(node => node.type === 'button').map(node => label(node.props.children))).toEqual(buttons)
     expect(renderToStaticMarkup(tree)).toContain('aria-label="Agent memory"')
+  })
+
+  it('Remember it again posts the owner\'s own add, and the forgotten line becomes kept, also after a reload', async () => {
+    const refused: RememberReceipt = { type: 'remember', kind: 'context', text: instinct.text, until: '2099-01-31', memory: { state: 'tombstone' } }
+    const revived = { ...instinct, id: 'i_0a0b0c0d0e0f1011', source: 'user', status: 'active', until: '2099-01-31' } as const
+    store.chat = [{ id: 'agent-memory', role: 'agent', text: 'You asked me to forget that.', at: 1, actions: [refused] }]
+    vi.mocked(authedFetch).mockImplementationOnce(async () => {
+      store.snapshot = { ...store.snapshot, instincts: [revived] }
+      return Response.json({ instinct: revived }, { status: 201 })
+    })
+    click(render(refused), 'Remember it again')
+    await vi.waitFor(() => expect(store.update).toHaveBeenCalledTimes(1))
+    expect(authedFetch).toHaveBeenCalledExactlyOnceWith('/memory/instincts', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: 'context', text: instinct.text, until: '2099-01-31', source: 'user' }),
+    })
+    const [line] = memoryHistory(store.chat)[0].actions as RememberReceipt[]
+    expect(line.memory).toEqual({ id: revived.id, state: 'active' })
+    expect(label(render(line))).toBe(`I'll remember: ${instinct.text}KeptForget`)
+    // Canonical history is append-only: the fold alone brings the kept line back, and a Forget on it still sticks.
+    vi.mocked(authedFetch).mockResolvedValueOnce(Response.json({ instinct: { ...revived, status: 'forgotten' } }))
+    click(render(line), 'Forget')
+    click(render(line), 'Forget')
+    await vi.waitFor(() => expect(store.update).toHaveBeenCalledTimes(2))
+    expect((memoryHistory(store.chat)[0].actions as RememberReceipt[])[0].memory).toEqual({ id: revived.id, state: 'forgotten' })
   })
 
   it('keeps with PATCH status active and preserves the resolved state with its message', async () => {

@@ -405,6 +405,50 @@ test('POST /memory/instincts validates, forces chat to pending, defaults user to
   await until(async () => (await app.memory.listRuns(email)).length === 1, 'the chat nudge')
 })
 
+test('forget binds the agent, not the owner: a user add revives a forgotten fact, a chat remember never does', async t => {
+  const app = await serve(t)
+  const fact = 'Travis Reed signs off Lonestar Packaging time'
+  const first = (await app.call('POST', '/memory/instincts', { kind: 'context', text: fact, source: 'user' })).body.instinct
+  assert.equal((await app.call('POST', `/memory/instincts/${first.id}/forget`)).status, 200)
+  for (const source of ['chat', 'decisions']) {
+    assert.deepEqual(await app.call('POST', '/memory/instincts', { kind: 'context', text: 'travis reed signs off lonestar packaging time.', source }), { status: 409, body: { reason: 'tombstone' } }, source)
+  }
+  const revived = await app.call('POST', '/memory/instincts', { kind: 'context', text: 'Travis Reed, signs off Lonestar Packaging time!', source: 'user' })
+  assert.deepEqual([revived.status, revived.body.instinct.status, revived.body.instinct.source], [201, 'active', 'user'])
+  const old = (await app.memory.listInstincts(email)).find(item => item.id === first.id)!
+  assert.deepEqual([old.status, old.replacedBy, old.text], ['replaced', revived.body.instinct.id, fact], 'the forgotten row stays for history')
+  for (const source of ['chat', 'user']) {
+    assert.deepEqual(await app.call('POST', '/memory/instincts', { kind: 'context', text: fact, source }), { status: 409, body: { reason: 'duplicate' } }, `${source} after the revive`)
+  }
+  assert.deepEqual((await app.call('GET', '/memory')).body.instincts.map((item: { id: string }) => item.id), [revived.body.instinct.id])
+  assert.equal((await app.call('POST', `/memory/instincts/${revived.body.instinct.id}/forget`)).status, 200)
+  assert.deepEqual(await app.call('POST', '/memory/instincts', { kind: 'context', text: fact, source: 'chat' }), { status: 409, body: { reason: 'tombstone' } }, 'a second Forget sticks too')
+  assert.equal(app.agent.length, 0, 'no chat remember was stored, so nothing nudged consolidation')
+})
+
+test('consolidation still drops a tombstoned op, but a revived fact is no tombstone: never re-forgotten or re-added', async t => {
+  const app = await serve(t)
+  const fact = 'Travis Reed signs off Lonestar Packaging time', reply = block([{ op: 'add', kind: 'context', text: fact }])
+  app.setReply(reply)
+  const first = (await app.call('POST', '/memory/instincts', { kind: 'context', text: fact, source: 'user' })).body.instinct
+  await app.call('POST', `/memory/instincts/${first.id}/forget`)
+  await app.data.appendChat(email, [{ id: 'u1', role: 'user', text: `Remember that ${fact}`, at: Date.now() }])
+  assert.equal((await app.call('POST', '/memory/consolidate', { trigger: 'chat' })).status, 202)
+  await until(async () => (await app.memory.listRuns(email)).length === 1, 'the first run')
+  assert.match(app.agent[0].message, /## Forgotten[^\n]*\n- Travis Reed signs off Lonestar Packaging time\n/)
+  assert.deepEqual((await app.memory.listRuns(email))[0].dropped.map(item => item.reason), ['tombstone'])
+  const revived = (await app.call('POST', '/memory/instincts', { kind: 'context', text: fact, source: 'user' })).body.instinct
+  // A fresh server has a fresh chat throttle; it shares this account's memory and chat.
+  const again = await serve(t, { memoryStore: app.memory, dataStore: app.data })
+  again.setReply(reply)
+  await app.data.appendChat(email, [{ id: 'u2', role: 'user', text: `Remember that ${fact}`, at: Date.now() + 1_000 }])
+  assert.equal((await again.call('POST', '/memory/consolidate', { trigger: 'chat' })).status, 202)
+  await until(async () => (await app.memory.listRuns(email)).length === 2, 'the second run')
+  assert.match(again.agent[0].message, /## Forgotten[^\n]*\nNone\./, 'the revived text is no longer listed as forgotten')
+  assert.deepEqual((await app.memory.listRuns(email))[0].dropped.map(item => item.reason), ['duplicate'])
+  assert.deepEqual((await app.memory.listInstincts(email)).filter(live).map(item => [item.id, item.status]), [[revived.id, 'active']])
+})
+
 test('PATCH edits in place or keeps; forget is idempotent; ids are scoped to the session email', async t => {
   const app = await serve(t)
   assert.deepEqual((await app.call('GET', '/memory')).body, { instincts: [], proposals: [], lastRun: null })
@@ -462,7 +506,9 @@ test('GET /memory returns newest first with proposals; keep and dismiss decide a
   assert.deepEqual((await app.call('GET', '/memory')).body.proposals, [], 'kept and dismissed rules are never proposed again')
   await app.journey.upsertDecision(email, decision('2026-09-27', 'CS-16H'))
   assert.deepEqual((await app.call('GET', '/memory')).body.proposals, [], 'not even after a fourth dismissal')
-  assert.deepEqual((await app.call('POST', '/memory/instincts', { kind: 'autonomy', text: dismissed.body.instinct.text, source: 'user' })).body, { reason: 'tombstone' })
+  assert.deepEqual((await app.call('POST', '/memory/instincts', { kind: 'autonomy', text: dismissed.body.instinct.text, source: 'chat' })).body, { reason: 'tombstone' })
+  assert.equal((await app.call('POST', '/memory/instincts', { kind: 'autonomy', text: dismissed.body.instinct.text, source: 'user' })).status, 201, 'the owner may add it back')
+  assert.deepEqual((await app.call('GET', '/memory')).body.proposals, [], 'the rule stays decided')
   await until(async () => (await app.memory.listRuns(email)).length === 1, 'the chat nudge')
 })
 
@@ -758,4 +804,12 @@ test('chat, onboard and delegate prompts: memory is read-only, remember is an ac
   }
   assert.doesNotMatch(consolidation, /"source":/, 'a single-trigger run has no source field')
   assert.match(memoryConsolidationPrompt(['chat', 'send']), /"source":"chat"\|"send"/)
+})
+
+test('chat, onboard and delegate prompts: a forgotten fact is never promised back; the owner brings it back from the line or Rules', () => {
+  for (const prompt of [systemPrompt({}), onboardPrompt({}), delegatePrompt({})]) {
+    assert.match(prompt, /If the user asks you to remember something on the Forgotten list, still append remember, but never say you will remember it: say it was forgotten at their request/)
+    assert.match(prompt, /bring it back with Remember it again on the line under your reply or by adding it on Rules/)
+    assert.match(prompt, /Never say a memory was saved, kept or brought back/)
+  }
 })
