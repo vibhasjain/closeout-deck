@@ -4,7 +4,10 @@ import { recentCycles } from '../../src/lib/cycles.ts'
 import { DataError, DataService, dateKey, localToday } from '../src/data.ts'
 import { createMemoryDataStore } from '../src/datastore.ts'
 import type { EntryQuery } from '../src/datastore.ts'
+import { parseFile } from '../src/ingest.ts'
+import type { MappingSpec } from '../src/ingest.ts'
 import { calendarFrom } from '../src/pipeline.ts'
+import { generateSample } from '../src/sampledata.ts'
 
 const email = 'data-integration@example.com'
 const now = new Date('2026-09-22T12:00:00Z')
@@ -109,22 +112,41 @@ test('a connect reads only its own set and dates for duplicates, and the full en
   assert.deepEqual(queries, [{ set: 1, from: files[0].firstDate, to: files[0].lastDate }, {}])
 })
 
-test('a connect interrupted mid-ingest is resumed by the retry, and a file that is not normalized is never reported as connected', async () => {
+test('an entry insert that fails mid-batch leaves the file received; the next connect re-ingests it under its id and ends normalized', async () => {
   const store = createMemoryDataStore()
   let fail = true
-  const service = new DataService({ ...store, replaceEntries: async (...args) => { if (fail) throw new Error('data_entries_write_failed'); return store.replaceEntries(...args) } })
+  // The worst case: one batch landed, the next failed, and no rollback ran.
+  const service = new DataService({ ...store, replaceEntries: async (account, fileId, entries) => {
+    if (!fail) return store.replaceEntries(account, fileId, entries)
+    await store.replaceEntries(account, fileId, entries.slice(0, 1000))
+    throw new Error('data_entries_write_failed')
+  } })
   const body = { set: 2, system: 'UKG', site: 'Pacific Cold Storage' }
   await assert.rejects(service.connect(email, body, {}, now), /data_entries_write_failed/)
   const [stuck] = await store.listFiles(email)
   assert.equal(stuck.status, 'received')
+  assert.equal((await store.listEntries(email)).length, 0)
+  assert.equal((await store.listEntries(email, { fileId: stuck.id, includeUnnormalized: true })).length, 1000)
   fail = false
   const retry = await service.connect(email, body, {}, now)
   assert.equal(retry.files[0].id, stuck.id); assert.equal(retry.files[0].status, 'normalized')
+  assert.ok(retry.files[0].entryCount! > 6000); assert.deepEqual(retry.cycles, ['2026-09-20'])
   assert.equal((await store.listFiles(email)).length, 1)
-  assert.equal((await store.listEntries(email, { fileId: stuck.id })).length, retry.files[0].entryCount)
-  assert.deepEqual(retry.cycles, ['2026-09-20'])
-  await store.upsertFile(email, { ...(await store.getFile(email, stuck.id))!, status: 'needs_mapping' })
-  await assert.rejects(service.connect(email, body, {}, now), (error: unknown) => error instanceof DataError && error.message === 'connect_incomplete')
+  assert.equal((await store.listEntries(email, { fileId: stuck.id, includeUnnormalized: true })).length, retry.files[0].entryCount)
+  assert.equal((await store.listEntries(email)).filter(e => e.set === 2).length, retry.files[0].entryCount)
+})
+
+test('a connect whose file does not end normalized is an error, on the first attempt and on the retry', async () => {
+  const store = createMemoryDataStore(), service = new DataService(store)
+  const ukg = generateSample(recentCycles(calendarFrom({}), 2, localToday([], {}, now))[1]).files.find(f => f.name.startsWith('ukg'))!
+  // A cached layout the sample no longer fits: the ingest ends at needs_mapping.
+  await store.ensureAccount(email)
+  await store.upsertMapping(email, { id: 'map_broken', fingerprint: parseFile(ukg.bytes, ukg.name).fingerprint!, spec: { source: { system: 'UKG' } } as MappingSpec, author: 'agent', version: 2, updatedAt: now.toISOString() })
+  const body = { set: 2, system: 'UKG', site: 'Pacific Cold Storage' }
+  const incomplete = (error: unknown) => error instanceof DataError && error.status === 500 && error.message === 'connect_incomplete'
+  await assert.rejects(service.connect(email, body, {}, now), incomplete)
+  assert.equal((await store.listFiles(email))[0].status, 'needs_mapping')
+  await assert.rejects(service.connect(email, body, {}, now), incomplete)
 })
 
 test('future exports are assigned to future cycles while preserving the biweekly anchor', async () => {
