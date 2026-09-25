@@ -4,7 +4,7 @@ import { Children, isValidElement, type EffectCallback, type ReactElement, type 
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { authedFetch } from '@/lib/api'
-import type { Instinct, MemorySnapshot } from '@/lib/memory'
+import { forgetInstinct, type Instinct, type MemorySnapshot } from '@/lib/memory'
 import type { ChatMessage, Onboarding } from '@/lib/onboarding'
 import { RememberLine } from './RememberLine'
 import { memoryHistory, type RememberReceipt } from './chatMemory'
@@ -12,7 +12,7 @@ import { memoryHistory, type RememberReceipt } from './chatMemory'
 const hooks = vi.hoisted(() => ({ cursor: 0, slots: [] as unknown[], effects: [] as EffectCallback[] }))
 const store = vi.hoisted(() => ({
   snapshot: { instincts: [], proposals: [], lastRun: null } as MemorySnapshot,
-  loaded: true, error: null as string | null, chat: [] as ChatMessage[], update: vi.fn(),
+  loaded: true, readAt: 2, error: null as string | null, chat: [] as ChatMessage[], update: vi.fn(),
 }))
 vi.mock('react', async importOriginal => ({
   ...await importOriginal<typeof import('react')>(),
@@ -39,7 +39,7 @@ const elements = (node: ReactNode): ReactElement<Props>[] => Children.toArray(no
 const label = (node: ReactNode): string => Children.toArray(node).map(child => isValidElement<Props>(child) ? label(child.props.children) : String(child)).join('')
 function render(value = receipt) {
   hooks.cursor = 0; hooks.effects = []
-  return RememberLine({ receipt: value, messageId: 'agent-memory' })
+  return RememberLine({ receipt: value, messageId: 'agent-memory', at: 1 })
 }
 function click(tree: ReactNode, text: string) { elements(tree).find(node => node.type === 'button' && label(node.props.children) === text)!.props.onClick!() }
 
@@ -47,7 +47,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   hooks.slots = []
   store.snapshot = { instincts: [instinct], proposals: [], lastRun: null }
-  store.loaded = true; store.error = null
+  store.loaded = true; store.readAt = 2; store.error = null
   store.chat = [{ id: 'agent-memory', role: 'agent', text: 'Understood.', at: 1, actions: [receipt] }]
   store.update.mockImplementation((patch: Partial<Onboarding> | ((state: Onboarding) => Partial<Onboarding>)) => {
     const change = typeof patch === 'function' ? patch({ chat: store.chat } as Onboarding) : patch
@@ -100,20 +100,34 @@ describe('quiet chat memory line', () => {
     expect(confirm).not.toHaveBeenCalled()
   })
 
-  it('keeps the saved state until a memory read succeeds, then persists changes made on Rules', () => {
+  it('keeps the saved state until a memory read succeeds, and never records a Forget the owner did not make', async () => {
+    // Its own id: other tests in this file confirm a Forget of the shared one.
+    const replaced = { ...receipt, memory: { id: 'i_fedcba9876543210', state: 'pending' as const } }
+    store.chat = [{ id: 'agent-memory', role: 'agent', text: 'Understood.', at: 1, actions: [replaced] }]
     store.snapshot = { instincts: [], proposals: [], lastRun: null }
     store.loaded = false
-    expect(label(render())).toContain("I'll remember:")
+    expect(label(render(replaced))).toContain("I'll remember:")
     hooks.effects.forEach(effect => effect())
-    expect(store.update).not.toHaveBeenCalled()
     store.loaded = true; store.error = 'Offline'
-    expect(label(render())).toContain("I'll remember:")
+    expect(label(render(replaced))).toContain("I'll remember:")
+    hooks.effects.forEach(effect => effect())
+    // A read issued before this message cannot know its row yet (another device's correction arriving on focus).
+    store.error = null; store.readAt = 0
+    expect(label(render(replaced))).toContain("I'll remember:")
+    expect(elements(render(replaced)).filter(node => node.type === 'button').map(node => label(node.props.children))).toEqual(['Keep', 'Forget'])
+    hooks.effects.forEach(effect => effect())
+    // A newer read without the row: consolidation replaced it. That is not a Forget.
+    store.readAt = 2
+    expect(label(render(replaced))).toBe(`Changed since: ${instinct.text} · see Rules`)
+    expect(elements(render(replaced)).filter(node => node.type === 'button')).toEqual([])
     hooks.effects.forEach(effect => effect())
     expect(store.update).not.toHaveBeenCalled()
-    store.error = null
-    expect(label(render())).toBe(`Forgotten: ${instinct.text}`)
+    // Forget on Rules is confirmed by the server, so the line records it.
+    vi.mocked(authedFetch).mockResolvedValueOnce(Response.json({ instinct: { ...instinct, id: replaced.memory.id, status: 'forgotten' } }))
+    await forgetInstinct(replaced.memory.id)
+    expect(label(render(replaced))).toBe(`Forgotten: ${instinct.text}`)
     hooks.effects.forEach(effect => effect())
-    expect(memoryHistory(store.chat)[0].actions).toEqual([{ ...receipt, memory: { id: instinct.id, state: 'forgotten' } }])
+    expect(memoryHistory(store.chat)[0].actions).toEqual([{ ...replaced, memory: { id: replaced.memory.id, state: 'forgotten' } }])
   })
 
   it('does not persist active when a Keep settles after Forget in another pane', async () => {

@@ -6,7 +6,7 @@ import { createInstinct, MemoryError, type Instinct } from '@/lib/memory'
 import { flushOnboarding, getOnboarding, updateOnboarding } from '@/lib/onboarding'
 import { memoryRuleLabel } from './memoryDisplay'
 
-const hooks = vi.hoisted(() => ({ cursor: 0, slots: [] as unknown[], instincts: [] as Instinct[], loaded: true, declined: [] as string[] }))
+const hooks = vi.hoisted(() => ({ cursor: 0, slots: [] as unknown[], instincts: [] as Instinct[], loaded: true, readError: null as string | null, declined: [] as string[] }))
 vi.mock('react', async original => ({
   ...await original<typeof import('react')>(),
   useState: <T>(initial: T) => {
@@ -25,7 +25,7 @@ vi.mock('@/lib/onboarding', () => ({
 vi.mock('@/lib/memory', async original => ({
   ...await original<typeof import('@/lib/memory')>(),
   createInstinct: vi.fn(),
-  useMemory: () => ({ snapshot: { instincts: hooks.instincts, proposals: [], lastRun: null }, loaded: hooks.loaded }),
+  useMemory: () => ({ snapshot: { instincts: hooks.instincts, proposals: [], lastRun: null }, loaded: hooks.loaded, error: hooks.readError }),
 }))
 type Props = { children?: ReactNode; onClick?: () => void }
 const elements = (node: ReactNode): ReactElement<Props>[] => Children.toArray(node).flatMap(child => isValidElement<Props>(child) ? [child, ...elements(child.props.children)] : [])
@@ -38,7 +38,7 @@ const click = async () => {
   for (let i = 0; i < 10; i++) await Promise.resolve()
 }
 beforeEach(() => {
-  hooks.slots = []; hooks.instincts = []; hooks.loaded = true; hooks.declined = []
+  hooks.slots = []; hooks.instincts = []; hooks.loaded = true; hooks.readError = null; hooks.declined = []
   vi.clearAllMocks()
   vi.stubGlobal('localStorage', { getItem: vi.fn(() => null), setItem: vi.fn() })
   vi.mocked(createInstinct).mockResolvedValue({ id: 'instinct', kind: 'autonomy', source: 'user', text: `Approves ${label} by hand`, status: 'active', until: null, ruleId: rule.id, at: '2026-09-25T12:00:00Z' })
@@ -62,6 +62,12 @@ describe('existing automatic-approval offer', () => {
     hooks.loaded = true
     hooks.instincts = [{ id: 'instinct', kind: 'autonomy', source: 'user', text: `Approves ${label} by hand`, status: 'active', until: null, ruleId: rule.id, at: '2026-09-25T12:00:00Z' }]
     expect(render()).toBeNull()
+  })
+  it('still offers automatic approval when memory cannot be read', () => {
+    hooks.loaded = false; hooks.readError = 'Memory could not be loaded. Try again.'
+    const tree = render()
+    expect(tree).not.toBeNull()
+    expect(elements(tree).map(({ props }) => props.children)).toEqual(expect.arrayContaining(['Yes', 'Not now']))
   })
   it('retains the offer and reports a failed save, but dismisses a known tombstone', async () => {
     vi.mocked(createInstinct).mockRejectedValueOnce(new Error('Connection interrupted'))

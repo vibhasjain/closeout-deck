@@ -1,19 +1,23 @@
 import { useEffect, useState } from 'react'
-import { forgetInstinct, keepInstinct, useMemory } from '@/lib/memory'
+import { forgetInstinct, isForgotten, keepInstinct, useMemory } from '@/lib/memory'
 import { getOnboarding, useOnboarding } from '@/lib/onboarding'
 import { recordMemoryResolution, type RememberReceipt } from './chatMemory'
 import { memoryText } from './memoryDisplay'
 import './memory.css'
 
-export function RememberLine({ receipt, messageId }: { receipt: RememberReceipt; messageId: string }) {
+export function RememberLine({ receipt, messageId, at }: { receipt: RememberReceipt; messageId: string; at: number }) {
   const [, update] = useOnboarding()
-  const { snapshot, loaded, error: readError } = useMemory()
+  const { snapshot, loaded, readAt, error: readError } = useMemory()
   const [busy, setBusy] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const id = receipt.memory.id
   const current = snapshot.instincts.find(row => row.id === id)
-  const state = !id || !loaded || readError ? receipt.memory.state : current ? current.status : 'forgotten'
+  // Absence is not a Forget: consolidation may have replaced the row, or the read predates it. Only a confirmed Forget is recorded.
+  const state = !id || receipt.memory.state === 'forgotten' ? receipt.memory.state
+    : current ? current.status
+    : isForgotten(id) ? 'forgotten'
+    : loaded && !readError && readAt > at ? 'changed' : receipt.memory.state
   const text = current?.text ?? receipt.text
   useEffect(() => {
     if (id && (state === 'active' || state === 'forgotten') && state !== receipt.memory.state) {
@@ -34,7 +38,7 @@ export function RememberLine({ receipt, messageId }: { receipt: RememberReceipt;
   }
 
   return <div className="memory-note memory-chat-line" role="group" aria-label="Agent memory">
-    <span>{state === 'duplicate' ? 'Already known' : state === 'tombstone' ? 'You asked me to forget this' : state === 'forgotten' ? `Forgotten: ${memoryText(receipt.text)}` : `I'll remember: ${memoryText(text)}`}</span>
+    <span>{state === 'duplicate' ? 'Already known' : state === 'tombstone' ? 'You asked me to forget this' : state === 'forgotten' ? `Forgotten: ${memoryText(receipt.text)}` : state === 'changed' ? `Changed since: ${memoryText(receipt.text)} · see Rules` : `I'll remember: ${memoryText(text)}`}</span>
     {(state === 'pending' || state === 'active') && <div className="memory-actions">
       {state === 'pending' && <button type="button" className="btn memory-button" disabled={busy} onClick={() => { void resolve('active') }}>Keep</button>}
       {state === 'active' && <span>Kept</span>}

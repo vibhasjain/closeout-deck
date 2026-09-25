@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { viewerSession } from '@/lib/viewerSession'
 import { API_BASE } from '@/lib/api'
-import { createInstinct, dismissProposal, editInstinct, forgetInstinct, getMemory, getMemorySnapshot, keepInstinct, keepProposal, MemoryError, refreshMemory, scheduleMemoryRefresh, subscribeMemory, watchMemory, type Instinct, type MemorySnapshot } from './memory'
+import { createInstinct, dismissProposal, editInstinct, forgetInstinct, getMemory, getMemorySnapshot, isForgotten, keepInstinct, keepProposal, MemoryError, refreshMemory, scheduleMemoryRefresh, subscribeMemory, watchMemory, type Instinct, type MemorySnapshot } from './memory'
 
 vi.mock('@/lib/viewerSession', () => ({ viewerSession: vi.fn(), expireSession: vi.fn() }))
 const fetchMock = vi.fn<typeof fetch>()
@@ -48,6 +48,8 @@ describe('memory wire client', () => {
       [`${API_BASE}/memory/instincts/${row.id}/forget`, 'POST', undefined],
     ])
     expect(getMemorySnapshot().instincts).toEqual([])
+    expect(isForgotten(row.id)).toBe(true)
+    expect(isForgotten('i_never_forgotten')).toBe(false)
   })
   it('keeps and dismisses proposals with no body and removes the decided suggestion', async () => {
     await refreshMemory()

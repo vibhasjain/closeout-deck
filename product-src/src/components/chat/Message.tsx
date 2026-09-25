@@ -34,7 +34,7 @@ export function Message({ message, onAnswer, liveCard = -1 }: { message: ChatMes
         {skipped && <p className="chat-skipped" role="status">{skipped.text}{skipped.retry && onAnswer && <> <button type="button" className="lnk" onClick={() => onAnswer('Try saving that again')}>Tap to retry</button></>}</p>}
         {!!message.pendingActions?.length && <p role="status">Pending: {message.pendingActions.length} actions</p>}
         {message.actions?.map((action, index) => {
-          if (isRememberReceipt(action)) return <RememberLine key={index} receipt={action} messageId={message.id} />
+          if (isRememberReceipt(action)) return <RememberLine key={index} receipt={action} messageId={message.id} at={message.at} />
           const summary = actionSummary(action)
           return summary === null ? null : (
             <div key={index} className="chat-action">

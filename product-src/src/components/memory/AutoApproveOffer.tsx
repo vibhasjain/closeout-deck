@@ -12,7 +12,7 @@ function decline(ruleId: string) {
 }
 
 export function AutoApproveOffer({ ruleId, count, onAccept, onDismiss }: { ruleId: string; count: number; onAccept: () => void; onDismiss: () => void }) {
-  const { snapshot, loaded } = useMemory()
+  const { snapshot, loaded, error: readError } = useMemory()
   const [state] = useOnboarding()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -37,7 +37,8 @@ export function AutoApproveOffer({ ruleId, count, onAccept, onDismiss }: { ruleI
     } finally { setSaving(false) }
   }
 
-  if (!label || !loaded || (!error && (known || state.declinedAutoApproveRules?.includes(ruleId)))) return null
+  // Wait for the first read, but a failed read must not take the offer (and its Yes) away.
+  if (!label || (!loaded && !readError) || (!error && (known || state.declinedAutoApproveRules?.includes(ruleId)))) return null
   return <div className="decision-learn memory-offer">
     <span>Approved {count.toLocaleString()} · {label}. Approve these automatically from now on?</span>
     <Btn className="memory-button" disabled={saving} onClick={onAccept}>Yes</Btn>

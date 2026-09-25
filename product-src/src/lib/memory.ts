@@ -31,8 +31,9 @@ export class MemoryError extends Error {
 
 const account = () => viewerSession()?.email ?? 'development'
 const empty: MemorySnapshot = { instincts: [], proposals: [], lastRun: null }
-interface MemoryState { snapshot: MemorySnapshot; loading: boolean; loaded: boolean; error: string | null }
-const initial: MemoryState = { snapshot: empty, loading: false, loaded: false, error: null }
+/** `readAt`: when the applied read was issued. A row created after it cannot be in the snapshot yet. */
+interface MemoryState { snapshot: MemorySnapshot; loading: boolean; loaded: boolean; readAt: number; error: string | null }
+const initial: MemoryState = { snapshot: empty, loading: false, loaded: false, readAt: 0, error: null }
 const states = new Map<string, MemoryState>()
 const revisions = new Map<string, number>()
 const requests = new Map<string, Promise<void>>()
@@ -43,6 +44,8 @@ export const subscribeMemory = (listener: () => void) => { listeners.add(listene
 const state = (owner: string) => states.get(owner) ?? initial
 function publish(owner: string, value: MemoryState) { states.set(owner, value); listeners.forEach(listener => listener()) }
 export const getMemorySnapshot = () => state(account()).snapshot
+/** True only when this client saw the server confirm the Forget; absence from a read is not proof. */
+export const isForgotten = (id: string) => !!tombstones.get(account())?.has(id)
 const changedAccount = () => new MemoryError(409, undefined, 'The account changed. Reopen memory and try again.')
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -65,13 +68,13 @@ export const getMemory = () => request<MemorySnapshot>('/memory')
 export function refreshMemory(): Promise<void> {
   const owner = account(), pending = requests.get(owner)
   if (pending) return pending
-  const revision = revisions.get(owner) ?? 0
+  const revision = revisions.get(owner) ?? 0, readAt = Date.now()
   publish(owner, { ...state(owner), loading: true, error: null })
   let stale = false
   const work = getMemory().then(snapshot => {
     if (owner !== account()) return
     stale = revision !== (revisions.get(owner) ?? 0)
-    if (!stale) publish(owner, { snapshot: { ...snapshot, instincts: snapshot.instincts.filter(row => !tombstones.get(owner)?.has(row.id)) }, loading: false, loaded: true, error: null })
+    if (!stale) publish(owner, { snapshot: { ...snapshot, instincts: snapshot.instincts.filter(row => !tombstones.get(owner)?.has(row.id)) }, loading: false, loaded: true, readAt, error: null })
   }).catch((cause: unknown) => {
     if (owner === account()) publish(owner, { ...state(owner), loading: false, error: cause instanceof Error ? cause.message : 'Memory could not be loaded. Try again.' })
   }).finally(() => {
@@ -104,7 +107,6 @@ async function mutate(path: string, init: RequestInit, proposalRuleId?: string):
 }
 export const createInstinct = (input: CreateInstinct) => mutate('/memory/instincts', json('POST', input))
 export const editInstinct = (id: string, patch: EditInstinct) => mutate(instinctPath(id), json('PATCH', patch))
-export const updateInstinct = editInstinct
 export const keepInstinct = (id: string) => editInstinct(id, { status: 'active' })
 export const forgetInstinct = (id: string) => mutate(`${instinctPath(id)}/forget`, { method: 'POST' })
 export const keepProposal = (ruleId: string) => mutate(`/memory/proposals/${encodeURIComponent(ruleId)}/keep`, { method: 'POST' }, ruleId)
