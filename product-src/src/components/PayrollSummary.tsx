@@ -3,6 +3,7 @@ import { RULES } from '@/bench/engine.js'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronDown, ChevronRight, Mail } from 'lucide-react'
 import { EmailIssue } from '@/components/EmailIssue'
+import { AutoApproveOffer } from '@/components/memory/AutoApproveOffer'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useOverlay } from '@/components/shell/Overlay'
 import { Btn, PayDelta } from '@/components/ui'
@@ -170,11 +171,9 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
             {action(resolution, items, count)}
           </span>
         </div>
-        {resolution === 'proposed' && learned && <div className="decision-learn">
-          <span>Approved {learned.count.toLocaleString()} · {kindLabel(learned.ruleId)}. Approve these automatically from now on?</span>
-          <Btn onClick={() => { rememberKind(learned.ruleId); setLearning(null); toast(`Decision remembered for ${learned.ruleId}`) }}>Yes</Btn>
-          <Btn onClick={() => setLearning(null)}>Not Now</Btn>
-        </div>}
+        {resolution === 'proposed' && learned && <AutoApproveOffer ruleId={learned.ruleId} count={learned.count}
+          onAccept={() => { rememberKind(learned.ruleId); setLearning(null); toast(`Decision remembered for ${kindLabel(learned.ruleId)}`) }}
+          onDismiss={() => setLearning(null)} />}
         {items.length === 0 ? <p className="r-note">{HEADINGS[resolution].empty}</p> : items.map((group) => {
           const expanded = open.includes(key(group))
           const toggle = () => setOpen(expanded ? open.filter((item) => item !== key(group)) : [...open, key(group)])

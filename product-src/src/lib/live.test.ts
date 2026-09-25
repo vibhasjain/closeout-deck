@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { authedFetch } from '@/lib/api'
 import { stream } from '@/lib/chat'
 import { viewerSession } from '@/lib/viewerSession'
+import * as memory from '@/lib/memory'
 import { CALL_OPENER, MICROPHONE_CONSTRAINTS, callEndTranscript, startCall, stitchTranscript } from './live'
 import type { CallHandle, LiveEvent } from './live'
 
@@ -65,6 +66,24 @@ const call = (extra: Partial<Parameters<typeof startCall>[0]> = {}) => {
 }
 
 describe('GPT-Live call lifecycle', () => {
+  it('schedules the two memory reads once after a successful call end, including save retries', async () => {
+    const schedule = vi.spyOn(memory, 'scheduleMemoryRefresh').mockImplementation(() => {})
+    call(); await started()
+    const ending = handle!.hangup()
+    channel().emit({ type: 'session.closed' }); await ending
+    await handle!.retrySave()
+    expect(schedule).toHaveBeenCalledExactlyOnceWith('development')
+  })
+
+  it('does not schedule memory learning for a call missing from the server', async () => {
+    const schedule = vi.spyOn(memory, 'scheduleMemoryRefresh').mockImplementation(() => {})
+    call(); await started()
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ error: 'not_found' }), { status: 404 }))
+    const ending = handle!.hangup()
+    channel().emit({ type: 'session.closed' }); await ending
+    expect(schedule).not.toHaveBeenCalled()
+  })
+
   it('gathers ICE before POST, asks for echo cancellation, and sends nothing before session.started', async () => {
     FakePeer.iceState = 'gathering'
     call(); await flush()

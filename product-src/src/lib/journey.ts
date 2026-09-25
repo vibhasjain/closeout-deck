@@ -3,6 +3,7 @@ import { authedFetch } from '@/lib/api'
 import { getCycle, getDataSnapshot, invalidate, onDataInvalidated, publishCycle, refreshCycle, refreshCycleList, useData, type CyclePayload, type CycleReadResult, type DataSnapshot, type FindingGroup } from '@/lib/data'
 import { viewerSession } from '@/lib/viewerSession'
 import { flushOnboarding } from '@/lib/onboarding'
+import { scheduleMemoryRefresh } from '@/lib/memory'
 
 export type JourneyFormName = 'connect' | 'gaps' | 'send' | 'dispute'
 export interface NextStep {
@@ -163,6 +164,7 @@ export async function recordMessage(threadId: string, input: { dir: JourneyMessa
   return result
 }
 export async function sendPayroll(cycleId: string, input: { destination?: string } = {}): Promise<SendResult> {
+  const owner = account()
   const response = await transport(`${cyclePath(cycleId)}/send`, input)
   if (response.status === 409 || response.status === 422) {
     const body = await response.json()
@@ -170,6 +172,7 @@ export async function sendPayroll(cycleId: string, input: { destination?: string
     return { ...body, status: response.status } as SendResult
   }
   const body = await read<{ batch: JourneyBatch; csvUrl: string }>(response)
+  if (response.status === 201) scheduleMemoryRefresh(owner)
   await invalidate()
   return { status: 201, ...body }
 }

@@ -1,8 +1,10 @@
 import { authedFetch } from '@/lib/api'
 import type { FirmFacts, Onboarding, OnboardingSource, OnboardTopic, PayrollProfile, ProfileField, ProfileValue } from '@/lib/onboarding'
 import type { JourneyFormName } from '@/lib/journey'
+import type { MemoryKind } from '@/lib/memory'
 
 export type Action =
+  | { type: 'remember'; kind: MemoryKind; text: string; until?: string }
   | { type: 'approve'; cycleId: string; groupId: string }
   | { type: 'dismiss'; cycleId: string; groupId: string; reason: string }
   | { type: 'open_form'; form: JourneyFormName; cycleId: string }

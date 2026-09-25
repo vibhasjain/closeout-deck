@@ -6,6 +6,7 @@ import { Loader2, Mic, Phone, Plus, Send, Square } from 'lucide-react'
 import { ThinkingOrb } from 'thinking-orbs'
 import { Chip } from '@/components/ui'
 import { Message } from '@/components/chat/Message'
+import { memoryHistory } from '@/components/memory/chatMemory'
 import { CallBar } from '@/components/voice/CallBar'
 import { useVoiceCall } from '@/lib/useVoiceCall'
 import { useDictation } from '@/lib/useDictation'
@@ -139,7 +140,8 @@ export function ChatPane({ scope: explicitScope, headerAction, onCallingChange }
   const calling = !!voice.snapshot && voice.snapshot.status !== 'ended'
   // Keep "Show all" in the URL, but only for the case where it was chosen.
   const showAll = !scope || (params.get('chat') === 'all' && params.get('chatScope') === scope)
-  const messages = showAll ? state.chat : state.chat.filter((message) => message.scope === scope)
+  const history = memoryHistory(state.chat)
+  const messages = showAll ? history : history.filter((message) => message.scope === scope)
   const liveCard = newestActionableCard(messages)
   const showRequest = showAll || requestScope === scope
 
@@ -192,7 +194,7 @@ export function ChatPane({ scope: explicitScope, headerAction, onCallingChange }
     const message = text.trim()
     if (!message || calling) return
     if (busy.current) { if (options) queued.current.push(options); return }
-    const previous = latest.current.chat.at(-1)
+    const previous = memoryHistory(latest.current.chat).at(-1)
     // Only a typed answer to the agent's mapping question continues an ingest turn; any other send is a chat turn.
     const answersMapping = !options && previous?.role === 'agent' && previous.cards?.some(card => card.kind === 'question')
     const fileIds = options?.mode === 'ingest' && options.context && 'fileIds' in options.context
@@ -282,8 +284,8 @@ export function ChatPane({ scope: explicitScope, headerAction, onCallingChange }
             }
             const action = validated.actions[index]
             try {
-              if (action.type !== 'open_form') await applyAction(action, update, navigate, params, context.cycle?.id)
-              applied.push(action)
+              const result = action.type !== 'open_form' ? await applyAction(action, update, navigate, params, context.cycle?.id) : undefined
+              applied.push(result ?? action)
             } catch (cause) { skipped.push(`${action.type}: ${cause instanceof Error ? cause.message : 'could not apply'}`) }
             // Even when Stop arrives during a request, retain the outcome of that request.
             saveProgress(validated.actions.slice(index + 1))

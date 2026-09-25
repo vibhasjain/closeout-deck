@@ -7,6 +7,7 @@ import { FREQUENCIES, WEEKDAYS, ONBOARD_TOPICS, PROFILE_FIELDS, effectiveAuthori
 import type { CustomDeskRule, FirmFacts, Onboarding } from '@/lib/onboarding'
 import { invalidate } from '@/lib/data'
 import { decide } from '@/lib/journey'
+import { memoryHistory, rememberAction, validRememberAction } from '@/components/memory/chatMemory'
 
 export type ChatUpdate = (patch: Partial<Onboarding> | ((state: Onboarding) => Partial<Onboarding>)) => void
 
@@ -116,6 +117,7 @@ function isFirmPatch(value: unknown) {
 export function isAction(value: unknown): value is Action {
   if (!isRecord(value)) return false
   switch (value.type) {
+    case 'remember': return validRememberAction(value)
     case 'approve':
     case 'dismiss':
       return meaningfulString(value.cycleId) && meaningfulString(value.groupId)
@@ -185,16 +187,17 @@ export function authorityPatch(patch: Partial<Onboarding['authority']>): Partial
 
 export function applyAction(action: Action, update: ChatUpdate, navigate: NavigateFunction, params: URLSearchParams, cycleId?: string) {
   switch (action.type) {
+    case 'remember': return rememberAction(action)
     case 'approve':
     case 'dismiss':
       return decide(action.cycleId, { groupId: action.groupId, decision: action.type === 'approve' ? 'approved' : 'dismissed', ...(action.type === 'dismiss' ? { reason: action.reason } : {}) }).then(() => {})
     case 'open_form':
       update(state => {
-        const latest = state.chat.at(-1)
+        const latest = memoryHistory(state.chat).at(-1)
         if (!latest || latest.role !== 'agent') return {}
         const card: Card = { kind: 'form', form: action.form, cycleId: action.cycleId }
         if (latest.cards?.some(item => item.kind === 'form' && item.form === action.form && item.cycleId === action.cycleId)) return {}
-        return { chat: [...state.chat.slice(0, -1), { ...latest, cards: limitCards([...(latest.cards ?? []), card]).cards }] }
+        return { chat: state.chat.map(message => message.id === latest.id ? { ...message, cards: limitCards([...(message.cards ?? []), card]).cards } : message) }
       })
       break
     case 'set_fact':
@@ -312,6 +315,7 @@ export function actionSummary(value: unknown): string | null {
   if (!value || typeof value !== 'object' || !('type' in value)) return null
   const action = value as Record<string, unknown>
   switch (action.type) {
+    case 'remember': return null
     case 'approve': return `Approved ${String(action.groupId)}`
     case 'dismiss': return `Dismissed ${String(action.groupId)} · ${String(action.reason)}`
     case 'open_form': return null

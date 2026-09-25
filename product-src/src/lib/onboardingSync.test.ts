@@ -23,6 +23,21 @@ function harness(initial: Partial<Onboarding> = {}, persisted: SyncPatch = {}, s
     change: (patch: Partial<Onboarding>) => { state = { ...state, ...patch }; sync.changed(patch) } }
 }
 describe('canonical onboarding state', () => {
+  it('syncs declined automatic-approval offers across devices and clears them for an account without that preference', async () => {
+    const one = harness()
+    await one.sync.hydrate()
+    one.change({ declinedAutoApproveRules: ['CS-01'] })
+    await one.sync.flush()
+    const saved = one.puts()[0][1]!.doc
+    expect(saved.declinedAutoApproveRules).toEqual(['CS-01'])
+    const two = harness()
+    two.remote(saved)
+    await two.sync.hydrate()
+    expect(two.state().declinedAutoApproveRules).toEqual(['CS-01'])
+    two.remote({})
+    await two.sync.pull()
+    expect(two.state().declinedAutoApproveRules).toEqual([])
+  })
   it('never pushes untouched defaults on first hydrate or focus/flush', async () => {
     const h = harness()
     await h.sync.hydrate(); await h.sync.flush(); await h.sync.pull(); await vi.advanceTimersByTimeAsync(400)

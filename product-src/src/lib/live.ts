@@ -3,6 +3,7 @@ import { parseActions, stream } from '@/lib/chat'
 import type { Action, ChatMode, TurnContext } from '@/lib/chat'
 import { isAction } from '@/lib/chatActions'
 import { viewerSession } from '@/lib/viewerSession'
+import { scheduleMemoryRefresh } from '@/lib/memory'
 
 export const MICROPHONE_CONSTRAINTS = { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } } as const
 export const CALL_OPENER = 'The call just connected and the user is waiting. Say your opener now.'
@@ -130,6 +131,7 @@ let activeCall: CallHandle | null = null
 
 export function startCall(options: CallOptions): CallHandle {
   const bearerToken = viewerSession()?.sessionToken
+  const owner = viewerSession()?.email ?? 'development'
   let level = 0
   const levelListeners = new Set<(value: number) => void>()
   const levelSource: CallLevelSource = { get: () => level, subscribe: listener => { levelListeners.add(listener); return () => { levelListeners.delete(listener) } } }
@@ -182,6 +184,7 @@ export function startCall(options: CallOptions): CallHandle {
       if (!response.ok && response.status !== 404) throw await responseError(response, 'The call ended, but its notes could not be saved. Retry saving to finish saving them.')
       serverSaved = response.status !== 404
       saved = true
+      if (serverSaved) scheduleMemoryRefresh(owner)
     })()
     try { await endPromise } finally { endPromise = null }
   }

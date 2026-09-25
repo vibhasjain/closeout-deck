@@ -8,6 +8,8 @@ import { FindingsCard } from '@/components/journey/FindingsCard'
 import { FormCard } from '@/components/journey/FormCard'
 import { CallCard } from './CallCard'
 import { retryCallSave } from '@/lib/callRecovery'
+import { RememberLine } from '@/components/memory/RememberLine'
+import { isRememberReceipt } from '@/components/memory/chatMemory'
 import './journey-chat.css'
 
 /** `liveCard`: the index of the newest actionable card in the pane, if it is in this message; only it keeps a black button. */
@@ -32,6 +34,7 @@ export function Message({ message, onAnswer, liveCard = -1 }: { message: ChatMes
         {skipped && <p className="chat-skipped" role="status">{skipped.text}{skipped.retry && onAnswer && <> <button type="button" className="lnk" onClick={() => onAnswer('Try saving that again')}>Tap to retry</button></>}</p>}
         {!!message.pendingActions?.length && <p role="status">Pending: {message.pendingActions.length} actions</p>}
         {message.actions?.map((action, index) => {
+          if (isRememberReceipt(action)) return <RememberLine key={index} receipt={action} messageId={message.id} />
           const summary = actionSummary(action)
           return summary === null ? null : (
             <div key={index} className="chat-action">

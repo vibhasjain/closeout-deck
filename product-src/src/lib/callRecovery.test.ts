@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { authedFetch } from '@/lib/api'
 import { stream } from '@/lib/chat'
+import { viewerSession } from '@/lib/viewerSession'
+import * as memory from '@/lib/memory'
 import { clearStoredCall, liveCallKey, persistLiveCall, readStoredCall, recoverStoredCall, retryCallSave, setCallRetryFallback, type StoredCall } from './callRecovery'
 vi.mock('@/lib/api', () => ({ authedFetch: vi.fn() }))
+vi.mock('@/lib/viewerSession', () => ({ viewerSession: vi.fn() }))
 vi.mock('@/lib/chat', async original => ({ ...await original<typeof import('@/lib/chat')>(), stream: vi.fn() }))
 const email = 'recovery@example.test'
 let storage: Map<string, string>
@@ -10,11 +13,13 @@ const record = (): StoredCall => ({ sessionId: crypto.randomUUID(), purpose: 'on
 const save = (call: StoredCall) => storage.set(liveCallKey(email), JSON.stringify(call))
 beforeEach(() => {
   storage = new Map(); vi.useFakeTimers(); vi.clearAllMocks()
+  vi.mocked(viewerSession).mockReturnValue({ email, sessionToken: 'recovery-session', exp: 9999999999 })
+  vi.spyOn(memory, 'scheduleMemoryRefresh').mockImplementation(() => {})
   vi.stubGlobal('localStorage', { getItem: vi.fn((key: string) => storage.get(key) ?? null), setItem: vi.fn((key: string, value: string) => storage.set(key, value)), removeItem: vi.fn((key: string) => storage.delete(key)) })
   vi.mocked(authedFetch).mockResolvedValue(new Response('{}'))
   vi.mocked(stream).mockImplementation(async function* () { yield { done: true, final: 'Saved.\n```action\n{"type":"cover_topic","topic":"calendar"}\n```' } })
 })
-afterEach(() => { const stored = readStoredCall(email); if (stored) clearStoredCall(email, stored.sessionId); setCallRetryFallback(undefined); vi.useRealTimers(); vi.unstubAllGlobals() })
+afterEach(() => { const stored = readStoredCall(email); if (stored) clearStoredCall(email, stored.sessionId); setCallRetryFallback(undefined); vi.restoreAllMocks(); vi.useRealTimers(); vi.unstubAllGlobals() })
 describe('durable live-call recovery', () => {
   it('boot ends the stored call, consolidates, applies actions and cards it before clearing storage', async () => {
     const call = record(); save(call); const order: string[] = []
@@ -26,6 +31,7 @@ describe('durable live-call recovery', () => {
     expect(authedFetch).toHaveBeenCalledWith(`/live-session/${call.sessionId}/end`, expect.objectContaining({ method: 'POST', body: JSON.stringify({ seconds: 48, transcript: call.transcript }) }))
     expect(onCompleted).toHaveBeenCalledWith(expect.objectContaining({ callId: call.sessionId, serverSaved: true, transcript: call.transcript }), call)
     expect(readStoredCall(email)).toBeNull()
+    expect(memory.scheduleMemoryRefresh).toHaveBeenCalledExactlyOnceWith(email)
   })
   it('404 cards the local transcript as not saved and clears the key without consolidation', async () => {
     const call = record(); save(call); vi.mocked(authedFetch).mockResolvedValue(new Response('{}', { status: 404 }))
@@ -34,6 +40,7 @@ describe('durable live-call recovery', () => {
     expect(stream).not.toHaveBeenCalled()
     expect(onCompleted).toHaveBeenCalledWith(expect.objectContaining({ serverSaved: false, final: expect.stringContaining('not saved on the server'), transcript: call.transcript }), call)
     expect(readStoredCall(email)).toBeNull()
+    expect(memory.scheduleMemoryRefresh).not.toHaveBeenCalled()
   })
   it('an end error keeps the key and exposes saving Retry; retry saves without opening media', async () => {
     const call = record(); save(call); vi.mocked(authedFetch).mockResolvedValueOnce(new Response('{}', { status: 503 }))
@@ -41,9 +48,11 @@ describe('durable live-call recovery', () => {
     await expect(recoverStoredCall(email, { onActions: vi.fn(), onCompleted })).rejects.toThrow('could not be saved')
     expect(readStoredCall(email)?.sessionId).toBe(call.sessionId)
     expect(onCompleted).toHaveBeenCalledWith(expect.objectContaining({ saveError: expect.any(String), serverSaved: false }), call)
+    expect(memory.scheduleMemoryRefresh).not.toHaveBeenCalled()
     await retryCallSave(call.sessionId)
     expect(vi.mocked(authedFetch).mock.calls.every(([path]) => path.endsWith('/end'))).toBe(true)
     expect(readStoredCall(email)).toBeNull()
+    expect(memory.scheduleMemoryRefresh).toHaveBeenCalledExactlyOnceWith(email)
   })
   it('consolidation errors keep the key; same-boot Retry does not re-end the released call', async () => {
     const call = record(); save(call); vi.mocked(stream).mockImplementationOnce(async function* () { yield { done: true, error: 'scribe unavailable' } })
@@ -51,6 +60,7 @@ describe('durable live-call recovery', () => {
     expect(readStoredCall(email)?.sessionId).toBe(call.sessionId)
     await retryCallSave(call.sessionId)
     expect(authedFetch).toHaveBeenCalledTimes(1)
+    expect(memory.scheduleMemoryRefresh).toHaveBeenCalledExactlyOnceWith(email)
     expect(readStoredCall(email)).toBeNull()
   })
   it('uses a durable call-card fallback when an in-memory retry handle is missing', async () => {
@@ -72,6 +82,16 @@ describe('durable live-call recovery', () => {
     expect(stream).toHaveBeenCalledExactlyOnceWith('call ended', { callId: older.sessionId }, 'consolidate')
     expect(onCompleted).toHaveBeenCalledWith(expect.objectContaining({ callId: older.sessionId, purpose: older.purpose, serverSaved: true }), older)
     expect(readStoredCall(email)?.sessionId).toBe(newer.sessionId)
+    expect(memory.scheduleMemoryRefresh).not.toHaveBeenCalled()
+  })
+  it('captures the initiating account for delayed memory refreshes', async () => {
+    const call = record(); save(call)
+    vi.mocked(authedFetch).mockImplementationOnce(async () => {
+      vi.mocked(viewerSession).mockReturnValue({ email: 'next@example.test', sessionToken: 'next-session', exp: 9999999999 })
+      return new Response('{}')
+    })
+    await recoverStoredCall(email, { onActions: vi.fn(), onCompleted: vi.fn() })
+    expect(memory.scheduleMemoryRefresh).toHaveBeenCalledExactlyOnceWith(email)
   })
   it('keeps a supplied call-card Retry tied to its own record after a newer call takes the live key', async () => {
     const older = record(), newer = record(); save(older)

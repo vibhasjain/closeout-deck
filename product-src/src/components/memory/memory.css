@@ -1,0 +1,96 @@
+.memory-panel {
+  flex: 0 0 auto;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid hsl(var(--border));
+  font-family: var(--sans);
+  font-size: 13px;
+}
+
+.memory-offer { font-family: var(--sans); font-size: 13px; }
+
+.memory-panel h2,
+.memory-panel h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.memory-panel h2 { margin-bottom: .75rem; }
+.memory-group + .memory-group { margin-top: 1rem; }
+.memory-group h3 { color: hsl(var(--muted-foreground)); }
+.memory-group ul { list-style: none; margin: .35rem 0 0; padding: 0; }
+
+.memory-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .3rem .75rem;
+  padding: .65rem 0;
+  border-bottom: 1px solid hsl(var(--border) / .6);
+}
+
+.memory-row:last-child { border-bottom: 0; }
+.memory-text {
+  field-sizing: content;
+  resize: none;
+  overflow: hidden;
+  min-width: 0;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: calc(var(--radius) - 2px);
+  padding: .25rem .35rem;
+  margin-left: -.35rem;
+  background: transparent;
+  color: hsl(var(--foreground));
+  font: inherit;
+}
+
+.memory-text:hover,
+.memory-text:focus { border-color: hsl(var(--input)); }
+.memory-text:focus { background: hsl(var(--background)); }
+.memory-text:disabled { opacity: .65; }
+.memory-row-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; grid-column: 1; color: hsl(var(--muted-foreground)); }
+.memory-row > .memory-actions { grid-column: 2; grid-row: 1 / span 2; }
+.memory-source.tag { font-size: 13px; line-height: 1.3rem; }
+.memory-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+
+.memory-button.btn {
+  font-family: var(--sans);
+  font-size: 13px;
+  border: 1px solid hsl(var(--input));
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.memory-button.btn:hover { background: hsl(var(--muted)); }
+.memory-button.btn:disabled { cursor: default; opacity: .5; }
+.memory-icon.btn { justify-content: center; width: 2rem; padding: 0; }
+.memory-icon.btn svg { width: .875rem; height: .875rem; }
+.memory-note { margin: 0; font-family: var(--sans); font-size: 13px; color: hsl(var(--muted-foreground)); }
+.memory-empty { max-width: 42rem; }
+.memory-row-note { grid-column: 1 / -1; }
+.memory-forget-confirm { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; padding-top: .35rem; }
+.memory-forget-confirm > span { margin-right: .35rem; }
+.memory-add { margin-top: .75rem; }
+.memory-add-form { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.memory-kind.q-input { flex: 0 0 auto; width: auto; font-size: 13px; }
+.memory-new-text.q-input { flex: 1 1 14rem; font-size: 13px; }
+.memory-add-form > .memory-note { flex-basis: 100%; }
+.memory-suggestions { margin-top: 1rem; }
+.memory-suggestion { padding: .65rem 0; }
+.memory-suggestion p { margin: 0 0 .5rem; overflow-wrap: anywhere; }
+.memory-suggestion + .memory-suggestion { border-top: 1px solid hsl(var(--border) / .6); }
+.memory-last-learned { margin-top: 1rem; }
+.memory-load-error { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .5rem; }
+
+/* Let the memory and rulebook share the pane's scroll area as the account learns. */
+.rules-page:has(> .memory-panel) { overflow-y: auto; }
+.rules-page:has(> .memory-panel) > .rules-table-wrap { flex: 0 0 auto; overflow: visible; }
+.rules-page:has(> .memory-panel) > .rules-toolbar { flex-shrink: 0; }
+
+@media (max-width: 600px) {
+  .memory-panel { padding: 1rem; }
+  .memory-row { grid-template-columns: minmax(0, 1fr); }
+  .memory-row > .memory-actions { grid-column: 1; grid-row: auto; margin-top: .2rem; }
+  .memory-new-text.q-input { flex-basis: 100%; }
+}

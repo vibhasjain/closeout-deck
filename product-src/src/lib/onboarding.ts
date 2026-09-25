@@ -168,6 +168,8 @@ export interface Onboarding {
   acceptedGaps: Record<string, { reason: string; at: string }>
   /** cycleId -> rules whose automatic fixes were undone, so they wait for approval instead. */
   undone: Record<string, string[]>
+  /** Declined automatic-approval offers stay dismissed even if the associated memory is forgotten. */
+  declinedAutoApproveRules?: string[]
   /** What the agent may do without asking, set like a new hire's limits in agent setup. */
   /** Discovery intake answers from agent setup, in the sales team's intake sheet terms. */
   discovery: { period: string; payouts: string; payroll: string; billing: string; vms: string[]
@@ -185,7 +187,7 @@ export const ASK_FIRST: Onboarding['authority'] = { autoFix: false, limit: 0, we
 export const effectiveAuthority = (state: Pick<Onboarding, 'authority' | 'authorityConfigured'>) => state.authorityConfigured ? state.authority : ASK_FIRST
 
 const KEY = 'closeout-onboarding-v2'
-export const DEFAULTS: Onboarding = { dataSource: 'server', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, firm: null, profile: {}, covered: [], sources: [], neverContact: null, setupStep: 'welcome', setupHistory: [], setupRequest: null, setupClosing: null, setupNotice: null, kickoffPending: false, frequency: 'Weekly', periodEndDay: 'Sunday', payDay: 'Friday', payDatesOfMonth: [20, 5], cutoffDays: 1, deadlineDays: 2, cohorts: [], intake: [], approver: null, fileName: null, entries: 212, baseRate: null, system: null, forwarded: false, sidebar: 'full', checklistDismissed: false, rules: [], proposals: [], resolutions: {}, payrollConnected: false, sentCycles: [], uploads: {}, threads: {}, chat: [], chatSessionId: null, connections: {}, approvedCycles: [], batches: {}, customRules: [], reasons: {}, decisionTimes: {}, mediation: {}, acceptedGaps: {}, undone: {}, discovery: { period: '', payouts: '', payroll: '', billing: '', vms: [], workerChannels: [], clientTime: [], approved: [] }, authorityConfigured: false, authority: { autoFix: true, limit: 100, weeklyCap: 1000, textSupervisors: true, textWorkers: false, briefing: 'Email' }, authoritySuggestion: null }
+export const DEFAULTS: Onboarding = { dataSource: 'server', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, firm: null, profile: {}, covered: [], sources: [], neverContact: null, setupStep: 'welcome', setupHistory: [], setupRequest: null, setupClosing: null, setupNotice: null, kickoffPending: false, frequency: 'Weekly', periodEndDay: 'Sunday', payDay: 'Friday', payDatesOfMonth: [20, 5], cutoffDays: 1, deadlineDays: 2, cohorts: [], intake: [], approver: null, fileName: null, entries: 212, baseRate: null, system: null, forwarded: false, sidebar: 'full', checklistDismissed: false, rules: [], proposals: [], resolutions: {}, payrollConnected: false, sentCycles: [], uploads: {}, threads: {}, chat: [], chatSessionId: null, connections: {}, approvedCycles: [], batches: {}, customRules: [], reasons: {}, decisionTimes: {}, mediation: {}, acceptedGaps: {}, undone: {}, declinedAutoApproveRules: [], discovery: { period: '', payouts: '', payroll: '', billing: '', vms: [], workerChannels: [], clientTime: [], approved: [] }, authorityConfigured: false, authority: { autoFix: true, limit: 100, weeklyCap: 1000, textSupervisors: true, textWorkers: false, briefing: 'Email' }, authoritySuggestion: null }
 const listeners = new Set<() => void>()
 let cache: Onboarding | null = null
 

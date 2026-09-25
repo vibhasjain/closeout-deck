@@ -9,6 +9,7 @@ import { createChatHistory } from '@/lib/chatHistory'
 import { askGaps, createDispute, decide, downloadBatch, getDisputes, getThreads, recordMessage, resolveDispute, sendPayroll, simulateDispute, type JourneyBatch, type JourneyDecision, type JourneyDispute } from '@/lib/journey'
 import { getDataSnapshot, hydrate, invalidate, publishCycle, refreshCycleList, type CyclePayload } from '@/lib/data'
 import { rowResolution } from '@/lib/desk'
+import * as memory from '@/lib/memory'
 import fixture from '@/lib/fixtures/server-cycle.json'
 
 vi.mock('@/lib/viewerSession', () => ({ viewerSession: () => ({ email: 'contract@example.test', sessionToken: 'test-session', exp: 9999999999 }), signOut: vi.fn() }))
@@ -107,12 +108,15 @@ describe('journey transport', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
   it.each([201, 409, 422])('preserves send status %s and never forces or retries a send', async status => {
+    const schedule = vi.spyOn(memory, 'scheduleMemoryRefresh').mockImplementation(() => {})
     const body = status === 422 ? { reason: 'Review open items', open: { missingSets: [3], gaps: ['site|worker|1'], groups: ['CS-01'] } }
       : { batch, ...(status === 201 ? { csvUrl: '/data/batches/batch-a/csv' } : {}) }
     fetchMock.mockResolvedValueOnce(response(body, status))
     expect(await sendPayroll(payload.cycle.id, { destination: 'ADP' })).toEqual({ status, ...body })
     expect(fetchMock).toHaveBeenCalledOnce()
     expect(fetchMock.mock.calls[0][0]).toBe(`/api/data/cycles/${payload.cycle.id}/send`)
+    expect(schedule).toHaveBeenCalledTimes(status === 201 ? 1 : 0)
+    schedule.mockRestore()
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({ destination: 'ADP' })
   })
   it('posts asks, messages, disputes and resolutions using only contract fields', async () => {

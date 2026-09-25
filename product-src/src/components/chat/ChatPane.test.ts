@@ -78,6 +78,17 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals() })
 
 describe('chat conversation lifetime', () => {
+  it('keeps an ingest follow-up attached to its question after an earlier memory was resolved', async () => {
+    updateOnboarding({ chat: [
+      { id: 'question', role: 'agent', text: 'Are these actual clock times?', at: 1, ingestFileIds: ['f_csv'], cards: [{ kind: 'question', input: 'chips', chips: ['Actual', 'Scheduled'], topics: [] }] },
+      { id: 'receipt', role: 'agent', text: '', at: 2, actions: [{ type: 'memory_resolution', messageId: 'earlier', instinctId: 'i_123', state: 'active' }] },
+    ] })
+    vi.mocked(stream).mockImplementation(async function* () { yield { done: true, final: 'Saved.' } })
+    send('Actual')
+    await vi.waitFor(() => expect(stream).toHaveBeenCalled())
+    expect(vi.mocked(stream).mock.calls[0][1]).toEqual({ fileIds: ['f_csv'] })
+    expect(vi.mocked(stream).mock.calls[0][2]).toBe('ingest')
+  })
   it('posts an upload chip, preserves ingest mode for one question, then refreshes before the completed reply', async () => {
     const target = new EventTarget()
     vi.stubGlobal('window', Object.assign(target, { setTimeout, clearTimeout, cancelAnimationFrame: vi.fn() }))

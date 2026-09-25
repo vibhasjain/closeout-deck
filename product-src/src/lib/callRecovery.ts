@@ -2,6 +2,7 @@ import { authedFetch } from '@/lib/api'
 import { callEndTranscript, responseError, type CallPurpose, type TranscriptTurn } from '@/lib/live'
 import { parseActions, stream, type Action, type CallTranscriptTurn } from '@/lib/chat'
 import { viewerSession } from '@/lib/viewerSession'
+import { scheduleMemoryRefresh } from '@/lib/memory'
 
 export interface StoredCall {
   sessionId: string
@@ -77,6 +78,7 @@ export async function retryCallSave(callId: string) {
 
 /** Shared by boot and call start; both await the same recovery, before opening a microphone. */
 export function recoverStoredCall(email: string, callbacks: RecoveryCallbacks, storedRecord?: StoredCall, alreadySaved = false): Promise<void> {
+  const memoryOwner = viewerSession()?.email ?? 'development'
   const record = storedRecord ? { ...storedRecord, seconds: Math.min(3600, Math.max(0, storedRecord.seconds)), transcript: callEndTranscript(storedRecord.transcript.map(turn => ({ ...turn, endMs: turn.startMs }))) } : readStoredCall(email)
   if (!record) return Promise.resolve()
   const key = `${email}:${record.sessionId}`
@@ -94,6 +96,7 @@ export function recoverStoredCall(email: string, callbacks: RecoveryCallbacks, s
         }
         if (!response.ok) throw await responseError(response, 'The call ended, but its notes could not be saved.')
         serverSaved = true; released.add(key)
+        scheduleMemoryRefresh(memoryOwner)
       }
       let final: string | undefined, text = ''
       for await (const event of stream('call ended', { callId: record.sessionId }, 'consolidate')) {
