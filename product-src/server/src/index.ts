@@ -4,7 +4,7 @@ import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { authenticate, AuthError, InviteOnlyError, isAllowedEmail, signSession, validateSessionSecret, verifyGoogleIdToken } from './auth.ts'
 import { AGENT_ERROR, getClaudeVersion, runClaude } from './claude.ts'
-import { systemPrompt, onboardPrompt, ingestPrompt, livePrompt, scribePrompt, delegatePrompt, consolidatePrompt } from './prompts.ts'
+import { systemPrompt, onboardPrompt, ingestPrompt, livePrompt, scribePrompt, delegatePrompt, consolidatePrompt, withMemory } from './prompts.ts'
 import { runDataTurn, scribeOutput, spokenAnswer } from './agentTurn.ts'
 import { createLiveSession, LiveSessions, LiveUpstreamError, validateCallEnd, validateLiveBody, validateSdp, VOICE_ERROR } from './live.ts'
 import { createDictation, DictateUpstreamError, DICTATE_ERROR } from './dictate.ts'
@@ -14,14 +14,17 @@ import { stateStoreFromEnv } from './state.ts'
 import type { StateStore } from './state.ts'
 import { CALL_ID, chatMessage, isPlainObject, MAX_DOC_BYTES, validateChatBody, validateChatHistory, validateStateBody, ValidationError } from './validation.ts'
 import type { ChatMode } from './validation.ts'
-import { prepareWorkspace, materialize, writeCallFile } from './workspace.ts'
-import { DataError, DataService, cycleDates, localToday } from './data.ts'
+import { prepareWorkspace, materialize, materializeTurn, writeCallFile } from './workspace.ts'
+import { DataError, DataService, cycleDates, dateKey, localToday } from './data.ts'
 import { handleJourney } from './journeyRoutes.ts'
 import { createMemoryJourneyStore, journeyStoreFromEnv } from './journeyStore.ts'
 import type { JourneyStore } from './journeyStore.ts'
 import { dataStoreFromEnv, DuplicateFileError, createMemoryDataStore } from './datastore.ts'
 import type { DataStore } from './datastore.ts'
 import { calendarFrom, engineSha } from './pipeline.ts'
+import { createMemory, handleMemory, MEMORY_TIMEOUT_MS } from './memory.ts'
+import { createMemoryMemoryStore, memoryStoreFromEnv } from './memoryStore.ts'
+import type { MemoryStore } from './memoryStore.ts'
 import { parseFile, IngestError } from './ingest.ts'
 import { recentCycles } from '../../src/lib/cycles.ts'
 import { inboxAddress } from '../../src/lib/inbox.ts'
@@ -32,8 +35,8 @@ export function listenHost(env: NodeJS.ProcessEnv): string {
   return env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1'
 }
 
-export const MODE_TIMEOUTS = { chat: 180_000, onboard: 180_000, ingest: 300_000, firm: 60_000, scribe: 45_000, delegate: 180_000, consolidate: 120_000 } as const
-export function turnTimeoutMs(mode: ChatMode | 'firm', env: NodeJS.ProcessEnv): number {
+export const MODE_TIMEOUTS = { chat: 180_000, onboard: 180_000, ingest: 300_000, firm: 60_000, scribe: 45_000, delegate: 180_000, consolidate: 120_000, memory: MEMORY_TIMEOUT_MS } as const
+export function turnTimeoutMs(mode: ChatMode | 'firm' | 'memory', env: NodeJS.ProcessEnv): number {
   const configured = Number(env[`CLOSEOUT_${mode.toUpperCase()}_TIMEOUT_MS`])
   return Number.isFinite(configured) && configured > 0 ? configured : MODE_TIMEOUTS[mode]
 }
@@ -47,6 +50,7 @@ interface ServerOptions {
   stateStore?: StateStore
   dataStore?: DataStore
   journeyStore?: JourneyStore
+  memoryStore?: MemoryStore
   verifyGoogle?: typeof verifyGoogleIdToken
   claudeVersion?: () => Promise<string | null>
   runAgent?: typeof runClaude
@@ -139,11 +143,28 @@ export function createServer(options: ServerOptions = {}) {
   let journeyStore = options.journeyStore
   // P7 records live beside the data: Supabase when the data store is, otherwise in memory (tests, development).
   const getJourneyStore = () => journeyStore ??= options.dataStore || !(env.SUPABASE_URL && env.SUPABASE_SERVICE_KEY) ? createMemoryJourneyStore() : journeyStoreFromEnv(env)
+  let memoryStore = options.memoryStore
+  // P9 memory lives beside the journey records: Supabase when they are, otherwise in memory (tests, development).
+  const getMemoryStore = () => {
+    if (!memoryStore) {
+      if (!options.dataStore && env.SUPABASE_URL && env.SUPABASE_SERVICE_KEY) memoryStore = memoryStoreFromEnv(env)
+      else if (env.NODE_ENV !== 'production') memoryStore = createMemoryMemoryStore()
+      else throw new DataError(503, 'data_unavailable')
+    }
+    return memoryStore
+  }
   async function stateDoc(email: string): Promise<Record<string, unknown>> {
     if (!stateStore && env.SUPABASE_URL && env.SUPABASE_SERVICE_KEY) stateStore = stateStoreFromEnv(env)
     const row = await stateStore?.get(email)
     return isPlainObject(row?.doc) ? row.doc : {}
   }
+  const stores = () => ({ journey: getJourneyStore(), memory: getMemoryStore() })
+  // The account's own calendar day: until is validated against the same day the one-pager renders against.
+  const accountToday = async (email: string) => dateKey(localToday(await getDataStore().listFacts(email), await stateDoc(email)))
+  // Consolidation reads its own snapshot (a sibling directory, no cycle data): it never rebuilds or prunes the chat workspace.
+  const memory = createMemory({ env, runAgent, capacity, memory: getMemoryStore, data: getDataStore, journey: getJourneyStore,
+    timeoutMs: turnTimeoutMs('memory', env), today: accountToday,
+    workspace: async email => options.workspace ? workspace({ email }, env) : materialize({ email }, env, getDataStore(), await stateDoc(email), {}, { ...stores(), variant: 'memory', maxCycles: 0 }) })
   let cachedVersion: Promise<string | null> | undefined
 
   async function handle(request: IncomingMessage, response: ServerResponse): Promise<void> {
@@ -156,7 +177,7 @@ export function createServer(options: ServerOptions = {}) {
       }
       response.setHeader('Access-Control-Allow-Origin', origin)
       response.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-File-Name, X-Set, X-System, X-Site')
-      response.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+      response.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
     }
     if (request.method === 'OPTIONS') {
       response.writeHead(204)
@@ -215,6 +236,7 @@ export function createServer(options: ServerOptions = {}) {
       await writeCallFile(user.email, env, record)
       live.release(user.email, call.id)
       json(response, 200, { callId: call.id })
+      void memory.consolidateMemory(user.email, 'call', call.id)
       return
     }
     // The saved call, so its transcript opens on any device, not only the one that made the call.
@@ -240,7 +262,17 @@ export function createServer(options: ServerOptions = {}) {
     }
     if (request.method === 'POST' && path === '/firm') {
       firmReader ??= new FirmReader(firmCacheFromEnv(env), text => extractFirm(text, env, turnTimeoutMs('firm', env)))
-      json(response, 200, await firmReader.read(user.email, await readJson(request, 4096)))
+      const { firm, cached } = await firmReader.read(user.email, await readJson(request, 4096))
+      json(response, 200, { firm, cached })
+      // The Sample firm is not a pre-read, and an empty read (site down, nothing found) has nothing to learn.
+      if (firm.domain !== 'sample' && (firm.summary || firm.states.length || firm.verticals.length || firm.clientTypes.length)) {
+        void memory.consolidateMemory(user.email, 'site', firm.domain, { ...firm })
+      }
+      return
+    }
+    if (path === '/memory' || path.startsWith('/memory/')) {
+      if (!await handleMemory({ method: request.method!, path, email: user.email, response, readBody: max => readJson(request, max),
+        memory: getMemoryStore(), journey: getJourneyStore(), consolidate: memory.consolidateMemory, today: () => accountToday(user.email) })) json(response, 404, { error: 'not_found' })
       return
     }
     if (path === '/state' && (request.method === 'GET' || request.method === 'PUT')) {
@@ -279,7 +311,7 @@ export function createServer(options: ServerOptions = {}) {
       try {
         const doc = await stateDoc(user.email)
         const url = new URL(request.url!, 'http://localhost')
-        const sync = async () => materialize(user, env, store, await stateDoc(user.email), {}, { journey: getJourneyStore() })
+        const sync = async () => materialize(user, env, store, await stateDoc(user.email), {}, stores())
         if (path === '/files' && request.method === 'POST') {
           let name: string
           try { name = decodeURIComponent(String(request.headers['x-file-name'] ?? 'upload.csv')) }
@@ -351,7 +383,7 @@ export function createServer(options: ServerOptions = {}) {
         }
         // GET /data/cycles/:id (+ decisions, batch, nextStep) and the P7 journey routes.
         if (await handleJourney({ method: request.method!, path, url, email: user.email, doc, currentDoc: () => stateDoc(user.email), store, service, journey: getJourneyStore(),
-          response, readBody: max => readJson(request, max), sync })) return
+          response, readBody: max => readJson(request, max), sync, onSent: cycleId => void memory.consolidateMemory(user.email, 'send', cycleId) })) return
         if (request.method === 'GET' && (path === '/data/entries' || path === '/data/findings')) {
           const cycleId = url.searchParams.get('cycle')
           if (!cycleId || !/^\d{4}-\d{2}-\d{2}$/.test(cycleId)) throw new DataError(400, 'invalid_cycle')
@@ -419,24 +451,25 @@ export function createServer(options: ServerOptions = {}) {
         if (abort.signal.aborted) return
         const doc = await stateDoc(user.email), store = getDataStore()
         if (body.mode === 'ingest' && (await Promise.all((body.context.fileIds as string[]).map(id => store.getFile(user.email, id)))).some(file => !file || file.status !== 'needs_mapping')) throw new ValidationError()
-        const cwd = options.workspace ? await workspace(user, env) : await materialize(user, env, store, doc, body.context, { journey: getJourneyStore() })
+        // P9: the CLI never re-reads CLAUDE.md on its own, so the memory one-pager this turn's own rebuild wrote rides in its system prompt.
+        const { cwd, memory: onePager } = options.workspace ? { cwd: await workspace(user, env), memory: '' } : await materializeTurn(user, env, store, doc, body.context, stores())
         if (abort.signal.aborted) return
         await runDataTurn({ options: {
           cwd,
           message: body.message,
-          prompt: body.mode === 'onboard' ? onboardPrompt({ ...body.context, inbox: inboxAddress(user.email) })
-            : body.mode === 'ingest' ? ingestPrompt(ingestFiles.filter(file => file !== null), body.context)
-            : body.mode === 'scribe' ? scribePrompt(body.context)
-            : body.mode === 'delegate' ? delegatePrompt(body.context)
+          prompt: body.mode === 'scribe' ? scribePrompt(body.context)
             : body.mode === 'consolidate' ? consolidatePrompt({ callId: body.context.callId as string })
-            : systemPrompt(body.context),
+            : withMemory(body.mode === 'onboard' ? onboardPrompt({ ...body.context, inbox: inboxAddress(user.email) })
+              : body.mode === 'ingest' ? ingestPrompt(ingestFiles.filter(file => file !== null), body.context)
+              : body.mode === 'delegate' ? delegatePrompt(body.context)
+              : systemPrompt(body.context), onePager),
           model: body.mode === 'scribe' ? env.CLOSEOUT_SCRIBE_MODEL ?? 'sonnet' : env.CLOSEOUT_AGENT_MODEL ?? 'opus',
           env,
           signal: abort.signal,
           timeoutMs: turnTimeoutMs(body.mode, env),
           }, runAgent, service: new DataService(store), email: user.email, doc, lock: () => dataLocks.acquire(user.email),
           fileIds: body.mode === 'ingest' ? body.context.fileIds as string[] : undefined,
-          sync: () => options.workspace ? workspace(user, env) : materialize(user, env, store, doc, body.context, { journey: getJourneyStore() }),
+          sync: () => options.workspace ? workspace(user, env) : materialize(user, env, store, doc, body.context, stores()),
           emit(event) {
             if (abort.signal.aborted || done) return
             if (voice && 'text' in event) { spoken += event.text; return }
@@ -475,7 +508,7 @@ export function createServer(options: ServerOptions = {}) {
     json(response, 404, { error: 'not_found' })
   }
 
-  return createHttpServer((request, response) => {
+  const server = createHttpServer((request, response) => {
     void handle(request, response).catch((error: unknown) => {
       if (error instanceof InviteOnlyError) json(response, 403, { error: 'invite_only' })
       else if (error instanceof AuthError) json(response, 401, { error: 'invalid_token' })
@@ -491,6 +524,10 @@ export function createServer(options: ServerOptions = {}) {
       }
     })
   })
+  // Closing finishes the background memory runs this server started, so none is cut off between its writes and its run row.
+  const close = server.close.bind(server)
+  server.close = (callback?: (error?: Error) => void) => close(error => { void memory.settled().then(() => callback?.(error)) })
+  return server
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

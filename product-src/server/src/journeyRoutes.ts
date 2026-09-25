@@ -22,6 +22,8 @@ export interface JourneyRequest {
   store: DataStore; service: DataService; journey: JourneyStore; response: ServerResponse
   readBody: (maxBytes: number) => Promise<unknown>; sync: () => Promise<unknown>
   currentDoc?: () => Promise<Record<string, unknown>>
+  /** Fire-and-forget after a Send to Payroll returns 201 (P9 memory consolidation). */
+  onSent?: (cycleId: string) => void
 }
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex')
@@ -206,6 +208,7 @@ async function handleLockedJourney(req: JourneyRequest): Promise<boolean> {
     if (!created) { json(response, 409, { batch }); return true }
     await req.sync()
     json(response, 201, { batch, csvUrl: `/data/batches/${batch.id}/csv`, ...(state.nextStep.kind !== 'send' ? { open } : {}) })
+    req.onSent?.(cycleId)
     return true
   }
   if (path === '/data/threads' && method === 'GET') {

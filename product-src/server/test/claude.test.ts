@@ -282,3 +282,17 @@ test('data traces and handbook deduplication span a failed resume and its fresh 
   assert.deepEqual(traces, ['Read handbooks/ingest.md', 'Read data/resume0.json', 'Read data/resume1.json', 'Read data/resume2.json'])
   assert.equal(f.events.filter(event => 'done' in event).length, 1)
 })
+
+test('a fresh run (memory consolidation) uses a new --session-id every time, never --resume, and leaves the chat session alone', async t => {
+  const f = await fixture(t)
+  const chat = randomUUID()
+  await writeSessionId(f.cwd, chat)
+  await runClaude({ ...f.options, fresh: true })
+  await runClaude({ ...f.options, fresh: true })
+  const calls = await f.calls()
+  const ids = calls.map(call => call.args[call.args.indexOf('--session-id') + 1])
+  assert.ok(calls.every(call => call.args.includes('--session-id') && !call.args.includes('--resume')))
+  assert.equal(new Set([...ids, chat]).size, 3, 'each fresh run has its own new id, never the chat session id')
+  assert.equal(await readSessionId(f.cwd), chat)
+  assert.deepEqual(f.events.filter(event => 'done' in event).map(event => (event as { sessionId: string }).sessionId), ids)
+})

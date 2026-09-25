@@ -24,7 +24,9 @@ test('closeout journey: next step, decisions, asks, send once, dispute adjustmen
   const root = await mkdtemp(join(tmpdir(), 'closeout-journey-http-'))
   const doc = { neverContact: ['Blocked Worker'], profile: { payrollRunBy: 'I run it in ADP' } }
   const stateStore: StateStore = { get: async () => ({ doc, updated_at: '2026-09-25T00:00:00.000Z' }), put: async () => ({ status: 409, row: null }) }
-  const server = createServer({ dataStore: createMemoryDataStore(), stateStore, env: { ...env, CLOSEOUT_DATA_DIR: root }, claudeVersion: async () => 'test' })
+  // Send to Payroll starts a background memory run (P9); it never reaches the paid CLI in this test.
+  const server = createServer({ dataStore: createMemoryDataStore(), stateStore, env: { ...env, CLOSEOUT_DATA_DIR: root }, claudeVersion: async () => 'test',
+    runAgent: async options => options.onEvent({ done: true, sessionId: 'memory', final: '```memory\n{"ops":[]}\n```' }) })
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
   t.after(async () => { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); await rm(root, { recursive: true, force: true }) })
   const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`

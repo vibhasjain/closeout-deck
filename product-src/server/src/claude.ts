@@ -135,6 +135,8 @@ export interface RunOptions {
   env?: NodeJS.ProcessEnv
   /** Allows deterministic process-level tests without invoking the paid CLI. */
   command?: string
+  /** Background work (memory consolidation): a new --session-id every run, never --resume, session.json untouched. */
+  fresh?: boolean
 }
 
 type Attempt = {
@@ -240,9 +242,9 @@ function failed(attempt: Attempt): boolean {
 /** Call while holding this account's queue slot. Emits exactly one terminal event. */
 export async function runClaude(options: RunOptions): Promise<void> {
   if (options.signal?.aborted) return
-  const previous = await readSessionId(options.cwd)
+  const previous = options.fresh ? null : await readSessionId(options.cwd)
   let sessionId = previous ?? randomUUID()
-  if (!previous) await writeSessionId(options.cwd, sessionId)
+  if (!previous && !options.fresh) await writeSessionId(options.cwd, sessionId)
   if (options.signal?.aborted) return
   const turn = new AbortController()
   const abort = () => turn.abort(options.signal?.reason)

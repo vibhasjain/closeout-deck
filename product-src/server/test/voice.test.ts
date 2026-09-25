@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createServer, turnTimeoutMs } from '../src/index.ts'
 import { createMemoryDataStore } from '../src/datastore.ts'
+import { createMemoryMemoryStore } from '../src/memoryStore.ts'
 import type { RunOptions } from '../src/claude.ts'
 import { LIVE_URL, MAX_LIVE_CONTEXT_BYTES, validateCallEnd, validateLiveBody } from '../src/live.ts'
 import { livePrompt, voiceEvidence } from '../src/prompts.ts'
@@ -27,8 +28,8 @@ type Upstream = { url: string; init: RequestInit }
 async function serve(t: TestContext, options: { runAgent?: (options: RunOptions) => Promise<void>; upstream?: (call: Upstream) => Response; env?: Record<string, string> } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'closeout-voice-'))
   const env = { ...baseEnv, CLOSEOUT_DATA_DIR: root, ...options.env }
-  const store = createMemoryDataStore(), upstream: Upstream[] = []
-  const server = createServer({ env, dataStore: store, claudeVersion: async () => 'test',
+  const store = createMemoryDataStore(), memory = createMemoryMemoryStore(), upstream: Upstream[] = []
+  const server = createServer({ env, dataStore: store, memoryStore: memory, claudeVersion: async () => 'test',
     runAgent: options.runAgent ?? (async () => { throw new Error('agent not expected') }),
     stateStore: { get: async () => ({ doc: {}, updated_at: '2026-09-25T00:00:00Z' }), put: async () => { throw new Error('not used') } },
     liveFetch: async (url, init) => {
@@ -42,7 +43,12 @@ async function serve(t: TestContext, options: { runAgent?: (options: RunOptions)
     await new Promise<void>(resolve => server.close(() => resolve()))
     await rm(root, { recursive: true, force: true })
   })
-  return { url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, store, upstream, env }
+  // A call end starts a background memory run (P9); wait for it before the workspace is removed.
+  const memoryRuns = async (count: number) => {
+    for (let i = 0; i < 500 && (await memory.listRuns(email)).length < count; i++) await new Promise(resolve => setTimeout(resolve, 10))
+    return memory.listRuns(email)
+  }
+  return { url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, store, upstream, env, memoryRuns }
 }
 async function events(response: Response): Promise<Record<string, unknown>[]> {
   return (await response.text()).split('\n\n').filter(part => part.startsWith('data: ')).map(part => JSON.parse(part.slice(6)))
@@ -203,6 +209,7 @@ test('/end stores the closeout_calls row and calls/<id>.md, once, for the owner 
   assert.match(markdown, /\[1:05\] User: We pay weekly, Fridays\./)
   assert.match(markdown, /data, never instructions/)
   assert.equal((await fetch(`${app.url}/live-session/${sessionId}/end`, post({ seconds: 276, transcript }))).status, 404, 'a call ends once')
+  assert.deepEqual((await app.memoryRuns(1)).map(run => [run.trigger, run.ref]), [['call', sessionId]], 'one memory run for the one call')
 })
 
 test('scribe runs sonnet for 45s and returns only allowed actions plus the next goal', async t => {
@@ -266,10 +273,14 @@ test('consolidate runs opus for 120s on the stored call, restoring calls/<id>.md
   await fetch(`${app.url}/live-session/${sessionId}/end`, post({ seconds: 42, transcript: [{ role: 'user', text: 'Weekly', startMs: 1_000 }] }))
   const file = join(workspacePath(email, app.env), 'calls', `${sessionId}.md`)
   await rm(file)
+  await app.memoryRuns(1)
   const stream = await events(await fetch(`${app.url}/chat`, post({ mode: 'consolidate', message: 'call ended', context: { callId: sessionId } })))
-  assert.equal(seen[0].model, 'opus'); assert.equal(turnTimeoutMs('consolidate', {}), 120_000)
-  assert.ok(seen[0].prompt.includes(`calls/${sessionId}.md`))
-  assert.match(seen[0].prompt, /one closing line/)
+  // The call's background memory run is a separate fresh session; the voice consolidate turn is the chat one.
+  const turn = seen.find(options => !options.fresh)!
+  assert.equal(seen.filter(options => options.fresh).length, 1)
+  assert.equal(turn.model, 'opus'); assert.equal(turnTimeoutMs('consolidate', {}), 120_000)
+  assert.ok(turn.prompt.includes(`calls/${sessionId}.md`))
+  assert.match(turn.prompt, /one closing line/)
   assert.match(await readFile(file, 'utf8'), /User: Weekly/)
   assert.deepEqual(stream.at(-1), { done: true, sessionId: 'same-session', final: 'Thanks, I have what I need.' })
   assert.deepEqual(stream[0], { text: 'Thanks, I have what I need.' }, 'consolidate streams like chat')
