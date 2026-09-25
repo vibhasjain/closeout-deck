@@ -1,7 +1,10 @@
 import { money } from '@/bench/engine.js'
 import { kindLabel, type DeskCycle } from '@/lib/desk'
 import { actionFor, proposalFor, type ResolutionGroup } from '@/lib/resolution'
-import { clock, type Finding } from '@/lib/sample'
+import { clock, type Case, type Finding } from '@/lib/sample'
+
+/** Both real-cycle and setup evidence only need the displayed source rows. */
+export type FindingEvidence = Omit<Finding, 'cases'> & { cases: Pick<Case, 'worker' | 'day' | 'rows'>[] }
 
 /** A pre-written email about one issue, with its time entries as a CSV attachment. */
 export interface IssueEmail { subject: string; body: string; file: string; csv: string; rows: number }
@@ -14,7 +17,7 @@ const entries = (n: number) => `${n.toLocaleString()} time ${n === 1 ? 'entry' :
 const letter = (lines: string[], file: string) => ['Hi,', ...lines, `The time entries are attached (${file}).`, 'Thanks'].join('\n\n')
 
 /** From the setup demo's evidence: every source row for every case, side by side. */
-export function findingEmail(finding: Finding, dayLabel: (day: number) => string): IssueEmail {
+export function findingEmail(finding: FindingEvidence, dayLabel: (day: number) => string): IssueEmail {
   const rows = finding.cases.flatMap((item) => item.rows.map((row) => [item.worker, item.day == null ? '' : dayLabel(item.day), row.source,
     row.start == null ? '' : clock(row.start), row.meal ? clock(row.meal[0]) : '', row.meal ? clock(row.meal[1]) : '', row.end == null ? '' : clock(row.end),
     row.hours == null ? '' : row.hours.toFixed(2), row.note ?? '']))

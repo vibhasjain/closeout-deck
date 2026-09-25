@@ -15,7 +15,7 @@ import { activeCycles, applyKind, buildCycles, cycleStats, discrepancies, kinds,
 import { cycleIntake } from '@/lib/intake'
 import { payTotals } from '@/lib/payroll'
 import { resolutionGroups } from '@/lib/resolution'
-import { getCycle, getEntries, getFindings, getDataSnapshot, hydrate, invalidate, seedSample, setFact, uploadFile, type CyclePayload, type FileRecord, type SourceRecord } from '@/lib/data'
+import { getCycle, getEntries, getFindings, getDataSnapshot, hydrate, invalidate, publishCycle, refreshCycle, seedSample, setFact, uploadFile, type CyclePayload, type FileRecord, type SourceRecord } from '@/lib/data'
 import recorded from '@/lib/fixtures/server-cycle.json'
 
 const payload = recorded.payload as unknown as CyclePayload
@@ -92,8 +92,9 @@ describe('recorded server cycle', () => {
     const html = renderToStaticMarkup(h(MemoryRouter, null, h(OverlayProvider, null, h(AuxProvider, null, h(PayrollSummary, { cycle })))))
     expect(html).toContain('data-rule="SRC-WEEK-01"')
     expect(html).toContain('data-rule="FED-OT-40"')
-    expect(resolutionGroups(cycle, {}, ['SRC-WEEK-01']).find(group => group.ruleId === wrongWeek.ruleId)?.state).toBe('proposed')
-    expect(cycleStats(cycle, {}, ['SRC-WEEK-01'])).toMatchObject({ total: 1, agentResolved: 0, needsReview: 1 })
+    // Local undo markers cannot rewrite a server-owned decision/run.
+    expect(resolutionGroups(cycle, {}, ['SRC-WEEK-01']).find(group => group.ruleId === wrongWeek.ruleId)?.state).toBe('fixed')
+    expect(cycleStats(cycle, {}, ['SRC-WEEK-01'])).toMatchObject({ total: 1, agentResolved: 1, needsReview: 0 })
 
     // A source correction remains visible even without an accompanying engine premium.
     cycle.run.shifts[0].rows = [wrongWeek]
@@ -181,6 +182,25 @@ describe('recorded server cycle', () => {
 })
 
 describe('typed data requests', () => {
+  it('does not let an older task poll overwrite a completed decision or batch', async () => {
+    let release!: (response: Response) => void
+    vi.mocked(api.authedFetch).mockImplementationOnce(() => new Promise<Response>(resolve => { release = resolve }))
+    const pending = refreshCycle(payload.cycle.id)
+    const batch = { id: 'b_new', cycleId: payload.cycle.id, workers: 11, gross: 1000, held: 1, destination: 'ADP', createdAt: '2026-09-25T12:00:00Z' }
+    publishCycle({ ...payload, batch })
+    release(response({ ...payload, batch: null }))
+    await pending
+    expect(getDataSnapshot().payloads.find(cycle => cycle.cycle.id === payload.cycle.id)?.batch).toEqual(batch)
+  })
+  it('does not let an older task poll replace a newer complete refresh', async () => {
+    let release!: (response: Response) => void
+    vi.mocked(api.authedFetch).mockImplementationOnce(() => new Promise<Response>(resolve => { release = resolve }))
+    const pending = refreshCycle(payload.cycle.id)
+    await invalidate()
+    release(response({ ...payload, runAt: null, counts: { set1: 0, set2: 0, set3: 0 } }))
+    await pending
+    expect(getDataSnapshot().payloads.find(cycle => cycle.cycle.id === payload.cycle.id)?.runAt).toBe(payload.runAt)
+  })
   it('uses the cycle, entries and findings routes with encoded query fields', async () => {
     vi.mocked(api.authedFetch).mockImplementation(async () => response({ entries: [], groups: [], cases: [] }))
     await getCycle('2026-09-20')

@@ -74,6 +74,29 @@ const selectedMetrics = (html: string) => metrics(html).filter((metric) => metri
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks() })
 
 describe('Payroll review composition', () => {
+  it('keeps only one black approval action in the Payroll review pane', () => {
+    vi.useFakeTimers().setSystemTime(today)
+    const html = render('/payroll?step=review')
+    expect([...html.matchAll(/<button\b[^>]*class="[^"]*\bprimary\b[^"]*"/g)]).toHaveLength(1)
+  })
+
+  it('renders server decision metadata without fabricated legacy mediation activity', () => {
+    vi.useFakeTimers().setSystemTime(today)
+    const original = buildCycles(DEFAULTS, today)[0]
+    const rs = original.run.shifts.find((item) => item.rows.some((row) => row.status === 'flag'))!
+    const ruleId = rs.rows.find((row) => row.status === 'flag')!.ruleId
+    const at = '2026-09-22T14:35:00Z'
+    const cycle = { ...original, server: true, decisions: [{ id: 'decision-server', cycleId: original.id, groupId: ruleId, shiftIds: [], decision: 'dismissed' as const, reason: 'Verified against the approved client file', by: 'user' as const, at }] }
+    vi.spyOn(desk, 'useDesk').mockReturnValue({ cycles: [cycle], current: cycle, byId: () => cycle })
+    const html = render(`/payroll/${rs.shift.id}?cycle=${cycle.id}&step=review`)
+    const audit = html.slice(html.indexOf('aria-label="Time entry rules and trail"'))
+    expect(audit).toContain('class="tag">Dismissed</span>')
+    expect(audit).toContain(`dateTime="${at}"`)
+    expect(audit).toContain('Verified against the approved client file')
+    expect(audit).not.toContain('>Ingested</span>')
+    expect(audit).not.toContain('>Sent</span>')
+    expect(audit).not.toContain('Time not recorded')
+  })
   it('replaces the payments table with the summary rows for every pending kind in Review and keeps cycle navigation', () => {
     vi.useFakeTimers().setSystemTime(today)
     const cycles = buildCycles(DEFAULTS, today)
@@ -120,14 +143,19 @@ describe('Payroll review composition', () => {
     for (const delta of deltas) expect(delta[2]).not.toMatch(/[+−-]/)
   })
 
-  it('opens on the pending cycle with every cycle in one list, without period filters, send or search controls', () => {
+  it('opens on the pending cycle with every cycle in one list and the server Send to Payroll next step', () => {
     vi.useFakeTimers().setSystemTime(today)
-    const cycles = buildCycles(DEFAULTS, today)
+    const cycles = [...buildCycles(DEFAULTS, today)]
+    cycles[1] = { ...cycles[1], nextStep: { kind: 'send', label: 'Send to Payroll', detail: 'Ready to send', counts: { missingSets: 0, gaps: 0, openGroups: 0 } } }
+    vi.spyOn(desk, 'useDesk').mockReturnValue({ cycles, current: cycles[0], byId: (id) => cycles.find((cycle) => cycle.id === id) })
     const html = render('/payroll?filter=all')
     const sidebar = renderSidebar('/payroll?filter=all')
     expect(html).not.toContain('aria-label="Flags"')
     expect(html).not.toContain('Approve cycle')
-    expect(html).not.toContain('Send to Payroll')
+    expect(html).toContain('Send to Payroll')
+    const nextStep = html.match(/<div class="journey-next-step"[\s\S]*?<\/button><\/div>/)![0]
+    expect(nextStep.match(/<button\b/g)).toHaveLength(1)
+    expect(nextStep).not.toContain('primary')
     expect(html).not.toMatch(/Review \d+ discrepancies/)
     expect(html).not.toContain('aria-label="Search"')
     expect(html).not.toContain('aria-label="Search time entries"')

@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Download, X } from 'lucide-react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { RULES, money, type RunShift } from '@/bench/engine.js'
@@ -11,7 +11,8 @@ import { useSetChatContext, useSetChatSuggestions } from '@/components/chat/Chat
 import { useOverlay } from '@/components/shell/Overlay'
 import { PageTitle } from '@/components/shell/PageTitle'
 import { Btn, Empty, Lbl, PayDelta, Tag } from '@/components/ui'
-import { discrepancies, effectiveResolutions, provenance, shortShiftId, topstats, useDesk, type DeskCycle } from '@/lib/desk'
+import { discrepancies, effectiveResolutions, provenance, rowResolution, shortShiftId, topstats, useDesk, type DeskCycle } from '@/lib/desk'
+import { decide, groupId } from '@/lib/journey'
 import { getOnboarding, useOnboarding } from '@/lib/onboarding'
 import { shiftListHref } from '@/lib/navigation'
 import { defaultThreadParty, threadFor } from '@/lib/threads'
@@ -34,13 +35,16 @@ function ShiftTrail({ cycle, rs, primaryRuleId }: { cycle: DeskCycle; rs: RunShi
   const decision = effectiveResolutions(cycle, state.resolutions)[cycle.id]?.[rs.shift.id]
   const ids = new Set(rs.rows.filter((row) => row.status === 'flag' || row.status === 'held' || row.status === 'applied').map((row) => row.ruleId))
   const rules = RULES.filter((rule) => ids.has(rule.id)).sort((a, b) => Number(b.id === primaryRuleId) - Number(a.id === primaryRuleId))
+  const serverDecisions = cycle.server ? (cycle.decisions ?? []).filter((item) => [...ids].some((ruleId) => item.groupId === ruleId
+    || [...(cycle.groups ?? []), ...(cycle.extraGroups ?? [])].some((group) => group.ruleId === ruleId && groupId(group) === item.groupId))) : []
   const legacyParty = defaultThreadParty({ ...cycle, rememberedRuleIds: [] }, rs)
-  const trail: TraceEntry[] = (['worker', 'facility'] as const).flatMap((party) => {
+  const trail: TraceEntry[] = cycle.server ? serverDecisions.map((item) => ({ at: item.at, action: item.decision === 'escalated' ? 'status' : 'resolved',
+    detail: item.decision === 'approved' ? 'Payroll adjustment approved' : item.decision === 'dismissed' ? `Issue dismissed · ${item.reason}` : 'Issue escalated' })) : (['worker', 'facility'] as const).flatMap((party) => {
     const saved = state.mediation[`${key}:${party}`] ?? (party === legacyParty ? state.mediation[key] : undefined)
     return threadFor(cycle, rs, saved, party).trail
   }).filter((entry, index, all) => entry.action !== 'ingested'
     || all.findIndex((other) => other.action === 'ingested' && other.detail === entry.detail) === index)
-  if (decision) trail.push({
+  if (decision && !cycle.server) trail.push({
     at: state.decisionTimes[key] ?? '', action: 'resolved',
     detail: decision === 'applied' ? 'Payroll adjustment approved' : 'Payment kept at the current amount',
   })
@@ -59,7 +63,14 @@ function ShiftTrail({ cycle, rs, primaryRuleId }: { cycle: DeskCycle; rs: RunShi
       return <FiredRule key={`${row.ruleId}:${index}`} row={row} rule={rule}
         onOpen={rule ? () => openDrawer(<RuleEvidence rule={rule} />, rule.id, PROV[rule.id]?.doc ?? rule.source.doc) : undefined} />
     })}
-    {decision && <section className="shift-audit-section" aria-label="Recorded decision">
+    {serverDecisions.map((item) => <section key={item.id} className="shift-audit-section" aria-label="Recorded decision">
+      <Lbl>Decision</Lbl>
+      <Tag>{item.decision === 'approved' ? 'Approved' : item.decision === 'dismissed' ? 'Dismissed' : 'Escalated'}</Tag>
+      <p className="shift-audit-time"><RecordedTime at={item.at} /></p>
+      {item.decision === 'approved' && <PayDelta current={rs.naive} resolved={rs.pay} size="sm" />}
+      {item.reason && <p className="r-note">{item.reason}</p>}
+    </section>)}
+    {decision && !cycle.server && <section className="shift-audit-section" aria-label="Recorded decision">
       <Lbl>Decision</Lbl>
         <Tag>{decision === 'applied' ? 'Applied' : 'Not an Issue'}</Tag>
         <p className="shift-audit-time"><RecordedTime at={state.decisionTimes[key]} /></p>
@@ -99,6 +110,8 @@ export function ShiftPage() {
   const navigate = useNavigate()
   const { current, byId } = useDesk()
   const [state, update] = useOnboarding()
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const { toast } = useOverlay()
   const cycle = byId(params.get('cycle') ?? '') ?? current
   const rs = cycle.run.shifts.find(({ shift }) => shift.id === shiftId)
@@ -112,6 +125,10 @@ export function ShiftPage() {
   const primaryRuleId = flag ?? items.find((item) => item.shiftId === shiftId)?.ruleId
   const decision = decisions?.[shiftId]
   const canDecide = !!rs && !decision && items.some((item) => item.shiftId === shiftId)
+  const pendingRules = [...new Set((rs?.rows ?? []).filter((row) => (row.status === 'flag' || row.status === 'held')
+    && !rowResolution(cycle, shiftId, row.ruleId, state.resolutions)).map((row) => row.ruleId))]
+  const groupCases = (ruleId: string) => cycle.run.shifts.filter((item) => item.rows.some((row) => row.ruleId === ruleId && (row.status === 'flag' || row.status === 'held'))).map((item) => item.shift.id)
+  const approvalCount = pendingRules.reduce((count, ruleId) => count + groupCases(ruleId).length, 0)
 
   useSetChatSuggestions(suggestions)
   useSetChatContext({
@@ -129,9 +146,23 @@ export function ShiftPage() {
     rules: RULES.filter((rule) => rs?.rows.some((row) => row.ruleId === rule.id && row.status !== 'na')).map(({ id, sentence }) => ({ id, sentence })),
   })
 
-  function approve() {
+  async function approve() {
     const latest = getOnboarding()
-    if (!rs || effectiveResolutions(cycle, latest.resolutions)[cycle.id]?.[shiftId]) return
+    if (!rs || saving || effectiveResolutions(cycle, latest.resolutions)[cycle.id]?.[shiftId]) return
+    if (cycle.server) {
+      setSaving(true)
+      setError(null)
+      try {
+        for (const ruleId of pendingRules) {
+          const group = [...(cycle.groups ?? []), ...(cycle.extraGroups ?? [])].find((item) => item.ruleId === ruleId)
+          const id = group ? groupId(group) : ruleId
+          await decide(cycle.id, { groupId: id, decision: 'approved', shiftIds: groupCases(ruleId) })
+        }
+        toast(`Approved ${approvalCount.toLocaleString()} issues`)
+      } catch (cause) { setError(cause instanceof Error ? cause.message : 'The decision could not be saved.') }
+      finally { setSaving(false) }
+      return
+    }
     const key = `${cycle.id}:${shiftId}`
     update({
       resolutions: { ...latest.resolutions, [cycle.id]: { ...latest.resolutions[cycle.id], [shiftId]: 'applied' } },
@@ -156,8 +187,11 @@ export function ShiftPage() {
             title="Export these rows" onClick={() => exportShiftRows(cycle, rs)}><Download size={14} aria-hidden="true" /></Btn>
         </>} />
       <div className="shift-page-body scroll">
+        {error && <p role="alert">{error}</p>}
+        {saving && <p className="r-note" role="status">Saving decisions…</p>}
         <ShiftDetail cycle={cycle} rs={rs} primaryRuleId={primaryRuleId} showHeading={false} showSourceAction={false} showFired={false}
-          onApply={canDecide ? approve : undefined}
+          applyLabel={cycle.server ? `Approve ${approvalCount.toLocaleString()} issues` : undefined}
+          onApply={canDecide && !saving ? () => void approve() : undefined}
  />
       </div>
     </section>

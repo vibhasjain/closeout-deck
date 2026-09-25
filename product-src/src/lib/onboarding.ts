@@ -54,6 +54,7 @@ export interface ChatMessage {
   cards?: Card[]
   scope?: string
   contextChip?: string
+  traces?: string[]
   ingestFileIds?: string[]
   /** Parts of the agent's reply that failed validation and were not applied, named in one quiet line. */
   skipped?: string[]

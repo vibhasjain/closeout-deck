@@ -1,11 +1,13 @@
 import { Check, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { checklist } from '@/lib/checklist'
+import { useDesk } from '@/lib/desk'
 import { useOnboarding } from '@/lib/onboarding'
 
 export function GettingStarted({ onNavigate }: { onNavigate?: () => void } = {}) {
   const [state, update] = useOnboarding()
-  const progress = checklist(state)
+  const { cycles } = useDesk()
+  const progress = checklist(state, new Date(), cycles)
   if (progress.dismissed) return null
   return <section className="getting-started" aria-label="Getting started">
     <div className="getting-started-head">

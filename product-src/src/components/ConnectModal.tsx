@@ -3,23 +3,26 @@ import { Check, ChevronLeft, ChevronRight, Lock, X } from 'lucide-react'
 import type { Source, Destination } from '@/bench/vendors'
 import { useDesk } from '@/lib/desk'
 import { useOnboarding } from '@/lib/onboarding'
+import { connectSource } from '@/lib/data'
 import { Btn, Spinner, Tag } from '@/components/ui'
 import { VendorTile, vendorKey } from '@/components/SourcesTable'
 import { useOverlay } from '@/components/shell/Overlay'
 
-export function ConnectModal({ vendor, onDone }: { vendor: Source | Destination; onDone(): void }): JSX.Element {
+export function ConnectModal({ vendor, onDone, loadSample = false }: { vendor: Source | Destination; onDone(): void; loadSample?: boolean }): JSX.Element {
   const [state, update] = useOnboarding()
   const { current } = useDesk()
   const { close, toast } = useOverlay()
   const [phase, setPhase] = useState<'login' | 'syncing' | 'done'>('login')
   const [step, setStep] = useState(0)
+  const [error, setError] = useState('')
   const closeButton = useRef<HTMLButtonElement>(null)
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
+  const mounted = useRef(true)
   const latest = useRef(state)
   useEffect(() => { latest.current = state }, [state])
   useEffect(() => {
-    const pending = timers.current
-    return () => pending.forEach(clearTimeout)
+    mounted.current = true
+    return () => { mounted.current = false; timers.current.forEach(clearTimeout) }
   }, [])
   const host = vendor.name.normalize('NFKD').toLowerCase().replace(/[^a-z0-9]/g, '')
   const destination = 'format' in vendor
@@ -42,17 +45,23 @@ export function ConnectModal({ vendor, onDone }: { vendor: Source | Destination;
     // Keep keyboard focus in the overlay when the sign-in button disappears.
     closeButton.current?.focus()
     setPhase('syncing')
+    setError('')
     for (let next = 1; next < steps.length; next++) {
       timers.current.push(setTimeout(() => setStep(next), next * 800))
     }
-    timers.current.push(setTimeout(() => {
-      const connections = { ...latest.current.connections, [vendorKey(vendor)]: { status: 'connected' as const, method: 'browser' as const, lastSync: new Date().toISOString() } }
+    timers.current.push(setTimeout(async () => {
+      if (loadSample && !destination) {
+        try { await connectSource({ set: vendor.set ?? 2, system: vendor.name, site: vendor.sites[0] }) }
+        catch (cause) { if (mounted.current) { setError(cause instanceof Error ? cause.message : 'The sample connection could not be loaded. Try again.'); setPhase('login'); timers.current = [] } return }
+      }
+      if (!mounted.current) return
+      const connections = { ...latest.current.connections, [vendorKey(vendor)]: { status: 'connected' as const, method: 'browser' as const, lastSync: new Date().toISOString(), ...(loadSample ? { sample: true } : {}) } }
       latest.current = { ...latest.current, connections }
       update({ connections })
       setPhase('done')
       timers.current.push(setTimeout(() => {
         close()
-        toast(`${vendor.name} connected`)
+        toast(`${vendor.name} connected${loadSample ? ' · Sample' : ''}`)
         onDone()
       }, 700))
     }, steps.length * 800))
@@ -68,7 +77,7 @@ export function ConnectModal({ vendor, onDone }: { vendor: Source | Destination;
         <div className="vbrowser-chrome">
           <ChevronLeft aria-hidden="true" /><ChevronRight aria-hidden="true" />
           <div className="vbrowser-url"><Lock aria-hidden="true" /><span>{host}.com/auth/login</span></div>
-          <Tag>Demo</Tag>
+          <Tag>{loadSample ? 'Sample' : 'Demo'}</Tag>
         </div>
         <div className="vbrowser-page">
           {phase === 'login' ? <div className="vbrowser-login">
@@ -82,7 +91,8 @@ export function ConnectModal({ vendor, onDone }: { vendor: Source | Destination;
               </dl>
             </div>
             <Btn className="primary" onClick={connect}>Sign In</Btn>
-            <p className="r-note">Demo connection · use placeholder credentials</p>
+            <p className="r-note">{loadSample ? 'Simulated connector · loads Sample time entries' : 'Demo connection · use placeholder credentials'}</p>
+            {error && <p className="r-note" role="alert">{error}</p>}
           </div> : <div className="vbrowser-progress">
             <div className="vbrowser-progress-heading">
               <div className="vendor-title"><VendorTile vendor={vendor} large /><h4>{vendor.name}</h4></div>

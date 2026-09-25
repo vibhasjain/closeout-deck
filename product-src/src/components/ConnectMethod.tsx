@@ -2,6 +2,7 @@ import { useState, type JSX } from 'react'
 import { X } from 'lucide-react'
 import type { Source } from '@/bench/vendors'
 import { InboxAddress } from '@/components/InboxAddress'
+import { ConnectModal } from '@/components/ConnectModal'
 import { VendorTile, vendorKey } from '@/components/SourcesTable'
 import { useOverlay } from '@/components/shell/Overlay'
 import { Btn, Chip, Tag } from '@/components/ui'
@@ -11,9 +12,9 @@ import { METHODS, type Method } from '@/lib/connectMethods'
 import { connectSource } from '@/lib/data'
 
 /** Pick how the agent reaches a system: browser sign-in, API key, or forwarded email. */
-export function ConnectMethod({ vendor }: { vendor: Source }): JSX.Element {
+export function ConnectMethod({ vendor, inline = false }: { vendor: Source; inline?: boolean }): JSX.Element {
   const [state, update] = useOnboarding()
-  const { close, toast } = useOverlay()
+  const { close, toast, openModal } = useOverlay()
   const email = useCurrentEmail()
   const key = vendorKey(vendor)
   const current = state.connections[key]?.method
@@ -24,6 +25,11 @@ export function ConnectMethod({ vendor }: { vendor: Source }): JSX.Element {
   const [error, setError] = useState('')
   const save = async (method: Method) => {
     if (busy) return
+    if (inline && method === 'browser') {
+      setPicked(method)
+      openModal(<ConnectModal vendor={{ ...vendor, set: vendor.set === 3 || vendor.builtin ? 3 : set }} loadSample onDone={() => setDone(true)} />)
+      return
+    }
     setPicked(method); setBusy(true); setError('')
     try {
       await connectSource({ set: vendor.set === 3 || vendor.builtin ? 3 : set, system: vendor.name, site: vendor.sites[0] })
@@ -41,15 +47,15 @@ export function ConnectMethod({ vendor }: { vendor: Source }): JSX.Element {
   }
 
   return <div className="connect-method">
-    <div className="drawer-head">
+    {!inline && <div className="drawer-head">
       <div className="vendor-title"><VendorTile vendor={vendor} /><h3 className="drawer-title">{vendor.name}</h3></div>
       <button className="icon-btn" type="button" aria-label="Close" onClick={close}><X aria-hidden="true" /></button>
-    </div>
+    </div>}
     {done ? <div className="connect-method-body">
       <p>Connected <Tag>Sample</Tag></p>
       <p className="r-note">{vendor.name} time entries are ready in Payroll. This is a simulated connection.</p>
       {picked === 'email' && <InboxAddress address={inboxAddress(email)} />}
-      <Btn className="primary" onClick={close}>Done</Btn>
+      {!inline && <Btn className="primary" onClick={close}>Done</Btn>}
     </div> : <div className="connect-method-options">
       <p>How do you want to connect?</p>
       <p className="r-note">Simulated connector · loads Sample time entries</p>

@@ -6,6 +6,7 @@ import { useOverlay } from '@/components/shell/Overlay'
 import { Btn, Tag } from '@/components/ui'
 import { titleCase } from '@/lib/utils'
 import type { DeskCycle } from '@/lib/desk'
+import { recordMessage, useJourneyThreads, type JourneyThread } from '@/lib/journey'
 import { getOnboarding, useOnboarding } from '@/lib/onboarding'
 import { defaultThreadParty, readThreadInput, recordThreadAction, recordThreadInput, threadFor, type Draft, type ThreadAction, type ThreadEntry, type ThreadParty } from '@/lib/threads'
 import './thread.css'
@@ -23,6 +24,7 @@ function MessageBubble({ entry, name }: { entry: ThreadEntry; name: string }) {
     <div className="thread-label">{label} · <Time at={entry.at} /></div>
     {entry.subject && <p className="thread-subject">{entry.subject}</p>}
     <p className="thread-text">{entry.text}</p>
+    {entry.dir === 'out' && <Tag>Not Sent · Demo</Tag>}
   </article>
 }
 
@@ -69,9 +71,73 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction(action: ThreadA
   </section>
 }
 
-export function Thread({ cycle, rs }: { cycle: DeskCycle; rs?: RunShift }) {
-  return rs ? <PaymentThread key={`${cycle.id}:${rs.shift.id}`} cycle={cycle} rs={rs} />
+export function Thread({ cycle, rs, thread }: { cycle?: DeskCycle; rs?: RunShift; thread?: JourneyThread }) {
+  if (thread) return <JourneyThreadView thread={thread} />
+  if (cycle?.server) return <ServerPaymentThread cycle={cycle} rs={rs} />
+  return cycle && rs ? <PaymentThread key={`${cycle.id}:${rs.shift.id}`} cycle={cycle} rs={rs} />
     : <div className="thread-empty" aria-label="No conversation"><MessageSquare size={20} aria-hidden="true" /></div>
+}
+
+function ServerPaymentThread({ cycle, rs }: { cycle: DeskCycle; rs?: RunShift }) {
+  const { threads, loading, error } = useJourneyThreads(cycle.id)
+  const [selected, setSelected] = useState<string>()
+  const relevant = threads.filter((thread) => !rs || thread.shiftId === rs.shift.id
+    || thread.counterparty.kind === 'worker' && thread.counterparty.name === rs.shift.worker
+    || thread.counterparty.kind === 'site' && (thread.counterparty.name === rs.shift.fac.name
+      || thread.counterparty.name === cycle.sites?.find((site) => site.name === rs.shift.fac.name)?.supervisor?.name))
+  const thread = relevant.find((item) => item.id === selected) ?? relevant[0]
+  if (!thread) return <div className="thread-empty" aria-label="No conversation">
+    <MessageSquare size={20} aria-hidden="true" />
+    <p className="r-note" role={error ? 'alert' : 'status'}>{error ?? (loading ? 'Loading conversation…' : 'No conversation yet')}</p>
+  </div>
+  return <>
+    {relevant.length > 1 && <div className="thread-party-switch journey-thread-picker" role="group" aria-label="Conversation recipient">
+      {relevant.map((item) => <button type="button" key={item.id} aria-pressed={thread.id === item.id} onClick={() => setSelected(item.id)}>{item.counterparty.name}</button>)}
+    </div>}
+    <JourneyThreadView key={thread.id} thread={thread} />
+  </>
+}
+
+/** The same persisted conversation is used in the work pane and the dispute form. */
+export function JourneyThreadView({ thread: initial, primary = false }: { thread: JourneyThread; primary?: boolean }) {
+  const { threads, error: loadError } = useJourneyThreads(initial.cycleId)
+  const thread = threads.find((item) => item.id === initial.id) ?? initial
+  const [text, setText] = useState('')
+  const [dir, setDir] = useState<'in' | 'out'>('in')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const log = useRef<HTMLDivElement>(null)
+  async function save() {
+    if (!text.trim() || saving) return
+    setSaving(true)
+    setError(null)
+    try {
+      await recordMessage(thread.id, { dir, text: text.trim() })
+      setText('')
+      requestAnimationFrame(() => { if (log.current) log.current.scrollTop = log.current.scrollHeight })
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'The message could not be recorded.') }
+    finally { setSaving(false) }
+  }
+  return <section className="thread journey-thread" aria-label={`Conversation with ${thread.counterparty.name}`}>
+    <header className="thread-head"><div className="thread-heading"><span className="thread-name">{thread.counterparty.name}</span><Tag>{titleCase(thread.status)}</Tag></div></header>
+    <div ref={log} className="thread-log scroll" role="log" aria-live="polite">
+      {thread.messages.map((message) => <article key={message.id} className={`thread-bubble ${message.dir === 'note' ? 'internal' : message.dir}`}>
+        <div className="thread-label">{message.dir === 'in' ? thread.counterparty.name : message.dir === 'note' ? 'Closeout Agent' : 'You'} · <Time at={message.at} /></div>
+        <p className="thread-text">{message.text}</p>
+        {message.dir === 'out' && <Tag>Not Sent · Demo</Tag>}
+      </article>)}
+      {!thread.messages.length && <p className="r-note">No messages yet</p>}
+    </div>
+    {(error || loadError) && <p className="journey-thread-error" role="alert">{error ?? loadError}</p>}
+    <form className="journey-thread-composer" onSubmit={(event) => { event.preventDefault(); void save() }}>
+      <div className="thread-party-switch" role="group" aria-label="Message direction">
+        <button type="button" aria-pressed={dir === 'in'} onClick={() => setDir('in')}>Record reply</button>
+        <button type="button" aria-pressed={dir === 'out'} onClick={() => setDir('out')}>Outgoing message</button>
+      </div>
+      <textarea className="chat-input" rows={2} aria-label={dir === 'in' ? 'Reply text' : 'Outgoing message text'} placeholder={dir === 'in' ? `Record ${thread.counterparty.name}'s reply…` : `Message ${thread.counterparty.name}…`} value={text} onChange={(event) => setText(event.target.value)} />
+      <Btn type="submit" className={primary ? 'primary' : undefined} disabled={saving || !text.trim()}>{saving ? 'Recording…' : dir === 'in' ? 'Record reply' : 'Save message · Demo'}</Btn>
+    </form>
+  </section>
 }
 
 function PaymentThread({ cycle, rs }: { cycle: DeskCycle; rs: RunShift }) {
@@ -141,7 +207,7 @@ function PartyThread({ cycle, rs, party, legacyParty, switcher }: { cycle: DeskC
     const latest = mediation[key] ?? (party === legacyParty ? mediation[legacyKey] : undefined)
     update({ mediation: { ...mediation, [key]: recordThreadAction(latest, action) } })
     if (action.type === 'send') {
-      toast(`Message sent to ${thread.counterparty.name}`)
+      toast(`Message recorded for ${thread.counterparty.name} · Not Sent · Demo`)
       requestAnimationFrame(() => { if (log.current) log.current.scrollTop = log.current.scrollHeight })
     }
   }

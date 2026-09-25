@@ -64,7 +64,42 @@ describe('getting started checklist', () => {
     state.batches[current.id] = { status: 'sent', id: 'OTHER', workers: 5, gross: 100 }
     expect(checklist(state, now).items[3].done).toBe(false)
     state.batches[pending.id] = { status: 'sending', id: 'PENDING', workers: 5, gross: 100 }
+    expect(checklist(state, now).items[3].done).toBe(false)
+    state.batches[pending.id].status = 'sent'
     expect(checklist(state, now).items[3].done).toBe(true)
+  })
+
+  it('reads the server batch and finishes the journey at 4/4 without a local batch', () => {
+    const state = fresh()
+    const cycle = buildCycles(state, now)[1]
+    const server = { ...cycle, server: true, batch: { id: 'batch-1', cycleId: cycle.id, destination: 'ADP', workers: 3, gross: 1200, held: 1, createdAt: now.toISOString() },
+      nextStep: { kind: 'done' as const, label: 'Disputes', detail: 'Sent to ADP', counts: { missingSets: 0, gaps: 0, openGroups: 0 } } }
+    const progress = checklist(state, now, [server])
+    expect(progress).toMatchObject({ done: 4, total: 4, pendingCycleId: cycle.id })
+    expect(progress.items.every((item) => item.done && !item.expanded)).toBe(true)
+    expect(state.batches).toEqual({})
+  })
+
+  it('uses server next-step counts instead of synthetic intake and review counts', () => {
+    const state = { ...fresh(), forwarded: true }
+    const cycle = { ...buildCycles(state, now)[1], server: true, batch: null,
+      nextStep: { kind: 'send' as const, label: 'Send to Payroll', detail: 'Ready', counts: { missingSets: 0, gaps: 0, openGroups: 0 } } }
+    const progress = checklist(state, now, [cycle])
+    expect(progress.done).toBe(3)
+    expect(progress.items[3]).toMatchObject({ done: false, expanded: true })
+  })
+
+  it('keeps Getting started at 4/4 after sending a sample cycle outside the calendar pending period', () => {
+    const state = fresh()
+    const cycles = buildCycles(state, now)
+    const pending = { ...cycles[1], server: true, batch: null,
+      nextStep: { kind: 'get_timesheets' as const, label: 'Get timesheets', detail: 'Collect time entries', counts: { missingSets: 3, gaps: 0, openGroups: 0 } } }
+    const sample = { ...cycles[2], server: true, sample: true,
+      batch: { id: 'batch-sample', cycleId: cycles[2].id, destination: 'ADP', workers: 3, gross: 1200, held: 0, createdAt: now.toISOString() },
+      nextStep: { kind: 'done' as const, label: 'Done', detail: 'Sent to ADP · Demo', counts: { missingSets: 0, gaps: 0, openGroups: 0 } } }
+    const progress = checklist(state, now, [pending, sample])
+    expect(progress).toMatchObject({ done: 4, total: 4, pendingCycleId: sample.id })
+    expect(progress.items.every((item) => item.done)).toBe(true)
   })
 
   it('uses the configured calendar when deriving the pending cycle', () => {

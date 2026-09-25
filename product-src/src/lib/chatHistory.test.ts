@@ -9,6 +9,13 @@ function harness(local: ChatMessage[] = [], saved: ChatMessage[] = []) {
   return { history, request, chat: () => chat, pending: () => pending }
 }
 describe('separate append-only chat history', () => {
+  it('keeps received trace metadata when an older server returns the same message without it', async () => {
+    const local = { ...line('same'), traces: ['Read handbooks/mediation.md'] }
+    const h = harness([local])
+    h.request.mockResolvedValueOnce(Response.json({ messages: [line('same')] }))
+    await h.history.load()
+    expect(h.chat()).toEqual([local])
+  })
   it('hydrates server rows and migrates local and legacy history once by id', async () => {
     const h = harness([line('local', 3), line('same', 1)])
     h.request.mockResolvedValueOnce(Response.json({ messages: [line('remote', 2), line('same', 1)] }))

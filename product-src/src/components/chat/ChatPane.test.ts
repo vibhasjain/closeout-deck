@@ -5,6 +5,7 @@ import { stream, type ChatEvent } from '@/lib/chat'
 import { DEFAULTS, flushOnboarding, getOnboarding, updateOnboarding } from '@/lib/onboarding'
 import { CHAT_POST_EVENT, postToChat } from '@/lib/chatBus'
 import { invalidate } from '@/lib/data'
+import { decide } from '@/lib/journey'
 
 // Exercise the real send handler and effect cleanup without requiring a browser.
 const hooks = vi.hoisted(() => ({ cursor: 0, context: 0, slots: [] as unknown[], effects: [] as EffectCallback[] }))
@@ -41,6 +42,9 @@ vi.mock('@/lib/chat', async (importOriginal) => ({
   ...await importOriginal<typeof import('@/lib/chat')>(), stream: vi.fn(),
 }))
 vi.mock('@/lib/data', () => ({ invalidate: vi.fn(async () => {}) }))
+vi.mock('@/lib/journey', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/lib/journey')>(), decide: vi.fn(),
+}))
 
 type Props = {
   children?: ReactNode
@@ -118,6 +122,66 @@ describe('chat conversation lifetime', () => {
     await vi.waitFor(() => expect(getOnboarding().chat).toHaveLength(2))
     expect(getOnboarding().chat[1]).toMatchObject({ role: 'agent', text: 'Thursday it is.', actions: [{ type: 'set_calendar', patch: { payDay: 'Thursday' } }] })
     expect(getOnboarding()).toMatchObject({ payDay: 'Thursday', chatSessionId: 'saved-session' })
+  })
+
+  it('persists real trace frames with the final message, bounded to three distinct reads', async () => {
+    vi.mocked(stream).mockImplementation(async function* () {
+      yield { trace: 'Read handbooks/send-to-payroll.md' }
+      yield { text: 'Checking the batch.' }
+      yield { trace: 'Read data/cycles/2026-09-20.json' }
+      yield { trace: 'Read handbooks/send-to-payroll.md' }
+      yield { trace: 'Made up progress' }
+      yield { trace: 'Read data/decisions.jsonl' }
+      yield { trace: 'Read data/extra.json' }
+      yield { done: true, final: 'The batch is ready for your review.' }
+    })
+    send('Review the batch')
+    await vi.waitFor(() => expect(getOnboarding().chat).toHaveLength(2))
+    expect(getOnboarding().chat[1]).toMatchObject({ text: 'The batch is ready for your review.', traces: [
+      'Read handbooks/send-to-payroll.md', 'Read data/cycles/2026-09-20.json', 'Read data/decisions.jsonl',
+    ] })
+    expect(getOnboarding().chat[0].traces).toBeUndefined()
+  })
+
+  it('deduplicates an open_form action with its card and preserves only the agent-written message text', async () => {
+    vi.mocked(stream).mockImplementation(async function* () {
+      yield { done: true, final: 'Choose the Payroll destination.\n```card {"kind":"form","form":"send","cycleId":"2026-09-20"}```\n```action {"type":"open_form","form":"send","cycleId":"2026-09-20"}```' }
+    })
+    send('Send to Payroll')
+    await vi.waitFor(() => expect(getOnboarding().chat).toHaveLength(2))
+    expect(getOnboarding().chat[1]).toMatchObject({ text: 'Choose the Payroll destination.',
+      cards: [{ kind: 'form', form: 'send', cycleId: '2026-09-20' }],
+      actions: [{ type: 'open_form', form: 'send', cycleId: '2026-09-20' }], skipped: [],
+    })
+    expect(getOnboarding().chat[1].cards).toHaveLength(1)
+    expect(decide).not.toHaveBeenCalled()
+  })
+
+  it('awaits a decision and does not label a failed mutation Applied', async () => {
+    let rejectDecision: (error: Error) => void = () => {}
+    vi.mocked(decide).mockImplementation(() => new Promise((_resolve, reject) => { rejectDecision = reject }))
+    vi.mocked(stream).mockImplementation(async function* () {
+      yield { done: true, final: 'Applying your choice.\n```action {"type":"approve","cycleId":"2026-09-20","groupId":"CS-01"}```' }
+    })
+    send('Approve the duplicates')
+    await vi.waitFor(() => expect(decide).toHaveBeenCalledWith('2026-09-20', { groupId: 'CS-01', decision: 'approved' }))
+    expect(getOnboarding().chat).toHaveLength(1)
+    rejectDecision(new Error('Decision could not be saved'))
+    await vi.waitFor(() => expect(getOnboarding().chat).toHaveLength(2))
+    expect(getOnboarding().chat[1]).toMatchObject({ text: 'Applying your choice.', actions: [], skipped: ['approve: Decision could not be saved'] })
+  })
+
+  it('caps the combined card fences and open_form actions before persisting the message', async () => {
+    vi.mocked(stream).mockImplementation(async function* () {
+      yield { done: true, final: 'Here is the closeout.\n```card {"kind":"task","cycleId":"2026-09-20"}```\n```card {"kind":"findings","cycleId":"2026-09-20"}```\n```card {"kind":"form","form":"gaps","cycleId":"2026-09-20"}```\n```action {"type":"open_form","form":"send","cycleId":"2026-09-20"}```\n```action {"type":"open_form","form":"dispute","cycleId":"2026-09-20"}```' }
+    })
+    send('Show this closeout')
+    await vi.waitFor(() => expect(getOnboarding().chat).toHaveLength(2))
+    const saved = getOnboarding().chat[1]
+    expect(saved.text).toBe('Here is the closeout.')
+    expect(saved.cards).toHaveLength(3)
+    expect(JSON.stringify(saved.cards).length).toBeLessThanOrEqual(8192)
+    expect(saved.skipped?.length).toBeGreaterThan(0)
   })
 
   it('sends despite unrelated sync failure and keeps valid actions when a neighboring model action is invalid', async () => {

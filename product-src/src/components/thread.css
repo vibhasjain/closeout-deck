@@ -49,3 +49,11 @@
 .thread .thread-draft-actions .lnk { margin-left: 0; }
 .thread .thread-empty { align-items: flex-start; color: hsl(var(--muted-foreground) / .5); }
 .thread .thread-name { overflow-wrap: anywhere; }
+.journey-thread { min-width: 0; height: auto; }
+.journey-thread .thread-log { min-height: 6rem; max-height: 28rem; }
+.journey-thread .thread-bubble > .tag { margin-top: .5rem; }
+.journey-thread-composer { display: flex; flex-wrap: wrap; align-items: center; gap: .625rem; padding: .75rem; border-top: 1px solid hsl(var(--border)); }
+.journey-thread-composer .chat-input { flex-basis: 100%; width: 100%; min-width: 0; resize: vertical; }
+.journey-thread-composer > .btn { margin-left: auto; }
+.journey-thread-error { margin: .5rem .75rem; color: hsl(var(--muted-foreground)); }
+.journey-thread-picker { flex-wrap: wrap; margin: .5rem; border-radius: .375rem; }

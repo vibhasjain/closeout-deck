@@ -5,6 +5,7 @@ import { cycleLabel, cycleWeeks, recentCycles, type Cycle } from '@/lib/cycles'
 import type { DeskCycle } from '@/lib/desk'
 import { flushOnboarding, getOnboarding, updateOnboarding, type Onboarding } from '@/lib/onboarding'
 import { viewerSession } from '@/lib/viewerSession'
+import type { JourneyBatch, JourneyDecision, NextStep } from '@/lib/journey'
 
 /** JSON wire types mirror the data service without importing Node modules into the app. */
 export interface DataProvenance { file: string; sheet?: string; row: number; cols: Partial<Record<string, string>>; hoursOnly?: boolean; fileId?: string; sample?: boolean; system?: string }
@@ -31,7 +32,8 @@ export interface TimeEntry {
 export interface FactInput { kind: 'site' | 'rate' | 'differential' | 'alias' | 'account'; key: string; value: Record<string, unknown> }
 export interface CycleDates { id: string; start: string; end: string; cutoff: string; deadline: string; payDate: string; status: Cycle['status'] }
 export interface CyclePayload {
-  cycle: CycleDates; sample: boolean; runId: string; runAt: string; sites: DataSite[]
+  cycle: CycleDates; sample: boolean; runId: string | null; runAt: string | null; sites: DataSite[]
+  decisions?: JourneyDecision[]; batch?: JourneyBatch | null; nextStep?: NextStep
   week: (Omit<Shift, 'fac'> & { fac: number; sample?: boolean; prov: DataProvenance; entryIds: string[] })[]
   results: Omit<RunShift, 'shift'>[]
   totals: { under: number; over: number; flags: number; held: number; gross: number; naive: number; shifts: number; workers: number }
@@ -107,7 +109,8 @@ export function hydrate(payload: CyclePayload, cal: Onboarding, files: FileRecor
   })
   const ctx = runEngine(week).ctx
   return { ...cycle, week, run: { shifts: payload.results.map((result, i) => ({ ...result, shift: week[i] })), totals: payload.totals, ctx },
-    days: daysOf(cycle), scripted: false, label: cycleLabel(cycle), statusTag: statusTag(cycle, cal), rememberedRuleIds: remembered(cycle, cal),
+    days: daysOf(cycle), scripted: false, label: cycleLabel(cycle), statusTag: payload.batch ? 'Paid' : statusTag(cycle, cal), rememberedRuleIds: remembered(cycle, cal),
+    decisions: payload.decisions, batch: payload.batch, nextStep: payload.nextStep,
     server: true, sample: payload.sample, sites: payload.sites, groups: payload.groups, extraGroups: payload.extraGroups, gaps: payload.gaps, intake: payload.intake,
   }
 }
@@ -125,7 +128,33 @@ const owner = () => viewerSession()?.email ?? 'development'
 let pending: Promise<void> | null = null
 let pendingOwner = ''
 let revision = 0
+const cycleVersions = new Map<string, number>()
 export const getDataSnapshot = () => snapshot
+/** Mutation responses and chat cards publish into the same snapshot as Payroll. */
+export function publishCycle(payload: CyclePayload, account = owner()) {
+  if (owner() !== account) return
+  if (snapshot.owner !== account) emit(initial(account))
+  revision++
+  const key = `${account}:${payload.cycle.id}`
+  cycleVersions.set(key, (cycleVersions.get(key) ?? 0) + 1)
+  const summary: CycleSummary = { ...payload.cycle, sample: payload.sample, runAt: payload.runAt, totals: payload.totals, counts: payload.counts, findings: payload.groups.length + payload.extraGroups.length }
+  emit({ ...snapshot, error: null, payloads: [...snapshot.payloads.filter(item => item.cycle.id !== payload.cycle.id), payload],
+    list: snapshot.list.some(item => item.id === payload.cycle.id) ? snapshot.list.map(item => item.id === payload.cycle.id ? summary : item) : [...snapshot.list, summary] })
+}
+const cycleRequests = new Map<string, Promise<void>>()
+export function refreshCycle(id: string): Promise<void> {
+  const account = owner(), key = `${account}:${id}`
+  const pending = cycleRequests.get(key)
+  if (pending) return pending
+  const generation = cycleVersions.get(key) ?? 0
+  const work = getCycle(id).then(payload => {
+    if ((cycleVersions.get(key) ?? 0) === generation) publishCycle(payload, account)
+  }).catch((cause: unknown) => {
+    if (owner() === account && (cycleVersions.get(key) ?? 0) === generation) emit({ ...snapshot, error: cause instanceof Error ? cause.message : 'The cycle could not be loaded.' })
+  }).finally(() => { cycleRequests.delete(key) })
+  cycleRequests.set(key, work)
+  return work
+}
 /** Refreshes atomically. Failed refreshes retain this account's last successful data and expose a retryable error. */
 export async function invalidate(): Promise<void> {
   revision++
@@ -145,6 +174,11 @@ export async function loadData(): Promise<void> {
         const [list, { files }] = await Promise.all([getCycles(), getFiles()])
         const payloads = await Promise.all(list.cycles.filter(cycle => cycle.runAt !== null).map(cycle => getCycle(cycle.id)))
         if (owner() !== account) return
+        if (generation !== revision) continue
+        for (const payload of payloads) {
+          const key = `${account}:${payload.cycle.id}`
+          cycleVersions.set(key, (cycleVersions.get(key) ?? 0) + 1)
+        }
         emit({ owner: account, loaded: true, loading: false, error: null, list: list.cycles, sources: list.sources, files, payloads })
         if ((payloads.length || list.sources.length || files.length) && getOnboarding().dataSource !== 'server') updateOnboarding({ dataSource: 'server' })
       } catch (cause) {

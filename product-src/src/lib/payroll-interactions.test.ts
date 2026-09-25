@@ -18,6 +18,9 @@ import { payTotals } from '@/lib/payroll'
 import { resolutionGroups } from '@/lib/resolution'
 import { Payroll } from '@/pages/Payroll'
 import { ShiftPage } from '@/pages/ShiftPage'
+import { decide, groupId } from '@/lib/journey'
+import type { FindingGroup } from '@/lib/data'
+import * as desk from '@/lib/desk'
 
 // The suite runs in Node. Keep each directly invoked component's hook state and
 // exercise its real event handlers and store writes; layout is covered by SSR.
@@ -61,6 +64,7 @@ vi.mock('@/lib/desk', async (importOriginal) => {
 })
 vi.mock('@/components/shell/Overlay', () => ({ useOverlay: () => overlay }))
 vi.mock('@/components/chat/ChatPane', () => ({ useSetChatContext: vi.fn(), useSetChatSuggestions: vi.fn(), focusChatComposer: vi.fn() }))
+vi.mock('@/lib/journey', async (original) => ({ ...await original<typeof import('@/lib/journey')>(), decide: vi.fn() }))
 
 type ElementProps = { children?: ReactNode; [key: string]: unknown }
 function elements(node: ReactNode): ReactElement<ElementProps>[] {
@@ -123,7 +127,7 @@ beforeEach(() => {
     router.params = url.searchParams
   })
 })
-afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals() })
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
 describe('Payroll review actions', () => {
   it('keeps a stat selected when it is picked again and clears list filters on every pick', () => {
@@ -320,5 +324,77 @@ describe('Payroll cycle steps', () => {
       router.params = new URLSearchParams({ cycle: pending.id, [key]: 'x' })
       expect(elements(Payroll()).some((element) => element.type === Intake), key).toBe(false)
     }
+  })
+})
+
+function serverCycle(state: 'proposed' | 'judgment' = 'proposed') {
+  const base = buildCycles(DEFAULTS, now)[0]
+  const group = resolutionGroups(base, {}).find((item) => item.state === 'proposed')!
+  const ruleId = state === 'judgment' ? 'CON-MARGIN-01' : group.ruleId
+  const ids = new Set(group.cases.slice(0, 2).map((item) => item.shiftId))
+  const shifts = base.run.shifts.filter((item) => ids.has(item.shift.id)).map((item) => ({ ...item, rows: item.rows.filter((row) => row.ruleId === group.ruleId).map((row) => ({ ...row, ruleId })) }))
+  const finding: FindingGroup = { id: 75, ruleId, tag: 'Review', title: 'Review time entries', summary: '', why: '', hoursLabel: '', amount: 0, amountLabel: '', action: '', deadline: 'payroll', sources: [], dispute: 'Worker dispute', cases: shifts.length }
+  return { ...base, server: true, decisions: [], groups: [finding], week: shifts.map((item) => item.shift), run: { ...base.run, shifts } }
+}
+
+describe('persisted Payroll decisions', () => {
+  it('follows the server next step after asks even if the intake still contains missing entries', () => {
+    const base = serverCycle()
+    const cycle = { ...base, nextStep: { kind: 'send' as const, label: 'Send to Payroll', detail: 'Ready', counts: { missingSets: 0, gaps: 0, openGroups: 0 } } }
+    vi.spyOn(desk, 'useDesk').mockReturnValue({ cycles: [cycle], current: cycle, byId: () => cycle })
+    router.params = new URLSearchParams({ cycle: cycle.id })
+    expect(button(Payroll(), 'Review').props['aria-current']).toBe('step')
+    expect(elements(Payroll()).some((element) => element.type === Intake)).toBe(false)
+    router.params.set('step', 'intake')
+    expect(button(Payroll(), 'Collect').props['aria-current']).toBe('step')
+  })
+
+  it('posts group approvals through journey and leaves local resolutions untouched', async () => {
+    vi.useRealTimers()
+    const cycle = serverCycle()
+    vi.mocked(decide).mockResolvedValue({} as Awaited<ReturnType<typeof decide>>)
+    const render = mount(PayrollSummary, { cycle })
+    const count = cycle.run.shifts.length
+    const tree = render()
+    expect(elements(tree).filter((element) => element.props.className === 'primary')).toHaveLength(1)
+    click(tree, `Approve ${count}`)
+    await vi.waitFor(() => expect(decide).toHaveBeenCalledWith(cycle.id, { groupId: groupId(cycle.groups[0]), decision: 'approved', shiftIds: cycle.run.shifts.map((item) => item.shift.id) }))
+    expect(getOnboarding().resolutions).toEqual({})
+  })
+
+  it('persists escalation for a judgment group', async () => {
+    vi.useRealTimers()
+    const cycle = serverCycle('judgment')
+    vi.mocked(decide).mockResolvedValue({} as Awaited<ReturnType<typeof decide>>)
+    click(mount(PayrollSummary, { cycle })(), 'Escalate')
+    await vi.waitFor(() => expect(decide).toHaveBeenCalledWith(cycle.id, { groupId: 'CON-MARGIN-01', decision: 'escalated', shiftIds: cycle.run.shifts.map((item) => item.shift.id) }))
+    expect(getOnboarding().resolutions).toEqual({})
+  })
+
+  it('shows failed saves and leaves the group available to retry', async () => {
+    vi.useRealTimers()
+    const cycle = serverCycle()
+    vi.mocked(decide).mockRejectedValue(new Error('The decision could not be saved'))
+    const render = mount(PayrollSummary, { cycle })
+    const label = `Approve ${cycle.run.shifts.length}`
+    click(render(), label)
+    await vi.waitFor(() => expect(content(render())).toContain('The decision could not be saved'))
+    expect(button(render(), label).props.disabled).toBe(false)
+    expect(getOnboarding().resolutions).toEqual({})
+  })
+
+  it('states group scope in time-entry approval and posts all related cases', async () => {
+    vi.useRealTimers()
+    const cycle = serverCycle()
+    vi.mocked(decide).mockResolvedValue({} as Awaited<ReturnType<typeof decide>>)
+    vi.spyOn(desk, 'useDesk').mockReturnValue({ cycles: [cycle], current: cycle, byId: () => cycle })
+    router.pathname = `/payroll/${cycle.run.shifts[0].shift.id}`
+    router.params = new URLSearchParams({ cycle: cycle.id })
+    const render = mount(() => ShiftPage(), undefined)
+    const detail = component(render(), ShiftDetail)
+    expect(detail.props.applyLabel).toBe(`Approve ${cycle.run.shifts.length} issues`)
+    detail.props.onApply!()
+    await vi.waitFor(() => expect(decide).toHaveBeenCalledWith(cycle.id, { groupId: cycle.groups[0].ruleId, decision: 'approved', shiftIds: cycle.run.shifts.map((item) => item.shift.id) }))
+    expect(getOnboarding().resolutions).toEqual({})
   })
 })

@@ -1,5 +1,5 @@
 import { API_BASE } from '@/lib/api'
-import { parseActions, parseCards, stream, type Card, type Action, type OnboardContext } from '@/lib/chat'
+import { appendTrace, limitCards, parseActions, parseCards, stream, type QuestionCard, type Action, type OnboardContext } from '@/lib/chat'
 import { applyAction, isAction, safeModelCard, safeModelText, validatedActions } from '@/lib/chatActions'
 import { effectiveAuthority, flushOnboarding, getOnboarding, inboxAddress, updateOnboarding, type FirmFacts, type Onboarding } from '@/lib/onboarding'
 import { signOut, viewerSession } from '@/lib/viewerSession'
@@ -18,7 +18,7 @@ export async function readFirm(domain: string, signal?: AbortSignal): Promise<Fi
   return firm
 }
 
-export interface OnboardReply { question: string; card: Card; actions: Action[]; sessionId?: string; skipped?: string[] }
+export interface OnboardReply { question: string; card: QuestionCard | { kind: 'onboard_complete' }; actions: Action[]; sessionId?: string; skipped?: string[]; traces?: string[] }
 
 export function onboardContext(): OnboardContext {
   const state = getOnboarding()
@@ -30,9 +30,11 @@ async function agentTurn(message: string, context: OnboardContext, signal?: Abor
   // The in-turn context still carries current edits when an unrelated state save fails.
   await flushOnboarding().catch(() => {})
   let text = '', finished = false, sessionId: string | undefined
+  let traces: string[] = []
   for await (const event of stream(message, context, 'onboard', signal)) {
     if (event.error) throw new Error(event.error)
     if (event.text) text += event.text
+    if (event.trace) traces = appendTrace(traces, event.trace)
     if (event.sessionId) sessionId = event.sessionId
     if (event.done) { finished = true; if (event.final !== undefined) text = event.final }
   }
@@ -47,14 +49,14 @@ async function agentTurn(message: string, context: OnboardContext, signal?: Abor
     if (JSON.stringify(safe) !== JSON.stringify(card)) skipped.push('card URL')
     return safe ? [safe] : []
   })
-  return { question: safeModelText(reply.text, context.firm), cards, actions, skipped, sessionId }
+  return { question: safeModelText(reply.text, context.firm), cards, actions, skipped, sessionId, traces }
 }
 
 /** Keep valid parts of model output and ask a corrective follow-up only if no usable card remains. */
 export async function requestOnboarding(message: string, signal?: AbortSignal): Promise<OnboardReply> {
   if (getOnboarding().forwarded) updateOnboarding({ forwarded: false })
   const reply = await agentTurn(message, onboardContext(), signal)
-  const card = reply.cards[0]
+  const card = reply.cards.find((item): item is QuestionCard | { kind: 'onboard_complete' } => item.kind === 'question' || item.kind === 'onboard_complete')
   if (!card || (card.kind === 'question' && !reply.question.trim())) {
     const state = applyReplyActions(reply.actions)
     updateOnboarding({ ...state, setupRequest: 'Your last reply did not contain a readable question card. The valid actions were saved. Send the next question with one valid card, or your closing line with onboard_complete.',
@@ -103,7 +105,7 @@ export function applyOnboardReply(reply: OnboardReply) {
   if (reply.card.kind === 'onboard_complete') {
     patch.setupStep = 'writing'
     patch.setupClosing = reply.question
-    patch.chat = [...state.chat.filter((message) => message.id !== 'onboard-closing'), { id: 'onboard-closing', role: 'agent', text: reply.question, at: Date.now(), actions: checked.actions, ...(skipped.length ? { skipped } : {}) }]
+    patch.chat = [...state.chat.filter((message) => message.id !== 'onboard-closing'), { id: 'onboard-closing', role: 'agent', text: reply.question, traces: reply.traces, at: Date.now(), actions: checked.actions, ...(skipped.length ? { skipped } : {}) }]
   } else patch.setupHistory = [...history, { question: reply.question, card: reply.card }]
   updateOnboarding(patch)
 }
@@ -148,19 +150,23 @@ export async function finishOnboarding(names: string[]) {
     const reply = await agentTurn(getOnboarding().setupRequest || 'Finish setup and start my first closeout using the sources I have provided.', { ...context, phase: 'first_closeout', missingSets })
     const seen = new Set<number>(), skipped = [...reply.skipped]
     const cards = reply.cards.filter((card) => {
+      if (card.kind === 'task' || card.kind === 'findings' || card.kind === 'form') return true
+      if (card.kind === 'choice' && card.set && missingSets.includes(card.set) && !seen.has(card.set)) { seen.add(card.set); return true }
       if (card.kind === 'question' && card.input === 'choice' && card.set && missingSets.includes(card.set) && !seen.has(card.set)) { seen.add(card.set); return true }
       skipped.push('unexpected kickoff card'); return false
     })
-    if (!reply.question || missingSets.some((set) => !seen.has(set))) {
+    if (!reply.question || (!cards.some(card => card.kind === 'task' || (card.kind === 'form' && card.form === 'connect')) && missingSets.some((set) => !seen.has(set)))) {
       const state = applyReplyActions(reply.actions)
       updateOnboarding({ ...state, setupRequest: `Correct the first-closeout handoff: your previous output was missing a closing request or choice cards. Send one choice card with its set number for each missing set: ${missingSets.join(', ')}. The valid actions were already saved.`,
         setupNotice: skippedNote([...skipped, 'missing kickoff choices']) })
       throw new Error('The agent did not finish the first-closeout choices. Your profile is saved; ask the agent to continue.')
     }
     const state = applyReplyActions(reply.actions)
+    const bounded = limitCards(cards)
+    if (bounded.skipped) skipped.push('extra cards')
     updateOnboarding({ ...state, forwarded: true, setupStep: 'ready', kickoffPending: false, setupRequest: null, setupNotice: skippedNote(skipped),
       ...(reply.sessionId ? { chatSessionId: reply.sessionId } : {}),
-      chat: [...state.chat, { id: 'onboard-first-closeout', role: 'agent', at: Date.now(), text: reply.question, cards, actions: reply.actions, ...(skipped.length ? { skipped } : {}) }],
+      chat: [...state.chat, { id: 'onboard-first-closeout', role: 'agent', at: Date.now(), text: reply.question, traces: reply.traces, cards: bounded.cards, actions: reply.actions, ...(skipped.length ? { skipped } : {}) }],
     })
   })()
   try { await kickoff } finally { kickoff = null }

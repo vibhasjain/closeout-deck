@@ -1,10 +1,12 @@
 import type { NavigateFunction } from 'react-router-dom'
 import type { Action, Card } from '@/lib/chat'
+import { isJourneyForm, limitCards } from '@/lib/chat'
 import { agentHref } from '@/lib/navigation'
 import { cycleNamed, saveCycle, slugId } from '@/lib/cohorts'
-import { FREQUENCIES, WEEKDAYS, ONBOARD_TOPICS, PROFILE_FIELDS, effectiveAuthority } from '@/lib/onboarding'
+import { FREQUENCIES, WEEKDAYS, ONBOARD_TOPICS, PROFILE_FIELDS, effectiveAuthority, getOnboarding } from '@/lib/onboarding'
 import type { CustomDeskRule, FirmFacts, Onboarding } from '@/lib/onboarding'
-import { invalidate } from '@/lib/data'
+import { getCycle, invalidate } from '@/lib/data'
+import { decide } from '@/lib/journey'
 
 export type ChatUpdate = (patch: Partial<Onboarding> | ((state: Onboarding) => Partial<Onboarding>)) => void
 
@@ -39,6 +41,10 @@ export function safeModelText(text: string, firm: FirmFacts | null, cap = 20_000
 }
 
 export function safeModelCard(card: Card, firm: FirmFacts | null): Card | null {
+  if (card.kind === 'choice') {
+    const clean = { ...card, ask: safeModelText(card.ask, firm, 200), yours: safeModelText(card.yours, firm, 200), sample: safeModelText(card.sample, firm, 200) }
+    return clean.ask && clean.yours && clean.sample ? clean : null
+  }
   if (card.kind !== 'question') return card
   const clean = (value: string) => safeModelText(value, firm, 200)
   const choice = card.choice ? { yours: clean(card.choice.yours), sample: clean(card.choice.sample) } : undefined
@@ -110,6 +116,13 @@ function isFirmPatch(value: unknown) {
 export function isAction(value: unknown): value is Action {
   if (!isRecord(value)) return false
   switch (value.type) {
+    case 'approve':
+    case 'dismiss':
+      return meaningfulString(value.cycleId) && meaningfulString(value.groupId)
+        && (value.type !== 'dismiss' || meaningfulString(value.reason))
+        && Object.keys(value).every(key => ['type', 'cycleId', 'groupId', ...(value.type === 'dismiss' ? ['reason'] : [])].includes(key))
+    case 'open_form':
+      return meaningfulString(value.cycleId) && isJourneyForm(value.form) && Object.keys(value).every(key => ['type', 'cycleId', 'form'].includes(key))
     case 'set_fact':
       return ['site', 'rate', 'differential', 'alias', 'account'].includes(String(value.kind))
         && meaningfulString(value.key) && isRecord(value.value)
@@ -166,6 +179,18 @@ export function isAction(value: unknown): value is Action {
 
 export function applyAction(action: Action, update: ChatUpdate, navigate: NavigateFunction, params: URLSearchParams, cycleId?: string) {
   switch (action.type) {
+    case 'approve':
+    case 'dismiss':
+      return decide(action.cycleId, { groupId: action.groupId, decision: action.type === 'approve' ? 'approved' : 'dismissed', ...(action.type === 'dismiss' ? { reason: action.reason } : {}) }).then(() => {})
+    case 'open_form':
+      update(state => {
+        const latest = state.chat.at(-1)
+        if (!latest || latest.role !== 'agent') return {}
+        const card: Card = { kind: 'form', form: action.form, cycleId: action.cycleId }
+        if (latest.cards?.some(item => item.kind === 'form' && item.form === action.form && item.cycleId === action.cycleId)) return {}
+        return { chat: [...state.chat.slice(0, -1), { ...latest, cards: limitCards([...(latest.cards ?? []), card]).cards }] }
+      })
+      break
     case 'set_fact':
       // Facts are validated and saved by the server before its done event.
       void invalidate()
@@ -236,6 +261,12 @@ export function applyAction(action: Action, update: ChatUpdate, navigate: Naviga
       navigate(agentHref(action.to, params, cycleId))
       break
     case 'decide':
+      if (getOnboarding().dataSource === 'server') return (async () => {
+        const cycle = await getCycle(action.cycleId)
+        const index = cycle.week.findIndex(shift => shift.id === action.shiftId)
+        const rules = new Set(cycle.results[index]?.rows.filter(row => row.status === 'flag' || row.status === 'held').map(row => row.ruleId) ?? [])
+        for (const ruleId of rules) await decide(action.cycleId, { groupId: ruleId, decision: action.decision === 'applied' ? 'approved' : 'dismissed', ...(action.reason ? { reason: action.reason } : {}) })
+      })()
       update((state) => ({
         decisionTimes: { ...state.decisionTimes, [`${action.cycleId}:${action.shiftId}`]: new Date().toISOString() },
         resolutions: {
@@ -256,6 +287,9 @@ export function actionSummary(value: unknown): string | null {
   if (!value || typeof value !== 'object' || !('type' in value)) return null
   const action = value as Record<string, unknown>
   switch (action.type) {
+    case 'approve': return `Approved ${String(action.groupId)}`
+    case 'dismiss': return `Dismissed ${String(action.groupId)} · ${String(action.reason)}`
+    case 'open_form': return null
     case 'set_fact': return `Saved ${String(action.kind)} details: ${String(action.key)}`
     case 'set_profile': return `Payroll profile: ${String(action.field)}`
     case 'set_firm': return 'Updated firm details'

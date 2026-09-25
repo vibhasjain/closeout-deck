@@ -2,12 +2,13 @@ import { createElement as h } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Thread } from '@/components/Thread'
+import { JourneyThreadView, Thread } from '@/components/Thread'
 import { OverlayProvider } from '@/components/shell/Overlay'
 import { buildCycles } from '@/lib/desk'
 import * as onboarding from '@/lib/onboarding'
 import { DEFAULTS } from '@/lib/onboarding'
 import { defaultThreadParty, generateThread, recordThreadAction, type MediationState } from '@/lib/threads'
+import type { JourneyThread } from '@/lib/journey'
 
 const cycle = buildCycles(DEFAULTS, new Date(2026, 8, 22, 12))[0]
 const rs = cycle.run.shifts.find((payment) => generateThread(cycle, payment).draft)!
@@ -45,6 +46,7 @@ describe('Closeout Agent draft presentation', () => {
     const outgoing = [...html.matchAll(/<article class="thread-bubble out">[\s\S]*?<\/article>/g)].map((match) => match[0])
     expect(outgoing.at(-1)).toContain('Please confirm the recorded time')
     expect(outgoing.at(-1)).toContain(`dateTime="${at}"`)
+    expect(outgoing.at(-1)).toContain('Not Sent · Demo')
   })
 
   it('removes a skipped draft without creating a sent message', () => {
@@ -54,4 +56,16 @@ describe('Closeout Agent draft presentation', () => {
     expect(html.match(/class="thread-bubble /g)).toHaveLength(original.entries.length)
     expect(html).not.toContain('Waiting on')
   })
+})
+
+it('renders a persisted demo thread and reply entry without a hydrated cycle', () => {
+  const thread: JourneyThread = { id: 't-test', cycleId: cycle.id, counterparty: { kind: 'site', name: 'Pacific Supervisor' }, status: 'waiting', createdAt: at,
+    messages: [{ id: 'm-out', threadId: 't-test', dir: 'out', text: 'Confirm the hours.', status: 'not_sent_demo', at },
+      { id: 'm-in', threadId: 't-test', dir: 'in', text: 'Confirmed eight hours.', status: 'recorded', at }] }
+  const html = renderToStaticMarkup(h(JourneyThreadView, { thread }))
+  expect(html).toContain('Conversation with Pacific Supervisor')
+  expect(html).toContain('Not Sent · Demo')
+  expect(html).toContain('Confirmed eight hours.')
+  expect(html).toContain('Record reply')
+  expect(html).not.toContain('primary')
 })

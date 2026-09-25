@@ -9,6 +9,7 @@ import { sampleCycle } from '@/lib/sample'
 import type { Onboarding } from '@/lib/onboarding'
 import { serverCycles, useData, getDataSnapshot, type CyclePayload, type DataProvenance, type DataSite } from '@/lib/data'
 import { viewerSession } from '@/lib/viewerSession'
+import type { JourneyDecision, JourneyBatch, NextStep } from '@/lib/journey'
 
 export type DeskShift = Shift & { prov?: DataProvenance; entryIds?: string[]; sample?: boolean }
 export interface DeskCycle extends Cycle {
@@ -19,6 +20,9 @@ export interface DeskCycle extends Cycle {
   extraGroups?: CyclePayload['extraGroups']
   gaps?: CyclePayload['gaps']
   intake?: CyclePayload['intake']
+  decisions?: JourneyDecision[]
+  batch?: JourneyBatch | null
+  nextStep?: NextStep
   week: DeskShift[]
   run: Run
   days: string[]
@@ -113,17 +117,22 @@ export function buildCycles(cal: Onboarding, today?: Date): DeskCycle[] {
 
 /** Explicit decisions win; remembered decisions apply only to their own rule. */
 export function rowResolution(c: DeskCycle, shiftId: string, ruleId: string, res: Onboarding['resolutions']) {
+  if (c.server) {
+    const group = [...(c.groups ?? []), ...(c.extraGroups ?? [])].find(item => item.ruleId === ruleId)
+    const decision = c.decisions?.find(item => item.groupId === ruleId || item.groupId === String(group?.id ?? ruleId))
+    return decision?.decision === 'approved' ? 'applied' as const : decision ? 'dismissed' as const : undefined
+  }
   return res[c.id]?.[shiftId] ?? (c.rememberedRuleIds?.includes(ruleId) ? 'applied' as const : undefined)
 }
 
 /** Whole-shift status for existing ledger/modal consumers, without clearing unrelated flags. */
 export function effectiveResolutions(c: DeskCycle, res: Onboarding['resolutions']): Onboarding['resolutions'] {
-  const decisions = { ...res[c.id] }
+  const decisions = c.server ? {} as Record<string, 'applied' | 'dismissed'> : { ...res[c.id] }
   for (const shift of c.run.shifts) {
     const pending = shift.rows.filter((row) => row.status === 'flag' || row.status === 'held')
     if (!decisions[shift.shift.id] && pending.length
-      && pending.every((row) => rowResolution(c, shift.shift.id, row.ruleId, res) === 'applied')) {
-      decisions[shift.shift.id] = 'applied'
+      && pending.every((row) => rowResolution(c, shift.shift.id, row.ruleId, res))) {
+      decisions[shift.shift.id] = pending.some(row => rowResolution(c, shift.shift.id, row.ruleId, res) === 'applied') ? 'applied' : 'dismissed'
     }
   }
   return { ...res, [c.id]: decisions }
@@ -148,7 +157,7 @@ export function cycleStats(c: DeskCycle, res: Onboarding['resolutions'] = {}, un
     for (const row of shift.rows) {
       if (row.status === 'applied') {
         if (!appliedCorrection(c, row)) continue
-        if (undone.includes(row.ruleId) && !res[c.id]?.[shift.shift.id]) open = true
+        if (!c.server && undone.includes(row.ruleId) && !res[c.id]?.[shift.shift.id]) open = true
         else corrected = true
       }
       else if (row.status === 'flag' || row.status === 'held') {

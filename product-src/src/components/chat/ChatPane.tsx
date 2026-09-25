@@ -7,7 +7,7 @@ import { ThinkingOrb } from 'thinking-orbs'
 import { Chip } from '@/components/ui'
 import { Message } from '@/components/chat/Message'
 import { dayDivider } from '@/components/chat/dayDivider'
-import { parseActions, parseCards, stream } from '@/lib/chat'
+import { appendTrace, limitCards, parseActions, parseCards, stream } from '@/lib/chat'
 import type { ChatContext } from '@/lib/chat'
 import { CHAT_POST_EVENT, reportIngest, type ChatPost } from '@/lib/chatBus'
 import { invalidate } from '@/lib/data'
@@ -107,6 +107,7 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
   const [sending, setSending] = useState(false)
   const [thinking, setThinking] = useState(false)
   const [reply, setReply] = useState('')
+  const [traces, setTraces] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [requestScope, setRequestScope] = useState<string | undefined>()
   const latest = useRef(state)
@@ -117,7 +118,7 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
   const scrollRef = useRef<HTMLDivElement>(null)
   const composer = useRef<HTMLTextAreaElement>(null)
   const filePicker = useRef<HTMLInputElement>(null)
-  const activeRequest = useRef<{ controller: AbortController; text: string; scope?: string; fileIds: string[] } | null>(null)
+  const activeRequest = useRef<{ controller: AbortController; text: string; scope?: string; fileIds: string[]; traces: string[] } | null>(null)
   const scope = explicitScope ?? selectionScope(context.selection)
   // Keep "Show all" in the URL, but only for the case where it was chosen.
   const showAll = !scope || (params.get('chat') === 'all' && params.get('chatScope') === scope)
@@ -152,7 +153,7 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
   useEffect(() => {
     const el = scrollRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [state.chat, reply, sending, thinking, error, scope, showAll])
+  }, [state.chat, reply, traces, sending, thinking, error, scope, showAll])
   useLayoutEffect(() => {
     const el = composer.current
     if (!el) return
@@ -180,12 +181,13 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
     const user: ChatMessage = { id: crypto.randomUUID(), role: 'user', text: message, at: Date.now(), scope,
       ...(options?.contextChip ? { contextChip: options.contextChip } : {}), ...(fileIds.length ? { ingestFileIds: [...fileIds] } : {}) }
     busy.current = true
-    const pending = { controller: new AbortController(), text: '', scope, fileIds }
+    const pending = { controller: new AbortController(), text: '', scope, fileIds, traces: [] as string[] }
     activeRequest.current = pending
     update((current) => ({ chat: [...current.chat, user] }))
     setDraft('')
     setError(null)
     setReply('')
+    setTraces([])
     setThinking(false)
     setRequestScope(scope)
     setSending(true)
@@ -208,6 +210,10 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
           void invalidate()
         }
         if (event.facts) void invalidate()
+        if (event.trace) {
+          pending.traces = appendTrace(pending.traces, event.trace)
+          setTraces(pending.traces)
+        }
         if (event.text) {
           textSoFar += event.text
           pending.text = textSoFar
@@ -219,19 +225,31 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
           const parsed = parseActions(cards.text)
           const validated = validatedActions(parsed.actions, latest.current.firm)
           const skipped = [...(parsed.skipped ?? []), ...validated.skipped, ...(cards.invalid ? ['invalid card'] : [])]
-          const safeCards = cards.cards.slice(0, 3).flatMap((card) => {
+          const safeCards = cards.cards.flatMap((card) => {
             const safe = safeModelCard(card, latest.current.firm)
             if (JSON.stringify(safe) !== JSON.stringify(card)) skipped.push('card URL')
             return safe ? [safe] : []
           })
-          const agent: ChatMessage = { id: crypto.randomUUID(), role: 'agent', text: safeModelText(parsed.text, latest.current.firm), actions: validated.actions, skipped: [...new Set(skipped)], cards: safeCards, at: Date.now(), scope,
+          const applied = []
+          for (const action of validated.actions) {
+            try {
+              if (action.type === 'open_form') {
+                if (!safeCards.some(card => card.kind === 'form' && card.form === action.form && card.cycleId === action.cycleId)) safeCards.push({ kind: 'form', form: action.form, cycleId: action.cycleId })
+              } else await applyAction(action, update, navigate, params, context.cycle?.id)
+              applied.push(action)
+            } catch (cause) { skipped.push(`${action.type}: ${cause instanceof Error ? cause.message : 'could not apply'}`) }
+          }
+          if (request.current !== requestId) return
+          const bounded = limitCards(safeCards)
+          if (bounded.skipped) skipped.push('extra cards')
+          const agent: ChatMessage = { id: crypto.randomUUID(), role: 'agent', text: safeModelText(parsed.text, latest.current.firm), actions: applied, skipped: [...new Set(skipped)].slice(0, 10).map(item => item.slice(0, 200)), cards: bounded.cards, traces: pending.traces, at: Date.now(), scope,
             ...(fileIds.length ? { ingestFileIds: [...fileIds] } : {}) }
           update((current) => ({
             chat: [...current.chat, agent], chatSessionId: event.sessionId ?? current.chatSessionId,
           }))
-          for (const action of validated.actions) applyAction(action, update, navigate, params, context.cycle?.id)
           completed = true
           setReply('')
+          setTraces([])
           break
         }
       }
@@ -270,13 +288,14 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
     pending?.controller.abort()
     // A stopped reply stays in the conversation, but never applies unfinished actions.
     const text = safeModelText(parseCards(parseActions(pending?.text ?? '').text).text.replace(/```(?:action|card)[\s\S]*$/, '').trim(), latest.current.firm)
-    if (text) update((current) => ({ chat: [...current.chat, {
-      id: crypto.randomUUID(), role: 'agent', text, at: Date.now(), scope: pending?.scope,
+    if (text || pending?.traces.length) update((current) => ({ chat: [...current.chat, {
+      id: crypto.randomUUID(), role: 'agent', text, traces: pending?.traces, at: Date.now(), scope: pending?.scope,
       ...(pending?.fileIds.length ? { ingestFileIds: [...pending.fileIds] } : {}),
     }] }))
     activeRequest.current = null
     busy.current = false
     setReply('')
+    setTraces([])
     setError(null)
     setSending(false)
     setThinking(false)
@@ -335,7 +354,7 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
             </Fragment>
           )
         })}
-        {showRequest && reply && <Message message={{ id: 'streaming', role: 'agent', text: safeModelText(parseCards(parseActions(reply).text).text.replace(/```(?:action|card)[\s\S]*$/, '').trim(), state.firm), at: 0, scope: requestScope }} />}
+        {showRequest && (reply || traces.length > 0) && <Message message={{ id: 'streaming', role: 'agent', traces, text: safeModelText(parseCards(parseActions(reply).text).text.replace(/```(?:action|card)[\s\S]*$/, '').trim(), state.firm), at: 0, scope: requestScope }} />}
         {showRequest && sending && thinking && (
           <div className="chat-busy">
             <Loader2 size={12} aria-hidden="true" />

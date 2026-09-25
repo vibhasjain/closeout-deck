@@ -55,14 +55,14 @@ export function resolutionGroups(c: DeskCycle, res: Onboarding['resolutions'], u
       if (seen.has(row.ruleId)) continue
       const decision = rowResolution(c, rs.shift.id, row.ruleId, res)
       let state: ResolutionState | null = null
-      if (appliedCorrection(c, row)) state = undone.includes(row.ruleId) && !res[c.id]?.[rs.shift.id] ? 'proposed' : 'fixed'
+      if (appliedCorrection(c, row)) state = decision === 'dismissed' ? null : !c.server && undone.includes(row.ruleId) && !res[c.id]?.[rs.shift.id] ? 'proposed' : 'fixed'
       else if (row.status === 'flag' || row.status === 'held') {
         if (decision === 'applied') state = 'fixed'
         else if (!decision) state = JUDGMENT[row.ruleId] ? 'judgment' : WAITING.has(row.ruleId) || row.status === 'held' ? 'waiting' : 'proposed'
       }
       if (!state) continue
       seen.add(row.ruleId)
-      const approved = state === 'fixed' && res[c.id]?.[rs.shift.id] === 'applied'
+      const approved = state === 'fixed' && (c.server ? decision === 'applied' : res[c.id]?.[rs.shift.id] === 'applied')
       const key = `${state}:${row.ruleId}:${approved}`
       const group = groups.get(key) ?? { state, ruleId: row.ruleId, cases: [], current: 0, resolved: 0, ...(approved ? { approved } : {}),
         ...(JUDGMENT[row.ruleId] ? { owner: JUDGMENT[row.ruleId] } : {}),

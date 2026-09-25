@@ -26,7 +26,12 @@ export const isChatMessage = (value: unknown): value is ChatMessage => !!value &
   && typeof (value as ChatMessage).text === 'string' && typeof (value as ChatMessage).at === 'number'
 function union(...lists: ChatMessage[][]): ChatMessage[] {
   const byId = new Map<string, ChatMessage>()
-  for (const list of lists) for (const message of list) if (!byId.has(message.id)) byId.set(message.id, message)
+  for (const list of lists) for (const message of list) {
+    const previous = byId.get(message.id)
+    if (!previous) byId.set(message.id, message)
+    // Older history services omit traces. Preserve locally received evidence on refresh.
+    else if (!previous.traces?.length && message.traces?.length) byId.set(message.id, { ...previous, traces: message.traces })
+  }
   return [...byId.values()].sort((a, b) => a.at - b.at)
 }
 

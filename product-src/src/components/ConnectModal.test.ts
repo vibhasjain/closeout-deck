@@ -18,6 +18,7 @@ const hooks = vi.hoisted(() => ({
 const desk = vi.hoisted(() => ({ current: undefined as DeskCycle | undefined }))
 const store = vi.hoisted(() => ({ current: undefined as Onboarding | undefined, update: vi.fn() }))
 const overlay = vi.hoisted(() => ({ close: vi.fn(), toast: vi.fn() }))
+const sample = vi.hoisted(() => ({ connectSource: vi.fn() }))
 
 vi.mock('react', async (importOriginal) => ({
   ...await importOriginal<typeof import('react')>(),
@@ -56,6 +57,7 @@ vi.mock('@/lib/desk', async (importOriginal) => ({
   useDesk: () => ({ current: desk.current }),
 }))
 vi.mock('@/components/shell/Overlay', () => ({ useOverlay: () => overlay }))
+vi.mock('@/lib/data', async (importOriginal) => ({ ...await importOriginal<typeof import('@/lib/data')>(), connectSource: sample.connectSource }))
 
 const now = new Date(2026, 8, 22, 12)
 const ready = SOURCES.find((vendor) => vendor.id === 'ukg-ready')!
@@ -74,12 +76,12 @@ function clickSignIn(node: ReactNode): boolean {
   return false
 }
 
-function mount(vendor: Vendor) {
+function mount(vendor: Vendor, loadSample = false) {
   const onDone = vi.fn()
   let tree: ReactNode
   const render = () => {
     hooks.cursor = 0
-    tree = ConnectModal({ vendor, onDone })
+    tree = ConnectModal({ vendor, onDone, loadSample })
     hooks.pending.splice(0).forEach((effect) => effect())
     return renderToStaticMarkup(tree)
   }
@@ -112,6 +114,38 @@ afterEach(() => {
 })
 
 describe('simulated browser connection', () => {
+  it('waits for the real Sample pipeline before showing Connected in the journey', async () => {
+    let finish!: () => void
+    sample.connectSource.mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve }))
+    const modal = mount({ ...ready, set: 2 }, true)
+    expect(modal.render()).toContain('>Sample</span>')
+    modal.signIn()
+    expect(modal.advance(3200)).toContain('Syncing')
+    expect(store.update).not.toHaveBeenCalled()
+    expect(sample.connectSource).toHaveBeenCalledWith({ set: 2, system: ready.name, site: ready.sites[0] })
+    finish()
+    await Promise.resolve()
+    expect(modal.render()).toContain('Connected')
+    expect(store.current!.connections[vendorKey(ready)]?.sample).toBe(true)
+    modal.advance(700)
+    expect(overlay.toast).toHaveBeenCalledWith(`${ready.name} connected · Sample`)
+    expect(modal.onDone).toHaveBeenCalledOnce()
+  })
+
+  it('keeps a failed Sample connection retryable and does not save Connected', async () => {
+    sample.connectSource.mockRejectedValueOnce(new Error('Sample connection unavailable'))
+    const modal = mount({ ...ready, set: 2 }, true)
+    modal.render()
+    modal.signIn()
+    modal.advance(3200)
+    await Promise.resolve()
+    const html = modal.render()
+    expect(html).toContain('Sample connection unavailable')
+    expect(html).toContain('Sign In')
+    expect(store.update).not.toHaveBeenCalled()
+    expect(modal.onDone).not.toHaveBeenCalled()
+  })
+
   it('shows an explicitly fake, read-only account with a vendor-derived URL', () => {
     const modal = mount(ready)
     const html = modal.render()

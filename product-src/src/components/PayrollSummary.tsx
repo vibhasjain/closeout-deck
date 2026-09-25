@@ -11,6 +11,7 @@ import { bucketHue, kindLabel, rememberKind, type DeskCycle } from '@/lib/desk'
 import { shiftHref } from '@/lib/navigation'
 import { titleCase } from '@/lib/utils'
 import { groupEmail } from '@/lib/issueEmail'
+import { decide, groupId } from '@/lib/journey'
 import { getOnboarding, useOnboarding } from '@/lib/onboarding'
 import { actionFor, proposalFor, resolutionGroups, STATES, type ResolutionGroup, type ResolutionState } from '@/lib/resolution'
 import './sheet.css'
@@ -44,19 +45,48 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
   const [emailing, setEmailing] = useState<ResolutionGroup | null>(null)
   // The group just approved asks once whether to do it every cycle.
   const [learning, setLearning] = useState<{ cycleId: string; ruleId: string; count: number } | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const undone = state.undone[cycle.id] ?? []
   const groups = resolutionGroups(cycle, state.resolutions, undone)
   const closed = cycle.statusTag === 'Paid' || new Date() > cycle.deadline
   const key = (group: ResolutionGroup) => `${group.state}:${group.ruleId}:${!!group.approved}`
 
-  function approve(group: ResolutionGroup) {
+  async function approve(group: ResolutionGroup) {
     const ids = group.cases.map((item) => item.shiftId)
+    if (cycle.server) {
+      const match = [...(cycle.groups ?? []), ...(cycle.extraGroups ?? [])].find((item) => item.ruleId === group.ruleId)
+      await decide(cycle.id, { groupId: match ? groupId(match) : group.ruleId, decision: 'approved', shiftIds: ids })
+      return
+    }
     const latest = getOnboarding(), at = new Date().toISOString()
     const decisions = { ...latest.resolutions[cycle.id] }, times = { ...latest.decisionTimes }
     for (const id of ids) { decisions[id] = 'applied'; times[`${cycle.id}:${id}`] = at }
     update({ resolutions: { ...latest.resolutions, [cycle.id]: decisions }, decisionTimes: times })
     toast(`Approved ${ids.length.toLocaleString()} · ${kindLabel(group.ruleId)}`)
     if (RULES.some((rule) => rule.id === group.ruleId)) setLearning({ cycleId: cycle.id, ruleId: group.ruleId, count: ids.length })
+  }
+
+  async function resolve(items: ResolutionGroup[], decision: 'approved' | 'escalated', count: number) {
+    if (saving) return
+    setSaving(true)
+    setError(null)
+    try {
+      for (const group of items) {
+        if (decision === 'approved') {
+          if (cycle.server) await approve(group)
+          else void approve(group)
+        }
+        else if (cycle.server) {
+          const match = [...(cycle.groups ?? []), ...(cycle.extraGroups ?? [])].find((item) => item.ruleId === group.ruleId)
+          await decide(cycle.id, { groupId: match ? groupId(match) : group.ruleId, decision, shiftIds: group.cases.map((item) => item.shiftId) })
+        }
+      }
+      if (items.length > 1) setLearning(null)
+      toast(`${decision === 'approved' ? 'Approved' : 'Escalated'} ${count.toLocaleString()}`)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'The decision could not be saved.')
+    } finally { setSaving(false) }
   }
 
   function undo(group: ResolutionGroup) {
@@ -68,15 +98,12 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
   /** A category's one action, shown in its header: it acts on every group in the category. */
   function action(resolution: ResolutionState, items: ResolutionGroup[], count: number) {
     if (!items.length) return null
-    if (resolution === 'proposed') return <Btn className="primary" onClick={() => {
-      for (const group of items) approve(group)
-      if (items.length > 1) { setLearning(null); toast(`Approved ${count.toLocaleString()}`) }
-    }}>Approve {count.toLocaleString()}</Btn>
+    if (resolution === 'proposed') return <Btn className="primary" disabled={saving} onClick={() => void resolve(items, 'approved', count)}>Approve {count.toLocaleString()}</Btn>
     if (resolution === 'fixed') {
       const undoable = items.filter((group) => !group.approved)
-      return closed || !undoable.length ? null : <Btn onClick={() => undoable.forEach(undo)}>Undo All</Btn>
+      return cycle.server || closed || !undoable.length ? null : <Btn onClick={() => undoable.forEach(undo)}>Undo All</Btn>
     }
-    if (resolution === 'judgment') return <Btn onClick={() => toast(`Sent ${count.toLocaleString()} cases to ${[...new Set(items.map((group) => group.owner))].join(', ')}`)}>Escalate</Btn>
+    if (resolution === 'judgment') return <Btn disabled={saving} onClick={() => void resolve(items, 'escalated', count)}>Escalate</Btn>
     return null
   }
 
@@ -103,7 +130,8 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
 
   const learned = learning?.cycleId === cycle.id ? learning : null
 
-  return <div className="payroll-summary scroll">
+  return <div id="payroll-review-list" className="payroll-summary scroll" tabIndex={-1} aria-label="Review issues">
+    {error && <p role="alert">{error}</p>}
     {/* Email all: the catch-all send of an issue's time entries, in a panel that slides out on the right. Single cases open the shift view's conversation. */}
     <Sheet open={!!emailing} onOpenChange={(next) => { if (!next) setEmailing(null) }}>
       <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
@@ -120,13 +148,13 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
         <div className="payroll-summary-head">
           <h3 id={`summary-${resolution}`}>{HEADINGS[resolution].title} · {count.toLocaleString()}</h3>
           <span className="payroll-summary-head-end">
-            {resolution === 'fixed' && count > 0 && !closed && <span className="r-note">Undo the agent's fixes until Payroll closes {shortDate(cycle.deadline)}</span>}
+            {resolution === 'fixed' && count > 0 && !cycle.server && !closed && <span className="r-note">Undo the agent's fixes until Payroll closes {shortDate(cycle.deadline)}</span>}
             {action(resolution, items, count)}
           </span>
         </div>
         {resolution === 'proposed' && learned && <div className="decision-learn">
           <span>Approved {learned.count.toLocaleString()} · {kindLabel(learned.ruleId)}. Approve these automatically from now on?</span>
-          <Btn className="primary" onClick={() => { rememberKind(learned.ruleId); setLearning(null); toast(`Decision remembered for ${learned.ruleId}`) }}>Yes</Btn>
+          <Btn onClick={() => { rememberKind(learned.ruleId); setLearning(null); toast(`Decision remembered for ${learned.ruleId}`) }}>Yes</Btn>
           <Btn onClick={() => setLearning(null)}>Not Now</Btn>
         </div>}
         {items.length === 0 ? <p className="r-note">{HEADINGS[resolution].empty}</p> : items.map((group) => {

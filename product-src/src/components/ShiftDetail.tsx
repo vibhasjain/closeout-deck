@@ -7,6 +7,7 @@ import { Btn, Kv, Lbl, PayDelta, Tag } from '@/components/ui'
 import { useOverlay } from '@/components/shell/Overlay'
 import { effectiveResolutions, provenance, type DeskCycle } from '@/lib/desk'
 import { useOnboarding } from '@/lib/onboarding'
+import { groupId } from '@/lib/journey'
 
 function openDocument(rule: Rule) {
   const source = PROV[rule.id]
@@ -63,6 +64,7 @@ interface ShiftDetailProps {
   timeOnly?: boolean
   /** Replaces the "Rule applied" label, e.g. with the finding's bucket tag. */
   ruleHead?: ReactNode
+  applyLabel?: string
   onApply?(): void
 }
 
@@ -71,12 +73,14 @@ export function ShiftDetail(props: ShiftDetailProps): JSX.Element {
 }
 
 
-function ShiftEvidence({ cycle, rs, primaryRuleId, showHeading = true, showSourceAction = true, showFired = true, timeOnly = false, ruleHead, onApply }: ShiftDetailProps): JSX.Element {
+function ShiftEvidence({ cycle, rs, primaryRuleId, showHeading = true, showSourceAction = true, showFired = true, timeOnly = false, ruleHead, applyLabel = 'Approve', onApply }: ShiftDetailProps): JSX.Element {
   const { openDrawer } = useOverlay()
   const [state] = useOnboarding()
   const s = rs.shift
   const decision = effectiveResolutions(cycle, state.resolutions)[cycle.id]?.[s.id]
-  const savedReason = state.reasons[`${cycle.id}:${s.id}`]
+  const savedReason = cycle.server ? (cycle.decisions ?? []).filter((item) => item.decision === 'dismissed'
+    && rs.rows.some((row) => row.ruleId === item.groupId || [...(cycle.groups ?? []), ...(cycle.extraGroups ?? [])].some((group) => group.ruleId === row.ruleId && groupId(group) === item.groupId)))
+    .map((item) => item.reason).filter(Boolean).join(' · ') : state.reasons[`${cycle.id}:${s.id}`]
   const source = provenance(cycle, s, cycle.week.findIndex((shift) => shift.id === s.id))
   const fired = rs.rows.filter((row) => row.status === 'flag' || row.status === 'held' || row.status === 'applied')
   // Each timesheet row carries the mark of the system that reported it.
@@ -122,7 +126,7 @@ function ShiftEvidence({ cycle, rs, primaryRuleId, showHeading = true, showSourc
     <div className="shift-action-bar">
       <PayDelta current={rs.naive} resolved={rs.pay} size="lg" />
       {((!decision && onApply) || (showSourceAction && primaryRule)) && <div className="actions">
-        {onApply && !decision && <Btn className="primary" onClick={onApply}>Approve</Btn>}
+        {onApply && !decision && <Btn className="primary" onClick={onApply}>{applyLabel}</Btn>}
         {showSourceAction && primaryRule && <Btn onClick={() => showRule(primaryRule)}>Open Source Document ↗</Btn>}
       </div>}
     </div>

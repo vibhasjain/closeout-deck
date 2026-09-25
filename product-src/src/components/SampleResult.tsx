@@ -2,8 +2,8 @@ import { Fragment, useId } from 'react'
 import { EmailIssue } from '@/components/EmailIssue'
 import { Lbl, Tag } from '@/components/ui'
 import { fmtHM } from '@/bench/engine.js'
-import { findingEmail } from '@/lib/issueEmail'
-import { clock, type Finding } from '@/lib/sample'
+import { findingEmail, type FindingEvidence } from '@/lib/issueEmail'
+import { clock } from '@/lib/sample'
 import { titleCase } from '@/lib/utils'
 import './sample-result.css'
 
@@ -26,7 +26,7 @@ export function FindingAmount({ label }: { label: string }) {
 }
 
 /** One finding's evidence, each source side by side for the same shift, and the drafted action. */
-export function FindingDetail({ finding, dayLabel }: { finding: Finding; dayLabel(day: number): string }) {
+export function FindingDetail({ finding, dayLabel }: { finding: FindingEvidence; dayLabel(day: number): string }) {
   const id = useId()
   const time = (value: number | null) => value == null ? '' : clock(value)
   return <div className="shift-evidence"><div className="shift-evidence-scroll finding-detail">
