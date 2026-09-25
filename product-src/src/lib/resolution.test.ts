@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { buildCycles, cycleStats } from '@/lib/desk'
 import { DEFAULTS } from '@/lib/onboarding'
-import { resolutionGroups } from '@/lib/resolution'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { MemoryRouter } from 'react-router-dom'
+import { OverlayProvider } from '@/components/shell/Overlay'
+import { PayrollSummary } from '@/components/PayrollSummary'
+import { lawLabel, requiredByLaw, resolutionGroups } from '@/lib/resolution'
 
 describe('agent-first resolution', () => {
   const cycle = buildCycles(DEFAULTS, new Date(2026, 8, 22)).find((item) => item.status === 'needs-review')!
@@ -43,5 +48,19 @@ describe('agent-first resolution', () => {
       expect(group.current).toBeCloseTo(shifts.reduce((total, shift) => total + shift.naive, 0))
       expect(group.resolved).toBeCloseTo(shifts.reduce((total, shift) => total + shift.pay, 0))
     }
+  })
+})
+
+describe('SRC-WEEK-01 is FLSA workweek law', () => {
+  it('is classified as law by the engine bucket and its applied fix reads Required by law · applied, never by the agent', () => {
+    expect(requiredByLaw('SRC-WEEK-01')).toBe(true)
+    expect(requiredByLaw('CS-01')).toBe(false)
+    const cycle = buildCycles(DEFAULTS, new Date(2026, 8, 22)).find((item) => item.status === 'needs-review')!
+    expect(DEFAULTS.authorityConfigured).toBe(false) // autonomy off: nothing discretionary is authorized
+    const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(OverlayProvider, null, createElement(PayrollSummary, { cycle }))))
+    const row = html.slice(html.indexOf('data-rule="SRC-WEEK-01"'))
+    const line = /<span class="decision-line">([^<]*)<\/span>/.exec(row)![1]
+    expect(line).toBe(`${lawLabel('SRC-WEEK-01')} · Required by law · applied`)
+    expect(line).not.toContain('by the agent')
   })
 })
