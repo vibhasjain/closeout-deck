@@ -87,14 +87,14 @@ describe('journey send form', () => {
     expect(cycle.results.some(row => row.held && row.pay > 0)).toBe(true)
   })
 
-  it('includes held-only workers, dismissed-rule deductions and next-cycle adjustments in the preview', () => {
+  it('recomputes dismissed premiums, retains held-only workers and adds rounded next-cycle adjustments', () => {
     const cycle = payload()
     cycle.week = cycle.week.slice(0, 2)
-    cycle.results = [{ ...cycle.results[0], held: false, pay: 160.005, rate: 20, rows: [{ ruleId: 'CA-MB-01', status: 'flag', note: 'Missing meal', effect: { premiumHours: 1 } }] },
-      { ...cycle.results[1], held: true, pay: 90 }]
+    cycle.results = [{ ...cycle.results[0], held: false, pay: 180, rate: 20, rows: [{ ruleId: 'CA-MB-01', status: 'flag', note: 'Missing meal', effect: { premiumHours: 1 } }] },
+      { ...cycle.results[1], held: true, pay: 0, rows: [{ ruleId: 'CS-OVLP', status: 'held', note: 'Overlapping time', effect: { holdAll: true } }] }]
     cycle.decisions = [{ id: 'd1', cycleId: cycle.cycle.id, groupId: 'CA-MB-01', shiftIds: [], decision: 'dismissed', reason: 'Confirmed meal', by: 'user', at: '2026-09-25T12:00:00Z' }]
     const adjustment = { ...dispute, worker: 'New worker', status: 'adjusted' as const, adjustment: { hours: 2, amount: 40.005, next_cycle_id: cycle.cycle.id } }
-    expect(batchPreview(cycle, [adjustment])).toEqual({ workers: 3, gross: 180.02, held: 1 })
+    expect(batchPreview(cycle, [adjustment])).toEqual({ workers: 3, gross: 200.01, held: 1 })
   })
 
   it.each(['get_timesheets', 'chase_missing', 'review', 'send', 'done'] as const)('is black only when nextStep is send: %s', kind => {
@@ -182,13 +182,18 @@ describe('journey gaps form', () => {
     expect(primaryCount(html)).toBe(0)
   })
 
-  it('matches server recipient rules and removes accepted or already-asked gaps', () => {
+  it('matches server recipient rules and only removes reconciled or explicitly closed gaps', () => {
     const cycle = gapsPayload()
     const id = 'Pacific Cold Storage|Cam Li|0'
     expect(gapRows(cycle, ['Pacific Cold Storage'])[0].blocked).toBe(true)
     expect(gapRows(cycle, ['Cam Li'])[0].blocked).toBe(false)
     expect(gapRows(cycle, [], { [`${cycle.cycle.id}:${id}`]: { reason: 'Confirmed', at: '2026-09-25T12:00:00Z' } })).toEqual([])
-    expect(gapRows(cycle, [], {}, [{ ...thread, counterparty: { ...thread.counterparty, gapIds: [id] } }])).toEqual([])
+    expect(gapRows(cycle, [], { [`${cycle.cycle.id}:${id}`]: { reason: '  ', at: '2026-09-25T12:00:00Z' } })).toEqual([expect.objectContaining({ id })])
+    for (const status of ['open', 'waiting', 'resolved'] as const) {
+      expect(gapRows(cycle, [], {}, [{ ...thread, status, counterparty: { ...thread.counterparty, gapIds: [id] } }])).toEqual([
+        expect.objectContaining({ id, asked: true }),
+      ])
+    }
     cycle.intake.expected[0].onSite = undefined
     expect(gapRows(cycle, ['Cam Li'])[0]).toMatchObject({ name: 'Cam Li', kind: 'worker', blocked: true })
   })
@@ -211,14 +216,24 @@ describe('journey gaps form', () => {
     expect(form.draw()).toContain('Worker 200')
     await form.click('Ask 1 person')
     expect(api.askGaps.mock.calls[1][1]).toEqual({ gapIds: ids.slice(200) })
-    expect(form.draw()).toContain('No missing time entries.')
+    expect(form.draw()).toContain('Asked · Still missing')
+    expect(form.draw()).not.toContain('No missing time entries.')
+    expect(form.fields().filter(element => element.props['aria-label'] === 'Ask Maria Castillo')).toHaveLength(201)
     expect(primaryCount(form.draw())).toBe(0)
   })
 })
 
 describe('journey dispute form', () => {
+  it('requires a sent batch independently of the next step', () => {
+    const form = mount(() => DisputeForm({ cycle: payload() }))
+    expect(form.draw()).toContain('Send this cycle to Payroll before opening a dispute.')
+    expect(form.fields().some(element => element.props.children === 'Simulate a dispute')).toBe(false)
+    expect(api.createDispute).not.toHaveBeenCalled()
+    expect(api.simulateDispute).not.toHaveBeenCalled()
+  })
+
   it('uses uploaded text as the real dispute description and marks the source upload', async () => {
-    const cycle = payload()
+    const cycle = { ...payload(), batch }
     const form = mount(() => DisputeForm({ cycle }))
     form.change('Worker', 'Ana Peña')
     await form.upload(new File(['Two missing hours'], 'worker-note.txt', { type: 'text/plain' }))
@@ -228,7 +243,7 @@ describe('journey dispute form', () => {
   })
 
   it('keeps one black action while switching between simulation and a pasted dispute', async () => {
-    const cycle = payload()
+    const cycle = { ...payload(), batch }
     const form = mount(() => DisputeForm({ cycle }))
     expect(primaryCount(form.draw())).toBe(1)
     form.change('Worker', 'Ana Peña')
@@ -244,7 +259,7 @@ describe('journey dispute form', () => {
   it('simulates then resolves an adjustment through the contract', async () => {
     api.simulateDispute.mockResolvedValueOnce({ dispute, thread })
     api.resolveDispute.mockResolvedValueOnce({ dispute: { ...dispute, status: 'adjusted' } })
-    const cycle = payload()
+    const cycle = { ...payload(), batch }
     const form = mount(() => DisputeForm({ cycle }))
     await form.click('Simulate a dispute')
     form.change('Adjustment hours', '2')
@@ -260,7 +275,7 @@ describe('journey dispute form', () => {
   it('disables zero-only adjustments and rejects without sending invalid adjustment fields', async () => {
     api.simulateDispute.mockResolvedValueOnce({ dispute, thread })
     api.resolveDispute.mockResolvedValueOnce({ dispute: { ...dispute, status: 'rejected' } })
-    const cycle = payload()
+    const cycle = { ...payload(), batch }
     const form = mount(() => DisputeForm({ cycle }))
     await form.click('Simulate a dispute')
     form.change('Resolution note', 'No adjustment warranted')

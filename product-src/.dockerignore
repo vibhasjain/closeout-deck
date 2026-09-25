@@ -17,3 +17,5 @@ server/.env*
 server/.data
 server/test
 server/supabase
+
+!src/lib/journeyPay.ts

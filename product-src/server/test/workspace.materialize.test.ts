@@ -3,6 +3,8 @@ import { mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from 'node:f
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
+import { createMemoryJourneyStore } from '../src/journeyStore.ts'
+import { accountHash } from '../src/datastore.ts'
 import { DataService } from '../src/data.ts'
 import { createMemoryDataStore } from '../src/datastore.ts'
 import { materialize, workspaceFile } from '../src/workspace.ts'
@@ -104,4 +106,43 @@ test('cache limits evict oldest cycle data first and paths cannot escape cwd', a
   await assert.rejects(workspaceFile(cwd, 'escape/target'), /invalid_workspace_symlink/)
   await writeFile(join(root, 'outside'), 'sentinel')
   assert.equal(await readFile(join(root, 'outside'), 'utf8'), 'sentinel')
+})
+
+
+test('journey history is bounded, omitted explicitly and included in the final workspace cap', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'closeout-journey-cap-'))
+  t.after(() => rm(root, { recursive: true, force: true }))
+  const store = createMemoryDataStore(), service = new DataService(store), journey = createMemoryJourneyStore()
+  const env = { NODE_ENV: 'test', CLOSEOUT_DATA_DIR: root }
+  await service.ingestFile(email, { name: 'current.csv', bytes: bytes(), set: 1 }, {}, now)
+  const createdAt = now.toISOString(), cycleId = '2026-09-27'
+  for (let n = 0; n < 205; n++) {
+    const id = `t_${String(n).padStart(5, '0')}`
+    await journey.upsertThread(email, { id, cycleId, shiftId: null, disputeId: null, counterparty: { kind: 'worker', name: `Worker ${n}` }, status: 'waiting', createdAt })
+    await journey.addMessage(email, { id: `m_${n}`, threadId: id, dir: 'in', status: 'recorded', text: 'x'.repeat(3900), at: createdAt })
+  }
+  await journey.upsertThread(email, { id: 't_old', cycleId: '2020-01-05', shiftId: null, disputeId: null, counterparty: { kind: 'worker', name: 'Old history' }, status: 'open', createdAt })
+  for (let n = 0; n < 400; n++) await journey.upsertDecision(email, { id: `d_${n}`, cycleId, groupId: `rule-${n}`, shiftIds: [], decision: 'dismissed', reason: 'r'.repeat(500), by: 'user', at: createdAt })
+  const csvPath = `${accountHash(email)}/batches/b_large.csv`
+  await store.putObject(email, csvPath, Buffer.from('worker,regular_hours,ot_hours,premium_hours,gross,held_entries\n' + 'x'.repeat(500_000)))
+  await journey.createBatch(email, { id: 'b_large', cycleId, destination: 'Payroll', workers: 1, gross: 160, held: 0, csvPath, createdAt })
+  const cap = 100_000
+  const cwd = await materialize({ email }, env, store, {}, {}, { journey, maxBytes: cap })
+  assert.ok(await size(cwd) <= cap, 'all journey and final metadata bytes count')
+  assert.ok(!await missing(join(cwd, `data/entries/${cycleId}.jsonl`)), 'unbounded history must not evict all current evidence')
+  assert.ok(await missing(join(cwd, 'data/threads/t_old.md')), 'history outside selected cycles stays canonical only')
+  assert.ok(await missing(join(cwd, `data/batches/${cycleId}.csv`)), 'oversized immutable CSV is omitted whole')
+  assert.match(await readFile(join(cwd, 'data/journey.md'), 'utf8'), /[1-9]\d* records or artifacts omitted/)
+  const decisions = await readFile(join(cwd, 'data/decisions.jsonl'), 'utf8')
+  for (const row of decisions.trim().split('\n')) assert.doesNotThrow(() => JSON.parse(row))
+  assert.equal((await journey.listMessages(email, ['t_00001'])).length, 1, 'canonical messages survive eviction')
+  assert.equal((await journey.listDecisions(email)).length, 400)
+  await materialize({ email }, env, store, {}, {}, { journey, maxBytes: cap })
+  assert.ok(await size(cwd) <= cap, 'repeated materialization obeys the same cap')
+})
+
+test('materialize refuses a cap below essential account metadata instead of returning oversized context', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'closeout-minimum-cap-'))
+  t.after(() => rm(root, { recursive: true, force: true }))
+  await assert.rejects(materialize({ email }, { NODE_ENV: 'test', CLOSEOUT_DATA_DIR: root }, createMemoryDataStore(), {}, {}, { maxBytes: 100 }), /workspace_size_limit/)
 })

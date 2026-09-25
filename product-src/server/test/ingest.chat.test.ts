@@ -62,10 +62,12 @@ test('valid mapping persists, reruns with the closeout_state calendar, and holds
   assert.equal(future.status, 'normalized'); assert.equal(future.mappingAuthor, 'agent')
 })
 
-test('hours disagreement is returned to the same workspace and a corrected mapping succeeds', async t => {
+test('hours disagreement retries in the same workspace with at most three data traces per turn', async t => {
   let id = '', calls = 0, cwd = ''
   const app = await setup(t, async options => {
     calls++; if (cwd) assert.equal(options.cwd, cwd); cwd = options.cwd
+    options.onEvent({ trace: 'Read handbooks/ingest.md' })
+    for (let n = 0; n < 3; n++) options.onEvent({ trace: `Read data/attempt-${calls}-${n}.json` })
     const mapping = spec(id)
     if (calls === 1) delete mapping.columns.breakMin
     else assert.match(options.message, /Hours disagrees with the times/)
@@ -74,6 +76,8 @@ test('hours disagreement is returned to the same workspace and a corrected mappi
   id = (await app.upload()).id
   const events = await app.chat([id])
   assert.equal(calls, 2); assert.equal(events.find(e => e.ingest)?.ingest.status, 'normalized'); assert.equal(events.filter(e => e.done).length, 1)
+  assert.equal(events.filter(e => e.trace?.startsWith('Read data/')).length, 3)
+  assert.equal(events.filter(e => e.trace === 'Read handbooks/ingest.md').length, 1)
 })
 
 test('two failed attempts leave needs_mapping with errors and no entries', async t => {

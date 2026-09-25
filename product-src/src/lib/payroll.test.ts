@@ -54,8 +54,9 @@ describe('payroll totals', () => {
     })
     const result = payTotals(cycle([row]))
     // Daily OT minutes take precedence over the daily premium; weekly OT doubles its premium minutes.
-    expect(result).toMatchObject({ reg: 480, ot: 180, premiums: 65, gross: 425, naive: 300 })
-    expect(result.workers[0]).toMatchObject({ reg: 480, ot: 180, premiums: 65, gross: 425 })
+    expect(result).toMatchObject({ reg: 420, ot: 180, premiums: 65, gross: 425, naive: 300 })
+    expect(result.workers[0]).toMatchObject({ reg: 420, ot: 180, premiums: 65, gross: 425 })
+    expect(result.reg + result.ot).toBe(row.payableMin)
   })
 
   it('keeps bench worker and punch ordering without sorting the source run', () => {
@@ -71,6 +72,21 @@ describe('payroll totals', () => {
     expect(result.workers.map((worker) => worker.name)).toEqual(['Zoe', 'Amy'])
     expect(result.workers[0].approved.map((row) => row.shift.id)).toEqual(['yesterday', 'early', 'late'])
     expect(source.run.shifts.map((row) => row.shift.id)).toEqual(['late', 'other-worker', 'early', 'yesterday'])
+  })
+
+  it('keeps all weekly overtime when the final entry carries more overtime than its own hours', () => {
+    const rows = Array.from({ length: 7 }, (_, day) => shift(`day-${day}`, 'Worker A'))
+    rows[6].rows = [{ ruleId: 'FED-OT-40', status: 'applied', note: '16 weekly overtime hours', effect: { otPremiumMin: 480 } }]
+    const result = payTotals(cycle(rows))
+    expect(result).toMatchObject({ reg: 2400, ot: 960 })
+    expect(result.reg + result.ot).toBe(7 * 480)
+  })
+
+  it('rounds real server Payroll gross per worker exactly like the CSV', () => {
+    const source = { ...cycle([shift('a', 'Worker A', { pay: 160.005 }), shift('b', 'Worker B', { pay: 160.005 })]), server: true }
+    const result = payTotals(source)
+    expect(result.workers.map(worker => worker.gross)).toEqual([160.01, 160.01])
+    expect(result.gross).toBe(320.02)
   })
 
   it('reconciles the real scripted run to its approved shifts and worker totals', () => {

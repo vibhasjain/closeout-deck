@@ -544,7 +544,8 @@ function runEngine(week, paramOverrides) {
       if (e.premiumHours) premiumHours += e.premiumHours;
       if (e.premiumMin) workedMin += e.premiumMin;
       if (e.otPremiumMin) otPremiumMin += e.otPremiumMin;
-      if (e.topUpMin) topUpMin += e.topUpMin;
+      // Minimum guarantees overlap: pay the largest shortfall, never the same minutes twice.
+      if (e.topUpMin) topUpMin = Math.max(topUpMin, e.topUpMin);
       if (e.holdMin) holdMin += e.holdMin;
       if (e.holdAll) holdAll = true;
       if (e.extendToMin != null) extendTo = e.extendToMin;
@@ -569,6 +570,84 @@ function runEngine(week, paramOverrides) {
     t.flags += r.flagged ? 1 : 0; t.held += r.held ? 1 : 0; return t;
   }, { under: 0, over: 0, flags: 0, held: 0 });
   return { shifts, totals, ctx };
+}
+
+/**
+ * Re-run payout from immutable engine evidence after review decisions. Source rows retain
+ * pipeline reconciliation and full-workweek context; only dismissed effects are removed.
+ * The dependency pass uses effective working minutes/rates before repricing premiums.
+ */
+function rerunEngine(week, snapshots, dismissed) {
+  const P = (rid, key) => RULES.find(r => r.id === rid).params[key].v;
+  const ctx = makeCtx(week, P);
+  const rawWorked = ctx.workedMin;
+  const records = week.map((shift, i) => {
+    const before = snapshots[i];
+    const rows = before.rows.map(row => dismissed(shift.id, row.ruleId) && row.effect && row.status !== 'held'
+      ? { ...row, effect: undefined } : { ...row, ...(row.effect ? { effect: { ...row.effect } } : {}) });
+    const effectMinutes = list => {
+      let extra = 0, extend = null;
+      for (const { effect: e } of list) if (e) { extra += e.premiumMin || 0; if (e.extendToMin != null) extend = e.extendToMin; }
+      const out = ctx.resolvedPairs(shift).at(-1)?.rawOut;
+      return extra + (extend != null && out != null ? Math.max(0, extend - out) : 0);
+    };
+    const effectiveRate = list => list.reduce((rate, row) => row.effect?.rateOverride ?? rate, shift.rate);
+    const originalExtra = effectMinutes(before.rows), extra = effectMinutes(rows);
+    return { shift, before, rows, worked: rawWorked(shift) + extra, originalWorked: rawWorked(shift) + originalExtra,
+      rate: effectiveRate(rows), changedMinutes: originalExtra !== extra, changedRate: effectiveRate(before.rows) !== effectiveRate(rows) };
+  });
+  const byId = new Map(records.map(r => [r.shift.id, r]));
+  ctx.workedMin = shift => byId.get(shift.id).worked;
+  const replace = (record, ruleId) => {
+    const rule = RULES.find(r => r.id === ruleId);
+    if (!record.rows.some(row => row.ruleId === ruleId) || dismissed(record.shift.id, ruleId)) return;
+    const evaluated = rule.evaluate({ ...record.shift, rate: record.rate }, ctx, P)
+      .map(row => ({ ruleId, kindDefault: rule.kind, ...row }));
+    record.rows = record.rows.filter(row => row.ruleId !== ruleId).concat(evaluated);
+  };
+  for (const record of records) {
+    if (record.changedMinutes) {
+      replace(record, 'CA-OT-8'); replace(record, 'CA-MB-01');
+      replace(record, 'CA-RT-01'); replace(record, 'CON-MIN-4H');
+    }
+    if (record.changedMinutes || record.changedRate) replace(record, 'CA-SS-01');
+  }
+  // Grouping by the captured payroll context keeps biweekly and partial-week cycles separate.
+  const groups = new Map();
+  for (const record of records) {
+    const context = record.before.payrollContext;
+    const key = context ? `${context.workerKey}|${context.workweek}` : record.shift.worker;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(record);
+  }
+  for (const group of groups.values()) {
+    const oldDaily = group.reduce((n, r) => n + r.before.rows.reduce((m, row) => m + (row.effect?.dailyOtMin || 0), 0), 0);
+    const daily = group.reduce((n, r) => n + r.rows.reduce((m, row) => m + (row.effect?.dailyOtMin || 0), 0), 0);
+    if (!group.some(record => record.changedMinutes) && oldDaily === daily) continue;
+    const captured = group.find(r => r.before.payrollContext)?.before.payrollContext;
+    const worked = (captured?.workerWorkedMin ?? group.reduce((n, r) => n + rawWorked(r.shift), 0))
+      + group.reduce((n, r) => n + (r.worked - rawWorked(r.shift)), 0);
+    const totalDaily = (captured?.workerDailyOtMin ?? oldDaily) + daily - oldDaily;
+    const overtime = Math.max(0, worked - MIN(P('FED-OT-40', 'weekly_h')) - totalDaily);
+    for (const record of group) for (const row of record.rows) {
+      if (row.status === 'na' || dismissed(record.shift.id, row.ruleId)) continue;
+      if (row.ruleId === 'FED-OT-40') row.effect = overtime ? { otPremiumMin: overtime * 0.5 } : undefined;
+      if (row.ruleId === 'FED-RR-01') row.effect = overtime && record.shift.diff
+        ? { premiumAmt: Math.round(H(overtime) * 1.5 * record.shift.diff * 100) / 100 } : undefined;
+    }
+  }
+  return records.map(({ shift, before, rows, rate, worked }) => {
+    let topUpMin = 0, holdMin = 0, holdAll = false, premium = 0;
+    for (const { effect: e } of rows) if (e) {
+      topUpMin = Math.max(topUpMin, e.topUpMin || 0);
+      holdMin += e.holdMin || 0; holdAll ||= !!e.holdAll;
+      premium += (e.premiumAmt || 0) + (e.premiumHours || 0) * rate + H(e.otPremiumMin || 0) * rate;
+    }
+    const payableMin = Math.max(0, worked + topUpMin - holdMin);
+    const pay = holdAll ? 0 : H(payableMin) * rate + premium;
+    return { ...before, shift, rows, rate, payableMin, pay, held: holdAll || holdMin > 0,
+      deltaUnder: Math.max(0, pay - before.naive), deltaOver: Math.max(0, before.naive - pay) };
+  });
 }
 
 // Count shifts with a flag/held/applied-with-effect for a rule in an existing run.
@@ -763,7 +842,7 @@ function makeWeek({ seed = 20260824, scripted = true, start } = {}) {
 }
 
 // ---------- exports / self-check ----------
-export { FACILITIES, FEATURES, RULES, makeWeek, runEngine, backtest, fireCount, dayLabels, fmtT, fmtH, fmtHM, money, DAYS, MIN, H };
+export { FACILITIES, FEATURES, RULES, makeWeek, runEngine, rerunEngine, backtest, fireCount, dayLabels, fmtT, fmtH, fmtHM, money, DAYS, MIN, H };
 
 export function selfCheck() {
   const week = makeWeek();

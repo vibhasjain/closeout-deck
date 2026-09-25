@@ -125,6 +125,8 @@ export interface RunShift {
   deltaOver: number
   payableMin: number
   rate: number
+  /** Complete workweek context captured before the pipeline keeps only this cycle's entries. */
+  payrollContext?: { workerKey: string; workweek: string; workerWorkedMin: number; workerDailyOtMin: number }
 }
 
 export interface Run {
@@ -142,6 +144,7 @@ export const RULES: Rule[]
 export const DAYS: string[]
 export function makeWeek(o?: { seed?: number; scripted?: boolean; start?: string }): Shift[]
 export function runEngine(week: Shift[], overrides?: Record<string, number>): Run
+export function rerunEngine(week: Shift[], snapshots: Omit<RunShift, 'shift'>[], dismissed: (shiftId: string, ruleId: string) => boolean): RunShift[]
 export function backtest(week: Shift[], ruleId: string, overrides?: Record<string, number>): { fires: number; of: number }
 export function fireCount(run: Run, ruleId: string): number
 export function dayLabels(startISO: string): string[]

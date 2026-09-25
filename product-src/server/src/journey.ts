@@ -1,12 +1,13 @@
-import { fmtHM, type Effect } from '../../src/bench/engine.js'
+import { fmtHM } from '../../src/bench/engine.js'
+import { effectiveJourneyRun, journeyPayroll, type PayrollLine } from '../../src/lib/journeyPay.ts'
 import type { CyclePayload } from './pipeline.ts'
 import { isPlainObject, ValidationError } from './validation.ts'
 
 /** P7 journey records. Top-level fields are camelCase like the P5 API; jsonb contents follow the contract verbatim. */
 export type DecisionKind = 'approved' | 'dismissed' | 'escalated'
 export interface Decision { id: string; cycleId: string; groupId: string; shiftIds: string[]; decision: DecisionKind; reason: string | null; by: 'user' | 'agent'; at: string }
-/** gapIds is additive: the intake gaps this thread asked about, so asked gaps stop blocking the next step. */
-export interface Counterparty { kind: 'worker' | 'site'; name: string; contact?: string; gapIds?: string[] }
+/** gapIds records outreach evidence, never closure. siteNames preserves never-contact matching after reconciliation. */
+export interface Counterparty { kind: 'worker' | 'site'; name: string; contact?: string; gapIds?: string[]; siteNames?: string[] }
 export interface Thread { id: string; cycleId: string; shiftId: string | null; disputeId: string | null; counterparty: Counterparty; status: 'open' | 'waiting' | 'resolved'; createdAt: string }
 export interface Message { id: string; threadId: string; dir: 'out' | 'in' | 'note'; text: string; status: 'draft' | 'not_sent_demo' | 'recorded'; at: string }
 export interface Batch { id: string; cycleId: string; destination: string; workers: number; gross: number; held: number; csvPath: string; createdAt: string }
@@ -48,11 +49,14 @@ export function summarize(p: CyclePayload): CycleSummary {
     supervisors: Object.fromEntries(p.sites.filter(s => s.supervisor).map(s => [s.name, s.supervisor!.name])) }
 }
 
-/** Accepted gaps (closed with a reason on the desk) and gaps already asked about no longer block the cycle. */
+/** Only reconciled evidence (summary.gaps) or explicit closure with a reason resolves a gap. */
 export function openGaps(summary: CycleSummary, doc: Record<string, unknown>, threads: Thread[]): IntakeGap[] {
+  void threads // Thread state describes correspondence, not reconciliation evidence.
   const accepted = isPlainObject(doc.acceptedGaps) ? doc.acceptedGaps : {}
-  const asked = new Set(threads.filter(t => t.cycleId === summary.id).flatMap(t => t.counterparty.gapIds ?? []))
-  return summary.gaps.filter(g => !(`${summary.id}:${g.id}` in accepted) && !asked.has(g.id))
+  return summary.gaps.filter(g => {
+    const closure = accepted[`${summary.id}:${g.id}`]
+    return !isPlainObject(closure) || typeof closure.reason !== 'string' || !closure.reason.trim()
+  })
 }
 
 export function journeyCycle(summary: CycleSummary, doc: Record<string, unknown>, threads: Thread[]): JourneyCycle {
@@ -68,51 +72,31 @@ export function openItems(cycle: JourneyCycle, decisions: Decision[]) {
 
 const plural = (n: number, one: string, many = one + 's') => `${n} ${n === 1 ? one : many}`
 
-/** The one next step for a cycle. A batch always means done: a sent cycle is never re-sent. */
+/** Binding action ordering. Paid/send-once state is derived separately from the batch. */
 export function nextStep(cycle: JourneyCycle, decisions: Decision[], batch: Batch | null): NextStep {
   const open = openItems(cycle, decisions)
   const counts = { missingSets: open.missingSets.length, gaps: open.gaps.length, openGroups: open.groups.length }
-  if (batch) return { kind: 'done', label: 'Done', detail: `Sent to ${batch.destination} · Demo`, counts }
   if (open.missingSets.length) return { kind: 'get_timesheets', label: 'Get timesheets', detail: `No ${open.missingSets.map(n => SET_NAMES[n]).join(' or ')} yet`, counts }
   if (open.gaps.length) return { kind: 'chase_missing', label: 'Chase missing time', detail: `${plural(open.gaps.length, 'time entry', 'time entries')} ${open.gaps.length === 1 ? 'has' : 'have'} no client-approved hours`, counts }
   if (open.groups.length) return { kind: 'review', label: `Review ${plural(open.groups.length, 'issue')}`, detail: 'Approve, dismiss or escalate each group before Payroll', counts }
+  if (batch) return { kind: 'done', label: 'Done', detail: `Sent to ${batch.destination} · Demo`, counts }
   return { kind: 'send', label: 'Send to Payroll', detail: 'Every issue is decided and the batch is ready', counts }
 }
 
 // ---- Payroll export ----------------------------------------------------------------------------
 
-export interface ExportLine { worker: string; regular_hours: number; ot_hours: number; premium_hours: number; gross: number; held_entries: number }
+export type ExportLine = PayrollLine
 export const CSV_COLUMNS = ['worker', 'regular_hours', 'ot_hours', 'premium_hours', 'gross', 'held_entries'] as const
 const cents = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100
-/** What a flagged row adds to engine pay (engine.js payout). */
-const effectPay = (e: Effect, rate: number) => (e.premiumHours ?? 0) * rate + (e.premiumAmt ?? 0) + ((e.otPremiumMin ?? 0) + (e.topUpMin ?? 0) + (e.premiumMin ?? 0)) / 60 * rate
-/** Overtime hours worked, not the premium: daily OT names its minutes; weekly OT carries the half-time premium. */
-const otMinutes = (e: Effect) => e.dailyOtMin ?? (e.otPremiumMin ?? 0) * 2
 
 /**
  * One line per worker from the engine run. Held time entries are excluded from pay and counted.
- * A dismissed proposal removes that rule's own pay effect; approved and escalated keep the engine's pay.
+ * Decisions re-run effective hours, rates and dependent premiums through the shared engine.
  * Resolved disputes land as adjustment lines on the cycle named in their adjustment.
  */
 export function buildExport(p: CyclePayload, decisions: Decision[], disputes: Dispute[]) {
-  const aliases = new Map(p.groups.filter(g => g.id != null).map(g => [String(g.id), g.ruleId]))
-  const dismissed = new Set(decisions.filter(d => d.cycleId === p.cycle.id && d.decision === 'dismissed').map(d => aliases.get(d.groupId) ?? d.groupId))
-  const byWorker = new Map<string, { regular: number; ot: number; premium: number; gross: number; held: number }>()
-  p.results.forEach((result, i) => {
-    const worker = p.week[i].worker, line = byWorker.get(worker) ?? { regular: 0, ot: 0, premium: 0, gross: 0, held: 0 }
-    byWorker.set(worker, line)
-    if (result.held) { line.held++; return }
-    let pay = result.pay, ot = 0, premium = 0
-    for (const row of result.rows) {
-      if (!row.effect) continue
-      if (row.status === 'flag' && dismissed.has(row.ruleId)) { pay -= effectPay(row.effect, result.rate); continue }
-      ot += otMinutes(row.effect); premium += row.effect.premiumHours ?? 0
-    }
-    ot = Math.min(ot, result.payableMin)
-    line.regular += (result.payableMin - ot) / 60; line.ot += ot / 60; line.premium += premium; line.gross += pay
-  })
-  const lines: ExportLine[] = [...byWorker].sort(([a], [b]) => a.localeCompare(b)).map(([worker, l]) => ({
-    worker, regular_hours: cents(l.regular), ot_hours: cents(l.ot), premium_hours: cents(l.premium), gross: cents(l.gross), held_entries: l.held }))
+  const aliases = new Map([...p.groups, ...(p.extraGroups ?? [])].filter(g => g.id != null).map(g => [String(g.id), g.ruleId]))
+  const { lines } = journeyPayroll(p.week.map(s => ({ ...s, fac: p.sites[s.fac] })), p.results, decisions.filter(d => d.cycleId === p.cycle.id), aliases)
   for (const d of disputes) if (d.status === 'adjusted' && d.adjustment?.next_cycle_id === p.cycle.id) {
     lines.push({ worker: `${d.worker} · Adjustment for ${d.cycleId}`, regular_hours: cents(d.adjustment.hours), ot_hours: 0, premium_hours: 0, gross: cents(d.adjustment.amount), held_entries: 0 })
   }
@@ -166,17 +150,27 @@ export function counterpartyFor(gap: IntakeGap, summary: CycleSummary): Counterp
 /** Never-contact names match the person, and for a site ask, the site too. */
 export function neverContacted(cp: Counterparty, gaps: IntakeGap[], list: unknown): boolean {
   const names = new Set((Array.isArray(list) ? list : []).filter((n): n is string => typeof n === 'string').map(norm).filter(Boolean))
-  return names.has(norm(cp.name)) || (cp.kind === 'site' && gaps.some(g => names.has(norm(g.client))))
+  return names.has(norm(cp.name)) || (cp.kind === 'site' && [...gaps.map(g => g.client), ...(cp.siteNames ?? [])].some(name => names.has(norm(name))))
 }
 
 export function draftAsk(cp: Counterparty, gaps: IntakeGap[], summary: CycleSummary): string {
   const due = dayLabel(summary.cutoff, 0, true)
-  if (cp.kind === 'worker') {
-    const days = gaps.map(g => `${dayLabel(summary.start, g.day)} at ${g.client}`).join(', ')
-    return `Hi ${first(cp.name)}, the client-approved hours are missing for your time ${gaps.length === 1 ? 'entry' : 'entries'} on ${days}. Did you work ${gaps.length === 1 ? 'that shift' : 'those shifts'}, and what were your in and out times? Payroll closes ${due}.`
+  // Keep whole evidence references and reserve room for the question; the thread keeps every gap id.
+  const bounded = (rows: string[], separator: string) => {
+    const selected: string[] = []
+    let used = 0
+    for (const row of rows) {
+      if (used + row.length + separator.length > 3200) break
+      selected.push(row); used += row.length + separator.length
+    }
+    return selected.join(separator) + (selected.length < rows.length ? `${separator}and ${rows.length - selected.length} more entries listed in this thread` : '')
   }
-  const rows = gaps.map(g => `${g.worker} on ${dayLabel(summary.start, g.day)}${g.onSite ? ` (location shows ${fmtHM(g.onSite)} on site)` : ''}`).join('; ')
-  return `Hi ${first(cp.name)}, ${gaps[0].client}'s approved hours are missing for ${plural(gaps.length, 'time entry', 'time entries')}: ${rows}. Can you confirm the hours before Payroll closes ${due}?`
+  if (cp.kind === 'worker') {
+    const days = bounded(gaps.map(g => `${dayLabel(summary.start, g.day)} at ${g.client}`), ', ')
+    return `Hi ${first(cp.name).slice(0, 200)}, the client-approved hours are missing for your time ${gaps.length === 1 ? 'entry' : 'entries'} on ${days}. Did you work ${gaps.length === 1 ? 'that shift' : 'those shifts'}, and what were your in and out times? Payroll closes ${due}.`
+  }
+  const rows = bounded(gaps.map(g => `${g.worker} on ${dayLabel(summary.start, g.day)}${g.onSite ? ` (location shows ${fmtHM(g.onSite)} on site)` : ''}`), '; ')
+  return `Hi ${first(cp.name).slice(0, 200)}, ${gaps[0].client.slice(0, 200)}'s approved hours are missing for ${plural(gaps.length, 'time entry', 'time entries')}: ${rows}. Can you confirm the hours before Payroll closes ${due}?`
 }
 
 export function sameWorker(a: string, b: string): boolean {
@@ -188,12 +182,14 @@ export function sameWorker(a: string, b: string): boolean {
 }
 
 /** Evidence refs for a dispute: each of the worker's time entries with its file row, paid times and location. */
-export function disputeEvidence(p: CyclePayload, worker: string): { text: string; shiftId: string | null; afterClockOut: number; rate: number } {
+export function disputeEvidence(p: CyclePayload, worker: string, decisions: Decision[] = []): { text: string; shiftId: string | null; afterClockOut: number; rate: number } {
   const lines: string[] = []
   let shiftId: string | null = null, after = 0, rate = 0
+  const aliases = new Map([...p.groups, ...(p.extraGroups ?? [])].filter(g => g.id != null).map(g => [String(g.id), g.ruleId]))
+  const effective = effectiveJourneyRun(p.week.map(s => ({ ...s, fac: p.sites[s.fac] })), p.results, decisions.filter(d => d.cycleId === p.cycle.id), aliases)
   p.week.forEach((s, i) => {
     if (!sameWorker(s.worker, worker)) return
-    const r = p.results[i], last = s.punches.at(-1), out = last?.out ?? null
+    const r = effective[i], last = s.punches.at(-1), out = last?.out ?? null
     const onSiteAfter = s.geo && out != null ? Math.max(0, s.geo[1] - out) : 0
     if (onSiteAfter > after || !shiftId) { shiftId = s.id; after = Math.max(after, onSiteAfter) }
     rate ||= r.rate
@@ -230,7 +226,10 @@ function body(value: unknown, keys: string[]): Record<string, unknown> {
 }
 function text(value: unknown, max: number, optional = false): string | undefined {
   if (value === undefined && optional) return undefined
-  if (typeof value !== 'string' || !value.trim() || value.length > max || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value)) throw new ValidationError()
+  if (typeof value !== 'string' || !value.trim() || value.length > max || [...value].some(char => {
+    const code = char.charCodeAt(0)
+    return code === 127 || (code < 32 && code !== 9 && code !== 10 && code !== 13)
+  })) throw new ValidationError()
   return value.trim()
 }
 function number(value: unknown, min: number, max: number): number | undefined {

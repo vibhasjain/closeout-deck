@@ -48,12 +48,12 @@ test('state doc must be a plain object, including for non-HTTP callers', () => {
 test('history validates bounded transcript rows and round trips their presentation context', () => {
   const message = { id: 'line-1', role: 'agent', text: 'Send the worker emails to my inbox', at: Date.now(), scope: 'setup',
     cards: [{ kind: 'question', input: 'choice', set: 1, topics: ['workerHours'], choice: { yours: 'Forward worker emails', sample: 'Use sample worker time' } }],
-    actions: [{ type: 'cover_topic', topic: 'workerHours' }], skipped: ['set_firm: invalid URL'], contextChip: 'Worker time', ingestFileIds: ['f_abcdefghijkl'] }
+    actions: [{ type: 'cover_topic', topic: 'workerHours' }], skipped: ['set_firm: invalid URL'], traces: ['Read handbooks/disputes.md', 'Read data/cycles/2026-09-20.json'], contextChip: 'Worker time', ingestFileIds: ['f_abcdefghijkl'] }
   const [stored] = validateChatHistory({ messages: [message] })
   assert.deepEqual(chatMessage(stored), message)
   assert.equal('actions' in stored, false, 'presentation fields live in the existing context column')
   for (const patch of [{ id: '../bad' }, { role: 'system' }, { text: 'x'.repeat(20_001) }, { at: Infinity }, { at: 9e15 }, { at: -1 },
-    { cards: Array.from({ length: 4 }, () => ({})) }, { cards: ['not a card'] }, { skipped: ['x'.repeat(201)] }]) {
+    { cards: Array.from({ length: 4 }, () => ({})) }, { cards: ['not a card'] }, { skipped: ['x'.repeat(201)] }, { traces: ['x'.repeat(241)] }, { traces: Array(41).fill('Read data/x') }, { traces: [1] }, { traces: 'Read data/x' }]) {
     assert.throws(() => validateChatHistory({ messages: [{ ...message, ...patch }] }), ValidationError)
   }
   assert.throws(() => validateChatHistory({ messages: [] }), ValidationError)

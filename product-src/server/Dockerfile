@@ -10,7 +10,7 @@ COPY server/package.json server/package-lock.json ./
 RUN npm ci --omit=dev
 COPY server/ ./
 COPY src/bench/engine.js src/bench/engine.d.ts /app/src/bench/
-COPY src/lib/cycles.ts src/lib/sample.ts src/lib/inbox.ts /app/src/lib/
+COPY src/lib/cycles.ts src/lib/sample.ts src/lib/inbox.ts src/lib/journeyPay.ts /app/src/lib/
 RUN chmod 755 /app/server/entrypoint.sh
 
 ENV HOME=/data NODE_ENV=production PORT=8080

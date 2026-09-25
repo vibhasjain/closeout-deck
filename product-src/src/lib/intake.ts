@@ -49,7 +49,7 @@ export function buildIntake({ cycleId, start, expected, received, lastReceived, 
   for (const entry of expected) {
     const id = gapId(entry)
     const reason = accepted[gapKey(cycleId, id)]?.reason
-    if (reason !== undefined) { closed.push({ ...entry, id, reason }); continue }
+    if (typeof reason === 'string' && reason.trim()) { closed.push({ ...entry, id, reason }); continue }
     const sources = clients.get(entry.client) ?? new Map<string, SourceIntake>()
     clients.set(entry.client, sources)
     const last = lastReceived[entry.source] ?? now

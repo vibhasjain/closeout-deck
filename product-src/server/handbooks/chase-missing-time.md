@@ -12,5 +12,6 @@
 - Never turn location minutes into confirmed paid time without supporting context.
 - Record a reason when closing a gap as not worked; a closed gap can be reopened.
 - Accepted gaps leave the expected and open counts and retain their recorded reason.
-- Current ask actions save activity notes; they do not deliver external messages.
-- Uploads record filenames and pending counts in the browser demonstration.
+- Asks save persisted threads and outgoing messages marked Not sent · Demo. They never resolve a gap.
+- A recorded reply is evidence to reconcile; only reconciled approved time or explicit closure clears the gap.
+- Uploads normalize actual file contents, update time entries and rerun the engine.

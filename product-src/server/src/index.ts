@@ -223,7 +223,7 @@ export function createServer(options: ServerOptions = {}) {
       try {
         const doc = await stateDoc(user.email)
         const url = new URL(request.url!, 'http://localhost')
-        const sync = () => materialize(user, env, store, doc, {}, { journey: getJourneyStore() })
+        const sync = async () => materialize(user, env, store, await stateDoc(user.email), {}, { journey: getJourneyStore() })
         if (path === '/files' && request.method === 'POST') {
           let name: string
           try { name = decodeURIComponent(String(request.headers['x-file-name'] ?? 'upload.csv')) }
@@ -294,7 +294,7 @@ export function createServer(options: ServerOptions = {}) {
           json(response, 200, { cycles, sources }); return
         }
         // GET /data/cycles/:id (+ decisions, batch, nextStep) and the P7 journey routes.
-        if (await handleJourney({ method: request.method!, path, url, email: user.email, doc, store, service, journey: getJourneyStore(),
+        if (await handleJourney({ method: request.method!, path, url, email: user.email, doc, currentDoc: () => stateDoc(user.email), store, service, journey: getJourneyStore(),
           response, readBody: max => readJson(request, max), sync })) return
         if (request.method === 'GET' && (path === '/data/entries' || path === '/data/findings')) {
           const cycleId = url.searchParams.get('cycle')

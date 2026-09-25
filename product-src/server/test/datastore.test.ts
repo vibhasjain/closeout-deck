@@ -151,13 +151,14 @@ test('Supabase manifest uses three narrow account-scoped queries', async () => {
 })
 
 test('Supabase chat append namespaces local ids and reads only the authenticated account', async () => {
-  const line = { id: 'local-id', role: 'agent' as const, text: 'Ready', at: Date.parse('2026-09-25T12:00:00.000Z'), scope: 'setup', cards: [] }
+  const line = { id: 'local-id', role: 'agent' as const, text: 'Ready', at: Date.parse('2026-09-25T12:00:00.000Z'), scope: 'setup', cards: [], context: { traces: ['Read handbooks/disputes.md', 'Read data/decisions.jsonl'] } }
   const { store, requests } = mockStore((url, method) => method === 'GET' && url.pathname.endsWith('/closeout_chat')
     ? [{ ...line, id: `${accountHash(email)}:${line.id}`, at: new Date(line.at).toISOString() }]
     : [])
   await store.appendChat(email, [line])
   const append = requests.find(request => request.url.pathname.endsWith('/closeout_chat'))!
   assert.equal(append.method, 'POST')
+  assert.deepEqual((append.body as { context: unknown }[])[0].context, line.context)
   assert.equal(append.url.searchParams.get('on_conflict'), 'id')
   assert.deepEqual((append.body as { id: string; email: string }[]).map(row => [row.id, row.email]), [[`${accountHash(email)}:${line.id}`, email]])
   assert.deepEqual(await store.listChat(email), [line])

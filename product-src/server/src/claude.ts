@@ -45,7 +45,7 @@ export function mapStreamLine(line: string, sessionId: string, state: StreamStat
 
 /**
  * Quiet trace frames for the chat: each Read of a workspace handbook becomes "Read handbooks/x.md",
- * and Reads under data/ become "Read data/<path>", at most 3 of those per attempt. Paths are shown
+ * and Reads under data/ become "Read data/<path>", at most 3 of those per turn, including a resume retry. Paths are shown
  * relative to the account workspace, never absolute, and each trace is emitted once.
  */
 export function createTraceMapper(cwd: string): (line: string) => { trace: string }[] {
@@ -147,14 +147,14 @@ type Attempt = {
 }
 const TURN_TIMEOUT = Symbol('turn_timeout')
 
-function runAttempt(options: RunOptions, sessionId: string, resume: boolean): Promise<Attempt> {
+function runAttempt(options: RunOptions, sessionId: string, resume: boolean, traceLine: ReturnType<typeof createTraceMapper>): Promise<Attempt> {
   return new Promise(resolve => {
     const env = options.env ?? process.env
     const child = spawn(options.command ?? 'claude', claudeArgs(
       options.prompt, sessionId, resume, options.model ?? env.CLOSEOUT_AGENT_MODEL ?? 'opus',
       env.CLOSEOUT_TURN_BUDGET_USD ?? '2',
     ), { cwd: options.cwd, env: claudeEnv(env), stdio: ['pipe', 'pipe', 'pipe'] })
-    const mapLine = createStreamMapper(sessionId), traceLine = createTraceMapper(options.cwd)
+    const mapLine = createStreamMapper(sessionId)
     let buffer = ''
     let stderr = ''
     let failureReason: string | undefined
@@ -250,8 +250,8 @@ export async function runClaude(options: RunOptions): Promise<void> {
   const timer = setTimeout(() => turn.abort(TURN_TIMEOUT), options.timeoutMs ?? 180_000)
   timer.unref()
   try {
-    const attemptOptions = { ...options, signal: turn.signal }
-    let attempt = await runAttempt(attemptOptions, sessionId, Boolean(previous))
+    const attemptOptions = { ...options, signal: turn.signal }, traceLine = createTraceMapper(options.cwd)
+    let attempt = await runAttempt(attemptOptions, sessionId, Boolean(previous), traceLine)
     if (options.signal?.aborted) return
     if (!attempt.aborted && failed(attempt)) logFailure(attempt)
     if (previous && !attempt.aborted && !attempt.streamed && failed(attempt)) {
@@ -261,7 +261,7 @@ export async function runClaude(options: RunOptions): Promise<void> {
       await writeSessionId(options.cwd, sessionId)
       if (options.signal?.aborted) return
       if (!turn.signal.aborted) {
-        attempt = await runAttempt(attemptOptions, sessionId, false)
+        attempt = await runAttempt(attemptOptions, sessionId, false, traceLine)
         if (options.signal?.aborted) return
         if (!attempt.aborted && failed(attempt)) logFailure(attempt)
       }

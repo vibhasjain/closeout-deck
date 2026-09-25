@@ -375,7 +375,7 @@ test('chat history appends idempotently in closeout_chat and stays out of the st
   const messages = [
     { id: 'user-1', role: 'user', text: 'I forward the worker photos every Monday', at: 1000 },
     { id: 'agent-1', role: 'agent', text: `Forward them to me at ${inboxAddress(devEnv.CLOSEOUT_DEV_EMAIL)}`, at: 2000,
-      cards: [{ kind: 'question', input: 'text', topics: ['workerHours'] }] },
+      cards: [{ kind: 'question', input: 'text', topics: ['workerHours'] }], traces: ['Read handbooks/send-to-payroll.md', 'Read data/decisions.jsonl'] },
   ]
   let savedDoc: unknown
   const url = await serve(t, { dataStore, stateStore: {

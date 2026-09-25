@@ -66,7 +66,7 @@ export function validateStateBody(body: unknown): StateBody {
   return { doc: body.doc, base_updated_at: body.base_updated_at as string | null }
 }
 
-const CHAT_CONTEXT_KEYS = ['actions', 'contextChip', 'ingestFileIds', 'skipped'] as const
+const CHAT_CONTEXT_KEYS = ['actions', 'contextChip', 'ingestFileIds', 'skipped', 'traces'] as const
 const strings = (value: unknown, count: number, length: number) => Array.isArray(value) && value.length <= count
   && value.every(item => typeof item === 'string' && item.length <= length)
 
@@ -83,7 +83,8 @@ export function validateChatHistory(body: unknown): ChatRecord[] {
       || (message.actions !== undefined && (!Array.isArray(message.actions) || message.actions.length > 30 || jsonString(message.actions).length > 16_384))
       || (message.contextChip !== undefined && (typeof message.contextChip !== 'string' || message.contextChip.length > 300))
       || (message.ingestFileIds !== undefined && !strings(message.ingestFileIds, 5, 20))
-      || (message.skipped !== undefined && !strings(message.skipped, 10, 200))) throw new ValidationError()
+      || (message.skipped !== undefined && !strings(message.skipped, 10, 200))
+      || (message.traces !== undefined && !strings(message.traces, 40, 240))) throw new ValidationError()
     const context = Object.fromEntries(CHAT_CONTEXT_KEYS.filter(key => message[key] !== undefined).map(key => [key, message[key]]))
     return { id: message.id, role: message.role, text: message.text, at: message.at,
       ...(message.scope !== undefined ? { scope: message.scope as string } : {}), ...(message.cards !== undefined ? { cards: message.cards as unknown[] } : {}),

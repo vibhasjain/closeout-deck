@@ -7,6 +7,7 @@
 - It shows discovered worksites and record counts from the current sample cycle.
 - Completing the demonstration records a connected status and last-sync time in the app.
 - Use placeholder credentials for the demo; never ask for passwords in chat.
-- File intake records upload names and counts; it does not replace the sample engine data.
+- File intake stores the original, normalizes supported layouts and reruns the engine with actual entries.
+- Use sample only after the user chooses it; wait for server ingestion before showing Connected.
 - Explain the available method from context and direct the user to the source settings.
 - Do not claim that a real vendor connection or data import has completed.

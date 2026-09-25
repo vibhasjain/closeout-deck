@@ -70,6 +70,30 @@ describe('recorded server cycle', () => {
     expect(provenance(cycle, cycle.week[0], 999)).toMatchObject({ system: 'Bullhorn', file: 'bullhorn_2026-09-20.csv', fileId: payload.week[0].prov.file, row: payload.week[0].prov.row, sample: true })
     expect(JSON.stringify(payload)).toBe(before)
   })
+  it('shows effective decision money and hours in the shared Payroll desk without changing its source payload', () => {
+    const wire = structuredClone(payload)
+    wire.week = [{ ...wire.week[0], rate: 23, punches: [{ in: 480, out: 577 }], meal: null, vms: undefined }]
+    wire.results = [{ ...wire.results[0], rate: 23, payableMin: 383, pay: 383 / 60 * 23, naive: 97 / 60 * 23, rows: [
+      { ruleId: 'CA-RT-01', status: 'flag', note: 'Reporting minimum', effect: { topUpMin: 143 } },
+      { ruleId: 'CON-MIN-4H', status: 'flag', note: 'Contract minimum', effect: { topUpMin: 143 } },
+    ] }]
+    wire.decisions = ['CA-RT-01', 'CON-MIN-4H'].map(groupId => ({ id: groupId, cycleId: wire.cycle.id, groupId, shiftIds: [wire.week[0].id], decision: 'dismissed' as const, reason: 'Verified actual time', by: 'user' as const, at: '2026-09-25T12:00:00Z' }))
+    const original = JSON.stringify(wire)
+    const cycle = hydrate(wire, state, files)
+    expect(cycle.run.shifts[0].payableMin).toBe(97)
+    expect(payTotals(cycle).gross).toBeCloseTo(37.1833333333)
+    expect(cycle.run.shifts[0].rows.map(row => row.ruleId)).toEqual(['CA-RT-01', 'CON-MIN-4H'])
+    expect(JSON.stringify(wire)).toBe(original)
+  })
+  it('always excludes partial held pay and rounds gross per worker before any decisions', () => {
+    const wire = structuredClone(payload)
+    wire.week = wire.week.slice(0, 2)
+    wire.results = [{ ...wire.results[0], pay: 160.005 }, { ...wire.results[1], held: true, pay: 99.99 }]
+    wire.decisions = []
+    wire.totals.gross = 259.995
+    expect(hydrate(wire, state, files).run.totals).toMatchObject({ gross: 160.01 })
+    expect(wire.totals.gross).toBe(259.995)
+  })
   it('keeps an applied wrong-week correction beside overtime extras without inventing effects or counting pay twice', () => {
     const wire = structuredClone(payload)
     wire.week = wire.week.slice(0, 1)

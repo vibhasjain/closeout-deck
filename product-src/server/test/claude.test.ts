@@ -92,7 +92,12 @@ const send = value => process.stdout.write(JSON.stringify(value) + '\\n');
 let input = '';
 process.stdin.on('data', chunk => input += chunk);
 process.stdin.on('end', () => {
-  if (resume && ['missing', 'prompt-too-long', 'retry-then-hang'].includes(scenario)) {
+  if (scenario === 'trace-retry') {
+    for (const file of ['handbooks/ingest.md', ...Array.from({length:3}, (_, n) => 'data/' + (resume ? 'resume' : 'fresh') + n + '.json')]) {
+      send({type:'assistant', message:{content:[{type:'tool_use',name:'Read',input:{file_path:file}}]}});
+    }
+  }
+  if (resume && ['missing', 'prompt-too-long', 'retry-then-hang', 'trace-retry'].includes(scenario)) {
     process.stderr.write(scenario === 'missing' ? 'No conversation found with session ID: ' + id : 'Prompt is too long');
     process.exitCode = 1;
     return;
@@ -265,4 +270,15 @@ test('fresh-session recovery shares the original wall-clock deadline', async t =
   await running
   assert.equal((await f.calls()).length, 2)
   assert.deepEqual(f.events, [{ text: 'Hello there' }, { done: true, sessionId: await readSessionId(f.cwd), error: AGENT_ERROR }])
+})
+
+
+test('data traces and handbook deduplication span a failed resume and its fresh attempt', async t => {
+  const f = await fixture(t, 'trace-retry')
+  await writeSessionId(f.cwd, randomUUID())
+  await runClaude(f.options)
+  assert.equal((await f.calls()).length, 2)
+  const traces = f.events.filter((event): event is { trace: string } => 'trace' in event).map(event => event.trace)
+  assert.deepEqual(traces, ['Read handbooks/ingest.md', 'Read data/resume0.json', 'Read data/resume1.json', 'Read data/resume2.json'])
+  assert.equal(f.events.filter(event => 'done' in event).length, 1)
 })

@@ -84,6 +84,11 @@ describe('journey card and action contract', () => {
     expect(rowResolution(cycle, cycle.week[0].id, 'OTHER', { [cycle.id]: { [cycle.week[0].id]: 'applied' } })).toBeUndefined()
     expect(hydrate({ ...payload, batch }, DEFAULTS).statusTag).toBe('Paid')
   })
+  it('derives Paid from the sent batch separately from contract next-step ordering or calendar dates', () => {
+    const missing: CyclePayload = { ...payload, batch, nextStep: { kind: 'get_timesheets', label: 'Get timesheets', detail: 'Missing location', counts: { missingSets: 1, gaps: 0, openGroups: 0 } } }
+    expect(hydrate(missing, DEFAULTS)).toMatchObject({ statusTag: 'Paid', nextStep: { kind: 'get_timesheets' } })
+    expect(hydrate({ ...payload, cycle: { ...payload.cycle, status: 'reviewed' }, batch: null }, DEFAULTS).statusTag).toBe('Pending')
+  })
 })
 
 describe('journey transport', () => {

@@ -3,7 +3,7 @@ import test from 'node:test'
 import { createClient } from '@supabase/supabase-js'
 import { createTraceMapper, runClaude, type ClaudeEvent } from '../src/claude.ts'
 import {
-  buildExport, defaultDestination, nextStep, openGaps, summarize, toCsv, validateAsks, validateDecision, validateDispute,
+  buildExport, defaultDestination, draftAsk, nextStep, openGaps, summarize, toCsv, validateAsks, validateDecision, validateDispute,
   validateMessage, validateResolve, validateSend, CSV_COLUMNS,
 } from '../src/journey.ts'
 import type { Batch, Decision, Dispute, JourneyCycle, ReviewGroup, Thread } from '../src/journey.ts'
@@ -15,6 +15,8 @@ import { chmod, mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { CyclePayload } from '../src/pipeline.ts'
+import { FACILITIES, runEngine, type Shift } from '../../src/bench/engine.js'
+import { effectiveJourneyRun } from '../../src/lib/journeyPay.ts'
 
 const email = 'person@hypertrack.io'
 const counts = { set1: 10, set2: 10, set3: 10 }
@@ -38,8 +40,12 @@ test('nextStep follows get timesheets → chase missing → review → send → 
   const send = nextStep(cycle, [decision('CA-MB-01'), decision('7', 'escalated')], null)
   assert.deepEqual([send.kind, send.label], ['send', 'Send to Payroll'])
   assert.equal(nextStep(cycle, [decision('CA-MB-01', 'approved', '2026-09-13')], null).counts.openGroups, 2, 'another cycle\'s decision does not count')
-  // A sent cycle is done, whatever else is open: it is never re-sent.
-  assert.deepEqual([nextStep({ ...cycle, counts: { ...counts, set2: 0 } }, [], batch).kind, nextStep(cycle, [], batch).detail], ['done', 'Sent to ADP · Demo'])
+  // The action ordering stays intact after forced sends; the separate batch prevents a re-send.
+  assert.equal(nextStep({ ...cycle, counts: { ...counts, set2: 0 } }, [], batch).kind, 'get_timesheets')
+  assert.equal(nextStep({ ...cycle, gaps: ['a|b|1'] }, [], batch).kind, 'chase_missing')
+  assert.equal(nextStep(cycle, [], batch).kind, 'review')
+  assert.deepEqual([nextStep(cycle, [decision('CA-MB-01'), decision('CON-MARGIN-01')], batch).kind,
+    nextStep(cycle, [decision('CA-MB-01'), decision('CON-MARGIN-01')], batch).detail], ['done', 'Sent to ADP · Demo'])
 })
 
 // A two-worker cycle: Ana has a meal premium and daily overtime; Ben has one held time entry.
@@ -48,9 +54,9 @@ const payload = {
   groups: [{ id: 4, ruleId: 'CA-MB-01' }],
   sites: [{ name: 'Pacific Cold Storage', supervisor: { name: 'Maria Castillo' } }],
   week: [
-    { id: 's_00000000000a', worker: 'Ana Diaz', fac: 0, day: 2, punches: [{ in: 480, out: 1080 }], geo: [470, 1130], prov: { file: 'f_one', row: 2, cols: {} }, entryIds: ['e_1'] },
-    { id: 's_00000000000b', worker: 'Ben Ortiz', fac: 0, day: 3, punches: [{ in: 480, out: null }], geo: null, prov: { file: 'f_one', row: 3, cols: {} }, entryIds: ['e_2'] },
-    { id: 's_00000000000c', worker: 'Ben Ortiz', fac: 0, day: 4, punches: [{ in: 480, out: 960 }], geo: [475, 965], prov: { file: 'f_one', row: 4, cols: {} }, entryIds: ['e_3'] },
+    { id: 's_00000000000a', worker: 'Ana Diaz', fac: 0, rate: 20, mealMin: 30, day: 2, punches: [{ in: 480, out: 1080 }], geo: [470, 1130], prov: { file: 'f_one', row: 2, cols: {} }, entryIds: ['e_1'] },
+    { id: 's_00000000000b', worker: 'Ben Ortiz', fac: 0, rate: 18, day: 3, punches: [{ in: 480, out: null }], geo: null, prov: { file: 'f_one', row: 3, cols: {} }, entryIds: ['e_2'] },
+    { id: 's_00000000000c', worker: 'Ben Ortiz', fac: 0, rate: 18, day: 4, punches: [{ in: 480, out: 960 }], geo: [475, 965], prov: { file: 'f_one', row: 4, cols: {} }, entryIds: ['e_3'] },
   ],
   results: [
     { held: false, rate: 20, payableMin: 570, pay: 20 * 9.5 + 20 * 1.5 / 2 + 20, rows: [
@@ -63,15 +69,28 @@ const payload = {
   counts,
 } as unknown as CyclePayload
 
-test('summary groups rules by resolution state and lists intake gaps; accepted and asked gaps close', () => {
+test('asks and replies never resolve intake gaps; only reconciled evidence or explicit reasoned closure does', () => {
   const summary = summarize(payload)
   assert.deepEqual(summary.groups.map(g => [g.id, g.state, g.num]), [['CA-MB-01', 'proposed', 4], ['TS-COMPLETE', 'waiting', null]])
   assert.deepEqual(summary.gaps.map(g => g.id), ['Pacific Cold Storage|Ben Ortiz|4'])
   assert.equal(summary.supervisors['Pacific Cold Storage'], 'Maria Castillo')
   const asked: Thread = { id: 't_1', cycleId: '2026-09-20', shiftId: null, disputeId: null, counterparty: { kind: 'site', name: 'Maria Castillo', gapIds: ['Pacific Cold Storage|Ben Ortiz|4'] }, status: 'waiting', createdAt: '' }
   assert.equal(openGaps(summary, {}, []).length, 1)
-  assert.equal(openGaps(summary, {}, [asked]).length, 0)
+  for (const status of ['open', 'waiting', 'resolved'] as const) assert.equal(openGaps(summary, {}, [{ ...asked, status }]).length, 1)
+  assert.equal(openGaps(summary, { acceptedGaps: { '2026-09-20:Pacific Cold Storage|Ben Ortiz|4': { reason: '' } } }, []).length, 1)
   assert.equal(openGaps(summary, { acceptedGaps: { '2026-09-20:Pacific Cold Storage|Ben Ortiz|4': { reason: 'Not worked' } } }, []).length, 0)
+  assert.equal(openGaps(summarize({ ...payload, intake: { ...payload.intake, received: [...payload.intake.received, 'Pacific Cold Storage|Ben Ortiz|4'] } }), {}, [asked]).length, 0)
+})
+
+test('server-generated bulk ask drafts fit the 4000 character message boundary', () => {
+  const summary = summarize(payload)
+  const gaps = Array.from({ length: 200 }, (_, day) => ({ id: `g_${day}`, worker: `Worker ${day} ${'x'.repeat(170)}`, client: 'A large client with several sites', day, onSite: 480 }))
+  for (const kind of ['site', 'worker'] as const) {
+    const text = draftAsk({ kind, name: 'Supervisor' }, gaps, summary)
+    assert.ok(text.length <= 4000)
+    assert.match(text, /more entries listed in this thread/)
+    assert.equal(validateMessage({ dir: 'out', text }).text, text)
+  }
 })
 
 test('the Payroll export has the contract columns, excludes held entries, and carries next-cycle adjustments', () => {
@@ -91,6 +110,72 @@ test('the Payroll export has the contract columns, excludes held entries, and ca
   // A dismissed proposal (by rule id or numeric group id) removes its own premium from pay.
   for (const id of ['CA-MB-01', '4']) assert.deepEqual(buildExport(payload, [{ ...decision(id, 'dismissed') }], []).lines[0], { worker: 'Ana Diaz', regular_hours: 8, ot_hours: 1.5, premium_hours: 0, gross: 205, held_entries: 0 })
   assert.equal(toCsv([{ worker: '=HYPERLINK("x")', regular_hours: 0, ot_hours: 0, premium_hours: 0, gross: 0, held_entries: 0 }]).split('\r\n')[1], `"'=HYPERLINK(""x"")",0.00,0.00,0.00,0.00,0`)
+})
+
+const moneyShift = (values: Partial<Shift> = {}): Shift => ({ id: 's_0000000000aa', worker: 'A Worker', fac: FACILITIES.sutter,
+  role: 'Warehouse', rate: 23, day: 0, sched: [480, 960], punches: [{ in: 480, out: 577 }], meal: null, geo: [475, 580], ...values })
+function moneyPayload(week: Shift[]): CyclePayload {
+  const results = runEngine(week).shifts
+  return { ...payload, sites: week.map(s => ({ ...s.fac, key: s.fac.name })), week: week.map((s, fac) => ({ ...s, fac, prov: { file: 'fixture', row: fac + 1, cols: {} }, entryIds: [], sample: true })),
+    results: results.map(result => { const { shift, ...rest } = result; void shift; return rest }), groups: payload.groups, extraGroups: [] }
+}
+
+test('dismissed overlapping minimum guarantees recompute payable hours and gross together', () => {
+  const cycle = moneyPayload([moneyShift({ contractMin: true })])
+  assert.equal(buildExport(cycle, [], []).gross, 92, 'two four-hour guarantees pay four hours once')
+  for (const ruleId of ['CA-RT-01', 'CON-MIN-4H']) {
+    const one = buildExport(cycle, [decision(ruleId, 'dismissed')], []).lines[0]
+    assert.deepEqual([one.regular_hours, one.gross], [4, 92], 'the remaining guarantee still pays the four-hour minimum')
+  }
+  const both = buildExport(cycle, ['CA-RT-01', 'CON-MIN-4H'].map(id => decision(id, 'dismissed')), []).lines[0]
+  assert.deepEqual([both.regular_hours, both.gross], [1.62, 37.18], '97 minutes at $23, without mismatched 6.38 exported hours')
+})
+
+test('dismissed rate override reprices base pay, daily overtime and dependent meal premium', () => {
+  const cycle = moneyPayload([moneyShift({ orientation: true, punches: [{ in: 480, out: 1020 }], geo: [475, 1025] })])
+  const before = buildExport(cycle, [], []).lines[0]
+  assert.deepEqual([before.regular_hours, before.ot_hours, before.premium_hours, before.gross], [8, 1, 1, 189])
+  const after = buildExport(cycle, [decision('CON-SUTTER-01', 'dismissed')], []).lines[0]
+  assert.deepEqual([after.regular_hours, after.ot_hours, after.premium_hours, after.gross], [8, 1, 1, 241.5])
+  assert.equal(cycle.results[0].rate, 18, 'the underlying run remains immutable for later approval')
+  assert.equal(buildExport(cycle, [decision('CON-SUTTER-01', 'approved')], []).gross, 189)
+})
+
+test('dismissal recalculates weekly overtime and differential when daily overtime changes', () => {
+  const week = Array.from({ length: 5 }, (_, day) => moneyShift({ id: `s_0000000000a${day}`, day, rate: 20, diff: 2,
+    punches: [{ in: 480, out: 1020 }], mealMin: 30, geo: [475, 1025] }))
+  const before = runEngine(week).shifts
+  const after = effectiveJourneyRun(week, before, [decision('CA-OT-8', 'dismissed')])
+  assert.equal(before.reduce((n, r) => n + (r.rows.find(row => row.ruleId === 'CA-OT-8')?.effect?.dailyOtMin ?? 0), 0), 150)
+  const last = after.at(-1)!
+  assert.equal(last.rows.find(row => row.ruleId === 'FED-OT-40')?.effect?.otPremiumMin, 75)
+  assert.equal(last.rows.find(row => row.ruleId === 'FED-RR-01')?.effect?.premiumAmt, 7.5)
+  assert.equal(after.reduce((n, r) => n + r.pay, 0), 882.5)
+})
+
+test('captured complete-workweek context retains outside-cycle hours in dependent overtime', () => {
+  const shift = moneyShift({ fac: FACILITIES.lonestar, punches: [{ in: 480, out: 960 }], rate: 20 })
+  const result = runEngine([shift]).shifts[0]
+  result.rows.push({ ruleId: 'FAC-AUTODED-01', status: 'flag', note: 'Confirmed deducted hour', effect: { premiumMin: 60 } })
+  result.rows.find(row => row.ruleId === 'FED-OT-40')!.effect = { otPremiumMin: 90 }
+  result.payrollContext = { workerKey: 'worker-key', workweek: '2026-09-14', workerWorkedMin: 2520, workerDailyOtMin: 0 }
+  const [effective] = effectiveJourneyRun([shift], [result], [decision('FAC-AUTODED-01', 'dismissed')])
+  assert.equal(effective.rows.find(row => row.ruleId === 'FED-OT-40')?.effect?.otPremiumMin, 60)
+  assert.deepEqual([effective.payableMin, effective.pay], [480, 180])
+})
+
+test('weekly overtime export hours cover the whole workweek rather than only its last entry', () => {
+  const cycle = moneyPayload(Array.from({ length: 7 }, (_, day) => moneyShift({ id: `s_0000000000a${day}`, fac: FACILITIES.lonestar,
+    rate: 20, day, punches: [{ in: 480, out: 960 }], geo: [475, 965] })))
+  const line = buildExport(cycle, [], []).lines[0]
+  assert.deepEqual([line.regular_hours, line.ot_hours, line.gross], [40, 16, 1280])
+})
+
+test('legacy numeric aliases use the latest decision and group decisions cover all shift evidence', () => {
+  const cycle = moneyPayload([moneyShift({ punches: [{ in: 480, out: 960 }] }), moneyShift({ id: 's_0000000000bb', day: 1, punches: [{ in: 480, out: 960 }] })])
+  const oldDismissal = { ...decision('4', 'dismissed'), at: '2026-09-24T00:00:00.000Z' }
+  assert.equal(buildExport(cycle, [oldDismissal, decision('CA-MB-01')], []).gross, 414)
+  assert.equal(buildExport(cycle, [{ ...decision('CA-MB-01', 'dismissed'), shiftIds: [cycle.week[0].id] }], []).gross, 368)
 })
 
 test('destination defaults to the profile Payroll system, else Payroll', () => {
@@ -144,7 +229,7 @@ test('an unavailable journey store leaves the workspace with its legacy decision
   t.mock.method(console, 'error', () => {})
   await writeJourney({ email, store: createMemoryDataStore(), journey: broken, doc: {}, runs: [], legacy: [{ cycleId: '2026-09-20', shiftId: 's_1', decision: 'applied' }], io: {
     write: async (path, value) => { writes.set(path, String(value)) }, present: async () => false, list: async () => [], remove: async () => {} } })
-  assert.deepEqual([...writes.keys()], ['data/decisions.jsonl'])
+  assert.deepEqual([...writes.keys()], ['data/decisions.jsonl', 'data/journey.md'])
   assert.match(writes.get('data/decisions.jsonl')!, /"shiftId":"s_1"/)
 })
 

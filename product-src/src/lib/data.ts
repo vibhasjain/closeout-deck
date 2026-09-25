@@ -6,6 +6,7 @@ import type { DeskCycle } from '@/lib/desk'
 import { flushOnboarding, getOnboarding, updateOnboarding, type Onboarding } from '@/lib/onboarding'
 import { viewerSession } from '@/lib/viewerSession'
 import type { JourneyBatch, JourneyDecision, NextStep } from '@/lib/journey'
+import { effectiveJourneyRun, journeyPayroll } from '@/lib/journeyPay'
 
 /** JSON wire types mirror the data service without importing Node modules into the app. */
 export interface DataProvenance { file: string; sheet?: string; row: number; cols: Partial<Record<string, string>>; hoursOnly?: boolean; fileId?: string; sample?: boolean; system?: string }
@@ -92,11 +93,10 @@ export function uploadFile(file: File, options: { set: 1 | 2; system?: string; s
 
 const date = (value: string) => new Date(`${value}T00:00:00`)
 const restoreDates = (c: CycleDates): Cycle => ({ ...c, start: date(c.start), end: date(c.end), cutoff: date(c.cutoff), deadline: date(c.deadline), payDate: date(c.payDate) })
-const statusTag = (cycle: Cycle, cal: Onboarding): DeskCycle['statusTag'] => cal.approvedCycles.includes(cycle.id) ? 'Approved' : cycle.status === 'in-progress' ? 'In Progress' : cycle.status === 'needs-review' ? 'Pending' : 'Paid'
 const remembered = (cycle: Cycle, cal: Onboarding) => cal.customRules.filter(rule => rule.autoApply && !rule.draft && rule.sourceRuleId
   && (rule.effectiveCycleStart ? cycle.start >= date(rule.effectiveCycleStart) : cycle.status === 'in-progress')).map(rule => rule.sourceRuleId!)
 const daysOf = (cycle: Cycle) => cycleWeeks(cycle).flatMap(dayLabels).slice(0, Math.round((Date.UTC(cycle.end.getFullYear(), cycle.end.getMonth(), cycle.end.getDate()) - Date.UTC(cycle.start.getFullYear(), cycle.start.getMonth(), cycle.start.getDate())) / 86_400_000) + 1)
-/** Keep the server's pay and rule rows; the extra engine pass restores callable context only. */
+/** Keep the source payload immutable; the shared engine recomputes effective pay from persisted decisions. */
 export function hydrate(payload: CyclePayload, cal: Onboarding, files: FileRecord[] = []): DeskCycle {
   if (payload.results.length !== payload.week.length) throw new Error('The time-entry results are incomplete.')
   const cycle = restoreDates(payload.cycle)
@@ -108,14 +108,24 @@ export function hydrate(payload: CyclePayload, cal: Onboarding, files: FileRecor
     return { ...shift, fac, prov: { ...shift.prov, ...(file ? { fileId: file.id, file: file.name, sample: file.sample, system: source?.short ?? source?.name } : {}) } }
   })
   const ctx = runEngine(week).ctx
-  return { ...cycle, week, run: { shifts: payload.results.map((result, i) => ({ ...result, shift: week[i] })), totals: payload.totals, ctx },
-    days: daysOf(cycle), scripted: false, label: cycleLabel(cycle), statusTag: payload.batch ? 'Paid' : statusTag(cycle, cal), rememberedRuleIds: remembered(cycle, cal),
+  const aliases = new Map([...payload.groups, ...payload.extraGroups].filter(group => group.id != null).map(group => [String(group.id), group.ruleId]))
+  const shifts = effectiveJourneyRun(week, payload.results, (payload.decisions ?? []).filter(decision => decision.cycleId === cycle.id), aliases)
+  const totals = {
+    ...payload.totals,
+    ...(payload.decisions?.some(decision => decision.cycleId === cycle.id && decision.decision === 'dismissed') ? {
+      under: shifts.reduce((total, row) => total + (row.held ? 0 : row.deltaUnder), 0), over: shifts.reduce((total, row) => total + (row.held ? 0 : row.deltaOver), 0),
+      held: shifts.filter(row => row.held).length, flags: shifts.filter(row => row.flagged).length,
+    } : {}),
+    gross: journeyPayroll(week, payload.results, (payload.decisions ?? []).filter(decision => decision.cycleId === cycle.id), aliases).gross,
+  }
+  return { ...cycle, week, run: { shifts, totals, ctx },
+    days: daysOf(cycle), scripted: false, label: cycleLabel(cycle), statusTag: payload.batch ? 'Paid' : cycle.status === 'in-progress' ? 'In Progress' : 'Pending', rememberedRuleIds: remembered(cycle, cal),
     decisions: payload.decisions, batch: payload.batch, nextStep: payload.nextStep,
     server: true, sample: payload.sample, sites: payload.sites, groups: payload.groups, extraGroups: payload.extraGroups, gaps: payload.gaps, intake: payload.intake,
   }
 }
-function emptyCycle(cycle: Cycle, cal: Onboarding): DeskCycle {
-  return { ...cycle, week: [], run: runEngine([]), days: daysOf(cycle), scripted: false, label: cycleLabel(cycle), statusTag: statusTag(cycle, cal),
+function emptyCycle(cycle: Cycle): DeskCycle {
+  return { ...cycle, week: [], run: runEngine([]), days: daysOf(cycle), scripted: false, label: cycleLabel(cycle), statusTag: cycle.status === 'in-progress' ? 'In Progress' : 'Pending',
     server: true, sample: false, sites: [], groups: [], extraGroups: [], gaps: [], intake: { sources: [], expected: [], received: [] } }
 }
 
@@ -208,9 +218,9 @@ export function serverCycles(cal: Onboarding): DeskCycle[] {
   const payloads = new Map(available.payloads.map(payload => [payload.cycle.id, payload]))
   const cycles = periods.filter(cycle => payloads.has(cycle.id) || cycle.status !== 'reviewed').map(cycle => {
     const payload = payloads.get(cycle.id)
-    return payload ? hydrate({ ...payload, cycle: { ...payload.cycle, status: cycle.status } }, cal, available.files) : emptyCycle(cycle, cal)
+    return payload ? hydrate({ ...payload, cycle: { ...payload.cycle, status: cycle.status } }, cal, available.files) : emptyCycle(cycle)
   })
-  if (!cycles.length) cycles.push(emptyCycle(recentCycles(cal, 1)[0], cal))
+  if (!cycles.length) cycles.push(emptyCycle(recentCycles(cal, 1)[0]))
   cycleCache = { owner: owner(), snapshot, cal, cycles }
   return cycles
 }

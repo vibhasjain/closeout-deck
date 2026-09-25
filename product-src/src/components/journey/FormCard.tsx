@@ -6,6 +6,7 @@ import { JourneyThreadView } from '@/components/Thread'
 import { Btn, Tag } from '@/components/ui'
 import type { CyclePayload } from '@/lib/data'
 import { gapId, gapKey } from '@/lib/intake'
+import { journeyPayroll } from '@/lib/journeyPay'
 import { useOnboarding, type Onboarding } from '@/lib/onboarding'
 import {
   askGaps, createDispute, downloadBatch, getDisputes, refreshThreads, resolveDispute, sendPayroll, simulateDispute, useJourneyCycle, useJourneyThreads,
@@ -21,7 +22,7 @@ const text = (value: unknown) => typeof value === 'string' ? value : ''
 const money = (amount: number) => amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 const errorText = (cause: unknown) => cause instanceof Error ? cause.message : 'This could not be saved. Try again.'
 
-export interface GapRow { id: string; worker: string; site: string; day: number; kind: 'site' | 'worker'; name: string; blocked: boolean }
+export interface GapRow { id: string; worker: string; site: string; day: number; kind: 'site' | 'worker'; name: string; blocked: boolean; asked?: boolean }
 
 /** Mirror server summarize/openGaps/counterpartyFor; location-backed gaps ask the site. */
 export function gapRows(cycle: CyclePayload, neverContact: readonly string[], accepted: Onboarding['acceptedGaps'] = {}, threads: JourneyThread[] = []): GapRow[] {
@@ -32,12 +33,13 @@ export function gapRows(cycle: CyclePayload, neverContact: readonly string[], ac
   const rows = new Map<string, GapRow>()
   for (const gap of cycle.intake.expected) {
     const id = gapId(gap)
-    if (received.has(id) || rows.has(id) || gapKey(cycle.cycle.id, id) in accepted || asked.has(id)) continue
+    const reason = accepted[gapKey(cycle.cycle.id, id)]?.reason
+    if (received.has(id) || rows.has(id) || (typeof reason === 'string' && reason.trim())) continue
     const kind = gap.onSite ? 'site' : 'worker'
     const site = cycle.sites.find(site => site.name === gap.client)
     const name = kind === 'site' ? site?.supervisor?.name ?? gap.client : gap.worker
     rows.set(id, { id, worker: gap.worker, site: gap.client, day: gap.day, kind, name,
-      blocked: blocked.has(norm(name)) || (kind === 'site' && blocked.has(norm(gap.client))) })
+      blocked: blocked.has(norm(name)) || (kind === 'site' && blocked.has(norm(gap.client))), ...(asked.has(id) ? { asked: true } : {}) })
   }
   return [...rows.values()]
 }
@@ -45,27 +47,15 @@ export function gapRows(cycle: CyclePayload, neverContact: readonly string[], ac
 /** The export excludes every held entry, including entries with a partial pay value. */
 export function batchPreview(cycle: CyclePayload, disputes: JourneyDispute[] = []) {
   const cents = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100
-  const aliases = new Map(cycle.groups.filter(group => group.id != null).map(group => [String(group.id), group.ruleId]))
-  const dismissed = new Set((cycle.decisions ?? []).filter(decision => decision.cycleId === cycle.cycle.id && decision.decision === 'dismissed').map(decision => aliases.get(decision.groupId) ?? decision.groupId))
-  const byWorker = new Map<string, number>()
-  let held = 0
-  cycle.results.forEach((result, index) => {
-    const worker = cycle.week[index].worker
-    let pay = result.held ? 0 : result.pay
-    if (result.held) held++
-    else for (const row of result.rows) {
-      if (row.status !== 'flag' || !row.effect || !dismissed.has(row.ruleId)) continue
-      const e = row.effect
-      pay -= (e.premiumHours ?? 0) * result.rate + (e.premiumAmt ?? 0) + ((e.otPremiumMin ?? 0) + (e.topUpMin ?? 0) + (e.premiumMin ?? 0)) / 60 * result.rate
-    }
-    byWorker.set(worker, (byWorker.get(worker) ?? 0) + pay)
-  })
-  const workers = new Set([...byWorker.keys()].map(worker => worker.split(' · Adjustment for ')[0]))
-  let gross = [...byWorker.values()].reduce((total, pay) => total + cents(pay), 0)
+  const aliases = new Map([...cycle.groups, ...cycle.extraGroups].filter(group => group.id != null).map(group => [String(group.id), group.ruleId]))
+  const week = cycle.week.map(shift => ({ ...shift, fac: cycle.sites[shift.fac] }))
+  const preview = journeyPayroll(week, cycle.results, (cycle.decisions ?? []).filter(decision => decision.cycleId === cycle.cycle.id), aliases)
+  const workers = new Set(week.map(shift => shift.worker))
+  let gross = preview.gross
   for (const dispute of disputes) if (dispute.status === 'adjusted' && dispute.adjustment?.next_cycle_id === cycle.cycle.id) {
     workers.add(dispute.worker); gross += cents(dispute.adjustment.amount)
   }
-  return { workers: workers.size, gross: cents(gross), held }
+  return { workers: workers.size, gross: cents(gross), held: preview.held }
 }
 
 export function openItemLabels(cycle: CyclePayload): string[] {
@@ -124,7 +114,10 @@ export function GapsForm({ cycle, prefill }: FormProps) {
   const [result, setResult] = useState<AskResult | null>(null)
   const rows = gapRows(cycle, [...(state.neverContact ?? []), ...(result?.skipped ?? [])], state.acceptedGaps, [...threads, ...(result?.threads ?? [])])
   const available = rows.filter(row => !row.blocked)
-  const selectedIds = new Set(selection ?? available.slice(0, 200).map(row => row.id))
+  // A simulated ask records outreach only. Keep the gap visible until reconciled or explicitly closed,
+  // and default the next batch to entries that have not already been asked about.
+  const unasked = available.filter(row => !row.asked)
+  const selectedIds = new Set(selection ?? unasked.slice(0, 200).map(row => row.id))
   const eligible = available.filter(row => selectedIds.has(row.id))
   const people = new Set(eligible.map(row => `${row.kind}|${row.name}`)).size
   async function submit() {
@@ -146,10 +139,11 @@ export function GapsForm({ cycle, prefill }: FormProps) {
           checked={!row.blocked && selectedIds.has(row.id)} onChange={event => setSelection(event.target.checked ? [...eligible.map(item => item.id), row.id] : eligible.filter(item => item.id !== row.id).map(item => item.id))} />
         <span><strong>{row.worker}</strong><span className="r-note">{row.site} · Day {row.day + 1}</span><span className="r-note">Ask {row.name}</span></span>
         {row.blocked && <Tag>Never Contact</Tag>}
+        {row.asked && <Tag>Asked · Still missing</Tag>}
       </label>)}
       {!rows.length && <p className="r-note">No missing time entries.</p>}
     </div>
-    {available.length > 200 && <p className="r-note" role="status">Ask about up to 200 time entries at a time. {available.length - eligible.length} more remain.</p>}
+    {unasked.length > 200 && <p className="r-note" role="status">Ask about up to 200 time entries at a time. {unasked.length - eligible.length} more remain.</p>}
     {result && <div className="journey-form-result" role="status">
       <p>{result.threads.length} {result.threads.length === 1 ? 'conversation' : 'conversations'} created <Tag>Not Sent · Demo</Tag></p>
       {result.threads.map(thread => <p className="r-note" key={thread.id}>Asked {thread.counterparty.name}</p>)}
@@ -230,7 +224,7 @@ export function DisputeForm({ cycle, prefill }: FormProps) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   async function start(simulated: boolean) {
-    if (busy || (!simulated && (!worker.trim() || !description.trim()))) return
+    if (!cycle.batch || busy || (!simulated && (!worker.trim() || !description.trim()))) return
     setBusy(true); setError('')
     try {
       const result = simulated ? await simulateDispute(cycle.cycle.id)
@@ -266,7 +260,7 @@ export function DisputeForm({ cycle, prefill }: FormProps) {
     && (!amount.trim() || (Number.isFinite(Number(amount)) && Number(amount) >= -10_000 && Number(amount) <= 10_000))
   return <section className="journey-form" aria-label="Payroll dispute">
     <FormHeader title="Payroll dispute" sample={cycle.sample || dispute?.source === 'simulated'} />
-    {!dispute ? <>
+    {!cycle.batch ? <p className="r-note" role="status">Send this cycle to Payroll before opening a dispute.</p> : !dispute ? <>
       <input className="journey-form-input" aria-label="Worker" placeholder="Worker" value={worker} maxLength={200} disabled={busy} onChange={event => setWorker(event.target.value)} />
       <textarea className="journey-form-input" aria-label="Dispute description" placeholder="Paste the dispute or describe what happened…" value={description} maxLength={2000} rows={3} disabled={busy}
         onChange={event => { setDescription(event.target.value); setSource('paste'); setFileName('') }} />

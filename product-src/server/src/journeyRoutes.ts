@@ -20,11 +20,26 @@ export interface JourneyRequest {
   method: string; path: string; url: URL; email: string; doc: Record<string, unknown>
   store: DataStore; service: DataService; journey: JourneyStore; response: ServerResponse
   readBody: (maxBytes: number) => Promise<unknown>; sync: () => Promise<unknown>
+  currentDoc?: () => Promise<Record<string, unknown>>
 }
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 const newId = (prefix: string) => `${prefix}_${randomBytes(8).toString('hex')}`
 const cents = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100
+// ponytail: single Node process / single machine only. All journey snapshots and mutations share
+// this per-account lock, including across createServer instances. Before running multiple processes
+// or replicas, replace it with a database transaction/advisory lock around assignment and send.
+const accountLocks = new Map<string, Promise<void>>()
+async function locked<T>(email: string, work: () => Promise<T>): Promise<T> {
+  const previous = accountLocks.get(email) ?? Promise.resolve()
+  let release!: () => void
+  const held = new Promise<void>(resolve => { release = resolve })
+  const tail = previous.then(() => held)
+  accountLocks.set(email, tail)
+  await previous
+  try { return await work() }
+  finally { release(); if (accountLocks.get(email) === tail) accountLocks.delete(email) }
+}
 function json(response: ServerResponse, status: number, body: unknown): void {
   response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' })
   response.end(JSON.stringify(body))
@@ -64,14 +79,27 @@ async function loadCycle(req: JourneyRequest, cycleId: string, parse = false) {
 }
 
 async function journeyState(req: JourneyRequest, summary: CycleSummary) {
-  const [decisions, batches, threads] = await Promise.all([req.journey.listDecisions(req.email, summary.id), req.journey.listBatches(req.email), req.journey.listThreads(req.email, summary.id)])
+  const aliases = Object.fromEntries(summary.groups.flatMap(g => [[g.id, g.id], ...(g.num == null ? [] : [[String(g.num), g.id]])]))
+  const [decisions, batches, threads] = await Promise.all([req.journey.canonicalizeDecisions(req.email, summary.id, aliases), req.journey.listBatches(req.email), req.journey.listThreads(req.email, summary.id)])
   const batch = batches.find(b => b.cycleId === summary.id) ?? null, cycle = journeyCycle(summary, req.doc, threads)
   return { decisions, batch, cycle, nextStep: nextStep(cycle, decisions, batch) }
 }
 
 async function withMessages(req: JourneyRequest, threads: Thread[]) {
   const messages = await req.journey.listMessages(req.email, threads.map(t => t.id))
-  return threads.map(t => ({ ...t, messages: messages.filter(m => m.threadId === t.id).sort((a, b) => a.at.localeCompare(b.at)) }))
+  return threads.map(t => ({ ...t, messages: messages.filter(m => m.threadId === t.id).sort((a, b) => a.at.localeCompare(b.at) || a.id.localeCompare(b.id)) }))
+}
+
+async function requireSent(req: JourneyRequest, cycleId: string): Promise<void> {
+  if (!(await req.journey.listBatches(req.email)).some(b => b.cycleId === cycleId)) throw new DataError(422, 'cycle_not_sent')
+}
+
+/** Preserve full evidence in bounded message chunks, including long provenance references. */
+function recordedMessages(threadId: string, text: string, at: string): Message[] {
+  const messages: Message[] = []
+  for (let offset = 0; offset < text.length; offset += 4000) messages.push({ id: newId('m'), threadId, dir: 'note',
+    text: text.slice(offset, offset + 4000), status: 'recorded', at: new Date(Date.parse(at) + messages.length).toISOString() })
+  return messages
 }
 
 /** The adjustment lands on the first cycle after the paid one that has not been sent. */
@@ -84,20 +112,30 @@ async function nextUnsentCycle(req: JourneyRequest, paidCycleId: string): Promis
 }
 
 async function openDispute(req: JourneyRequest, input: { cycleId: string; worker: string; description: string; source: Dispute['source'] }) {
-  const { payload } = await loadCycle(req, input.cycleId, true)
-  const evidence = disputeEvidence(payload, input.worker), now = new Date().toISOString()
+  await requireSent(req, input.cycleId)
+  const { payload, summary } = await loadCycle(req, input.cycleId, true)
+  const { decisions } = await journeyState(req, summary)
+  const evidence = disputeEvidence(payload, input.worker, decisions), now = new Date().toISOString()
   const dispute: Dispute = { id: newId('dp'), ...input, status: 'open', adjustment: null, createdAt: now }
   const thread: Thread = { id: newId('t'), cycleId: input.cycleId, shiftId: evidence.shiftId, disputeId: dispute.id, counterparty: { kind: 'worker', name: input.worker }, status: 'open', createdAt: now }
-  await req.journey.upsertDispute(req.email, dispute)
-  await req.journey.upsertThread(req.email, thread)
-  await req.journey.addMessage(req.email, { id: newId('m'), threadId: thread.id, dir: 'in', text: input.description, status: 'recorded', at: now })
-  await req.journey.addMessage(req.email, { id: newId('m'), threadId: thread.id, dir: 'note', text: evidence.text.slice(0, 4000), status: 'recorded', at: new Date(Date.parse(now) + 1).toISOString() })
+  await req.journey.saveConversation(req.email, thread, [
+    { id: newId('m'), threadId: thread.id, dir: 'in', text: input.description, status: 'recorded', at: now },
+    ...recordedMessages(thread.id, evidence.text, new Date(Date.parse(now) + 1).toISOString()),
+  ], dispute)
   await req.sync()
   json(req.response, 201, { dispute, thread: (await withMessages(req, [thread]))[0] })
 }
 
 /** Returns false when the path is not a journey route. Every lookup is scoped to the session email. */
 export async function handleJourney(req: JourneyRequest): Promise<boolean> {
+  if (!/^\/data\/(cycles\/\d{4}-\d{2}-\d{2}(?:\/(?:decisions|asks|send))?|threads(?:\/[^/]+\/messages)?|batches\/[^/]+\/csv|disputes(?:\/simulate|\/[^/]+\/resolve)?)$/.test(req.path)) return false
+  return locked(req.email, async () => {
+    if (req.currentDoc) req.doc = await req.currentDoc()
+    return handleLockedJourney(req)
+  })
+}
+
+async function handleLockedJourney(req: JourneyRequest): Promise<boolean> {
   const { method, path, email, response } = req
   let match: RegExpExecArray | null
   if ((match = /^\/data\/cycles\/(\d{4}-\d{2}-\d{2})$/.exec(path)) && method === 'GET') {
@@ -111,9 +149,12 @@ export async function handleJourney(req: JourneyRequest): Promise<boolean> {
     if (action === 'decisions') {
       const input = validateDecision(await req.readBody(262_144))
       const { text, summary } = await loadCycle(req, cycleId)
-      const shiftIds = input.shiftIds ?? [...new Set(summary.groups.filter(g => g.id === input.groupId || String(g.num) === input.groupId).flatMap(g => g.shiftIds))]
-      const decision = await req.journey.upsertDecision(email, { id: 'd_' + hash(`${email}|${cycleId}|${input.groupId}`).slice(0, 16), cycleId,
-        groupId: input.groupId, shiftIds, decision: input.decision, reason: input.reason, by: 'user', at: now })
+      const group = summary.groups.find(g => g.id === input.groupId || g.num != null && String(g.num) === input.groupId)
+      if (!group) throw new DataError(400, 'unknown_group')
+      await journeyState(req, summary)
+      const shiftIds = input.shiftIds ?? [...new Set(summary.groups.filter(g => g.id === group.id).flatMap(g => g.shiftIds))]
+      const decision = await req.journey.upsertDecision(email, { id: 'd_' + hash(`${email}|${cycleId}|${group.id}`).slice(0, 16), cycleId,
+        groupId: group.id, shiftIds, decision: input.decision, reason: input.reason, by: 'user', at: now })
       const state = await journeyState(req, summary)
       await req.sync()
       gzipJson(response, 200, `{"decision":${JSON.stringify(decision)},"cycle":${withFields(text, { decisions: state.decisions, batch: state.batch, nextStep: state.nextStep })}}`)
@@ -124,7 +165,7 @@ export async function handleJourney(req: JourneyRequest): Promise<boolean> {
       const { summary } = await loadCycle(req, cycleId)
       const known = new Map(summary.gaps.map(g => [g.id, g]))
       const gaps = input.gapIds.map(id => known.get(id)).filter((g): g is IntakeGap => !!g)
-      if (!gaps.length) throw new DataError(400, 'unknown_gaps')
+      if (gaps.length !== input.gapIds.length) throw new DataError(400, 'unknown_gaps')
       const byParty = new Map<string, { cp: ReturnType<typeof counterpartyFor>; gaps: IntakeGap[] }>()
       for (const gap of gaps) {
         const cp = counterpartyFor(gap, summary), key = `${cp.kind}|${cp.name}`
@@ -132,12 +173,15 @@ export async function handleJourney(req: JourneyRequest): Promise<boolean> {
       }
       const existing = await req.journey.listThreads(email, cycleId), threads: Thread[] = [], skipped: string[] = []
       for (const { cp, gaps: asked } of byParty.values()) {
-        if (neverContacted(cp, asked, req.doc.neverContact)) { skipped.push(cp.name); continue }
+        const doc = req.currentDoc ? await req.currentDoc() : req.doc
+        if (neverContacted(cp, asked, doc.neverContact)) { skipped.push(cp.name); continue }
         const id = 't_' + hash(`${email}|${cycleId}|${cp.kind}|${cp.name}`).slice(0, 16), old = existing.find(t => t.id === id)
         const thread: Thread = { id, cycleId, shiftId: old?.shiftId ?? null, disputeId: null, status: 'waiting', createdAt: old?.createdAt ?? now,
-          counterparty: { ...cp, gapIds: [...new Set([...old?.counterparty.gapIds ?? [], ...asked.map(g => g.id)])] } }
-        await req.journey.upsertThread(email, thread)
-        await req.journey.addMessage(email, { id: newId('m'), threadId: id, dir: 'out', text: input.message ?? draftAsk(cp, asked, summary), status: 'not_sent_demo', at: now })
+          counterparty: { ...cp, ...(cp.kind === 'site' ? { siteNames: [...new Set([...old?.counterparty.siteNames ?? [], ...asked.map(g => g.client)])] } : {}),
+            gapIds: [...new Set([...old?.counterparty.gapIds ?? [], ...asked.map(g => g.id)])] } }
+        const text = input.message ?? draftAsk(cp, asked, summary)
+        validateMessage({ dir: 'out', text })
+        await req.journey.saveConversation(email, thread, [{ id: newId('m'), threadId: id, dir: 'out', text, status: 'not_sent_demo', at: now }])
         threads.push(thread)
       }
       await req.sync()
@@ -173,11 +217,20 @@ export async function handleJourney(req: JourneyRequest): Promise<boolean> {
     const input = validateMessage(await req.readBody(16_384))
     const thread = (await req.journey.listThreads(email)).find(t => t.id === match![1])
     if (!thread) throw new DataError(404, 'not_found')
+    if (input.dir === 'out') {
+      // Reconstruct context for pre-integration threads as well as retaining siteNames on new asks.
+      const { summary } = await loadCycle(req, thread.cycleId)
+      const gaps = summary.gaps.filter(g => thread.counterparty.gapIds?.includes(g.id))
+      const sites = Object.entries(summary.supervisors).filter(([, name]) => name === thread.counterparty.name).map(([site]) => site)
+      const legacySites = (thread.counterparty.gapIds ?? []).map(id => id.split('|')[0])
+      const counterparty = { ...thread.counterparty, siteNames: [...thread.counterparty.siteNames ?? [], ...sites, ...legacySites] }
+      const doc = req.currentDoc ? await req.currentDoc() : req.doc
+      if (neverContacted(counterparty, gaps, doc.neverContact)) throw new DataError(403, 'never_contact')
+    }
     // Sending is simulated: an outgoing message is logged, never delivered.
     const message: Message = { id: newId('m'), threadId: thread.id, dir: input.dir, text: input.text, status: input.dir === 'out' ? 'not_sent_demo' : 'recorded', at: new Date().toISOString() }
-    await req.journey.addMessage(email, message)
     const updated: Thread = { ...thread, status: input.dir === 'out' ? 'waiting' : input.dir === 'in' ? 'open' : thread.status }
-    if (updated.status !== thread.status) await req.journey.upsertThread(email, updated)
+    await req.journey.saveConversation(email, updated, [message])
     await req.sync()
     json(response, 201, { message, thread: (await withMessages(req, [updated]))[0] })
     return true
@@ -200,6 +253,7 @@ export async function handleJourney(req: JourneyRequest): Promise<boolean> {
   }
   if (path === '/data/disputes/simulate' && method === 'POST') {
     const { cycleId } = validateCycleRef(await req.readBody(1_024))
+    await requireSent(req, cycleId)
     const { payload } = await loadCycle(req, cycleId, true)
     const simulated = simulatedDispute(payload)
     if (!simulated) throw new DataError(422, 'no_location_evidence')
@@ -210,26 +264,26 @@ export async function handleJourney(req: JourneyRequest): Promise<boolean> {
     const input = validateResolve(await req.readBody(8_192))
     const dispute = (await req.journey.listDisputes(email)).find(d => d.id === match![1])
     if (!dispute) throw new DataError(404, 'not_found')
+    await requireSent(req, dispute.cycleId)
     if (dispute.status !== 'open') { json(response, 409, { dispute }); return true }
     let adjustment: Dispute['adjustment'] = null
     if (input.decision === 'adjust') {
       let amount = input.amount
       if (amount === undefined) {
-        const { payload } = await loadCycle(req, dispute.cycleId, true)
-        const rate = disputeEvidence(payload, dispute.worker).rate
+        const { payload, summary } = await loadCycle(req, dispute.cycleId, true)
+        const { decisions } = await journeyState(req, summary)
+        const rate = disputeEvidence(payload, dispute.worker, decisions).rate
         if (!rate) throw new DataError(422, 'rate_unknown')
         amount = cents(input.hours! * rate)
       }
       adjustment = { hours: input.hours ?? 0, amount, next_cycle_id: await nextUnsentCycle(req, dispute.cycleId) }
     }
     const saved: Dispute = { ...dispute, status: adjustment ? 'adjusted' : 'rejected', adjustment }
-    await req.journey.upsertDispute(email, saved)
     const thread = (await req.journey.listThreads(email, dispute.cycleId)).find(t => t.disputeId === dispute.id)
     if (thread) {
       const summary = adjustment ? `Adjusted: ${adjustment.hours}h, $${adjustment.amount.toFixed(2)} on the ${adjustment.next_cycle_id} Payroll. ` : 'Rejected. '
-      await req.journey.addMessage(email, { id: newId('m'), threadId: thread.id, dir: 'note', text: (summary + input.note).slice(0, 4000), status: 'recorded', at: new Date().toISOString() })
-      await req.journey.upsertThread(email, { ...thread, status: 'resolved' })
-    }
+      await req.journey.saveConversation(email, { ...thread, status: 'resolved' }, recordedMessages(thread.id, summary + input.note, new Date().toISOString()), saved)
+    } else await req.journey.upsertDispute(email, saved)
     await req.sync()
     json(response, 200, { dispute: saved, ...(thread ? { thread: (await withMessages(req, [{ ...thread, status: 'resolved' }]))[0] } : {}) })
     return true
@@ -244,49 +298,78 @@ export interface WorkspaceIO {
   remove(path: string): Promise<void>
 }
 
-/** Writes decisions, threads, disputes, sent batches and the next step per cycle into the agent workspace. */
-export async function writeJourney(input: { email: string; store: DataStore; journey: JourneyStore; doc: Record<string, unknown>; runs: RunRecord[]; legacy: unknown[]; io: WorkspaceIO }): Promise<void> {
+/** Journey artifacts are a bounded cache; omitted history remains available from authenticated routes. */
+export async function writeJourney(input: { email: string; store: DataStore; journey: JourneyStore; doc: Record<string, unknown>; runs: RunRecord[]; legacy: unknown[]; io: WorkspaceIO; maxBytes?: number; cycleIds?: string[] }): Promise<void> {
   const { email, store, journey, doc, io } = input
+  const maxBytes = input.maxBytes ?? 8 * 1024 * 1024
+  let remaining = Math.max(0, maxBytes - 4096), omitted = 0
+  const artifacts: string[] = []
+  const write = async (path: string, value: string | Uint8Array) => {
+    const size = typeof value === 'string' ? Buffer.byteLength(value) : value.byteLength
+    if (size > remaining) { omitted++; return false }
+    await io.write(path, value); remaining -= size; artifacts.push(path); return true
+  }
+  // Remove the previous cache first, including CSVs that no longer fit this turn's budget.
+  for (const path of ['data/threads', 'data/disputes', 'data/batches', 'data/decisions.jsonl', 'nextstep.md', 'data/journey.md']) await io.remove(path)
   let decisions: Decision[], threads: Thread[], disputes: Dispute[], batches: Batch[]
   try { [decisions, threads, disputes, batches] = await Promise.all([journey.listDecisions(email), journey.listThreads(email), journey.listDisputes(email), journey.listBatches(email)]) }
   catch (error) {
-    // The agent workspace is a cache: an unavailable journey store (e.g. migration 0003 not applied) must not stop chat.
     console.error('Journey workspace skipped:', error instanceof Error ? error.message : 'Error')
-    await io.write('data/decisions.jsonl', input.legacy.map(v => JSON.stringify(v)).join('\n') + '\n')
+    const rows: string[] = []
+    let bytes = 0
+    for (const d of input.legacy) { const row = JSON.stringify(d) + '\n'; if (bytes + Buffer.byteLength(row) > remaining) break; rows.push(row); bytes += Buffer.byteLength(row) }
+    await write('data/decisions.jsonl', rows.join(''))
+    await write('data/journey.md', '# Journey history unavailable\nLegacy decisions only. Retry authenticated journey routes for current status.\n')
     return
   }
+  const cycles = new Set(input.cycleIds ?? input.runs.filter(r => r.totals.shifts > 0).slice(0, 8).map(r => r.cycleId))
   const compactDecision = (d: Decision) => ({ ...d, shiftIds: d.shiftIds.slice(0, 20), shiftCount: d.shiftIds.length })
-  await io.write('data/decisions.jsonl', [...input.legacy, ...decisions.map(compactDecision)].map(v => JSON.stringify(v)).join('\n') + '\n')
-  for (const dir of ['data/threads', 'data/disputes']) await io.remove(dir)
-  const messages = await journey.listMessages(email, threads.map(t => t.id))
-  const indent = (text: string) => text.replace(/\n/g, '\n  ')
-  for (const t of threads) {
-    const own = messages.filter(m => m.threadId === t.id).sort((a, b) => a.at.localeCompare(b.at))
-    await io.write(`data/threads/${t.id}.md`, [`# Thread ${t.id}`, `Cycle: ${t.cycleId}`, `Counterparty: ${t.counterparty.kind} · ${t.counterparty.name}${t.counterparty.contact ? ` (${t.counterparty.contact})` : ''}`,
-      `Status: ${t.status}`, ...(t.disputeId ? [`Dispute: ${t.disputeId}`] : []), ...(t.shiftId ? [`Time entry: ${t.shiftId}`] : []), ...(t.counterparty.gapIds?.length ? [`Asked about gaps: ${t.counterparty.gapIds.join('; ')}`] : []),
-      '', '## Messages (sending is simulated: out = Not sent · Demo)', ...own.map(m => `- ${m.at} ${m.dir} [${m.status}]: ${indent(m.text)}`)].join('\n') + '\n')
+  const ownDecisions = decisions.filter(d => cycles.has(d.cycleId)).sort((a, b) => b.at.localeCompare(a.at) || b.id.localeCompare(a.id))
+  const decisionRows: string[] = []
+  let decisionBytes = 0
+  for (const d of [...ownDecisions.map(compactDecision), ...input.legacy]) {
+    const row = JSON.stringify(d) + '\n'
+    if (decisionBytes + Buffer.byteLength(row) > Math.min(262144, remaining / 4)) { omitted++; continue }
+    decisionRows.push(row); decisionBytes += Buffer.byteLength(row)
   }
-  for (const d of disputes) {
-    await io.write(`data/disputes/${d.id}.md`, [`# Dispute ${d.id}`, `Paid cycle: ${d.cycleId}`, `Worker: ${d.worker}`, `Source: ${d.source}`, `Status: ${d.status}`, `Opened: ${d.createdAt}`,
-      `Adjustment: ${d.adjustment ? `${d.adjustment.hours}h, $${d.adjustment.amount.toFixed(2)}, lands on the ${d.adjustment.next_cycle_id} Payroll export` : 'none'}`,
-      `Thread: ${threads.find(t => t.disputeId === d.id)?.id ?? 'none'}`, '', '## Claim', d.description].join('\n') + '\n')
-  }
-  const sentCycles = new Set(batches.map(b => `${b.cycleId}.csv`))
-  for (const name of await io.list('data/batches')) if (!sentCycles.has(name)) await io.remove(`data/batches/${name}`)
-  for (const b of batches) {
-    if (await io.present(`data/batches/${b.cycleId}.csv`)) continue
-    const bytes = await store.getObject(email, b.csvPath)
-    if (bytes) await io.write(`data/batches/${b.cycleId}.csv`, bytes)
-  }
-  const lines = []
-  for (const run of input.runs.filter(r => r.totals.shifts > 0).slice(0, 8)) {
+  omitted += decisions.length - ownDecisions.length
+  await write('data/decisions.jsonl', decisionRows.join(''))
+  const lines: string[] = []
+  for (const run of input.runs.filter(r => cycles.has(r.cycleId))) {
     const summary = await summaryFor(store, email, run)
     const cycle = journeyCycle(summary, doc, threads.filter(t => t.cycleId === run.cycleId))
-    const own = decisions.filter(d => d.cycleId === run.cycleId), step = nextStep(cycle, own, batches.find(b => b.cycleId === run.cycleId) ?? null)
-    const open = openItems(cycle, own)
-    lines.push(`${run.cycleId}: ${step.kind} · ${step.label} · ${step.detail}` +
+    const own = decisions.filter(d => d.cycleId === run.cycleId), batch = batches.find(b => b.cycleId === run.cycleId) ?? null
+    const step = nextStep(cycle, own, batch), open = openItems(cycle, own)
+    lines.push(`${run.cycleId}: ${step.kind} · ${step.label} · ${step.detail}` + (batch ? ` · Sent to ${batch.destination} · Demo; never re-send` : '') +
       (open.missingSets.length ? ` · missing sets ${open.missingSets.join(', ')}` : '') + (open.gaps.length ? ` · open gaps ${open.gaps.slice(0, 10).join('; ')}${open.gaps.length > 10 ? ' …' : ''}` : '') +
       (open.groups.length ? ` · open groups ${open.groups.join(', ')}` : ''))
   }
-  await io.write('nextstep.md', ['# Next step per cycle', 'Each cycle has exactly one next step, in this order: get_timesheets, chase_missing, review, send, done. Lead the user to it; never skip ahead.', '', ...(lines.length ? lines : ['No cycle has time entries yet: get_timesheets'])].join('\n') + '\n')
+  await write('nextstep.md', ['# Next step per cycle', 'Order: get_timesheets, chase_missing, review, send, done. Sent status is independent; never re-send a batch.', '', ...(lines.length ? lines : ['No cycle has time entries yet: get_timesheets'])].join('\n') + '\n')
+  const selectedThreads = threads.filter(t => cycles.has(t.cycleId)).sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id)).slice(0, 200)
+  omitted += threads.length - selectedThreads.length
+  const messages = await journey.listMessages(email, selectedThreads.map(t => t.id))
+  const indent = (text: string) => text.replace(/\n/g, '\n  ')
+  for (const t of selectedThreads) {
+    const all = messages.filter(m => m.threadId === t.id).sort((a, b) => a.at.localeCompare(b.at) || a.id.localeCompare(b.id))
+    // Recent replies survive when a long thread has to be bounded. The omission is explicit.
+    const own = all.slice(-100)
+    await write(`data/threads/${t.id}.md`, [`# Thread ${t.id}`, `Cycle: ${t.cycleId}`, `Counterparty: ${t.counterparty.kind} · ${t.counterparty.name}${t.counterparty.contact ? ` (${t.counterparty.contact})` : ''}`,
+      `Status: ${t.status}`, ...(t.disputeId ? [`Dispute: ${t.disputeId}`] : []), ...(t.shiftId ? [`Time entry: ${t.shiftId}`] : []), ...(t.counterparty.gapIds?.length ? [`Asked about gaps (still require reconciliation or explicit closure): ${t.counterparty.gapIds.slice(0, 200).join('; ')}`] : []),
+      ...(all.length > own.length ? [`Omitted ${all.length - own.length} older messages; fetch /data/threads?cycleId=${t.cycleId} for full history.`] : []),
+      '', '## Messages (sending is simulated: out = Not sent · Demo)', ...own.map(m => `- ${m.at} ${m.dir} [${m.status}]: ${indent(m.text)}`)].join('\n') + '\n')
+  }
+  const selectedDisputes = disputes.filter(d => cycles.has(d.cycleId) || (d.adjustment && cycles.has(d.adjustment.next_cycle_id)))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id)).slice(0, 200)
+  omitted += disputes.length - selectedDisputes.length
+  for (const d of selectedDisputes) await write(`data/disputes/${d.id}.md`, [`# Dispute ${d.id}`, `Paid cycle: ${d.cycleId}`, `Worker: ${d.worker}`, `Source: ${d.source}`, `Status: ${d.status}`, `Opened: ${d.createdAt}`,
+    `Adjustment: ${d.adjustment ? `${d.adjustment.hours}h, $${d.adjustment.amount.toFixed(2)}, lands on the ${d.adjustment.next_cycle_id} Payroll export` : 'none'}`,
+    `Thread: ${threads.find(t => t.disputeId === d.id)?.id ?? 'none'}`, '', '## Claim', d.description].join('\n') + '\n')
+  const selectedBatches = batches.filter(b => cycles.has(b.cycleId)).sort((a, b) => b.cycleId.localeCompare(a.cycleId))
+  omitted += batches.length - selectedBatches.length
+  for (const b of selectedBatches) {
+    const bytes = await store.getObject(email, b.csvPath)
+    if (bytes) await write(`data/batches/${b.cycleId}.csv`, bytes)
+  }
+  const note = `# Journey cache\n${artifacts.length} artifacts materialized; ${omitted} records or artifacts omitted by cycle, count or byte limits.\nCache budget: ${maxBytes} bytes. Further workspace eviction may remove artifacts.\nFull records: /data/cycles/:id, /data/threads?cycleId=, /data/disputes, /data/batches/:id/csv.\nMissing cache files never mean a cycle is unsent, a gap is closed, or evidence is absent.\n`
+  if (Buffer.byteLength(note) <= maxBytes - (Math.max(0, maxBytes - 4096) - remaining)) await io.write('data/journey.md', note)
 }

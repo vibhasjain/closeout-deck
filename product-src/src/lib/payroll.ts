@@ -24,6 +24,8 @@ export interface PayTotals {
 
 const sum = <T,>(items: T[], value: (item: T) => number): number =>
   items.reduce((total, item) => total + value(item), 0)
+const cents = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100
+const overtimeMinutes = (row: RunShift) => sum(row.rows, rule => rule.effect?.dailyOtMin ?? (rule.effect?.otPremiumMin ?? 0) * 2)
 
 /** Bench pay-run semantics: held shifts remain visible but never enter outgoing sums. */
 export function payTotals(cycle: DeskCycle): PayTotals {
@@ -38,14 +40,17 @@ export function payTotals(cycle: DeskCycle): PayTotals {
     rows.sort((a, b) => a.shift.day - b.shift.day || a.shift.punches[0].in - b.shift.punches[0].in)
     const approved = rows.filter((row) => !row.held)
     const held = rows.filter((row) => row.held)
+    const payable = sum(approved, row => row.payableMin)
+    // The final entry carries weekly overtime that may cover several earlier days.
+    const overtime = Math.min(payable, sum(approved, overtimeMinutes))
     return {
       name,
       approved,
       held,
-      reg: sum(approved, (row) => Math.max(0, row.payableMin - sum(row.rows, (rule) => rule.effect?.dailyOtMin || 0))),
-      ot: sum(approved, (row) => sum(row.rows, (rule) => rule.effect?.dailyOtMin || (rule.effect?.otPremiumMin || 0) * 2)),
+      reg: Math.max(0, payable - overtime),
+      ot: overtime,
       premiums: sum(approved, (row) => sum(row.rows, (rule) => (rule.effect?.premiumAmt || 0) + (rule.effect?.premiumHours || 0) * row.rate)),
-      gross: sum(approved, (row) => row.pay),
+      gross: cycle.server ? cents(sum(approved, row => row.pay)) : sum(approved, row => row.pay),
     }
   })
   const approved = cycle.run.shifts.filter((row) => !row.held)
@@ -57,7 +62,7 @@ export function payTotals(cycle: DeskCycle): PayTotals {
     reg: sum(workers, (worker) => worker.reg),
     ot: sum(workers, (worker) => worker.ot),
     premiums: sum(workers, (worker) => worker.premiums),
-    gross: sum(approved, (row) => row.pay),
+    gross: cycle.server ? cents(sum(workers, worker => worker.gross)) : sum(approved, row => row.pay),
     naive: sum(approved, (row) => row.naive),
   }
 }

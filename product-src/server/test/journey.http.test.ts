@@ -28,7 +28,7 @@ test('closeout journey: next step, decisions, asks, send once, dispute adjustmen
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
   t.after(async () => { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); await rm(root, { recursive: true, force: true }) })
   const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
-  const call = async (path: string, init?: RequestInit) => { const response = await fetch(url + path, init); return { status: response.status, body: await response.json() as any } }
+  const call = async (path: string, init?: RequestInit) => { const response = await fetch(url + path, init); return { status: response.status, body: await response.json() } }
 
   const { body: seeded } = await call('/data/sample', post({}))
   const id = seeded.cycleId as string, next = addDays(id, 7)
@@ -42,7 +42,7 @@ test('closeout journey: next step, decisions, asks, send once, dispute adjustmen
     assert.deepEqual(body.nextStep, { kind: 'review', label: 'Review 5 issues', detail: 'Approve, dismiss or escalate each group before Payroll', counts: { missingSets: 0, gaps: 0, openGroups: 5 } })
   })
 
-  await t.test('intake gaps lead to chase missing; asks skip the never-contact list and close the step', async () => {
+  await t.test('intake gaps lead to chase missing; asks skip the never-contact list and leave gaps open', async () => {
     assert.equal((await fetch(url + '/files', bullhorn([['Test Worker', addDays(id, -4)], ['Blocked Worker', addDays(id, -3)]]))).status, 201)
     const { body } = await call(`/data/cycles/${id}`)
     assert.deepEqual([body.nextStep.kind, body.nextStep.counts.gaps], ['chase_missing', 2])
@@ -56,8 +56,8 @@ test('closeout journey: next step, decisions, asks, send once, dispute adjustmen
     assert.deepEqual([thread.counterparty.kind, thread.counterparty.name, thread.status, thread.counterparty.gapIds], ['worker', 'Test Worker', 'waiting', [gapIds[0]]])
     assert.deepEqual(thread.messages.map((m: { dir: string; status: string }) => [m.dir, m.status]), [['out', 'not_sent_demo']])
     assert.match(thread.messages[0].text, /^Hi Test, the client-approved hours are missing/)
-    // The blocked gap is still open: chasing continues until it is closed or asked through someone else.
-    assert.deepEqual([(await call(`/data/cycles/${id}`)).body.nextStep.kind, (await call(`/data/cycles/${id}`)).body.nextStep.counts.gaps], ['chase_missing', 1])
+    // Both gaps stay open: an ask and an entered reply are not reconciled evidence.
+    assert.deepEqual([(await call(`/data/cycles/${id}`)).body.nextStep.kind, (await call(`/data/cycles/${id}`)).body.nextStep.counts.gaps], ['chase_missing', 2])
     const reply = await call(`/data/threads/${thread.id}/messages`, post({ dir: 'in', text: 'Yes, 8 to 4:30 with a 30 minute lunch' }))
     assert.equal(reply.status, 201)
     assert.deepEqual([reply.body.message.status, reply.body.thread.status, reply.body.thread.messages.length], ['recorded', 'open', 2])
@@ -90,7 +90,7 @@ test('closeout journey: next step, decisions, asks, send once, dispute adjustmen
     assert.equal(ready.cycle.nextStep.kind, 'chase_missing', 'the never-contact gap still needs someone else')
     const sent = await call(`/data/cycles/${id}/send`, post({ force: true }))
     assert.equal(sent.status, 201)
-    assert.deepEqual(sent.body.open.gaps, ['Pacific Cold Storage|Blocked Worker|3'])
+    assert.deepEqual(sent.body.open.gaps.sort(), ['Pacific Cold Storage|Blocked Worker|3', 'Pacific Cold Storage|Test Worker|2'])
     const { batch, csvUrl } = sent.body
     assert.equal(batch.destination, 'ADP')
     const csv = await fetch(url + csvUrl)
@@ -104,7 +104,8 @@ test('closeout journey: next step, decisions, asks, send once, dispute adjustmen
     assert.equal(batch.held, 0)
     const resend = await call(`/data/cycles/${id}/send`, post({}))
     assert.deepEqual([resend.status, resend.body.batch.id], [409, batch.id])
-    assert.equal((await call(`/data/cycles/${id}`)).body.nextStep.kind, 'done')
+    assert.equal((await call(`/data/cycles/${id}`)).body.nextStep.kind, 'chase_missing')
+    assert.equal((await call(`/data/cycles/${id}`)).body.batch.id, batch.id, 'paid status is independent of the unresolved next step')
     const { sessionToken } = await signSession({ sub: 'x', email: 'other@hypertrack.io', name: 'Other', picture: '' }, env.SESSION_SECRET)
     assert.equal((await fetch(url + csvUrl, { headers: { Authorization: `Bearer ${sessionToken}` } })).status, 404, 'another account cannot download it')
   })
@@ -142,7 +143,7 @@ test('closeout journey: next step, decisions, asks, send once, dispute adjustmen
     assert.match(await readFile(join(cwd, 'data/disputes', disputes[0]), 'utf8'), new RegExp(`Adjustment: 0.25h, .* lands on the ${next} Payroll export`))
     assert.deepEqual((await readdir(join(cwd, 'data/batches'))).sort(), [`${id}.csv`, `${next}.csv`])
     const nextstep = await readFile(join(cwd, 'nextstep.md'), 'utf8')
-    assert.match(nextstep, new RegExp(`${id}: done · Done · Sent to ADP · Demo`))
-    assert.match(nextstep, new RegExp(`${next}: done`))
+    assert.match(nextstep, new RegExp(`${id}: chase_missing`))
+    assert.match(nextstep, new RegExp(`${next}: get_timesheets`))
   })
 })

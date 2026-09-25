@@ -19,6 +19,8 @@ export async function runDataTurn(input: {
 }): Promise<void> {
   const { options, service, email, doc, emit } = input
   const pending = new Set(input.fileIds ?? [])
+  const traces = new Set<string>()
+  let dataTraces = 0
   let held: Extract<ClaudeEvent, { done: true }> = { done: true, sessionId: '', error: AGENT_ERROR }
   let allText = '', message = options.message, changed = false, applied = 0, turns = 0, sanitized = false
   const factCycles = new Set<string>(), deadline = Date.now() + (options.timeoutMs ?? 180_000)
@@ -29,7 +31,12 @@ export async function runDataTurn(input: {
     await input.runAgent({ ...options, message, timeoutMs: Math.max(1, deadline - Date.now()), onEvent(event) {
       if (options.signal?.aborted) return
       if ('done' in event) terminal = event
-      else if ('trace' in event) emit(event)
+      else if ('trace' in event) {
+        const data = event.trace.startsWith('Read data/')
+        if (!traces.has(event.trace) && (!data || dataTraces < 3)) {
+          traces.add(event.trace); if (data) dataTraces++; emit(event)
+        }
+      }
       else { streamed += event.text; emit(event) }
     } })
     if (options.signal?.aborted) return

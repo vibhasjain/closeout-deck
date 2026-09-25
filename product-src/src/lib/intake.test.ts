@@ -49,6 +49,7 @@ describe('intake', () => {
     expect(closed.closed).toMatchObject([{ worker: 'Ben', reason: 'No-show' }])
     expect(closed.clients.find((client) => client.name === 'Pacific')!.open).toBe(0)
     expect(build({})).toMatchObject({ expected: 5, open: 2, closed: [] })
+    expect(build({ [key]: { reason: '  ', at: '2026-09-21T10:00:00Z' } })).toMatchObject({ expected: 5, open: 2, closed: [] })
   })
 
   it('lets an explicit step or a view in the URL pick the step', () => {

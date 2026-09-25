@@ -36,7 +36,7 @@ export function Payroll() {
   const totals = payTotals(cycle)
   const stats = cycleStats(cycle, state.resolutions, state.undone[cycle.id])
   const intake = cycleIntake(cycle, state)
-  // Asked gaps no longer block the server journey; a saved view in the URL still wins.
+  // Server steps preserve unresolved gaps even after outreach; a saved view in the URL still wins.
   const collecting = cycle.nextStep ? cycle.nextStep.kind === 'get_timesheets' || cycle.nextStep.kind === 'chase_missing' : intake.open > 0
   const step = stepOf(params, collecting ? 'intake' : 'review')
   const destination = destinations.find((item) => item.name === cycle.batch?.destination)
