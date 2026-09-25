@@ -20,7 +20,7 @@ export interface NextStep { kind: StepKind; label: string; detail: string; count
 export interface ReviewGroup { id: string; num: number | null; state: 'proposed' | 'waiting' | 'judgment'; shiftIds: string[] }
 /** Gap ids use the client's intake gapId: `${client}|${worker}|${day}`. */
 export interface IntakeGap { id: string; worker: string; client: string; day: number; onSite?: number }
-export interface CycleSummary { id: string; start: string; cutoff: string; counts: CyclePayload['counts']; gaps: IntakeGap[]; groups: ReviewGroup[]; supervisors: Record<string, string> }
+export interface CycleSummary { id: string; start: string; cutoff: string; deadline: string; counts: CyclePayload['counts']; gaps: IntakeGap[]; groups: ReviewGroup[]; supervisors: Record<string, string> }
 export interface JourneyCycle { id: string; counts: CyclePayload['counts']; gaps: string[]; groups: ReviewGroup[] }
 
 const WAITING = new Set(['SRC-VMS-01'])
@@ -47,7 +47,7 @@ export function summarize(p: CyclePayload): CycleSummary {
   const received = new Set(p.intake.received)
   const gaps = p.intake.expected.filter(e => !received.has(gapId(e)))
     .map(e => ({ id: gapId(e), worker: e.worker, client: e.client, day: e.day, ...(e.onSite ? { onSite: e.onSite } : {}) }))
-  return { id: p.cycle.id, start: p.cycle.start, cutoff: p.cycle.cutoff, counts: p.counts, gaps, groups: [...groups.values()],
+  return { id: p.cycle.id, start: p.cycle.start, cutoff: p.cycle.cutoff, deadline: p.cycle.deadline, counts: p.counts, gaps, groups: [...groups.values()],
     supervisors: Object.fromEntries(p.sites.filter(s => s.supervisor).map(s => [s.name, s.supervisor!.name])) }
 }
 
@@ -150,8 +150,9 @@ export function neverContacted(cp: Counterparty, gaps: IntakeGap[], list: unknow
   return names.has(norm(cp.name)) || (cp.kind === 'site' && [...gaps.map(g => g.client), ...(cp.siteNames ?? [])].some(name => names.has(norm(name))))
 }
 
-export function draftAsk(cp: Counterparty, gaps: IntakeGap[], summary: CycleSummary): string {
-  const due = dayLabel(summary.cutoff, 0, true)
+/** `due` is the reply-by date (YYYY-MM-DD, never past: see replyBy); it defaults to the cutoff for callers without a calendar. */
+export function draftAsk(cp: Counterparty, gaps: IntakeGap[], summary: CycleSummary, dueDate = summary.cutoff): string {
+  const due = dayLabel(dueDate, 0, true)
   // Keep whole evidence references and reserve room for the question; the thread keeps every gap id.
   const bounded = (rows: string[], separator: string) => {
     const selected: string[] = []
@@ -164,7 +165,7 @@ export function draftAsk(cp: Counterparty, gaps: IntakeGap[], summary: CycleSumm
   }
   if (cp.kind === 'worker') {
     const days = bounded(gaps.map(g => `${dayLabel(summary.start, g.day)} at ${g.client}`), ', ')
-    return `Hi ${first(cp.name).slice(0, 200)}, the client-approved hours are missing for your time ${gaps.length === 1 ? 'entry' : 'entries'} on ${days}. Did you work ${gaps.length === 1 ? 'that shift' : 'those shifts'}, and what were your in and out times? Payroll closes ${due}.`
+    return `Hi ${first(cp.name).slice(0, 200)}, the client-approved hours are missing for your time ${gaps.length === 1 ? 'entry' : 'entries'} on ${days}. Did you work ${gaps.length === 1 ? 'that day' : 'those days'}, and what were your in and out times? Payroll closes ${due}.`
   }
   const rows = bounded(gaps.map(g => `${g.worker} on ${dayLabel(summary.start, g.day)}${g.onSite ? ` (location shows ${fmtHM(g.onSite)} on site)` : ''}`), '; ')
   return `Hi ${first(cp.name).slice(0, 200)}, ${gaps[0].client.slice(0, 200)}'s approved hours are missing for ${plural(gaps.length, 'time entry', 'time entries')}: ${rows}. Can you confirm the hours before Payroll closes ${due}?`
@@ -178,8 +179,9 @@ export function sameWorker(a: string, b: string): boolean {
   return xr.join(' ') === yr.join(' ') && xr.length > 0 && (xf.length === 1 ? yf.startsWith(xf) : yf.length === 1 && xf.startsWith(yf))
 }
 
-/** Evidence refs for a dispute: each of the worker's time entries with its file row, paid times and location. */
-export function disputeEvidence(p: CyclePayload, worker: string, decisions: Decision[] = []): { text: string; shiftId: string | null; afterClockOut: number; rate: number } {
+/** Evidence refs for a dispute: each of the worker's time entries with its file row, paid times and location.
+ * `fileNames` maps stored file ids to their names: a person reads the file name and row, never an internal id. */
+export function disputeEvidence(p: CyclePayload, worker: string, decisions: Decision[] = [], fileNames: ReadonlyMap<string, string> = new Map()): { text: string; shiftId: string | null; afterClockOut: number; rate: number } {
   const lines: string[] = []
   let shiftId: string | null = null, after = 0, rate = 0
   const aliases = new Map([...p.groups, ...(p.extraGroups ?? [])].filter(g => g.id != null).map(g => [String(g.id), g.ruleId]))
@@ -192,7 +194,7 @@ export function disputeEvidence(p: CyclePayload, worker: string, decisions: Deci
     rate ||= r.rate
     lines.push(`- ${dayLabel(p.cycle.start, s.day)} · ${p.sites[s.fac]?.name ?? 'Site'} · paid ${s.punches.length ? `${clock(s.punches[0].in)}–${out == null ? 'no clock-out' : clock(out)}` : 'no punches'} (${fmtHM(r.payableMin)}, $${r.pay.toFixed(2)}${r.held ? ', held' : ''})` +
       ` · location ${s.geo ? `${clock(s.geo[0])}–${clock(s.geo[1])}${onSiteAfter ? `, ${fmtHM(onSiteAfter)} on site after clock-out` : ''}` : 'none'}` +
-      ` · file ${s.prov.file} row ${s.prov.row} · entries ${s.entryIds.slice(0, 6).join(', ')}${s.entryIds.length > 6 ? ' …' : ''}`)
+      ` · ${fileNames.get(s.prov.file) ?? 'source file'} row ${s.prov.row}`)
   })
   const text = lines.length ? `Evidence for ${worker}, cycle ending ${p.cycle.id}:\n${lines.slice(0, 20).join('\n')}${lines.length > 20 ? `\n… ${lines.length - 20} more time entries` : ''}`
     : `No time entries for ${worker} in the cycle ending ${p.cycle.id}`

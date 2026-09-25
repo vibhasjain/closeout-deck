@@ -28,6 +28,7 @@ import type { MemoryStore } from './memoryStore.ts'
 import { parseFile, IngestError } from './ingest.ts'
 import { recentCycles } from '../../src/lib/cycles.ts'
 import { inboxAddress } from '../../src/lib/inbox.ts'
+import { journeyAdjustments } from '../../src/lib/journeyPay.ts'
 
 const ALLOWED_ORIGINS = new Set(['https://closeoutcopilot.com', 'http://localhost:9000'])
 
@@ -384,11 +385,13 @@ export function createServer(options: ServerOptions = {}) {
         }
         if (path === '/data/cycles' && request.method === 'GET') {
           await service.recompute(user.email, doc)
-          const [runs, sources, facts] = await Promise.all([store.listRuns(user.email), store.listSources(user.email), store.listFacts(user.email)])
+          const [runs, sources, facts, disputes] = await Promise.all([store.listRuns(user.email), store.listSources(user.email), store.listFacts(user.email), getJourneyStore().listDisputes(user.email)])
           const cycles = recentCycles(calendarFrom(doc), 26, localToday(facts, doc)).map(c => {
-            const run = runs.find(r => r.cycleId === c.id)
+            const run = runs.find(r => r.cycleId === c.id), pending = journeyAdjustments(c.id, disputes)
             return { ...cycleDates(c), sample: run?.sample ?? false, runAt: run?.runAt ?? null,
-              totals: run?.totals ?? null, counts: run?.counts ?? { set1: 0, set2: 0, set3: 0 }, findings: run?.groups.length ?? 0 }
+              totals: run?.totals ?? null, counts: run?.counts ?? { set1: 0, set2: 0, set3: 0 }, findings: run?.groups.length ?? 0,
+              // N8: adjustments can land on a cycle before it has any time entries; the client reads that cycle's detail.
+              ...(pending.length ? { adjustments: { count: pending.length, amount: pending.reduce((n, a) => n + a.amount, 0) } } : {}) }
           })
           json(response, 200, { cycles, sources }); return
         }

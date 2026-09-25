@@ -2,10 +2,13 @@ import { useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { FindingDetail } from '@/components/SampleResult'
-import { FormCard } from '@/components/journey/FormCard'
+import { FormCard, gapRows } from '@/components/journey/FormCard'
 import { useOverlay } from '@/components/shell/Overlay'
-import { Btn, Tag } from '@/components/ui'
+import { Btn, PayDelta, Tag } from '@/components/ui'
+import { money } from '@/bench/engine.js'
 import { hydrate, type CyclePayload, type FindingGroup } from '@/lib/data'
+import { kindLabel } from '@/lib/desk'
+import { shiftHref } from '@/lib/navigation'
 import { decide, groupId, useJourneyCycle, useJourneyThreads, type JourneyThread } from '@/lib/journey'
 import type { FindingEvidence } from '@/lib/issueEmail'
 import { useOnboarding, type Onboarding } from '@/lib/onboarding'
@@ -14,6 +17,21 @@ import type { EvidenceRow } from '@/lib/sample'
 import './task-findings.css'
 
 export interface CarouselFinding { group: FindingGroup; resolution: ResolutionGroup; asked?: string }
+
+/** N5: the group's money is the pane's own (resolutionGroups, from journeyShiftPay), never the server's billing exposure label. */
+// eslint-disable-next-line react-refresh/only-export-components
+export function payChange(resolution: Pick<ResolutionGroup, 'current' | 'resolved'>): string {
+  const delta = Math.round((resolution.resolved - resolution.current) * 100) / 100
+  return `${delta < 0 ? '−' : '+'}${money(Math.abs(delta))} pay change`
+}
+
+/** N6: whether any of the group's time entries is an open gap someone could be asked about. */
+// eslint-disable-next-line react-refresh/only-export-components
+export function hasAskableGaps(payload: CyclePayload, resolution: ResolutionGroup, state: Onboarding, threads: JourneyThread[] = []): boolean {
+  const open = new Set(gapRows(payload, state.neverContact ?? [], state.acceptedGaps, threads).filter(row => !row.blocked).map(row => row.id))
+  const week = new Map(payload.week.map(shift => [shift.id, shift]))
+  return resolution.cases.some(item => { const shift = week.get(item.shiftId); return !!shift && open.has(`${payload.sites[shift.fac]?.name}|${shift.worker}|${shift.day}`) })
+}
 
 /** The carousel uses the exact work-pane triage, including its persisted decisions. */
 // eslint-disable-next-line react-refresh/only-export-components
@@ -54,11 +72,13 @@ export function findingEvidence(payload: CyclePayload, item: CarouselFinding): F
     if (shift.geo) rows.push({ source: 'HyperTrack location', start: shift.geo[0], end: shift.geo[1], meal: null, hours: (shift.geo[1] - shift.geo[0]) / 60 })
     return [{ worker: shift.worker, day: shift.day, rows }]
   })
-  return { ...item.group, id: item.group.id ?? 0, cases }
+  // Rules outside the main reconciliation groups carry their rule id as the tag; show its name instead.
+  return { ...item.group, tag: item.group.tag === item.group.ruleId ? kindLabel(item.group.ruleId) : item.group.tag, id: item.group.id ?? 0, cases, amountLabel: payChange(item.resolution) }
 }
 
-export function FindingsCard({ cycleId }: { cycleId: string }) {
-  const { cycle, loading, error } = useJourneyCycle(cycleId)
+/** `live`: the newest actionable card in the agent pane (H3); only then does the item in view get a black Approve. */
+export function FindingsCard({ cycleId, live = true }: { cycleId: string; live?: boolean }) {
+  const { cycle, loading, empty, error } = useJourneyCycle(cycleId)
   const { threads } = useJourneyThreads(cycleId)
   const [state] = useOnboarding()
   const { openDrawer } = useOverlay()
@@ -67,11 +87,14 @@ export function FindingsCard({ cycleId }: { cycleId: string }) {
   const [position, setPosition] = useState(0)
   const [pending, setPending] = useState<string | null>(null)
   const [failure, setFailure] = useState<string | null>(null)
-  if (!cycle) return <div className="journey-findings" role={error ? 'alert' : 'status'}>{error ?? (loading ? 'Loading findings…' : 'Findings are not available.')}</div>
+  if (!cycle) return <div className="journey-findings" role={error ? 'alert' : 'status'}>{error ?? (loading ? 'Loading findings…' : empty ? 'No time entries yet' : 'Findings are not available.')}</div>
   const items = carouselFindings(cycle, state, threads)
+  const askable = new Set(items.filter(item => item.resolution.state === 'waiting' && !item.asked && hasAskableGaps(cycle, item.resolution, state, threads)))
   const index = Math.min(position, Math.max(0, items.length - 1))
   const count = items.length
   const days = hydrate(cycle, state).days
+  // One black button, and only when approving is the cycle's next step.
+  const primary = live && (!cycle.nextStep || cycle.nextStep.kind === 'review')
 
   async function act(item: CarouselFinding, decision: 'approved' | 'escalated') {
     const id = groupId(item.group)
@@ -96,14 +119,17 @@ export function FindingsCard({ cycleId }: { cycleId: string }) {
           const node = event.currentTarget, first = node.children[0] as HTMLElement | undefined
           if (first) setPosition(Math.round(node.scrollLeft / (first.offsetWidth + 12)))
         }}>
-          {items.map(item => <article className="journey-finding" key={`${groupId(item.group)}:${item.resolution.state}`} role="listitem" data-state={item.resolution.state}>
+          {items.map((item, at) => <article className="journey-finding" key={`${groupId(item.group)}:${item.resolution.state}`} role="listitem" data-state={item.resolution.state}>
             <Tag>{item.resolution.state === 'proposed' ? 'Proposed' : item.resolution.state === 'waiting' ? 'Waiting' : item.resolution.state === 'escalated' ? `Escalated · ${item.resolution.owner}` : 'Needs Judgment'}</Tag>
             <h4>{item.group.title}</h4><p>{item.group.summary}</p>
-            <div className="journey-finding-data"><span className="tabular-nums">{item.resolution.cases.length.toLocaleString()} time entries</span>{item.group.amountLabel && <span className="tabular-nums">{item.group.amountLabel}</span>}</div>
+            <div className="journey-finding-data"><span className="tabular-nums">{item.resolution.cases.length.toLocaleString()} time {item.resolution.cases.length === 1 ? 'entry' : 'entries'}</span><PayDelta current={item.resolution.current} resolved={item.resolution.resolved} size="sm" /></div>
             {item.resolution.state === 'waiting' && <p className="journey-asked">{item.asked ? `Asked ${item.asked}` : 'Not asked yet'}</p>}
             <div className="journey-finding-actions">
-              {item.resolution.state === 'waiting' && !item.asked && <Btn onClick={() => openDrawer(<FormCard form="gaps" cycleId={cycleId} />, 'Missing time entries')}>Review gaps</Btn>}
-              {item.resolution.state === 'proposed' && <Btn className="primary" disabled={pending !== null} onClick={() => void act(item, 'approved')}>{pending === groupId(item.group) ? 'Approving…' : `Approve ${item.resolution.cases.length.toLocaleString()}`}</Btn>}
+              {/* N6: the gaps form only helps with missing time; other waiting entries are asked from their own conversation. */}
+              {item.resolution.state === 'waiting' && !item.asked && (askable.has(item)
+                ? <Btn onClick={() => openDrawer(<FormCard form="gaps" cycleId={cycleId} />, 'Missing time entries')}>Review gaps</Btn>
+                : <Btn onClick={() => navigate(shiftHref(cycleId, item.resolution.cases[0].shiftId))}>Ask from an entry</Btn>)}
+              {item.resolution.state === 'proposed' && <Btn className={primary && at === index ? 'primary' : undefined} disabled={pending !== null} onClick={() => void act(item, 'approved')}>{pending === groupId(item.group) ? 'Approving…' : `Approve ${item.resolution.cases.length.toLocaleString()}`}</Btn>}
               {item.resolution.state === 'judgment' && <Btn disabled={pending !== null} onClick={() => void act(item, 'escalated')}>{pending === groupId(item.group) ? 'Escalating…' : 'Escalate'}</Btn>}
               <Btn onClick={() => openDrawer(<FindingDetail finding={findingEvidence(cycle, item)} dayLabel={day => days[day] ?? ''} />, 'Evidence', cycle.sample ? 'Sample' : undefined)}>Evidence</Btn>
             </div>

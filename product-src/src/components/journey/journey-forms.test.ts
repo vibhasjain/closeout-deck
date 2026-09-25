@@ -1,14 +1,14 @@
 import { Children, createElement, isValidElement, type DependencyList, type EffectCallback, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { batchPreview, ConnectForm, DisputeForm, FormCard, gapRows, GapsForm, SendForm } from './FormCard'
+import { batchPreview, ConnectForm, connectTarget, DisputeForm, FormCard, gapRows, GapsForm, SendForm, waitingPaidAsReported } from './FormCard'
 import { DEFAULTS, type Onboarding } from '@/lib/onboarding'
 import type { CyclePayload, CycleSummary } from '@/lib/data'
 import type { JourneyDispute, JourneyThread } from '@/lib/journey'
 import fixture from '@/lib/fixtures/server-cycle.json'
 
 const hooks = vi.hoisted(() => ({ cursor: 0, slots: [] as unknown[], pending: [] as Array<() => void> }))
-const store = vi.hoisted(() => ({ state: undefined as Onboarding | undefined }))
+const store = vi.hoisted(() => ({ state: undefined as Onboarding | undefined, threads: [] as JourneyThread[] }))
 const api = vi.hoisted(() => ({ askGaps: vi.fn(), sendPayroll: vi.fn(), downloadBatch: vi.fn(), getDisputes: vi.fn(), getThreads: vi.fn(), createDispute: vi.fn(), simulateDispute: vi.fn(), resolveDispute: vi.fn(), useJourneyCycle: vi.fn() }))
 vi.mock('react', async importOriginal => ({
   ...await importOriginal<typeof import('react')>(),
@@ -26,13 +26,15 @@ vi.mock('react', async importOriginal => ({
   },
 }))
 vi.mock('@/lib/onboarding', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/onboarding')>(), useOnboarding: () => [store.state, vi.fn()] }))
-vi.mock('@/lib/journey', () => ({ ...api, refreshThreads: vi.fn(), useJourneyThreads: () => ({ threads: [], loaded: true, loading: false, error: null }) }))
-vi.mock('@/components/ConnectMethod', () => ({ ConnectMethod: ({ vendor }: { vendor: { set: number } }) => createElement('div', { 'data-set': vendor.set }, 'How do you want to connect?') }))
+const chat = vi.hoisted(() => ({ postToChat: vi.fn() }))
+vi.mock('@/lib/chatBus', () => chat)
+vi.mock('@/lib/journey', () => ({ ...api, refreshThreads: vi.fn(), useJourneyThreads: () => ({ threads: store.threads, loaded: true, loading: false, error: null }) }))
+vi.mock('@/components/ConnectMethod', () => ({ ConnectMethod: ({ vendor }: { vendor: { set: number; name: string; sites: string[] } }) => createElement('div', { 'data-set': vendor.set, 'data-site': vendor.sites[0] ?? '', 'data-system': vendor.name }, 'How do you want to connect?') }))
 vi.mock('@/components/Thread', () => ({ JourneyThreadView: ({ thread }: { thread: JourneyThread }) => createElement('div', { 'aria-label': 'Dispute conversation' }, thread.counterparty.name) }))
 
 const next = (kind: NonNullable<CyclePayload['nextStep']>['kind']): NonNullable<CyclePayload['nextStep']> => ({ kind, label: kind, detail: 'Review open time entries', counts: { missingSets: 0, gaps: 0, openGroups: kind === 'review' ? 2 : 0 } })
 const payload = (): CyclePayload => ({ ...structuredClone(fixture.payload) as CyclePayload, decisions: [], batch: null, nextStep: next('send') })
-const gapsPayload = (): CyclePayload => { const cycle = payload(); cycle.intake.expected = [{ worker: 'Cam Li', client: 'Pacific Cold Storage', day: 0, source: cycle.intake.sources[0].id, onSite: 480 }]; cycle.intake.received = []; return cycle }
+const gapsPayload = (): CyclePayload => { const cycle = { ...payload(), nextStep: next('chase_missing') }; cycle.intake.expected = [{ worker: 'Cam Li', client: 'Pacific Cold Storage', day: 0, source: cycle.intake.sources[0].id, onSite: 480 }]; cycle.intake.received = []; return cycle }
 const batch = { id: 'batch-1', cycleId: fixture.payload.cycle.id, destination: 'ADP', workers: 10, gross: 1200, held: 1, createdAt: '2026-09-25T12:00:00Z' }
 const thread: JourneyThread = { id: 'thread-1', cycleId: fixture.payload.cycle.id, counterparty: { kind: 'worker', name: 'Ana Peña' }, status: 'open', createdAt: '2026-09-25T12:00:00Z',
   messages: [{ id: 'message-1', threadId: 'thread-1', dir: 'out', text: 'Please confirm the missing time.', status: 'not_sent_demo', at: '2026-09-25T12:00:00Z' }] }
@@ -81,6 +83,7 @@ beforeEach(() => {
   vi.clearAllMocks(); hooks.cursor = 0; hooks.slots = []; hooks.pending = []
   api.getDisputes.mockResolvedValue({ disputes: [] }); api.getThreads.mockResolvedValue({ threads: [] })
   store.state = { ...DEFAULTS, discovery: { ...DEFAULTS.discovery, payroll: 'ADP' } }
+  store.threads = []
 })
 
 describe('journey connect form', () => {
@@ -92,6 +95,46 @@ describe('journey connect form', () => {
     expect(html).toContain('data-set="2"')
     expect(html).not.toContain('Cycle unavailable')
     expect(renderToStaticMarkup(ConnectForm({}))).toContain('data-set="1"')
+  })
+
+  it('a used connect card keeps the set it loaded while the data refreshes, so it can confirm the load', () => {
+    const cycle = payload()
+    cycle.counts = { set1: 0, set2: 0, set3: 0 }
+    let current = cycle
+    const card = mount(() => ConnectForm({ cycle: current }))
+    expect(card.draw()).toContain('data-set="1"')
+    const method = (tree: ReturnType<typeof ConnectForm>) => elements(tree).find(element => 'onConnect' in element.props) as unknown as { props: { onConnect(): void } }
+    hooks.cursor = 0
+    method(ConnectForm({ cycle: current })).props.onConnect()
+    current = { ...cycle, counts: { set1: 6282, set2: 0, set3: 0 } }
+    expect(card.draw()).toContain('data-set="1"')
+    // A fresh card (a later next-step reply) targets the next missing set.
+    hooks.slots = []
+    expect(renderToStaticMarkup(ConnectForm({ cycle: current }))).toContain('data-set="2"')
+  })
+  it("ConnectForm's set choice when set 3 is loaded targets the client still missing a set, not set 3 again (D2)", () => {
+    const cycle = payload()
+    cycle.counts = { set1: 3189, set2: 3240, set3: 6290 }
+    cycle.sites = [...cycle.sites, { ...cycle.sites[0], key: 'lonestar packaging', name: 'Lonestar Packaging' }]
+    cycle.gaps = [{ id: 'set_missing:lonestar packaging|2', kind: 'set_missing', key: 'lonestar packaging|2', count: 3189, blocks: ['SRC-VMS-01'], ask: "Can you send Lonestar Packaging's client-approved hours?" }]
+    const html = renderToStaticMarkup(ConnectForm({ cycle }))
+    expect(html).toContain('data-set="2"')
+    expect(html).toContain('data-site="Lonestar Packaging"')
+    expect(html).toContain('data-system="ADP"')
+    expect(connectTarget(cycle)).toEqual({ set: 2, site: 'Lonestar Packaging' })
+    // Nothing missing: re-offer client-approved, never a generic "Time entries" system.
+    cycle.gaps = []
+    expect(connectTarget(cycle)).toEqual({ set: 2, site: '' })
+    expect(renderToStaticMarkup(ConnectForm({ cycle }))).not.toContain('data-system="Time entries"')
+    // An explicit worker or client ask still wins; with every set in, location is never the default (D2v).
+    expect(connectTarget(cycle, undefined, { set: 1 })).toEqual({ set: 1, site: '' })
+    expect(connectTarget(cycle, undefined, { set: 3 })).toEqual({ set: 2, site: '' })
+    const picker = renderToStaticMarkup(ConnectForm({ cycle, prefill: { set: 3 } }))
+    expect(picker).toContain('All three sets are in for this cycle. Pick one to load again.')
+    expect(picker).toContain('data-set="2"')
+    for (const label of ['Worker-reported', 'Client-approved', 'Location']) expect(picker).toContain(`>${label}</button>`)
+    // While a set is still empty, an asked location stays the target.
+    expect(connectTarget({ ...cycle, counts: { ...cycle.counts, set3: 0 } }, undefined, { set: 3 })).toEqual({ set: 3, site: '' })
   })
 })
 
@@ -155,6 +198,19 @@ describe('journey send form', () => {
     if (kind === 'review') expect(html).toContain('2 issues to review')
   })
 
+  it('N7: says plainly that entries still waiting for evidence are paid as reported, without blocking Send', () => {
+    const cycle = payload()
+    const vms = { ruleId: 'SRC-VMS-01', status: 'flag' as const, kindDefault: 'det' as const, note: 'The ATS has 8h, but the client approved 7h in their own timekeeping.' }
+    cycle.results = cycle.results.map((result, index) => index === 0 ? { ...result, rows: [...result.rows, vms], flagged: true }
+      : index === 1 ? { ...result, rows: [...result.rows, vms], flagged: true, held: true } : result)
+    // The held entry is waiting too, but it is excluded from pay, so only one is paid as reported.
+    const waiting = waitingPaidAsReported(cycle, store.state!)
+    expect(waiting).toBe(1)
+    const html = mount(() => SendForm({ cycle })).draw()
+    expect(html).toContain(`${waiting} time ${waiting === 1 ? 'entry' : 'entries'} still waiting for evidence ${waiting === 1 ? 'is' : 'are'} paid as reported; any correction lands as an adjustment next pay run.`)
+    expect(primaryCount(html)).toBe(1)
+    expect(mount(() => SendForm({ cycle: { ...cycle, batch } })).draw()).not.toContain('still waiting for evidence')
+  })
   it('posts the destination and gives the authenticated CSV download after 201', async () => {
     api.sendPayroll.mockResolvedValueOnce({ status: 201, batch, csvUrl: '/data/batches/batch-1/csv' })
     const cycle = payload()
@@ -229,7 +285,25 @@ describe('journey gaps form', () => {
     const checkbox = form.fields().find(element => element.props['aria-label'] === 'Ask Maria Castillo about Cam Li · Pacific Cold Storage · Day 1')
     expect(checkbox?.props.disabled).toBe(true)
     expect(form.draw()).toContain('Never Contact')
-    expect(primaryCount(form.draw())).toBe(1)
+    // N6: nobody askable is explained, never a black "Ask 0 people".
+    expect(form.draw()).toContain('Everyone left to ask is on your never-contact list.')
+    expect(form.draw()).not.toContain('Ask 0 people')
+    expect(primaryCount(form.draw())).toBe(0)
+  })
+  it('N6: a cycle with no missing time says there is nobody to ask, with no button', () => {
+    const cycle = gapsPayload()
+    cycle.intake.received = cycle.intake.expected.map(entry => `${entry.client}|${entry.worker}|${entry.day}`)
+    const html = mount(() => GapsForm({ cycle })).draw()
+    expect(html).toContain('No time entries are missing client-approved hours, so there is nobody to ask.')
+    expect(html).not.toMatch(/Ask \d+ (person|people)/)
+    expect(primaryCount(html)).toBe(0)
+  })
+  it('N13: a chase card from an earlier step stays usable in outline with a quiet note', () => {
+    const cycle = { ...gapsPayload(), nextStep: next('review') }
+    const html = mount(() => GapsForm({ cycle })).draw()
+    expect(html).toContain('Ask 1 person')
+    expect(primaryCount(html)).toBe(0)
+    expect(html).toContain('This cycle has moved on: the next step is review.')
   })
 
   it('posts selected gap IDs and displays skipped people returned by the server', async () => {
@@ -292,6 +366,33 @@ describe('journey gaps form', () => {
     expect(labels).toEqual(['Ask Maria Castillo about Cam Li · Pacific Cold Storage · Day 1', 'Ask Maria Castillo about Cam Li · Pacific Cold Storage · Day 2'])
   })
 
+  it('shows the asked state from persisted threads after a reload, with no local ask result (D18)', () => {
+    const cycle = gapsPayload()
+    cycle.intake.expected = Array.from({ length: 7 }, (_, index) => ({ ...cycle.intake.expected[0], worker: `Worker ${index}`, onSite: undefined }))
+    const ids = cycle.intake.expected.map(gap => `${gap.client}|${gap.worker}|${gap.day}`)
+    store.threads = ids.map((id, index) => ({ ...thread, id: `thread-${index}`, counterparty: { kind: 'worker' as const, name: `Worker ${index}`, gapIds: [id] },
+      messages: [{ ...thread.messages[0], id: `message-${index}`, threadId: `thread-${index}` }] }))
+    const html = mount(() => GapsForm({ cycle })).draw()
+    expect(html).toContain('7 conversations created')
+    expect(html).toContain('Not Sent · Demo')
+    expect(html).toContain('Asked Worker 0')
+    expect(html).toContain('Asked Worker 4')
+    expect(html).not.toContain('Asked Worker 5')
+    expect(html).toContain('and 2 more')
+    // Every gap was asked: no new ask is offered as the next action.
+    expect(primaryCount(html)).toBe(0)
+  })
+
+  it('gives a superseded chase card outline buttons only (H3)', () => {
+    const cycle = gapsPayload()
+    expect(primaryCount(mount(() => GapsForm({ cycle })).draw())).toBe(1)
+    hooks.slots = []
+    const stale = mount(() => GapsForm({ cycle, live: false })).draw()
+    expect(stale).toContain('Ask 1 person')
+    expect(primaryCount(stale)).toBe(0)
+    expect(stale).toContain('A newer card below has the current step.')
+  })
+
   it('marks a gap asked only from a real outbound message to a permitted recipient', () => {
     const cycle = gapsPayload()
     const conversation = { ...thread, counterparty: { kind: 'site' as const, name: 'Maria Castillo', gapIds: ['Pacific Cold Storage|Cam Li|0'] } }
@@ -340,6 +441,7 @@ describe('journey dispute form', () => {
   })
 
   it('simulates then resolves an adjustment through the contract', async () => {
+    chat.postToChat.mockClear()
     api.simulateDispute.mockResolvedValueOnce({ dispute, thread })
     api.resolveDispute.mockResolvedValueOnce({ dispute: { ...dispute, status: 'adjusted' } })
     const cycle = { ...payload(), batch }
@@ -352,6 +454,10 @@ describe('journey dispute form', () => {
     expect(api.simulateDispute).toHaveBeenCalledWith(cycle.cycle.id)
     expect(api.resolveDispute).toHaveBeenCalledWith(dispute.id, { decision: 'adjust', hours: 2, amount: 40, note: 'Location confirms the interval' })
     expect(html).toContain('Adjustment recorded for the next cycle’s export.')
+    // N14: logging the dispute asks the agent for its recommendation in a visible, chipped turn.
+    expect(chat.postToChat).toHaveBeenCalledOnce()
+    expect(chat.postToChat.mock.calls[0][0]).toMatchObject({ contextChip: `Dispute from ${dispute.worker} · Sep 14 to 20`, context: { cycle: { id: cycle.cycle.id }, selection: { disputeId: dispute.id } } })
+    expect(html).not.toContain('role="alert"')
     expect(primaryCount(html)).toBe(0)
   })
 

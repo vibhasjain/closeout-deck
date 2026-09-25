@@ -3,10 +3,11 @@ import { Check, ChevronRight } from 'lucide-react'
 import { fmtHM } from '@/bench/engine.js'
 import { VendorTile, vendorMethod } from '@/components/SourcesTable'
 import { useOverlay } from '@/components/shell/Overlay'
-import { Btn, Chip } from '@/components/ui'
+import { Btn, Chip, Tag } from '@/components/ui'
 import { titleCase } from '@/lib/utils'
 import type { DeskCycle } from '@/lib/desk'
-import { ago, dayTime, gapKey, initial, usually, type Gap, type Intake as IntakeData, type SourceIntake } from '@/lib/intake'
+import { ago, askedGaps, dayTime, gapKey, initial, usually, type Gap, type Intake as IntakeData, type SourceIntake } from '@/lib/intake'
+import type { JourneyThread } from '@/lib/journey'
 import { addNote, useOnboarding } from '@/lib/onboarding'
 import { CLIENTS } from '@/lib/sample'
 import { uploadFile } from '@/lib/data'
@@ -14,14 +15,14 @@ import { INGEST_RESULT_EVENT, postToChat } from '@/lib/chatBus'
 import type { IngestEvent } from '@/lib/chat'
 import './intake.css'
 
-const REASONS = ['No-show', 'Shift cancelled', 'Other']
+const REASONS = ['No-show', 'Cancelled', 'Other']
 const md = (d: Date) => `${d.toLocaleDateString('en-US', { weekday: 'short' })} ${d.getMonth() + 1}/${d.getDate()}`
 const supervisorAt = (cycle: DeskCycle, client: string) => cycle.sites?.find((item) => item.name === client)?.supervisor?.name ?? Object.values(CLIENTS).find((item) => item.name === client)?.supervisor ?? 'the site supervisor'
 const threadKey = (cycleId: string, id: string) => `intake:${cycleId}:${id}`
 interface UploadResult { id: string; name: string; rows: number | null; entries: number; status: string; mapping: string; gaps: string[]; sample: boolean }
 
 /** Step 1 of a pay cycle: did the expected time arrive, client by client. */
-export function Intake({ cycle, intake }: { cycle: DeskCycle; intake: IntakeData }) {
+export function Intake({ cycle, intake, threads = [] }: { cycle: DeskCycle; intake: IntakeData; threads?: JourneyThread[] }) {
   const [state, update] = useOnboarding()
   const { toast } = useOverlay()
   const [closing, setClosing] = useState<{ id: string; chip: string; text: string } | null>(null)
@@ -35,6 +36,8 @@ export function Intake({ cycle, intake }: { cycle: DeskCycle; intake: IntakeData
   const waiting = intake.clients.filter((client) => client.open > 0)
   const complete = intake.clients.filter((client) => client.open === 0)
   const missingSets = cycle.gaps?.filter((gap) => gap.kind === 'set_missing') ?? []
+  const asked = askedGaps(cycle, threads, state.acceptedGaps)
+  const askedAt = (client: string) => [...asked.keys()].filter((id) => id.startsWith(`${client}|`)).length
   useEffect(() => {
     const ingest = (event: Event) => {
       const result = (event as CustomEvent<IngestEvent>).detail
@@ -72,7 +75,8 @@ export function Intake({ cycle, intake }: { cycle: DeskCycle; intake: IntakeData
 
   function missingRow(gap: Gap) {
     if (cycle.server) return <li key={gap.id} className="intake-gap">
-      <div className="intake-gap-text"><span>{initial(gap.worker)} · {md(dayOf(gap.day))}</span><span className="r-note">Client-approved time entry missing</span></div>
+      <div className="intake-gap-text"><span>{initial(gap.worker)} · {md(dayOf(gap.day))}</span><span className="r-note">Client-approved time entry missing</span>
+        {asked.has(gap.id) && <span className="intake-agent">Asked {asked.get(gap.id)}</span>}</div>
       <Btn disabled={busy} onClick={() => pickMissingSet(2, gap.client)}>Upload client-approved</Btn>
     </li>
     const who = gap.onSite ? supervisorAt(cycle, gap.client) : initial(gap.worker)
@@ -163,6 +167,7 @@ export function Intake({ cycle, intake }: { cycle: DeskCycle; intake: IntakeData
       <Btn disabled={busy} onClick={() => pickUpload()}>{busy ? 'Uploading…' : 'Upload'}</Btn>
     </div>
     {error && <p role="alert" className="r-note">{error}</p>}
+    {cycle.server && !cycle.week.length && cycle.nextStep?.kind === 'get_timesheets' && !results.length && <p className="intake-empty r-note" role="status">No time entries yet for {cycle.label}.</p>}
     {results.length > 0 && <ul className="intake-upload-results" aria-label="Upload results" aria-live="polite">{results.map((file) => <li key={file.id}>
       <div><b>{file.name}</b>{file.sample && <span className="tag">Sample</span>}</div>
       <p>{file.rows === null ? 'Rows awaiting mapping' : `${file.rows.toLocaleString()} rows in`} · {file.entries.toLocaleString()} time entries · {file.mapping}</p>
@@ -176,7 +181,8 @@ export function Intake({ cycle, intake }: { cycle: DeskCycle; intake: IntakeData
     {/* Every client keeps its card; a client with everything in is the same card, ghosted. */}
     <section aria-label="Time exports by client">
       {waiting.map((client) => <div key={client.name} className="intake-client">
-        <div className="intake-client-head"><b>{client.name}</b><span className="num">{(client.expected - client.received).toLocaleString()} {cycle.server ? 'Client-approved pending' : 'Pending'}</span></div>
+        <div className="intake-client-head"><b>{client.name}</b><span className="num">{(client.expected - client.received).toLocaleString()} {cycle.server ? 'Client-approved pending' : 'Pending'}</span>
+          {askedAt(client.name) > 0 && <span className="intake-asked">{askedAt(client.name).toLocaleString()} asked <Tag>Not Sent · Demo</Tag></span>}</div>
         <ul className="intake-sources">{client.sources.filter((row) => row.pending || row.missing.length).map((row) => <li key={row.source.id} className="intake-source">
           <div className="intake-source-head"><VendorTile vendor={row.source} /><span>{row.source.name}</span>{(row.source.sample || cycle.sample) && <span className="tag">Sample</span>}<span className="r-note">{vendorMethod(row.source.method)}</span>{row.source.set !== 3 && <Btn disabled={busy} onClick={() => pickUpload(row.source, client.name)}>Upload</Btn>}</div>
           <ul className="intake-gaps">{sourceRows(client.name, row)}</ul>

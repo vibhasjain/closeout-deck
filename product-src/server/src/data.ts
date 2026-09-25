@@ -5,7 +5,7 @@ import { accountHash, DuplicateFileError, validateFact } from './datastore.ts'
 import type { DataStore, FactRecord, FileRecord, SourceRecord } from './datastore.ts'
 import { libraryMapping, normalize, parseFile, sanitizeFileName, validateMapping, inferPeriod } from './ingest.ts'
 import type { MappingSpec, NormalizeMeta, TimeEntry } from './ingest.ts'
-import { buildCycle, calendarFrom, engineSha, pipelineInputHash } from './pipeline.ts'
+import { buildCycle, calendarFrom, engineSha, GENERIC_SYSTEM, pipelineInputHash } from './pipeline.ts'
 import { generateSample } from './sampledata.ts'
 
 export class DataError extends Error {
@@ -314,7 +314,8 @@ export class DataService {
         const bytes = Buffer.from([grid[0], ...rows, [`Total: Sample ${String(body.system ?? 'connection')} ${String(body.site ?? '')}`]].map(row => row.map(csvCell).join(',')).join('\r\n') + '\r\n')
         const existing = await this.storedFile(email, bytes)
         if (existing) { files.push(connected(existing)); continue }
-        files.push(connected(await this.ingestFile(email, { ...input, bytes, system: typeof body.system === 'string' ? body.system : undefined,
+        // A generic label ("Time entries") is not a system; the sample file's own vendor names the source.
+        files.push(connected(await this.ingestFile(email, { ...input, bytes, system: typeof body.system === 'string' && !GENERIC_SYSTEM.test(body.system) ? body.system : undefined,
           site: typeof body.site === 'string' ? body.site : undefined, sample: true, method: 'simulated', deferRun: true }, doc, now)))
       }
       return { files, cycles: await this.recompute(email, doc, now) }

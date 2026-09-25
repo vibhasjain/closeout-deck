@@ -50,7 +50,7 @@ export function ProfileEditor({ onEditRulebook }: { onEditRulebook(): void }) {
     </section>)}
     <section className="profile-edit-section"><h3>What I fix on my own</h3>
       <p>{state.authorityConfigured ? state.authority.autoFix
-        ? `Fix up to $${state.authority.limit.toLocaleString()} per entry, within $${state.authority.weeklyCap.toLocaleString()} each week.`
+        ? `Fix up to $${state.authority.limit.toLocaleString()} per entry${state.authority.weeklyCap ? `, within $${state.authority.weeklyCap.toLocaleString()} each week` : ''}.`
         : 'Approval required before every change.' : 'Configure permission to make changes in your Rulebook.'}</p>
       <button className="btn" type="button" onClick={onEditRulebook}>Edit in Rulebook</button>
     </section>

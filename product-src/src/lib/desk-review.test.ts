@@ -176,6 +176,8 @@ describe('persisted bucket decisions', () => {
   })
 
   it('bulk applies in one write, drops all affected counts and survives a store reload', async () => {
+    // Local bulk decisions belong to the signed-out synthetic demo, which a store opts into explicitly.
+    storage.set('closeout-onboarding-v2', JSON.stringify({ dataSource: 'synthetic' }))
     const desk = await import('@/lib/desk')
     const store = await import('@/lib/onboarding')
     const state = store.getOnboarding()

@@ -326,7 +326,7 @@ export function normalize(grid: string[][], spec: MappingSpec, meta: NormalizeMe
         if (mealStart != null && mealEnd != null) {
           while (entry.start != null && mealStart < entry.start) mealStart += 1440
           while (mealEnd < mealStart) mealEnd += 1440
-          if (mealEnd - mealStart > 480 || (entry.end != null && mealEnd > entry.end)) fail('Meal is outside the shift')
+          if (mealEnd - mealStart > 480 || (entry.end != null && mealEnd > entry.end)) fail('Meal is outside the time entry')
           meals.push({ ...entry, kind: 'meal', start: mealStart, end: mealEnd, minutes: null, mealMin: null, sched: null, flags: [...flags] })
         }
       }

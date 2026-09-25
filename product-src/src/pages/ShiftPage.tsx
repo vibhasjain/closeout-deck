@@ -17,6 +17,7 @@ import { getDataSnapshot } from '@/lib/data'
 import { journeyShiftPay } from '@/lib/journeyPay'
 import { getOnboarding, useOnboarding } from '@/lib/onboarding'
 import { shiftListHref } from '@/lib/navigation'
+import { resolutionGroups } from '@/lib/resolution'
 import { defaultThreadParty, threadFor } from '@/lib/threads'
 import './shift-page.css'
 
@@ -126,8 +127,14 @@ export function ShiftPage() {
   const allPayments = shiftListHref(cycle.id, params, '/payroll', true)
   const primaryRuleId = flag ?? items.find((item) => item.shiftId === shiftId)?.ruleId
   const decision = decisions?.[shiftId]
-  const pendingRules = [...new Set((rs?.rows ?? []).filter((row) => (row.status === 'flag' || row.status === 'held')
-    && !rowResolution(cycle, shiftId, row.ruleId, state.resolutions)).map((row) => row.ruleId))]
+  // N10: the sheet offers the pane's decision for this entry's groups: Approve proposed corrections,
+  // Escalate judgment calls, and nothing while a group waits for evidence.
+  const triage = cycle.server ? resolutionGroups(cycle, state.resolutions, state.undone[cycle.id]).filter((group) => group.cases.some((item) => item.shiftId === shiftId)) : []
+  const proposed = triage.filter((group) => group.state === 'proposed').map((group) => group.ruleId)
+  const escalating = cycle.server && !proposed.length && triage.some((group) => group.state === 'judgment')
+  const pendingRules = cycle.server ? escalating ? triage.filter((group) => group.state === 'judgment').map((group) => group.ruleId) : proposed
+    : [...new Set((rs?.rows ?? []).filter((row) => (row.status === 'flag' || row.status === 'held')
+      && !rowResolution(cycle, shiftId, row.ruleId, state.resolutions)).map((row) => row.ruleId))]
   const canDecide = !!rs && !(cycle.server && rs.held) && !decision && (!cycle.server || pendingRules.length > 0) && items.some((item) => item.shiftId === shiftId)
   const groupCases = (ruleId: string) => cycle.run.shifts.filter((item) => item.rows.some((row) => row.ruleId === ruleId && (row.status === 'flag' || row.status === 'held'))).map((item) => item.shift.id)
   const approvalCount = pendingRules.reduce((count, ruleId) => count + groupCases(ruleId).length, 0)
@@ -161,10 +168,10 @@ export function ShiftPage() {
           const group = [...(current?.groups ?? cycle.groups ?? []), ...(current?.extraGroups ?? cycle.extraGroups ?? [])].find((item) => item.ruleId === ruleId)
           const id = group ? groupId(group) : ruleId
           if ((current?.decisions ?? cycle.decisions ?? []).some(item => item.groupId === id || item.groupId === String(group?.id))) continue
-          await decide(cycle.id, { groupId: id, decision: 'approved', shiftIds: groupCases(ruleId) })
+          await decide(cycle.id, { groupId: id, decision: escalating ? 'escalated' : 'approved', shiftIds: groupCases(ruleId) })
           approved += groupCases(ruleId).length
         }
-        toast(approved ? `Approved ${approved.toLocaleString()} issues` : 'Already decided; no changes applied')
+        toast(approved ? `${escalating ? 'Escalated' : 'Approved'} ${approved.toLocaleString()} issues` : 'Already decided; no changes applied')
       } catch (cause) { setError(cause instanceof Error ? cause.message : 'The decision could not be saved.') }
       finally { setSaving(false) }
       return
@@ -196,7 +203,7 @@ export function ShiftPage() {
         {error && <p role="alert">{error}</p>}
         {saving && <p className="r-note" role="status">Saving decisions…</p>}
         <ShiftDetail cycle={cycle} rs={rs} primaryRuleId={primaryRuleId} showHeading={false} showSourceAction={false} showFired={false}
-          applyLabel={cycle.server ? `Approve ${approvalCount.toLocaleString()} issues` : undefined}
+          applyLabel={cycle.server ? `${escalating ? 'Escalate' : 'Approve'} ${approvalCount.toLocaleString()} issues` : undefined}
           onApply={canDecide && !saving ? () => void approve() : undefined}
  />
       </div>

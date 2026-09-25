@@ -174,17 +174,18 @@ export interface Onboarding {
     workerChannels: string[]; clientTime: string[]; approved: string[] }
   /** False until the user answers the authority goal or accepts settings in the Rulebook; until then nothing is authorized. */
   authorityConfigured: boolean
-  authority: { autoFix: boolean; limit: number; weeklyCap: number; textSupervisors: boolean; textWorkers: boolean; briefing: 'Email' | 'Slack' }
+  /** weeklyCap null: no weekly cap. It is never $0, which would block every fix. */
+  authority: { autoFix: boolean; limit: number; weeklyCap: number | null; textSupervisors: boolean; textWorkers: boolean; briefing: 'Email' | 'Slack' }
   /** Wider settings the agent proposed from chat; they apply only when the user accepts them in the Rulebook. */
   authoritySuggestion: Partial<Onboarding['authority']> | null
 }
 
 /** What the agent may do before anyone has configured authority: nothing on its own. */
-export const ASK_FIRST: Onboarding['authority'] = { autoFix: false, limit: 0, weeklyCap: 0, textSupervisors: false, textWorkers: false, briefing: 'Email' }
+export const ASK_FIRST: Onboarding['authority'] = { autoFix: false, limit: 0, weeklyCap: null, textSupervisors: false, textWorkers: false, briefing: 'Email' }
 export const effectiveAuthority = (state: Pick<Onboarding, 'authority' | 'authorityConfigured'>) => state.authorityConfigured ? state.authority : ASK_FIRST
 
 const KEY = 'closeout-onboarding-v2'
-export const DEFAULTS: Onboarding = { dataSource: 'synthetic', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, firm: null, profile: {}, covered: [], sources: [], neverContact: null, setupStep: 'welcome', setupHistory: [], setupRequest: null, setupClosing: null, setupNotice: null, kickoffPending: false, frequency: 'Weekly', periodEndDay: 'Sunday', payDay: 'Friday', payDatesOfMonth: [20, 5], cutoffDays: 1, deadlineDays: 2, cohorts: [], intake: [], approver: null, fileName: null, entries: 212, baseRate: null, system: null, forwarded: false, sidebar: 'full', checklistDismissed: false, rules: [], proposals: [], resolutions: {}, payrollConnected: false, sentCycles: [], uploads: {}, threads: {}, chat: [], chatSessionId: null, connections: {}, approvedCycles: [], batches: {}, customRules: [], reasons: {}, decisionTimes: {}, mediation: {}, acceptedGaps: {}, undone: {}, discovery: { period: '', payouts: '', payroll: '', billing: '', vms: [], workerChannels: [], clientTime: [], approved: [] }, authorityConfigured: false, authority: { autoFix: true, limit: 100, weeklyCap: 1000, textSupervisors: true, textWorkers: false, briefing: 'Email' }, authoritySuggestion: null }
+export const DEFAULTS: Onboarding = { dataSource: 'server', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, firm: null, profile: {}, covered: [], sources: [], neverContact: null, setupStep: 'welcome', setupHistory: [], setupRequest: null, setupClosing: null, setupNotice: null, kickoffPending: false, frequency: 'Weekly', periodEndDay: 'Sunday', payDay: 'Friday', payDatesOfMonth: [20, 5], cutoffDays: 1, deadlineDays: 2, cohorts: [], intake: [], approver: null, fileName: null, entries: 212, baseRate: null, system: null, forwarded: false, sidebar: 'full', checklistDismissed: false, rules: [], proposals: [], resolutions: {}, payrollConnected: false, sentCycles: [], uploads: {}, threads: {}, chat: [], chatSessionId: null, connections: {}, approvedCycles: [], batches: {}, customRules: [], reasons: {}, decisionTimes: {}, mediation: {}, acceptedGaps: {}, undone: {}, discovery: { period: '', payouts: '', payroll: '', billing: '', vms: [], workerChannels: [], clientTime: [], approved: [] }, authorityConfigured: false, authority: { autoFix: true, limit: 100, weeklyCap: 1000, textSupervisors: true, textWorkers: false, briefing: 'Email' }, authoritySuggestion: null }
 const listeners = new Set<() => void>()
 let cache: Onboarding | null = null
 

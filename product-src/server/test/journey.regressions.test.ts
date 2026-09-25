@@ -132,7 +132,10 @@ test('100-gap asks remain open, produce a bounded draft and atomically save thei
 test('long dispute evidence is split into bounded notes without truncation', async () => {
   const { store, journey, call } = await setup()
   const p = payload()
-  p.week = Array.from({ length: 20 }, (_, i) => ({ ...p.week[0], id: `s_${String(i).padStart(12, '0')}`, day: i % 7, prov: { ...p.week[0].prov, file: `f_${i}_${'evidence'.repeat(60)}` } }))
+  p.week = Array.from({ length: 20 }, (_, i) => ({ ...p.week[0], id: `s_${String(i).padStart(12, '0')}`, day: i % 7, prov: { ...p.week[0].prov, file: `f_${i}` } }))
+  // N11: evidence names each file, never its id, so long file names make the long evidence.
+  const names = p.week.map((_, i) => `timeclock_${i}_${'evidence'.repeat(60)}.csv`)
+  for (const [i, name] of names.entries()) await store.upsertFile(email, { id: `f_${i}`, name, sha256: `sha_${i}`, receivedAt: at } as Parameters<DataStore['upsertFile']>[1])
   p.results = p.week.map(() => structuredClone(p.results[0]))
   const run = (await store.getRun(email, paid))!
   await store.saveRun(email, { ...run, runId: `${run.runId}_evidence`, storagePath: run.storagePath + '_evidence' }, [], p)
@@ -142,7 +145,8 @@ test('long dispute evidence is split into bounded notes without truncation', asy
   const notes = result.body.thread.messages.filter((m: Message) => m.dir === 'note') as Message[]
   assert.ok(notes.length > 1)
   assert.ok(notes.every(m => m.text.length <= 4000))
-  for (const shift of p.week) assert.ok(notes.map(m => m.text).join('').includes(shift.prov.file))
+  for (const name of names) assert.ok(notes.map(m => m.text).join('').includes(name))
+  assert.ok(!/\bf_\d+\b|\be_\d+\b/.test(notes.map(m => m.text).join('')), 'no internal file or entry ids')
 })
 
 test('resolution and export snapshot share a lock even through distinct route invocations', async () => {

@@ -3,7 +3,7 @@ import * as api from '@/lib/api'
 import * as onboarding from '@/lib/onboarding'
 import { DEFAULTS } from '@/lib/onboarding'
 import { getDataSnapshot, invalidate, publishCycle, refreshCycle, type CyclePayload, type CycleSummary } from '@/lib/data'
-import { decide, watchJourneyCycle, type JourneyDecision } from '@/lib/journey'
+import { decide, journeyRead, watchJourneyCycle, type JourneyDecision } from '@/lib/journey'
 import fixture from '@/lib/fixtures/server-cycle.json'
 
 const payload = fixture.payload as CyclePayload
@@ -28,44 +28,52 @@ beforeEach(async () => {
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks() })
 
 describe('cycle cards before a run exists', () => {
-  it('treats a detail 404 as Running and never writes a global error', async () => {
-    expect(await refreshCycle(payload.cycle.id)).toEqual({ state: 'running', error: null })
+  it('treats a detail 404 as no data yet and never writes a global error', async () => {
+    expect(await refreshCycle(payload.cycle.id)).toEqual({ state: 'empty', error: null })
     expect(getDataSnapshot()).toMatchObject({ error: null, payloads: [], list: [{ runAt: null, counts: row.counts }] })
   })
-  it('backs off 404 polls, caps the wait at 30 seconds, and cancels on unmount', async () => {
+  it('D16: a loaded list row without a run needs no detail request and no polling', () => {
+    expect(journeyRead(getDataSnapshot(), payload.cycle.id)).toMatchObject({ running: false, empty: true, cycle: undefined })
+    expect(journeyRead({ loaded: false, list: [], payloads: [] }, payload.cycle.id)).toMatchObject({ running: false, empty: false })
+    expect(journeyRead({ loaded: true, list: [{ ...row, runAt: payload.runAt }], payloads: [] }, payload.cycle.id)).toMatchObject({ running: true, empty: false })
+    expect(api.authedFetch).not.toHaveBeenCalled()
+  })
+  it('reads a 404 once and waits for an invalidation instead of polling, and cancels on unmount', async () => {
     const receive = vi.fn(), stop = watchJourneyCycle(payload.cycle.id, receive)
     await vi.advanceTimersByTimeAsync(0)
     expect(api.authedFetch).toHaveBeenCalledTimes(1)
-    for (const [delay, calls] of [[2000, 2], [4000, 3], [8000, 4], [16000, 5], [30000, 6], [30000, 7]]) {
-      await vi.advanceTimersByTimeAsync(delay - 1)
-      expect(api.authedFetch).toHaveBeenCalledTimes(calls - 1)
-      await vi.advanceTimersByTimeAsync(1)
-      expect(api.authedFetch).toHaveBeenCalledTimes(calls)
-    }
-    expect(receive).toHaveBeenLastCalledWith({ state: 'running', error: null })
+    await vi.advanceTimersByTimeAsync(120000)
+    expect(api.authedFetch).toHaveBeenCalledTimes(1)
+    expect(receive).toHaveBeenLastCalledWith({ state: 'empty', error: null })
     stop()
+    await invalidate()
     await vi.advanceTimersByTimeAsync(60000)
-    expect(api.authedFetch).toHaveBeenCalledTimes(7)
+    expect(vi.mocked(api.authedFetch).mock.calls.filter(([path]) => path === `/data/cycles/${payload.cycle.id}`)).toHaveLength(1)
   })
-  it('backs off a card error without polluting other cards or the Payroll error', async () => {
+  it('backs off a card error, capped at 30 seconds, without polluting other cards or the Payroll error', async () => {
     vi.mocked(api.authedFetch).mockImplementation(path => path.endsWith('/bad') ? Promise.reject(new Error('Connection interrupted')) : request(path))
     const receive = vi.fn(), stop = watchJourneyCycle('bad', receive)
     await vi.advanceTimersByTimeAsync(0)
     expect(receive).toHaveBeenLastCalledWith({ state: 'error', error: 'Connection interrupted' })
-    expect(await refreshCycle(payload.cycle.id)).toEqual({ state: 'running', error: null })
+    expect(await refreshCycle(payload.cycle.id)).toEqual({ state: 'empty', error: null })
     expect(getDataSnapshot().error).toBeNull()
-    await vi.advanceTimersByTimeAsync(6000)
-    expect(vi.mocked(api.authedFetch).mock.calls.filter(([path]) => path.endsWith('/bad'))).toHaveLength(3)
+    const bad = () => vi.mocked(api.authedFetch).mock.calls.filter(([path]) => path.endsWith('/bad')).length
+    for (const [delay, calls] of [[2000, 2], [4000, 3], [8000, 4], [16000, 5], [30000, 6], [30000, 7]]) {
+      await vi.advanceTimersByTimeAsync(delay - 1)
+      expect(bad()).toBe(calls - 1)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(bad()).toBe(calls)
+    }
     stop()
   })
-  it('wakes a backed-off card on invalidation and stops when ingestion publishes a run', async () => {
+  it('wakes an empty card on invalidation and stops when ingestion publishes a run', async () => {
     const receive = vi.fn(), stop = watchJourneyCycle(payload.cycle.id, receive)
     await vi.advanceTimersByTimeAsync(6000)
     const detailReads = () => vi.mocked(api.authedFetch).mock.calls.filter(([path]) => path === `/data/cycles/${payload.cycle.id}`).length
-    expect(detailReads()).toBe(3)
+    expect(detailReads()).toBe(1)
     await invalidate()
     await vi.advanceTimersByTimeAsync(0)
-    expect(detailReads()).toBe(4)
+    expect(detailReads()).toBe(2)
     ready = true
     await invalidate()
     expect(receive).toHaveBeenLastCalledWith({ state: 'done', error: null })

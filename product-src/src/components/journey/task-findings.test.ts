@@ -4,11 +4,12 @@ import { readFileSync } from 'node:fs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import fixture from '@/lib/fixtures/server-cycle.json'
 import { DEFAULTS } from '@/lib/onboarding'
-import { getDataSnapshot, refreshCycleList, serverCycles, type CyclePayload, type CycleSummary } from '@/lib/data'
+import { getDataSnapshot, hydrate, refreshCycleList, serverCycles, type CyclePayload, type CycleSummary } from '@/lib/data'
 import { resolutionGroups } from '@/lib/resolution'
 import type { JourneyThread } from '@/lib/journey'
 import { FirstCloseoutChoice } from '@/components/chat/FirstCloseoutChoice'
-import { FindingsCard, carouselFindings, findingEvidence, findingsLayout } from './FindingsCard'
+import { FindingsCard, carouselFindings, findingEvidence, findingsLayout, hasAskableGaps, payChange } from './FindingsCard'
+import { PayDelta } from '@/components/ui'
 import { TaskCard, taskProgress } from './TaskCard'
 
 const source = vi.hoisted(() => ({ cycle: undefined as CyclePayload | undefined, row: undefined as CycleSummary | undefined, error: null as string | null, threads: [] as JourneyThread[] }))
@@ -139,6 +140,54 @@ describe('findings carousel', () => {
     expect(cards[1]).not.toContain('class="btn primary"')
     expect(cards[2]).not.toContain('class="btn primary"')
     expect(cards[2]).toContain('Escalate')
+  })
+  it('gives only the proposed item in view a black Approve, and only while review is the next step (H3)', () => {
+    const cycle = source.cycle!
+    cycle.results[1].rows = [{ ...cycle.results[1].rows[0], ruleId: 'CA-MB-01' }]
+    cycle.groups[1] = { ...cycle.groups[1], ruleId: 'CA-MB-01' }
+    expect(carouselFindings(cycle, DEFAULTS).filter(item => item.resolution.state === 'proposed')).toHaveLength(2)
+    const primaries = () => (renderToStaticMarkup(createElement(FindingsCard, { cycleId: cycle.cycle.id })).match(/class="btn primary"/g) ?? []).length
+    expect(primaries()).toBe(1)
+    cycle.nextStep = { kind: 'review', label: 'Review 3 issues', detail: '', counts: { missingSets: 0, gaps: 0, openGroups: 3 } }
+    expect(primaries()).toBe(1)
+    cycle.nextStep = { kind: 'get_timesheets', label: 'Get timesheets', detail: 'No location yet', counts: { missingSets: 1, gaps: 0, openGroups: 3 } }
+    expect(primaries()).toBe(0)
+    cycle.nextStep = undefined
+    expect((renderToStaticMarkup(createElement(FindingsCard, { cycleId: cycle.cycle.id, live: false })).match(/class="btn primary"/g) ?? [])).toHaveLength(0)
+  })
+  it('N5: shows each group\'s money from the same function as the pane, never the server exposure label', () => {
+    const cycle = source.cycle!
+    cycle.groups = cycle.groups.map(group => ({ ...group, amountLabel: '$270 owed' }))
+    const html = renderToStaticMarkup(createElement(FindingsCard, { cycleId: cycle.cycle.id }))
+    expect(html).not.toContain('$270 owed')
+    const items = carouselFindings(cycle, DEFAULTS)
+    const pane = resolutionGroups(hydrate(cycle, DEFAULTS), {})
+    for (const item of items) {
+      const same = pane.find(group => group.ruleId === item.resolution.ruleId && group.state === item.resolution.state)!
+      expect([item.resolution.current, item.resolution.resolved]).toEqual([same.current, same.resolved])
+      expect(html).toContain(renderToStaticMarkup(createElement(PayDelta, { current: same.current, resolved: same.resolved, size: 'sm' })))
+      expect(findingEvidence(cycle, item).amountLabel).toBe(payChange(same))
+    }
+  })
+  it('N6: a waiting group with no missing time is asked from an entry, never through an empty chase form', () => {
+    const cycle = source.cycle!
+    const waiting = carouselFindings(cycle, DEFAULTS).find(item => item.resolution.state === 'waiting')!
+    const shift = cycle.week.find(entry => entry.id === waiting.resolution.cases[0].shiftId)!
+    cycle.intake = { ...cycle.intake, expected: [], received: [] }
+    let tree = FindingsCard({ cycleId: cycle.cycle.id })
+    expect(elements(tree).some(item => textOf(item.props.children) === 'Review gaps')).toBe(false)
+    button(tree, 'Ask from an entry').props.onClick!()
+    expect(actions.navigate).toHaveBeenCalledWith(expect.stringContaining(`/payroll/${encodeURIComponent(shift.id)}?`))
+    cycle.intake = { ...cycle.intake, expected: [{ worker: shift.worker, client: cycle.sites[shift.fac].name, day: shift.day, source: cycle.intake.sources[0]?.id ?? '' }], received: [] }
+    expect(hasAskableGaps(cycle, waiting.resolution, DEFAULTS)).toBe(true)
+    tree = FindingsCard({ cycleId: cycle.cycle.id })
+    expect(textOf(tree)).toContain('Not asked yet')
+    expect(button(tree, 'Review gaps')).toBeDefined()
+  })
+  it('names rule-only groups in the evidence drawer instead of showing the rule id (D14)', () => {
+    const cycle = source.cycle!, item = carouselFindings(cycle, DEFAULTS)[0]
+    expect(findingEvidence(cycle, { ...item, group: { ...item.group, ruleId: 'CA-OT-8', tag: 'CA-OT-8' } }).tag).toBe('Daily overtime')
+    expect(findingEvidence(cycle, item).tag).toBe(item.group.tag)
   })
   it('posts the exact group and decision then publishes the returned cycle to the shared store', async () => {
     const cycle = source.cycle!, item = carouselFindings(cycle, DEFAULTS)[0]

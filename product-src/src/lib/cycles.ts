@@ -97,6 +97,14 @@ export function recentCycles(cal: Calendar, count = 6, today = midnight(new Date
   })
 }
 
+/** When a reply is due, never in the past: the cutoff, else this run's Payroll deadline, else the next Payroll deadline on the calendar. */
+export function replyBy(cycle: Pick<Cycle, 'cutoff' | 'deadline'>, cal: Calendar, today = midnight(new Date())): Date {
+  const day0 = midnight(today)
+  if (cycle.cutoff >= day0) return cycle.cutoff
+  if (cycle.deadline >= day0) return cycle.deadline
+  return recentCycles(cal, 3, day0).map((c) => c.deadline).filter((d) => d >= day0).sort((a, b) => a.getTime() - b.getTime())[0] ?? day0
+}
+
 const fmt = (d: Date, opts: Intl.DateTimeFormatOptions) => d.toLocaleDateString('en-US', opts)
 
 export const cycleLabel = (c: Cycle) =>

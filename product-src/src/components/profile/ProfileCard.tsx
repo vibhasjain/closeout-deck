@@ -21,7 +21,7 @@ export function ProfileCard({ state: supplied, className = '' }: { state?: Onboa
   const source = (set: 1 | 2) => sources.filter((item) => item.set === set).map((item) => item.label).join(' · ')
   const calendar = covered.includes('calendar') ? cycleLine({ ...state, name: '' }).replace(/^ · /, '') : ''
   const own = state.authorityConfigured ? authority.autoFix
-    ? `Up to $${authority.limit.toLocaleString()} per entry · $${authority.weeklyCap.toLocaleString()} per week`
+    ? `Up to $${authority.limit.toLocaleString()} per entry${authority.weeklyCap ? ` · $${authority.weeklyCap.toLocaleString()} per week` : ''}`
     : 'Approval required before every change' : ''
   return <article className={`payroll-profile-card ${className}`} aria-label="Payroll profile preview" aria-live="polite">
     <header className="profile-card-firm">

@@ -6,7 +6,7 @@ import { EmailIssue } from '@/components/EmailIssue'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useOverlay } from '@/components/shell/Overlay'
 import { Btn, PayDelta } from '@/components/ui'
-import { shortDate } from '@/lib/cycles'
+import { replyBy, shortDate } from '@/lib/cycles'
 import { bucketHue, kindLabel, rememberKind, type DeskCycle } from '@/lib/desk'
 import { shiftHref } from '@/lib/navigation'
 import { titleCase } from '@/lib/utils'
@@ -15,7 +15,7 @@ import { decide, groupId, useJourneyThreads } from '@/lib/journey'
 import { getDataSnapshot } from '@/lib/data'
 import { journeyShiftMinutes, journeyShiftPay } from '@/lib/journeyPay'
 import { getOnboarding, useOnboarding } from '@/lib/onboarding'
-import { actionFor, proposalFor, resolutionGroups, STATES, type ResolutionGroup, type ResolutionState } from '@/lib/resolution'
+import { actionFor, lawLabel, proposalFor, requiredByLaw, resolutionGroups, STATES, type ResolutionGroup, type ResolutionState } from '@/lib/resolution'
 import './sheet.css'
 
 const pill = (ruleId: string, count: number) => {
@@ -112,7 +112,8 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
   /** A category's one action, shown in its header: it acts on every group in the category. */
   function action(resolution: ResolutionState, items: ResolutionGroup[], count: number) {
     if (!items.length) return null
-    if (resolution === 'proposed') return <Btn className="primary" disabled={saving} onClick={() => void resolve(items, 'approved')}>Approve {count.toLocaleString()}</Btn>
+    // Approving is the pane's black button only when review is the next step.
+    if (resolution === 'proposed') return <Btn className={!cycle.nextStep || cycle.nextStep.kind === 'review' ? 'primary' : undefined} disabled={saving} onClick={() => void resolve(items, 'approved')}>Approve {count.toLocaleString()}</Btn>
     if (resolution === 'fixed') {
       const undoable = items.filter((group) => !group.approved)
       return cycle.server || closed || !undoable.length ? null : <Btn onClick={() => undoable.forEach(undo)}>Undo All</Btn>
@@ -124,10 +125,12 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
   function line(group: ResolutionGroup) {
     const note = group.cases[0].note
     const detail = group.cases.length === 1 ? note : `${note.replace(/\.$/, '')}, and ${(group.cases.length - 1).toLocaleString()} more like it${note.endsWith('.') ? '.' : ''}`
-    if (group.state === 'waiting') return group.asked ? `Asked ${group.asked} to confirm the hours worked · reply due ${shortDate(cycle.cutoff)}` : 'Not asked yet'
+    if (group.state === 'waiting') return group.asked ? `Asked ${group.asked} to confirm the hours worked · reply due ${shortDate(replyBy(cycle, state))}` : 'Not asked yet'
     if (group.state === 'judgment') return `${note.replace(/\.$/, '')}. Not a Payroll call.`
     if (group.state === 'escalated') return `Escalated · ${group.owner}`
-    if (group.state === 'fixed') return `${actionFor(group.ruleId)} · ${group.approved ? 'approved by you' : 'by the agent'}`
+    // D20: a pay-law correction is applied because the law requires it, never on the agent's own authority.
+    if (group.state === 'fixed') return group.approved ? `${actionFor(group.ruleId)} · approved by you`
+      : requiredByLaw(group.ruleId) ? `${lawLabel(group.ruleId)} · Required by law · applied` : `${actionFor(group.ruleId)} · by the agent`
     if (group.state === 'proposed') return `${proposalFor(group.ruleId)} · ${detail.replace(/\.$/, '')}`
     return detail
   }

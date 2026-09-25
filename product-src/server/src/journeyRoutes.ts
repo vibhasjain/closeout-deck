@@ -1,11 +1,11 @@
 import { createHash, randomBytes } from 'node:crypto'
 import type { ServerResponse } from 'node:http'
 import { gunzipSync, gzipSync } from 'node:zlib'
-import { recentCycles } from '../../src/lib/cycles.ts'
+import { recentCycles, replyBy } from '../../src/lib/cycles.ts'
 import { journeyAdjustments } from '../../src/lib/journeyPay.ts'
 import { accountHash } from './datastore.ts'
 import type { DataStore, RunRecord } from './datastore.ts'
-import { DataError } from './data.ts'
+import { cycleDates, DataError, dateKey, localToday } from './data.ts'
 import type { DataService } from './data.ts'
 import { calendarFrom } from './pipeline.ts'
 import type { CyclePayload } from './pipeline.ts'
@@ -85,7 +85,20 @@ async function journeyState(req: JourneyRequest, summary: CycleSummary) {
   const aliases = Object.fromEntries(summary.groups.flatMap(g => [[g.id, g.id], ...(g.num == null ? [] : [[String(g.num), g.id]])]))
   const [decisions, batches, threads, disputes] = await Promise.all([req.journey.canonicalizeDecisions(req.email, summary.id, aliases), req.journey.listBatches(req.email), req.journey.listThreads(req.email, summary.id), req.journey.listDisputes(req.email)])
   const batch = batches.find(b => b.cycleId === summary.id) ?? null, cycle = journeyCycle(summary, req.doc, threads)
-  return { decisions, batch, cycle, adjustments: journeyAdjustments(summary.id, disputes), nextStep: nextStep(cycle, decisions, batch) }
+  return { decisions, batch, cycle, threads, adjustments: journeyAdjustments(summary.id, disputes), nextStep: nextStep(cycle, decisions, batch) }
+}
+
+/** N8: a cycle with no run can still carry journey state (an adjustment landing on it, a decision, a thread or a batch).
+ * That state stays visible on an empty payload; a cycle with nothing at all is still a 404 ("no data yet"). */
+async function journeyOnlyCycle(req: JourneyRequest, cycleId: string): Promise<void> {
+  const cycle = recentCycles(calendarFrom(req.doc), 26, localToday(await req.store.listFacts(req.email), req.doc)).find(c => c.id === cycleId)
+  if (!cycle) throw new DataError(404, 'not_found')
+  const dates = cycleDates(cycle), counts = { set1: 0, set2: 0, set3: 0 }
+  const state = await journeyState(req, { id: cycleId, start: dates.start, cutoff: dates.cutoff, deadline: dates.deadline, counts, gaps: [], groups: [], supervisors: {} })
+  if (!state.adjustments.length && !state.decisions.length && !state.batch && !state.threads.length) throw new DataError(404, 'not_found')
+  json(req.response, 200, { cycle: dates, sample: false, runId: null, runAt: null, sites: [], week: [], results: [],
+    totals: { under: 0, over: 0, flags: 0, held: 0, gross: 0, naive: 0, shifts: 0, workers: 0 }, counts, groups: [], extraGroups: [], gaps: [],
+    intake: { sources: [], expected: [], received: [] }, decisions: state.decisions, batch: state.batch, nextStep: state.nextStep, adjustments: state.adjustments })
 }
 
 async function withMessages(req: JourneyRequest, threads: Thread[]) {
@@ -118,7 +131,8 @@ async function openDispute(req: JourneyRequest, input: { cycleId: string; worker
   await requireSent(req, input.cycleId)
   const { payload, summary } = await loadCycle(req, input.cycleId, true)
   const { decisions } = await journeyState(req, summary)
-  const evidence = disputeEvidence(payload, input.worker, decisions), now = new Date().toISOString()
+  const fileNames = new Map((await req.store.listFiles(req.email)).map(file => [file.id, file.name]))
+  const evidence = disputeEvidence(payload, input.worker, decisions, fileNames), now = new Date().toISOString()
   const dispute: Dispute = { id: newId('dp'), ...input, status: 'open', adjustment: null, createdAt: now }
   const thread: Thread = { id: newId('t'), cycleId: input.cycleId, shiftId: evidence.shiftId, disputeId: dispute.id, counterparty: { kind: 'worker', name: input.worker }, status: 'open', createdAt: now }
   await req.journey.saveConversation(req.email, thread, [
@@ -142,9 +156,10 @@ async function handleLockedJourney(req: JourneyRequest): Promise<boolean> {
   const { method, path, email, response } = req
   let match: RegExpExecArray | null
   if ((match = /^\/data\/cycles\/(\d{4}-\d{2}-\d{2})$/.exec(path)) && method === 'GET') {
-    const { text, summary } = await loadCycle(req, match[1])
-    const { decisions, batch, nextStep, adjustments } = await journeyState(req, summary)
-    gzipJson(response, 200, withFields(text, { decisions, batch, nextStep, adjustments }))
+    const loaded = await loadCycle(req, match[1]).catch((error: unknown) => { if (error instanceof DataError && error.status === 404) return null; throw error })
+    if (!loaded) { await journeyOnlyCycle(req, match[1]); return true }
+    const { decisions, batch, nextStep, adjustments } = await journeyState(req, loaded.summary)
+    gzipJson(response, 200, withFields(loaded.text, { decisions, batch, nextStep, adjustments }))
     return true
   }
   if ((match = /^\/data\/cycles\/(\d{4}-\d{2}-\d{2})\/(decisions|asks|send)$/.exec(path)) && method === 'POST') {
@@ -175,6 +190,8 @@ async function handleLockedJourney(req: JourneyRequest): Promise<boolean> {
         byParty.set(key, { cp, gaps: [...byParty.get(key)?.gaps ?? [], gap] })
       }
       const existing = await req.journey.listThreads(email, cycleId), threads: Thread[] = [], skipped: string[] = []
+      const local = (date: string) => new Date(`${date}T00:00:00`)
+      const due = dateKey(replyBy({ cutoff: local(summary.cutoff), deadline: local(summary.deadline) }, calendarFrom(req.doc), localToday(await req.store.listFacts(email), req.doc)))
       for (const { cp, gaps: asked } of byParty.values()) {
         const doc = req.currentDoc ? await req.currentDoc() : req.doc
         if (neverContacted(cp, asked, doc.neverContact)) { skipped.push(cp.name); continue }
@@ -182,7 +199,7 @@ async function handleLockedJourney(req: JourneyRequest): Promise<boolean> {
         const thread: Thread = { id, cycleId, shiftId: old?.shiftId ?? null, disputeId: null, status: 'waiting', createdAt: old?.createdAt ?? now,
           counterparty: { ...cp, ...(cp.kind === 'site' ? { siteNames: [...new Set([...old?.counterparty.siteNames ?? [], ...asked.map(g => g.client)])] } : {}),
             gapIds: [...new Set([...old?.counterparty.gapIds ?? [], ...asked.map(g => g.id)])] } }
-        const text = input.message ?? draftAsk(cp, asked, summary)
+        const text = input.message ?? draftAsk(cp, asked, summary, due)
         validateMessage({ dir: 'out', text })
         await req.journey.saveConversation(email, thread, [{ id: newId('m'), threadId: id, dir: 'out', text, status: 'not_sent_demo', at: now }])
         threads.push(thread)
@@ -233,7 +250,8 @@ async function handleLockedJourney(req: JourneyRequest): Promise<boolean> {
     }
     // Sending is simulated: an outgoing message is logged, never delivered.
     const message: Message = { id: newId('m'), threadId: thread.id, dir: input.dir, text: input.text, status: input.dir === 'out' ? 'not_sent_demo' : 'recorded', at: new Date().toISOString() }
-    const updated: Thread = { ...thread, status: input.dir === 'out' ? 'waiting' : input.dir === 'in' ? 'open' : thread.status }
+    // A resolved dispute stays resolved when Payroll writes to the worker afterwards.
+    const updated: Thread = { ...thread, status: input.dir === 'out' ? thread.status === 'resolved' ? 'resolved' : 'waiting' : input.dir === 'in' ? 'open' : thread.status }
     await req.journey.saveConversation(email, updated, [message])
     await req.sync()
     json(response, 201, { message, thread: (await withMessages(req, [updated]))[0] })

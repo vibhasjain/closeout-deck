@@ -5,10 +5,12 @@ import type { NextStep } from '@/lib/journey'
 import { getOnboarding } from '@/lib/onboarding'
 import './next-step.css'
 
-export function NextStepRow({ nextStep, cycle, onReview }: {
+export function NextStepRow({ nextStep, cycle, onReview, primary = false }: {
   nextStep: NextStep
   cycle: { id: string; label: string }
   onReview?: () => void
+  /** The pane's one black button, when it is the next step's action. */
+  primary?: boolean
 }) {
   const { missingSets, gaps, openGroups } = nextStep.counts
   const label = nextStep.kind === 'done' ? 'Disputes' : nextStep.label
@@ -27,6 +29,6 @@ export function NextStepRow({ nextStep, cycle, onReview }: {
       <span className="journey-next-detail">{nextStep.detail}</span>
       <span className="journey-next-counts">{missingSets.toLocaleString()} missing sets · {gaps.toLocaleString()} gaps · {openGroups.toLocaleString()} open groups</span>
     </div>
-    <Btn className="journey-next-button" onClick={open}>{label}<ArrowRight size={13} aria-hidden="true" /></Btn>
+    <Btn className={`journey-next-button${primary ? ' primary' : ''}`} onClick={open}>{label}<ArrowRight size={13} aria-hidden="true" /></Btn>
   </div>
 }

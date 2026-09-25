@@ -132,3 +132,10 @@
 .aux .shift-evidence-scroll > .rule-head { margin-bottom: .75rem; }
 .rule-detail > .bucket-tag { margin-bottom: .875rem; }
 .rule-detail .rule-applied { padding-top: 0; }
+
+/* Phone width (D17): the close button sits over the first column's title, and values wrap instead of running off the sheet. */
+@media (max-width: 800px) {
+  .shift-modal .shift-page-column:first-child .page-title-row { padding-right: 3.5rem; }
+  .shift-page .kv th.k, .shift-page .kv td.k { padding-right: 1rem; }
+  .shift-page .kv td:last-child, .kv-via, .kv-via > span:last-child { white-space: normal; overflow-wrap: anywhere; }
+}

@@ -224,6 +224,19 @@ test('trace frames also match the CLI\'s resolved workspace path', async t => {
   assert.deepEqual(createTraceMapper(cwd)(line), [{ trace: 'Read handbooks/mediation.md' }])
 })
 
+test('E2E D12: the current CLI tool-use shape (one assistant event per block, caller field) yields the handbook trace', () => {
+  const cwd = '/data/accounts/0123456789abcdef'
+  // Captured from claude -p --output-format stream-json --verbose --include-partial-messages (Sep 2026): the model may
+  // first try a path outside the workspace, then read the right one; a thinking-only event carries no tool_use.
+  const event = (content: unknown[]) => JSON.stringify({ type: 'assistant', message: { model: 'claude-sonnet-5', id: 'msg_01', type: 'message', role: 'assistant', content, stop_reason: 'tool_use' }, parent_tool_use_id: null, session_id: 's' })
+  const read = (file_path: string) => event([{ type: 'tool_use', id: 'toolu_01', name: 'Read', input: { file_path }, caller: { type: 'direct' } }])
+  const trace = createTraceMapper(cwd)
+  assert.deepEqual(trace(event([{ type: 'thinking', thinking: '' }])), [])
+  assert.deepEqual(trace(JSON.stringify({ type: 'stream_event', event: { type: 'content_block_start', index: 1, content_block: { type: 'tool_use', id: 'toolu_01', name: 'Read', input: {} } } })), [])
+  assert.deepEqual(trace(read('/Users/someone/handbooks/connect-a-source.md')), [])
+  assert.deepEqual(trace(read(`${cwd}/handbooks/connect-a-source.md`)), [{ trace: 'Read handbooks/connect-a-source.md' }])
+})
+
 test('runClaude streams trace frames before the reply text', async t => {
   const cwd = await realpath(await mkdtemp(join(tmpdir(), 'closeout-trace-cli-')))
   t.after(() => rm(cwd, { recursive: true, force: true }))

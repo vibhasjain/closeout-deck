@@ -70,6 +70,19 @@ type ElementProps = { children?: ReactNode; 'aria-label'?: string; onClick?(): v
 const elements = (tree: ReactNode): ReactElement<ElementProps>[] => Children.toArray(tree).flatMap((node) => isValidElement<ElementProps>(node) ? [node, ...elements(node.props.children)] : [])
 
 describe('Rulebook consent and compact preview', () => {
+  it('owner decision: an empty or $0 weekly cap is saved as no cap, never $0', () => {
+    const cap = () => elements(AuthorityEditor()).find(({ props }) => props['aria-label'] === 'Weekly cap in dollars')!
+    for (const value of ['', '0']) {
+      cap().props.onChange!({ target: { value, checked: false } })
+      expect(store.update).toHaveBeenLastCalledWith({ authority: { ...DEFAULTS.authority, weeklyCap: null } })
+    }
+  })
+  it('weekly cap, decided: the Rulebook offers the suggested cap as optional, and an unset cap shows no figure', () => {
+    store.state = { ...store.state!, authorityConfigured: true, authority: { ...DEFAULTS.authority, weeklyCap: null }, authoritySuggestion: { weeklyCap: 1000 } }
+    const html = renderToStaticMarkup(AuthorityEditor())
+    expect(html).toContain('A weekly cap of $1,000 (optional)')
+    expect(html).toMatch(/aria-label="Weekly cap in dollars" placeholder="No weekly cap"[^>]*value=""/)
+  })
   it('keeps all permission defaults as suggestions when editing just the weekly cap', () => {
     const tree = AuthorityEditor()
     const cap = elements(tree).find(({ props }) => props['aria-label'] === 'Weekly cap in dollars')!

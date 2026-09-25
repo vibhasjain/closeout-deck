@@ -67,3 +67,5 @@
 .intake-source-head > .btn { margin-left: auto; }
 .intake-client-head { flex-wrap: wrap; }
 .intake-client-head b { overflow-wrap: anywhere; }
+.intake-empty { padding: .75rem 0; }
+.intake-asked { display: inline-flex; flex-basis: 100%; align-items: center; gap: .375rem; font-size: 12px; color: hsl(var(--muted-foreground)); }

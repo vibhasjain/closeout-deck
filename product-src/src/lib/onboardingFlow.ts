@@ -1,7 +1,8 @@
 import { API_BASE } from '@/lib/api'
 import { appendTrace, limitCards, parseActions, parseCards, stream, type QuestionCard, type Action, type OnboardContext } from '@/lib/chat'
-import { applyAction, isAction, safeModelCard, safeModelText, validatedActions } from '@/lib/chatActions'
-import { effectiveAuthority, flushOnboarding, getOnboarding, inboxAddress, updateOnboarding, type FirmFacts, type Onboarding } from '@/lib/onboarding'
+import { applyAction, authorityPatch, isAction, safeModelCard, safeModelText, skippedLine, validatedActions } from '@/lib/chatActions'
+import { getDataSnapshot, loadData } from '@/lib/data'
+import { ASK_FIRST, effectiveAuthority, flushOnboarding, getOnboarding, inboxAddress, updateOnboarding, type FirmFacts, type Onboarding } from '@/lib/onboarding'
 import { expireSession, viewerSession } from '@/lib/viewerSession'
 
 export const authHeaders = () => {
@@ -55,7 +56,9 @@ async function agentTurn(message: string, context: OnboardContext, signal?: Abor
 /** Keep valid parts of model output and ask a corrective follow-up only if no usable card remains. */
 export async function requestOnboarding(message: string, signal?: AbortSignal): Promise<OnboardReply> {
   if (getOnboarding().forwarded) updateOnboarding({ forwarded: false })
-  const reply = await agentTurn(message, onboardContext(), signal)
+  // ponytail: the retry note lives in memory; a reload drops it and the notice alone remains.
+  const reply = await agentTurn(retry ? `${message}\n\n${retry}` : message, onboardContext(), signal)
+  retry = ''
   const card = reply.cards.find((item): item is QuestionCard | { kind: 'onboard_complete' } => item.kind === 'question' || item.kind === 'onboard_complete')
   if (!card || (card.kind === 'question' && !reply.question.trim())) {
     const state = applyReplyActions(reply.actions)
@@ -67,7 +70,14 @@ export async function requestOnboarding(message: string, signal?: AbortSignal): 
   return { ...reply, card }
 }
 
-const skippedNote = (skipped: string[]) => skipped.length ? `Skipped: ${[...new Set(skipped)].join(', ')}.` : null
+/** Setup has no retry button: the next answer carries the correction, and the notice says so. */
+let retry = ''
+function skippedNote(skipped: string[]) {
+  if (!skipped.length) return null
+  const { text, retry: again } = skippedLine([...new Set(skipped)])
+  if (again) retry = `App note: the app could not save these parts of your previous reply: ${[...new Set(skipped)].join(', ')}. Send them again in the documented action formats, recording only what I said.`
+  return again ? `${text} I'll try again with your next answer.` : text
+}
 export const ONBOARD_ALLOWED_ACTIONS = ['set_profile', 'set_firm', 'add_source', 'remove_source', 'remove_rule', 'set_authority', 'never_contact', 'cover_topic', 'set_calendar', 'add_cohort', 'add_rule', 'note']
 function applyReplyActions(actions: Action[]) {
   let state = getOnboarding()
@@ -79,9 +89,49 @@ function applyReplyActions(actions: Action[]) {
 }
 const same = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right)
 
+/** Arrangements the agent may not add on its own: its offer to take forwards is not how the firm works until the user says so. */
+const ARRANGED = /\b(?:forward\w*|screenshots?|photos?|to me)\b/gi
+const AGREED = /^\s*(?:yes|yeah|yep|sure|ok(?:ay)?|sounds good|please do|that works|do that)\b/i
+/** ponytail: a word check, not a meaning check; it catches the invented forwarding/screenshot arrangements QA saw. */
+function inventsArrangement(action: Action, state: Onboarding): boolean {
+  if (action.type !== 'set_profile' && action.type !== 'add_source') return false
+  const latest = state.setupHistory.at(-1)
+  const said = [...state.setupHistory.map((entry) => entry.answer ?? ''), state.firm?.summary ?? '',
+    ...(latest?.answer && AGREED.test(latest.answer) ? [latest.question] : [])].join(' ')
+  const text = JSON.stringify(action.type === 'set_profile' ? action.value : [action.label, action.how ?? ''])
+  return [...text.matchAll(ARRANGED)].some(([word]) => !new RegExp(`\\b${word.slice(0, 5)}`, 'i').test(said))
+}
+
+type AuthorityPatch = Partial<Onboarding['authority']>
+/** P6: an explicit answer to the authority goal is consent and applies now; only an amount the user never said stays a suggestion. */
+function authorityConsent(before: Onboarding, answer: string, actions: Action[]): { state: Pick<Onboarding, 'authority' | 'authorityConfigured' | 'authoritySuggestion'>; saved: AuthorityPatch; suggested: AuthorityPatch | null } | null {
+  const amounts = [...answer.matchAll(/\$\s?(\d[\d,]*(?:\.\d+)?)/g)].map((match) => Number(match[1].replace(/,/g, '')))
+  // An ask-first answer with no amounts is a blanket restriction, whatever the model proposed.
+  if (!amounts.length && /\b(ask (?:me )?(?:first|before)|nothing (?:on your own|without)|spend nothing)\b/i.test(answer)) {
+    return { state: { authorityConfigured: true, authority: { ...ASK_FIRST, briefing: before.authority.briefing }, authoritySuggestion: null },
+      saved: { autoFix: false, textSupervisors: false, textWorkers: false }, suggested: null }
+  }
+  const patches = actions.flatMap((action) => action.type === 'set_authority' ? [authorityPatch(action.patch)] : [])
+  if (!patches.length) return null
+  const saved: AuthorityPatch = {}, suggestion: AuthorityPatch = {}
+  for (const [key, value] of Object.entries(Object.assign({}, ...patches) as AuthorityPatch)) {
+    Object.assign(typeof value !== 'number' || value === 0 || amounts.some((amount) => amount >= value) ? saved : suggestion, { [key]: value })
+  }
+  // Unstated permissions stay off and an unstated weekly cap stays unset: "ask before anything over $100" sets no weekly total.
+  const base = before.authorityConfigured ? before.authority : { ...ASK_FIRST, briefing: before.authority.briefing }
+  const authority = { ...base, ...saved }
+  // The Rulebook may offer the suggested weekly cap as an optional change the user confirms; the profile never states it.
+  const offered = authority.autoFix && authority.weeklyCap === null && suggestion.weeklyCap === undefined && before.authority.weeklyCap ? { weeklyCap: before.authority.weeklyCap } : {}
+  const all = { ...offered, ...suggestion }
+  return { state: { authorityConfigured: true, authority, authoritySuggestion: Object.keys(all).length ? all : null }, saved, suggested: Object.keys(suggestion).length ? suggestion : null }
+}
+
 export function applyOnboardReply(reply: OnboardReply) {
   const before = getOnboarding()
   const checked = validatedActions(reply.actions, before.firm)
+  const invented = checked.actions.filter((action) => inventsArrangement(action, before))
+  checked.actions = checked.actions.filter((action) => !invented.includes(action))
+  checked.skipped.push(...invented.map((action) => `${action.type}: it recorded something the user did not say`))
   const state = applyReplyActions(checked.actions)
   const history = [...state.setupHistory]
   const at = history.length - 1
@@ -96,16 +146,17 @@ export function applyOnboardReply(reply: OnboardReply) {
   const skipped = [...(reply.skipped ?? []), ...checked.skipped]
   const patch: Partial<Onboarding> = { ...state, forwarded: false, setupHistory: history, setupRequest: null, setupNotice: skippedNote(skipped) }
   if (reply.sessionId) patch.chatSessionId = reply.sessionId
-  // An explicit ask-first answer is safe consent. Any wider model-proposed scope waits for Rulebook acceptance.
-  if (history[at]?.card.topics.includes('authority') && /\b(ask (?:me )?(?:first|before)|nothing (?:on your own|without)|spend nothing)\b/i.test(history[at].answer ?? '')) {
-    patch.authorityConfigured = true
-    patch.authority = { autoFix: false, limit: 0, weeklyCap: 0, textSupervisors: false, textWorkers: false, briefing: state.authority.briefing }
-    patch.authoritySuggestion = null
-  }
+  const answer = history[at]?.card.topics.includes('authority') ? history[at].answer : undefined
+  const consent = answer === undefined ? null : authorityConsent(before, answer, checked.actions)
+  if (consent) Object.assign(patch, consent.state)
+  // The Applied line says exactly what was saved now and what still waits in the Rulebook.
+  const shown: unknown[] = consent ? [...checked.actions.filter((action) => action.type !== 'set_authority'),
+    ...(Object.keys(consent.saved).length ? [{ type: 'set_authority', patch: consent.saved, consent: true }] : []),
+    ...(consent.suggested ? [{ type: 'set_authority', patch: consent.suggested }] : [])] : checked.actions
   if (reply.card.kind === 'onboard_complete') {
     patch.setupStep = 'writing'
     patch.setupClosing = reply.question
-    patch.chat = [...state.chat.filter((message) => message.id !== 'onboard-closing'), { id: 'onboard-closing', role: 'agent', text: reply.question, traces: reply.traces, at: Date.now(), actions: checked.actions, ...(skipped.length ? { skipped } : {}) }]
+    patch.chat = [...state.chat.filter((message) => message.id !== 'onboard-closing'), { id: 'onboard-closing', role: 'agent', text: reply.question, traces: reply.traces, at: Date.now(), actions: shown, ...(skipped.length ? { skipped } : {}) }]
   } else patch.setupHistory = [...history, { question: reply.question, card: reply.card }]
   updateOnboarding(patch)
 }
@@ -136,6 +187,13 @@ export async function uploadOnboardingFiles(files: File[], signal?: AbortSignal,
   return files.map((file) => file.name)
 }
 
+/** A set counts only when time entries or a connected source exist for it. Setup source plans are not data. */
+async function setsWithoutData(): Promise<(1 | 2 | 3)[]> {
+  await loadData()
+  const data = getDataSnapshot()
+  return ([1, 2, 3] as const).filter((set) => !data.sources.some((source) => source.set === set) && !data.list.some((cycle) => cycle.counts[`set${set}`] > 0))
+}
+
 let kickoff: Promise<void> | null = null
 export async function finishOnboarding(names: string[]) {
   updateOnboarding({ neverContact: [...new Set(names.map((name) => name.trim()).filter(Boolean))] })
@@ -146,7 +204,7 @@ export async function finishOnboarding(names: string[]) {
   updateOnboarding({ kickoffPending: true })
   kickoff = (async () => {
     const context = onboardContext()
-    const missingSets = ([1, 2, 3] as const).filter((set) => !context.sources.some((source) => source.set === set))
+    const missingSets = await setsWithoutData()
     const reply = await agentTurn(getOnboarding().setupRequest || 'Finish setup and start my first closeout using the sources I have provided.', { ...context, phase: 'first_closeout', missingSets })
     const seen = new Set<number>(), skipped = [...reply.skipped]
     const cards = reply.cards.filter((card) => {

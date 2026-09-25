@@ -10,12 +10,13 @@ import { NextStepRow } from '@/components/journey/NextStepRow'
 import { ShiftTable } from '@/components/ShiftTable'
 import { useSetChatContext, useSetChatSuggestions } from '@/components/chat/ChatPane'
 import { PageTitle } from '@/components/shell/PageTitle'
-import { invalidate } from '@/lib/data'
+import { invalidate, pendingAdjustments } from '@/lib/data'
 import { Btn, Tag } from '@/components/ui'
 import { shortDate } from '@/lib/cycles'
 import { cycleStats, useDesk } from '@/lib/desk'
 import { cycleIntake, stepOf, type Step } from '@/lib/intake'
 import { isTableView, payrollView, shiftHref } from '@/lib/navigation'
+import { useJourneyThreads } from '@/lib/journey'
 import { useOnboarding } from '@/lib/onboarding'
 import { payTotals } from '@/lib/payroll'
 import './reconcile.css'
@@ -39,6 +40,7 @@ export function Payroll() {
   // Server steps preserve unresolved gaps even after outreach; a saved view in the URL still wins.
   const collecting = cycle.nextStep ? cycle.nextStep.kind === 'get_timesheets' || cycle.nextStep.kind === 'chase_missing' : intake.open > 0
   const step = stepOf(params, collecting ? 'intake' : 'review')
+  const { threads } = useJourneyThreads(cycle.server && cycle.week.length ? cycle.id : '')
   const destination = destinations.find((item) => item.name === cycle.batch?.destination)
     ?? destinations.find((item) => item.id === params.get('destination'))
     ?? destinations[0]
@@ -63,7 +65,8 @@ export function Payroll() {
   return <div className="reconcile-layout payroll-layout">
     <section className="detail reconcile-payments" aria-label="Payroll">
       <PageTitle title="Payroll" description="Collect time entries, resolve discrepancies, and prepare each pay run." />
-      {cycle.nextStep && <NextStepRow nextStep={cycle.nextStep} cycle={cycle} onReview={() => {
+      {/* One black button per pane: the next step's, unless the visible Review list carries its own Approve. */}
+      {cycle.nextStep && <NextStepRow nextStep={cycle.nextStep} cycle={cycle} primary={cycle.nextStep.kind !== 'done' && !(cycle.nextStep.kind === 'review' && step === 'review')} onReview={() => {
         setParams((previous) => { const next = new URLSearchParams(previous); next.set('step', 'review'); next.set('filter', 'needs-review'); return next })
         requestAnimationFrame(() => document.getElementById('payroll-review-list')?.focus())
       }} />}
@@ -84,7 +87,8 @@ export function Payroll() {
       </div>
       {error && <div role="alert"><p>{error}</p><Btn onClick={() => void invalidate()}>Retry</Btn></div>}
       {loading && cycle.server && !cycle.week.length && <p role="status" className="r-note">Loading time entries…</p>}
-      {step === 'intake' ? <Intake cycle={cycle} intake={intake} /> : <>
+      {!cycle.batch && pendingAdjustments(cycle.adjustments) && <p role="status" className="r-note payroll-adjustments">{pendingAdjustments(cycle.adjustments)} · lands on this Payroll export</p>}
+      {step === 'intake' ? <Intake cycle={cycle} intake={intake} threads={threads} /> : <>
         <CycleKpis cycle={cycle} stats={stats} />
         {isTableView(view)
           ? <ShiftTable key={view} cycle={cycle} filterMode="discrepancies" defaultFilter={view} onSelect={(id) => navigate(shiftHref(cycle.id, id, params, '/payroll'))} />

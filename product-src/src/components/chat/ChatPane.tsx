@@ -93,6 +93,16 @@ export function useSetChatSuggestions(suggestions: string[], active = true) {
   }, [serialized, setSuggestions, active])
 }
 
+/** H3: only the newest actionable card keeps a black button; older ones are superseded. */
+export function newestActionableCard(messages: ChatMessage[]): { id: string; index: number } | undefined {
+  for (let m = messages.length - 1; m >= 0; m--) {
+    const cards = messages[m].cards ?? []
+    for (let index = cards.length - 1; index >= 0; index--) {
+      if (['form', 'findings', 'choice', 'question'].includes(cards[index].kind)) return { id: messages[m].id, index }
+    }
+  }
+}
+
 function selectionScope(selection?: object): string | undefined {
   if (!selection) return undefined
   if ('scope' in selection && typeof selection.scope === 'string') return selection.scope
@@ -130,6 +140,7 @@ export function ChatPane({ scope: explicitScope, headerAction, onCallingChange }
   // Keep "Show all" in the URL, but only for the case where it was chosen.
   const showAll = !scope || (params.get('chat') === 'all' && params.get('chatScope') === scope)
   const messages = showAll ? state.chat : state.chat.filter((message) => message.scope === scope)
+  const liveCard = newestActionableCard(messages)
   const showRequest = showAll || requestScope === scope
 
   useEffect(() => { onCallingChange?.(calling) }, [calling, onCallingChange])
@@ -389,7 +400,7 @@ export function ChatPane({ scope: explicitScope, headerAction, onCallingChange }
           return (
             <Fragment key={message.id}>
               {divider && <div className="chat-day-divider"><span>{divider}</span></div>}
-              <Message message={message} onAnswer={index === messages.length - 1 && !sending && !calling ? (answer) => { void send(answer) } : undefined} />
+              <Message message={message} liveCard={message.id === liveCard?.id ? liveCard.index : -1} onAnswer={index === messages.length - 1 && !sending && !calling ? (answer) => { void send(answer) } : undefined} />
             </Fragment>
           )
         })}

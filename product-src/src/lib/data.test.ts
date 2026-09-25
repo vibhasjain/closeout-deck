@@ -5,17 +5,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ShiftTable } from '@/components/ShiftTable'
 import { PayrollSummary } from '@/components/PayrollSummary'
 import { PayRuns } from '@/components/shell/PayRuns'
+import { Intake } from '@/components/Intake'
 import { OverlayProvider } from '@/components/shell/Overlay'
 import { AuxProvider } from '@/components/shell/Aux'
 import * as api from '@/lib/api'
 import * as onboarding from '@/lib/onboarding'
 import * as sessions from '@/lib/viewerSession'
 import { DEFAULTS, type Onboarding } from '@/lib/onboarding'
-import { activeCycles, applyKind, buildCycles, cycleStats, discrepancies, kinds, provenance, useDesk } from '@/lib/desk'
+import { activeCycles, applyKind, cycleStats, discrepancies, kinds, provenance, useDesk } from '@/lib/desk'
 import { cycleIntake } from '@/lib/intake'
 import { payTotals } from '@/lib/payroll'
 import { resolutionGroups } from '@/lib/resolution'
-import { getCycle, getEntries, getFindings, getDataSnapshot, hydrate, invalidate, publishCycle, refreshCycle, seedSample, setFact, uploadFile, type CyclePayload, type FileRecord, type SourceRecord } from '@/lib/data'
+import { getCycle, getEntries, getFindings, getDataSnapshot, hydrate, invalidate, publishCycle, refreshCycle, seedSample, serverCycles, setFact, uploadFile, type CyclePayload, type FileRecord, type SourceRecord } from '@/lib/data'
 import recorded from '@/lib/fixtures/server-cycle.json'
 
 const payload = recorded.payload as unknown as CyclePayload
@@ -41,10 +42,37 @@ beforeEach(() => {
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
 describe('recorded server cycle', () => {
-  it('keeps the existing synthetic fallback before the account has data', () => {
-    const cycles = activeCycles(state)
-    expect(cycles).toBe(buildCycles(state))
-    expect(cycles).toHaveLength(26)
+  it('D6: a signed-in account with no data gets the calendar with honest empty states, never the synthetic generator', async () => {
+    vi.spyOn(sessions, 'viewerSession').mockReturnValue({ email: 'fresh@example.com', sessionToken: 'fresh', exp: 9999999999 })
+    vi.mocked(api.authedFetch).mockImplementation(path => Promise.resolve(response(path === '/files' ? { files: [] } : { cycles: [], sources: [] })))
+    await invalidate()
+    for (const cal of [state, { ...state, dataSource: 'synthetic' as const }]) {
+      const cycles = activeCycles(cal)
+      expect(cycles.length).toBeGreaterThan(0)
+      expect(cycles.every(cycle => cycle.server && cycle.week.length === 0 && cycle.status !== 'reviewed')).toBe(true)
+      expect(cycles.every(cycle => cycle.nextStep?.kind === 'get_timesheets' && cycle.nextStep.detail === 'No time entries yet')).toBe(true)
+    }
+    const rail = renderToStaticMarkup(h(MemoryRouter, null, h(PayRuns)))
+    expect(rail).toContain('No time entries yet')
+    expect(rail).not.toMatch(/\$[\d,]+\.\d\d|Paid|Bayview/)
+    const summary = renderToStaticMarkup(h(MemoryRouter, null, h(OverlayProvider, null, h(AuxProvider, null, h(Intake, { cycle: activeCycles(state)[0], intake: cycleIntake(activeCycles(state)[0], state) })))))
+    expect(summary).toContain(`No time entries yet for ${activeCycles(state)[0].label}.`)
+    expect(summary).not.toMatch(/Bayview|Jensen|Alvarez|Ask Site|Mark No-Show/)
+  })
+  it('D19: a card publishing one cycle before the list loads never shrinks the pay-runs rail to that cycle', () => {
+    vi.useFakeTimers({ now: new Date(2026, 8, 25, 17), toFake: ['Date'] })
+    vi.spyOn(sessions, 'viewerSession').mockReturnValue({ email: 'reload@example.com', sessionToken: 'reload', exp: 9999999999 })
+    publishCycle(payload)
+    expect(getDataSnapshot()).toMatchObject({ owner: 'reload@example.com', loaded: false, list: [{ id: payload.cycle.id }] })
+    const cycles = serverCycles(state)
+    expect(cycles.map(cycle => [cycle.id, cycle.statusTag])).toEqual([['2026-09-27', 'In Progress'], ['2026-09-20', 'Pending']])
+    expect(cycles[1].week).toHaveLength(11)
+    vi.useRealTimers()
+  })
+  it('keeps the synthetic demo only for an explicitly synthetic, signed-out store', () => {
+    const cycles = activeCycles({ ...state, dataSource: 'synthetic' })
+    expect(cycles.length).toBe(26)
+    expect(cycles.some(cycle => cycle.server)).toBe(false)
   })
   it('restores dates, facilities, every result and callable context without recomputing server pay', () => {
     const before = JSON.stringify(payload)

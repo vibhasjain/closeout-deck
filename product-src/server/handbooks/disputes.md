@@ -12,6 +12,7 @@ A dispute is a claim about a cycle that was already sent to Payroll. Disputes ar
 - Compare the claim with the evidence in one or two sentences, with numbers: what they claim, what the files show, what the evidence supports.
 
 ## Propose
+- Recommend in the same reply that reads the evidence. You only speak when the user writes, so never say you will suggest something later.
 - Underpaid with evidence: propose an off-cycle adjustment of the supported hours at the worker's rate. It goes on the next check, never by re-sending the paid cycle.
 - Unsupported: propose rejecting it, and draft a short, polite reply that shows the data.
 - Overpaid: small amounts can be let go; above the user's threshold, ask. Never claw back without the user's approval.

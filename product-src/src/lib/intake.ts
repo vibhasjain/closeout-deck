@@ -3,6 +3,7 @@ import { SOURCES, sourceFor, type SendSchedule, type Source } from '@/bench/vend
 import type { Cycle } from '@/lib/cycles'
 import type { Onboarding } from '@/lib/onboarding'
 import type { CyclePayload } from '@/lib/data'
+import type { JourneyThread } from '@/lib/journey'
 import { CLIENTS } from '@/lib/sample'
 
 /** A time entry someone scheduled, and the source it should arrive from. */
@@ -111,6 +112,17 @@ export function cycleIntake(cycle: IntakeCycle, state: Pick<Onboarding, 'accepte
   }
   return buildIntake({ cycleId: cycle.id, start: cycle.start, now, received, lastReceived, accepted: state.acceptedGaps,
     expected: collecting ? [...week, ...PLANTED, ...WALL_CLOCK] : week })
+}
+
+/** Open gaps someone was asked about (a sent, Not Sent · Demo message), keyed by gap id, with who was asked. */
+export function askedGaps(cycle: Pick<IntakeCycle, 'id' | 'intake'>, threads: JourneyThread[], accepted: AcceptedGaps = {}): Map<string, string> {
+  const received = new Set(cycle.intake?.received ?? [])
+  const asked = new Map<string, string>()
+  for (const thread of threads) {
+    if (thread.cycleId !== cycle.id || !thread.messages.some(message => message.dir === 'out' && message.status !== 'draft' && message.text.trim())) continue
+    for (const id of thread.counterparty.gapIds ?? []) if (!received.has(id) && !accepted[gapKey(cycle.id, id)]) asked.set(id, thread.counterparty.name)
+  }
+  return asked
 }
 
 /** An explicit `?step=` wins; a review filter or list view means Review. */

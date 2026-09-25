@@ -237,10 +237,21 @@ describe('permanent Closeout Agent conversation', () => {
     expect(router.params.get('chatScope')).toBe('case:12')
   })
 
-  it('names skipped model actions in one quiet line', () => {
-    const tree = Message({ message: { id: 'partial', role: 'agent', text: 'Saved the valid answers.', at: 1, skipped: ['set_firm', 'set_profile'] } })
-    const note = elements(tree).find(({ props }) => props.className === 'chat-skipped')!
-    expect(Children.toArray(note.props.children).join('')).toBe('Skipped: set_firm; set_profile.')
+  it('says skipped model actions in human words, never raw action names, and retries from the latest reply', () => {
+    const message = { id: 'partial', role: 'agent' as const, text: 'Saved the valid answers.', at: 1, skipped: ['set_firm', 'set_profile'] }
+    const text = (tree: ReturnType<typeof Message>) => {
+      const note = elements(tree).find(({ props }) => props.className === 'chat-skipped')!
+      return elements(note).map(({ props }) => props.children).concat(Children.toArray(note.props.children)).filter((part): part is string => typeof part === 'string').join('')
+    }
+    expect(text(Message({ message }))).toBe("I couldn't save part of that.")
+    expect(text(Message({ message }))).not.toMatch(/set_|Skipped/)
+    const onAnswer = vi.fn()
+    const retry = elements(Message({ message, onAnswer })).find(({ props }) => props.children === 'Tap to retry')!
+    retry.props.onClick!()
+    expect(onAnswer).toHaveBeenCalledWith('Try saving that again')
+    expect(elements(Message({ message })).some(({ props }) => props.children === 'Tap to retry')).toBe(false)
+    const reload = Message({ message: { ...message, skipped: ['Action outcome unconfirmed after reload; review the cycle before trying again'] } })
+    expect(text(reload)).toBe('Action outcome unconfirmed after reload; review the cycle before trying again')
   })
 
   it('renders full-width agent text, user bubbles, and Applied action lines', () => {

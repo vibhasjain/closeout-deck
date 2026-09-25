@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { checklist } from '@/lib/checklist'
+import { checklist as progressOf } from '@/lib/checklist'
 import { recentCycles } from '@/lib/cycles'
-import { buildCycles } from '@/lib/desk'
+import { runEngine } from '@/bench/engine.js'
+import { NO_DATA_STEP } from '@/lib/data'
+import { buildCycles, type DeskCycle } from '@/lib/desk'
+import type { NextStep } from '@/lib/journey'
 import { cycleIntake, gapId, gapKey, PLANTED } from '@/lib/intake'
 import { DEFAULTS, type Onboarding } from '@/lib/onboarding'
 
 const now = new Date(2026, 8, 25, 10)
-const fresh = (): Onboarding => structuredClone(DEFAULTS)
+const fresh = (): Onboarding => ({ ...structuredClone(DEFAULTS), dataSource: 'synthetic' })
+// The local demo cycles opt in explicitly; the app always passes the desk's own cycles.
+const checklist = (state: Onboarding, at: Date, cycles = buildCycles(state, at)) => progressOf(state, at, cycles)
 
 describe('getting started checklist', () => {
   it('starts at 0/4 with the first item expanded', () => {
@@ -27,7 +32,7 @@ describe('getting started checklist', () => {
   })
 
   it('marks intake done only after every pending-cycle gap is closed or received', () => {
-    const state = fresh()
+    const state = { ...fresh(), forwarded: true }
     const pendingCycleId = recentCycles(state, 2, now)[1].id
     const pending = buildCycles(state, now).find((cycle) => cycle.id === pendingCycleId)!
     expect(cycleIntake(pending, state, now).open).toBeGreaterThan(0)
@@ -36,19 +41,53 @@ describe('getting started checklist', () => {
     state.uploads[gapKey(pendingCycleId, 'wallclock')] = { files: ['time-entries.csv'], entries: 10 }
     expect(cycleIntake(pending, state, now).open).toBe(0)
     const progress = checklist(state, now)
-    expect(progress.done).toBe(1)
+    expect(progress.done).toBe(2)
     expect(progress.items[1]).toMatchObject({ id: 'intake', done: true })
   })
 
-  it('marks review done from decisions for the pending cycle, independently of intake', () => {
-    const state = fresh()
+  it('never ticks review before intake: approving every group while time entries are still missing stays 1/4', () => {
+    const state = { ...fresh(), forwarded: true }
     const pendingCycleId = recentCycles(state, 2, now)[1].id
     const pending = buildCycles(state, now).find((cycle) => cycle.id === pendingCycleId)!
     state.resolutions[pendingCycleId] = Object.fromEntries(pending.run.shifts.map((shift) => [shift.shift.id, 'applied' as const]))
     const progress = checklist(state, now)
-    expect(progress.items.map((item) => item.done)).toEqual([false, false, true, false])
+    expect(progress.items.map((item) => item.done)).toEqual([true, false, false, false])
     expect(progress.done).toBe(1)
     expect(progress.items[2].href).toBe(`/payroll?cycle=${pendingCycleId}&step=review`)
+  })
+
+  it('stays 1/4 on the QA server state: both groups approved, set 3 still missing', () => {
+    const state = { ...fresh(), forwarded: true }
+    const cycle = { ...buildCycles(state, now)[1], server: true, batch: null,
+      nextStep: { kind: 'get_timesheets' as const, label: 'Get timesheets', detail: 'No location yet', counts: { missingSets: 1, gaps: 3189, openGroups: 0 } } }
+    const progress = checklist(state, now, [cycle])
+    expect(progress.items.map((item) => item.done)).toEqual([true, false, false, false])
+    expect(progress.items.find((item) => item.expanded)?.id).toBe('intake')
+  })
+
+  it('does not count an empty server cycle as collected', () => {
+    const state = { ...fresh(), dataSource: 'server' as const, forwarded: true }
+    const cycle = { ...buildCycles(state, now)[1], week: [], server: true,
+      nextStep: { kind: 'get_timesheets' as const, label: 'Get timesheets', detail: 'No time entries yet', counts: { missingSets: 3, gaps: 0, openGroups: 0 } } }
+    expect(checklist(state, now, [cycle]).done).toBe(1)
+  })
+
+  it('N1: right after a sample reset (no entries, the detail 404s) nothing past the agent is done, even with a stale list row', () => {
+    const state = { ...fresh(), dataSource: 'server' as const, forwarded: true }
+    const period = buildCycles(state, now)[1]
+    // A 404'd or not-yet-loaded server cycle has no next step and no rows: the local counts would read it as all clear.
+    const stale = { ...period, week: [], run: runEngine([]), server: true, batch: null, nextStep: undefined }
+    expect(checklist(state, now, [stale]).items.map((item) => item.done)).toEqual([true, false, false, false])
+    expect(checklist(state, now, [{ ...stale, nextStep: NO_DATA_STEP }]).items.map((item) => item.done)).toEqual([true, false, false, false])
+  })
+
+  it('N1: intake completes when all three sets are loaded, review when no groups are open, send with a batch', () => {
+    const state = { ...fresh(), dataSource: 'server' as const, forwarded: true }
+    const step = (kind: NextStep['kind'], missingSets: number, openGroups: number): NextStep => ({ kind, label: kind, detail: '', counts: { missingSets, gaps: 5, openGroups } })
+    const cycle = (nextStep: NextStep, batch: DeskCycle['batch'] = null) => ({ ...buildCycles(state, now)[1], server: true, nextStep, batch })
+    expect(checklist(state, now, [cycle(step('chase_missing', 0, 2))]).done).toBe(2)
+    expect(checklist(state, now, [cycle(step('chase_missing', 0, 0))]).done).toBe(3)
+    expect(checklist(state, now, [cycle(step('done', 0, 0), { id: 'b_1', cycleId: 'x', destination: 'ADP', workers: 1, gross: 1, held: 0, createdAt: '' })]).done).toBe(4)
   })
 
   it('reports dismissal without changing saved progress', () => {

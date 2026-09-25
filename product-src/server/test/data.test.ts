@@ -215,6 +215,24 @@ test('a connection site stays on its source; the cached layout mapping never inh
   assert.ok((await store.listEntries(email, { fileId: adp.files[0].id })).every(e => e.site === 'Mercy General'))
 })
 
+test('a generic "Time entries" connection keeps the sample vendor names and the finding copy stays human', async () => {
+  const { store, service } = setup()
+  await service.connect(email, { set: 1, system: 'Time entries' }, {}, now)
+  await service.connect(email, { set: 2, system: 'Time entries' }, {}, now)
+  await service.connect(email, { set: 3 }, {}, now)
+  const systems = (await store.listSources(email)).map(s => s.system)
+  assert.ok(!systems.includes('Time entries'), systems.join(', '))
+  const closing = recentCycles(calendarFrom({}), 2, localToday([], {}, now))[1]
+  const run = await store.getRunPayload(email, closing.id)
+  assert.ok(run && run.groups.length && run.extraGroups.length)
+  for (const group of [...run.groups, ...run.extraGroups]) {
+    const copy = [group.tag === group.ruleId ? '' : group.tag, group.title, group.summary, group.why, group.action, group.draft ?? '', group.hoursLabel].join(' | ')
+    assert.doesNotMatch(copy, /Time entries's|engine (findings|evidence)|\bshifts?\b/i, copy)
+  }
+  const vms = run.groups.find(g => g.ruleId === 'SRC-VMS-01')
+  if (vms) assert.match(vms.summary, /Bullhorn differs from UKG by /)
+})
+
 test('simulated location connector names its file after the week its rows fall in, so it normalizes', async () => {
   const { service } = setup()
   await service.connect(email, { set: 1, system: 'Forwarding inbox', site: 'Pacific Cold Storage' }, {}, now)

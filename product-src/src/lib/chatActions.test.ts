@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { actionSummary, applyAction, isAction, allowedModelUrl, validatedActions, safeModelText } from '@/lib/chatActions'
+import { actionSummary, applyAction, authorityPatch, isAction, allowedModelUrl, skippedLine, validatedActions, safeModelText } from '@/lib/chatActions'
 import { DEFAULTS, getOnboarding, updateOnboarding } from '@/lib/onboarding'
 import type { Onboarding } from '@/lib/onboarding'
 import type { Action } from '@/lib/chat'
@@ -74,8 +74,9 @@ describe('onboarding action writes', () => {
         profile: { workerHours: 'Email from workers', ratesWhere: { source: 'Client contract', owner: 'Payroll' } },
         firm: { name: 'Acme Staffing', states: ['CA', 'TX'], staffing: true },
         sources: [{ set: 1, kind: 'email', label: 'Worker time entries', how: 'Forward weekly emails' }],
-        authority: { autoFix: false, limit: 0, weeklyCap: 0, textSupervisors: false, textWorkers: false, briefing: 'Email' },
-        authoritySuggestion: { limit: 200, weeklyCap: 2000, textWorkers: true }, authorityConfigured: false, neverContact: ['Pat Smith'], covered: ['workerHours'], frequency: 'Weekly',
+        // A weekly cap only restricts (there was none), so it applies; the wider limit and texting wait in the Rulebook.
+        authority: { autoFix: false, limit: 0, weeklyCap: 2000, textSupervisors: false, textWorkers: false, briefing: 'Email' },
+        authoritySuggestion: { limit: 200, textWorkers: true }, authorityConfigured: false, neverContact: ['Pat Smith'], covered: ['workerHours'], frequency: 'Weekly',
       })
       expect(JSON.parse(storage.get('closeout-onboarding-v2')!).covered).toEqual(['workerHours'])
       applyAction({ type: 'set_firm', patch: { size: '250 people' } }, update, () => {}, new URLSearchParams())
@@ -132,5 +133,46 @@ describe('model output boundaries', () => {
     expect(isAction({ type: 'add_rule', sentence: 'x'.repeat(201) })).toBe(false)
     expect(isAction({ type: 'go', to: 'https://evil.tld' })).toBe(false)
     expect(isAction({ type: 'go', to: '//evil.tld' })).toBe(false)
+  })
+})
+
+describe('E2E D8 and skipped notes: the Applied line says what really happened', () => {
+  it('D8: a source plan reads as a plan, never as a load', () => {
+    expect(actionSummary({ type: 'add_source', set: 3, kind: 'sample', label: 'Sample location data' })).toBe('Planned: Sample location data')
+    expect(actionSummary({ type: 'add_source', set: 1, kind: 'email', label: 'Worker texts', how: 'forward to closeout@example.com' })).toBe('Planned: Worker texts · forward to closeout@example.com')
+    expect(actionSummary({ type: 'remove_source', set: 1, label: 'Old inbox' })).toBe('Removed plan: Old inbox')
+    expect(actionSummary({ type: 'add_source', set: 2, kind: 'sample', label: 'Lonestar' })).not.toMatch(/Added|loaded|connected/i)
+  })
+  it('D4: authority lines say saved only when nothing widens without consent', () => {
+    expect(actionSummary({ type: 'set_authority', patch: { autoFix: false, textWorkers: false } })).toBe('Saved: Ask before every fix · ask before texting workers')
+    expect(actionSummary({ type: 'set_authority', patch: { textSupervisors: true } })).toBe('Suggested: Text site supervisors · confirm it in the Rulebook')
+    expect(actionSummary({ type: 'set_authority', patch: { autoFix: true, limit: 100 }, consent: true })).toBe('Saved: Fix up to $100 per entry without asking')
+  })
+  it('skipped notes are human and offer a retry only for model output the app rejected', () => {
+    expect(skippedLine(['set_profile', 'card URL'])).toEqual({ text: "I couldn't save part of that.", retry: true })
+    expect(skippedLine(['Action outcome unconfirmed after reload; review the cycle before trying again'])).toEqual({ text: 'Action outcome unconfirmed after reload; review the cycle before trying again', retry: false })
+    expect(skippedLine(['set_profile']).text).not.toMatch(/set_profile|Skipped/)
+  })
+})
+
+describe('owner decision: the weekly cap is never invented and never $0', () => {
+  it('stores no $0 cap: with fixing allowed it means no cap was stated, alone it means ask first', () => {
+    expect(authorityPatch({ autoFix: true, limit: 100, weeklyCap: 0 })).toEqual({ autoFix: true, limit: 100, weeklyCap: null })
+    expect(authorityPatch({ weeklyCap: 0 })).toEqual({ autoFix: false, weeklyCap: null })
+    expect(authorityPatch({ limit: 50, weeklyCap: 500 })).toEqual({ limit: 50, weeklyCap: 500 })
+    expect(actionSummary({ type: 'set_authority', patch: { autoFix: true, limit: 100, weeklyCap: null }, consent: true })).toBe('Saved: Fix up to $100 per entry without asking')
+  })
+  it('treats dropping a cap as widening and adding one as a restriction', () => {
+    const storage = new Map<string, string>()
+    vi.stubGlobal('localStorage', { getItem: (key: string) => storage.get(key) ?? null, setItem: (key: string, value: string) => storage.set(key, value) })
+    try {
+      updateOnboarding({ ...structuredClone(DEFAULTS), authorityConfigured: true, authority: { ...DEFAULTS.authority, weeklyCap: null } })
+      const update = (patch: Partial<Onboarding> | ((state: Onboarding) => Partial<Onboarding>)) => updateOnboarding(typeof patch === 'function' ? patch(getOnboarding()) : patch)
+      applyAction({ type: 'set_authority', patch: { weeklyCap: 800 } }, update, () => {}, new URLSearchParams())
+      expect(getOnboarding().authority.weeklyCap).toBe(800)
+      applyAction({ type: 'set_authority', patch: { weeklyCap: 0 } }, update, () => {}, new URLSearchParams())
+      expect(getOnboarding().authority).toMatchObject({ autoFix: false, weeklyCap: 800 })
+      expect(getOnboarding().authoritySuggestion).toMatchObject({ weeklyCap: null })
+    } finally { vi.unstubAllGlobals() }
   })
 })

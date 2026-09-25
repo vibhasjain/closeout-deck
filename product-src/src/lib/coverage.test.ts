@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { goalProgress, onboardingComplete, sectionProgress } from '@/lib/coverage'
 import { checklist } from '@/lib/checklist'
+import { buildCycles } from '@/lib/desk'
 import { DEFAULTS, ONBOARD_TOPICS } from '@/lib/onboarding'
 
 describe('onboarding coverage', () => {
@@ -28,7 +29,8 @@ describe('onboarding coverage', () => {
   it('marks Getting started step one done only when forwarded', () => {
     const full = { ...structuredClone(DEFAULTS), covered: [...ONBOARD_TOPICS] }
     expect(onboardingComplete(full)).toBe(false)
-    expect(checklist(full).items[0].done).toBe(false)
-    expect(checklist({ ...full, forwarded: true }).items[0].done).toBe(true)
+    const now = new Date(), cycles = buildCycles(full, now)
+    expect(checklist(full, now, cycles).items[0].done).toBe(false)
+    expect(checklist({ ...full, forwarded: true }, now, cycles).items[0].done).toBe(true)
   })
 })

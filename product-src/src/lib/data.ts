@@ -1,5 +1,5 @@
 import { useEffect, useSyncExternalStore } from 'react'
-import { dayLabels, runEngine, type Effect, type Facility, type RunShift, type Shift } from '@/bench/engine.js'
+import { dayLabels, money, runEngine, type Effect, type Facility, type RunShift, type Shift } from '@/bench/engine.js'
 import { authedFetch } from '@/lib/api'
 import { cycleLabel, cycleWeeks, recentCycles, type Cycle } from '@/lib/cycles'
 import type { DeskCycle } from '@/lib/desk'
@@ -41,7 +41,8 @@ export interface CyclePayload {
   counts: { set1: number; set2: number; set3: number }; groups: FindingGroup[]; extraGroups: FindingGroup[]; gaps: DataGap[]
   intake: { sources: { id: string; name: string; short: string; set: 1 | 2 | 3; method: string; sample?: boolean; site?: string | null; lastReceived: string | null }[]; expected: { worker: string; client: string; day: number; source: string; onSite?: number }[]; received: string[] }
 }
-export interface CycleSummary extends CycleDates { sample: boolean; runAt: string | null; totals: CyclePayload['totals'] | null; counts: CyclePayload['counts']; findings: number }
+/** `adjustments`: dispute adjustments landing on the cycle, which can exist before it has any time entries (N8). */
+export interface CycleSummary extends CycleDates { sample: boolean; runAt: string | null; totals: CyclePayload['totals'] | null; counts: CyclePayload['counts']; findings: number; adjustments?: { count: number; amount: number } }
 export interface CycleList { cycles: CycleSummary[]; sources: SourceRecord[] }
 export interface SampleResult { cycleId: string; files: string[]; entries: number; groups: FindingGroup[] }
 
@@ -124,9 +125,19 @@ export function hydrate(payload: CyclePayload, cal: Onboarding, files: FileRecor
     server: true, sample: payload.sample, sites: payload.sites, groups: payload.groups, extraGroups: payload.extraGroups, gaps: payload.gaps, intake: payload.intake,
   }
 }
-function emptyCycle(cycle: Cycle): DeskCycle {
+/** Before any time entries arrive, the next step is getting them: no run, no findings, no invented rows. */
+export const NO_DATA_STEP: NextStep = { kind: 'get_timesheets', label: 'Get timesheets', detail: 'No time entries yet', counts: { missingSets: 3, gaps: 0, openGroups: 0 } }
+/** A listed run whose detail has not loaded yet is not "no data": it gets no next step until it loads. */
+function emptyCycle(cycle: Cycle, hasRun = false): DeskCycle {
   return { ...cycle, week: [], run: runEngine([]), days: daysOf(cycle), scripted: false, label: cycleLabel(cycle), statusTag: cycle.status === 'in-progress' ? 'In Progress' : 'Pending',
-    server: true, sample: false, sites: [], groups: [], extraGroups: [], gaps: [], intake: { sources: [], expected: [], received: [] } }
+    server: true, sample: false, sites: [], groups: [], extraGroups: [], gaps: [], intake: { sources: [], expected: [], received: [] }, ...(hasRun ? {} : { nextStep: NO_DATA_STEP }) }
+}
+
+/** "1 adjustment pending · +$2.00": dispute money that lands on this cycle's export. */
+export function pendingAdjustments(adjustments: readonly { amount: number }[] = []): string | null {
+  if (!adjustments.length) return null
+  const amount = adjustments.reduce((n, a) => n + a.amount, 0)
+  return `${adjustments.length} ${adjustments.length === 1 ? 'adjustment' : 'adjustments'} pending · ${amount < 0 ? '−' : '+'}${money(Math.abs(amount))}`
 }
 
 export interface DataSnapshot { owner: string; loaded: boolean; loading: boolean; error: string | null; cycleErrors: Record<string, string>; list: CycleSummary[]; sources: SourceRecord[]; files: FileRecord[]; payloads: CyclePayload[] }
@@ -147,15 +158,17 @@ export function publishCycle(payload: CyclePayload, account = owner()) {
   revision++
   const key = `${account}:${payload.cycle.id}`
   cycleVersions.set(key, (cycleVersions.get(key) ?? 0) + 1)
-  const summary: CycleSummary = { ...payload.cycle, sample: payload.sample, runAt: payload.runAt, totals: payload.totals, counts: payload.counts, findings: payload.groups.length + payload.extraGroups.length }
+  const summary: CycleSummary = { ...payload.cycle, sample: payload.sample, runAt: payload.runAt, totals: payload.totals, counts: payload.counts, findings: payload.groups.length + payload.extraGroups.length,
+    ...(payload.adjustments?.length ? { adjustments: { count: payload.adjustments.length, amount: payload.adjustments.reduce((n, a) => n + a.amount, 0) } } : {}) }
   const cycleErrors = { ...snapshot.cycleErrors }
   delete cycleErrors[payload.cycle.id]
   emit({ ...snapshot, cycleErrors, payloads: [...snapshot.payloads.filter(item => item.cycle.id !== payload.cycle.id), payload],
     list: snapshot.list.some(item => item.id === payload.cycle.id) ? snapshot.list.map(item => item.id === payload.cycle.id ? summary : item) : [...snapshot.list, summary] })
 }
-export type CycleReadResult = { state: 'running' | 'done'; error: null } | { state: 'error'; error: string }
+/** empty: the cycle has no run yet (a 404 is "no data yet", not an error). */
+export type CycleReadResult = { state: 'running' | 'done' | 'empty'; error: null } | { state: 'error'; error: string }
 const cycleRequests = new Map<string, Promise<CycleReadResult>>()
-/** Card reads report their own errors. An absent run is normal while intake is empty. */
+/** Card reads report their own errors. An absent run is normal while intake is empty: it reads as empty, never as an error. */
 export function refreshCycle(id: string): Promise<CycleReadResult> {
   const account = owner(), key = `${account}:${id}`
   const pending = cycleRequests.get(key)
@@ -164,13 +177,14 @@ export function refreshCycle(id: string): Promise<CycleReadResult> {
   const work = getCycle(id).then<CycleReadResult>(payload => {
     if ((cycleVersions.get(key) ?? 0) === generation) publishCycle(payload, account)
     const current = snapshot.owner === account ? snapshot.payloads.find(item => item.cycle.id === id) : undefined
-    return { state: current?.runAt || payload.runAt ? 'done' : 'running', error: null }
+    // A cycle with journey state but no time entries (a pending adjustment) is read once and is not running.
+    return { state: current?.runAt || payload.runAt ? 'done' : 'empty', error: null }
   }).catch((cause: unknown) => {
     if ((cycleVersions.get(key) ?? 0) !== generation) {
       const current = snapshot.owner === account ? snapshot.payloads.find(item => item.cycle.id === id) : undefined
       return { state: current?.runAt ? 'done' as const : 'running' as const, error: null }
     }
-    if (cause instanceof DataError && cause.status === 404) return { state: 'running' as const, error: null }
+    if (cause instanceof DataError && cause.status === 404) return { state: 'empty' as const, error: null }
     return { state: 'error' as const, error: cause instanceof Error ? cause.message : 'The cycle could not be loaded.' }
   }).finally(() => { cycleRequests.delete(key) })
   cycleRequests.set(key, work)
@@ -212,7 +226,7 @@ export async function loadData(): Promise<void> {
       try {
         const [list, { files }] = await Promise.all([getCycles(), getFiles()])
         const cycleErrors: Record<string, string> = {}, absent = new Set<string>()
-        const reads = await Promise.all(list.cycles.filter(cycle => cycle.runAt !== null).map(async cycle => {
+        const reads = await Promise.all(list.cycles.filter(cycle => cycle.runAt !== null || cycle.adjustments).map(async cycle => {
           try { return await getCycle(cycle.id) } catch (cause) {
             if (cause instanceof DataError && cause.status === 404) absent.add(cycle.id)
             else {
@@ -254,11 +268,13 @@ let cycleCache: { owner: string; snapshot: DataSnapshot; cal: Onboarding; cycles
 export function serverCycles(cal: Onboarding): DeskCycle[] {
   if (cycleCache?.owner === owner() && cycleCache.snapshot === snapshot && cycleCache.cal === cal) return cycleCache.cycles
   const available = snapshot.owner === owner() ? snapshot : initial()
-  const periods = available.list.length ? available.list.map(restoreDates) : recentCycles(cal, 26)
+  // A detail read can publish before the list loads; one published row is not the account's periods.
+  const periods = available.loaded && available.list.length ? available.list.map(restoreDates) : recentCycles(cal, 26)
   const payloads = new Map(available.payloads.map(payload => [payload.cycle.id, payload]))
   const cycles = periods.filter(cycle => payloads.has(cycle.id) || cycle.status !== 'reviewed').map(cycle => {
     const payload = payloads.get(cycle.id)
-    return payload ? hydrate({ ...payload, cycle: { ...payload.cycle, status: cycle.status } }, cal, available.files) : emptyCycle(cycle)
+    return payload ? hydrate({ ...payload, cycle: { ...payload.cycle, status: cycle.status } }, cal, available.files)
+      : emptyCycle(cycle, !!available.list.find(row => row.id === cycle.id)?.runAt)
   })
   if (!cycles.length) cycles.push(emptyCycle(recentCycles(cal, 1)[0]))
   cycleCache = { owner: owner(), snapshot, cal, cycles }

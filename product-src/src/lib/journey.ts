@@ -1,6 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { authedFetch } from '@/lib/api'
-import { getCycle, getDataSnapshot, invalidate, onDataInvalidated, publishCycle, refreshCycle, refreshCycleList, useData, type CyclePayload, type CycleReadResult, type FindingGroup } from '@/lib/data'
+import { getCycle, getDataSnapshot, invalidate, onDataInvalidated, publishCycle, refreshCycle, refreshCycleList, useData, type CyclePayload, type CycleReadResult, type DataSnapshot, type FindingGroup } from '@/lib/data'
 import { viewerSession } from '@/lib/viewerSession'
 import { flushOnboarding } from '@/lib/onboarding'
 
@@ -69,7 +69,8 @@ export function watchJourneyCycle(cycleId: string, receive: (result: CycleReadRe
     if (stopped) return
     receive(result)
     if (again) { again = false; void poll(); return }
-    if (result.state !== 'done') timer = setTimeout(() => { void poll() }, Math.min(2000 * 2 ** Math.min(attempt++, 4), 30000))
+    // Only a failed read retries on a timer. No data yet (empty) waits for the next invalidation.
+    if (result.state === 'error' || result.state === 'running') timer = setTimeout(() => { void poll() }, Math.min(2000 * 2 ** Math.min(attempt++, 4), 30000))
   }
   const unsubscribe = onDataInvalidated(() => {
     clearTimeout(timer)
@@ -82,11 +83,18 @@ export function watchJourneyCycle(cycleId: string, receive: (result: CycleReadRe
   return () => { stopped = true; clearTimeout(timer); unsubscribe() }
 }
 
-export function useJourneyCycle(cycleId: string) {
-  const data = useData()
+/** What a card knows from the shared list: fetch a cycle's detail only when the list says it has a run we don't hold. */
+export function journeyRead(data: Pick<DataSnapshot, 'loaded' | 'list' | 'payloads'>, cycleId: string) {
   const cycle = data.payloads.find(item => item.cycle.id === cycleId)
   const row = data.list.find(item => item.id === cycleId)
-  const running = !cycle?.runAt
+  // N8: a row with pending adjustments has journey state to read even before it has a run.
+  const pending = !cycle && !!row?.adjustments
+  return { cycle, row, running: (!cycle?.runAt && !!row?.runAt) || pending, empty: data.loaded && !cycle?.runAt && !row?.runAt && !pending }
+}
+
+export function useJourneyCycle(cycleId: string) {
+  const data = useData()
+  const { cycle, row, running, empty } = journeyRead(data, cycleId)
   const owner = account()
   const key = `${owner}:${cycleId}`
   const [read, setRead] = useState<{ key: string; result: CycleReadResult } | null>(null)
@@ -95,7 +103,8 @@ export function useJourneyCycle(cycleId: string) {
     return watchJourneyCycle(cycleId, result => setRead({ key, result }))
   }, [cycleId, key, running])
   const current = read?.key === key ? read.result : undefined
-  return { cycle, row, running, loading: !cycle && !row && !current, error: running && current ? current.error : data.cycleErrors[cycleId] ?? null }
+  const none = empty || current?.state === 'empty'
+  return { cycle, row, running: running && !none, empty: none, loading: !cycle && !none && !current, error: running && current ? current.error : data.cycleErrors[cycleId] ?? null }
 }
 
 export async function decide(cycleId: string, input: DecisionInput) {

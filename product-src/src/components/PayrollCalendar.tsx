@@ -87,7 +87,7 @@ export function PayrollCalendar() {
       <CycleFields value={state} onChange={update} />
 
       <label className={field}>
-        <span className="lbl">Timesheet cutoff</span>
+        <span className="lbl">Cutoff</span>
         <select className="q-input w-full" id="cutoff-days" value={String(state.cutoffDays)} onChange={(e) => update({ cutoffDays: Number(e.target.value) })}>
           {[0, 1, 2, 3, 4, 5, 6, 7].map((n) => <option key={n} value={n}>{n === 0 ? 'Same day as period end' : `${plural(n, 'day')} after period end`}</option>)}
         </select>

@@ -1,7 +1,7 @@
 import { FirstCloseoutChoice } from './FirstCloseoutChoice'
 import { Tag } from '@/components/ui'
 import type { ChatMessage } from '@/lib/onboarding'
-import { actionSummary } from '@/lib/chatActions'
+import { actionSummary, skippedLine } from '@/lib/chatActions'
 import { FactQuestion } from './FactQuestion'
 import { TaskCard } from '@/components/journey/TaskCard'
 import { FindingsCard } from '@/components/journey/FindingsCard'
@@ -10,8 +10,10 @@ import { CallCard } from './CallCard'
 import { retryCallSave } from '@/lib/callRecovery'
 import './journey-chat.css'
 
-export function Message({ message, onAnswer }: { message: ChatMessage; onAnswer?(answer: string): void }) {
+/** `liveCard`: the index of the newest actionable card in the pane, if it is in this message; only it keeps a black button. */
+export function Message({ message, onAnswer, liveCard = -1 }: { message: ChatMessage; onAnswer?(answer: string): void; liveCard?: number }) {
   const user = message.role === 'user'
+  const skipped = message.skipped?.length ? skippedLine(message.skipped) : null
   return (
     <article className={`chat-message${user ? ' user' : ''}`} aria-label={user ? 'You' : 'Closeout Agent'}>
       <div className={user ? 'chat-bubble' : 'chat-agent-text'}>
@@ -21,13 +23,13 @@ export function Message({ message, onAnswer }: { message: ChatMessage; onAnswer?
         {message.cards?.map((card, index) => {
           if (card.kind === 'call') return <CallCard key={card.callId} card={card} transcript={message.callTranscript} saveError={message.callSaveError} onRetrySave={() => { void retryCallSave(card.callId).catch(() => {}) }} />
           if (card.kind === 'task') return <TaskCard key={index} cycleId={card.cycleId} onAnswer={onAnswer} />
-          if (card.kind === 'findings') return <FindingsCard key={index} cycleId={card.cycleId} />
-          if (card.kind === 'form') return <FormCard key={index} {...card} />
+          if (card.kind === 'findings') return <FindingsCard key={index} cycleId={card.cycleId} live={index === liveCard} />
+          if (card.kind === 'form') return <FormCard key={index} {...card} live={index === liveCard} />
           if (card.kind === 'choice') return <div key={index}><p>{card.ask}</p><FirstCloseoutChoice card={{ kind: 'question', input: 'choice', topics: [], choice: { yours: card.yours, sample: card.sample }, set: card.set }} onAnswer={onAnswer} /></div>
           return card.kind !== 'question' ? null : card.input === 'choice' && card.choice
             ? <FirstCloseoutChoice key={index} card={card} onAnswer={onAnswer} /> : onAnswer ? <FactQuestion key={index} card={card} onAnswer={onAnswer} /> : null
         })}
-        {!!message.skipped?.length && <p className="chat-skipped" role="status">Skipped: {message.skipped.join('; ')}.</p>}
+        {skipped && <p className="chat-skipped" role="status">{skipped.text}{skipped.retry && onAnswer && <> <button type="button" className="lnk" onClick={() => onAnswer('Try saving that again')}>Tap to retry</button></>}</p>}
         {!!message.pendingActions?.length && <p role="status">Pending: {message.pendingActions.length} actions</p>}
         {message.actions?.map((action, index) => {
           const summary = actionSummary(action)

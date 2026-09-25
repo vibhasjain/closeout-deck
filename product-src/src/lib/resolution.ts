@@ -1,5 +1,6 @@
 import { CLIENTS } from '@/lib/sample'
-import { appliedCorrection, rowResolution, type DeskCycle } from '@/lib/desk'
+import { RULES } from '@/bench/engine.js'
+import { appliedCorrection, kindLabel, rowResolution, type DeskCycle } from '@/lib/desk'
 import type { Onboarding } from '@/lib/onboarding'
 import type { JourneyThread } from '@/lib/journey'
 import { journeyShiftPay } from '@/lib/journeyPay'
@@ -34,6 +35,17 @@ const ACTIONS: Record<string, string> = {
   'CA-RT-01': 'Added reporting-time pay',
 }
 export const actionFor = (ruleId: string) => ACTIONS[ruleId] ?? 'Applied the correction'
+
+/** D20: pay-law rules apply whatever the authority says. The engine's own bucket says which rules are law. */
+const LAW_BUCKETS = new Set(['Legal', 'State', 'Local'])
+export const requiredByLaw = (ruleId: string) => LAW_BUCKETS.has(RULES.find((rule) => rule.id === ruleId)?.bucket ?? '')
+// ponytail: place names for the rule-id prefixes the engine uses today; an unknown prefix just omits the place.
+const PLACES: Record<string, string> = { CA: 'California', NY: 'New York', CHI: 'Chicago', OR: 'Oregon', WA: 'Washington', CO: 'Colorado', NJ: 'New Jersey', IL: 'Illinois', TX: 'Texas' }
+/** "California daily overtime": the rule's human label, with its place for state and city rules. */
+export function lawLabel(ruleId: string): string {
+  const place = PLACES[ruleId.split('-')[0]], label = kindLabel(ruleId)
+  return place ? `${place} ${label.charAt(0).toLowerCase()}${label.slice(1)}` : label
+}
 const IMPERATIVE: Record<string, string> = { Paid: 'Pay', Removed: 'Remove', Added: 'Add', Restored: 'Restore', Topped: 'Top', Applied: 'Apply' }
 /** The same fix as something to approve: "Add the missing time entry to pay". */
 export const proposalFor = (ruleId: string) => actionFor(ruleId).replace(/^\w+/, (verb) => IMPERATIVE[verb] ?? verb)

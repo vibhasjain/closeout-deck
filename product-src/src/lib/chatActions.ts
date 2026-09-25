@@ -177,6 +177,12 @@ export function isAction(value: unknown): value is Action {
   }
 }
 
+/** A $0 weekly cap is never stored. With fixing allowed in the same answer it just means no weekly cap was stated; alone it means ask before every fix. */
+export function authorityPatch(patch: Partial<Onboarding['authority']>): Partial<Onboarding['authority']> {
+  if (patch.weeklyCap !== 0) return patch
+  return patch.autoFix ? { ...patch, weeklyCap: null } : { ...patch, autoFix: false, weeklyCap: null }
+}
+
 export function applyAction(action: Action, update: ChatUpdate, navigate: NavigateFunction, params: URLSearchParams, cycleId?: string) {
   switch (action.type) {
     case 'approve':
@@ -213,10 +219,13 @@ export function applyAction(action: Action, update: ChatUpdate, navigate: Naviga
         const current = effectiveAuthority(state)
         const authority = { ...current }
         const suggestion: Partial<Onboarding['authority']> = {}
-        for (const [key, value] of Object.entries(action.patch)) {
+        for (const [key, value] of Object.entries(authorityPatch(action.patch))) {
           const field = key as keyof Onboarding['authority']
           const before = current[field]
-          const increase = typeof value === 'boolean' ? value && !before : typeof value === 'number' ? value > Number(before) : false
+          // No weekly cap is the widest setting: dropping a cap widens, adding one restricts.
+          // An unset or legacy $0 cap reads as no cap, never as $0.
+          const increase = field === 'weeklyCap' ? (!value ? !!before : !!before && Number(value) > Number(before))
+            : typeof value === 'boolean' ? value && !before : typeof value === 'number' ? value > Number(before) : false
           if (increase) Object.assign(suggestion, { [field]: value })
           else Object.assign(authority, { [field]: value })
         }
@@ -278,6 +287,27 @@ export function applyAction(action: Action, update: ChatUpdate, navigate: Naviga
   }
 }
 
+/** What a set_authority patch says, in the Rulebook's words. */
+export function authorityLine(patch: Partial<Onboarding['authority']>): string {
+  const parts = [
+    patch.autoFix === false ? 'ask before every fix' : patch.autoFix ? (patch.limit !== undefined ? `fix up to $${patch.limit.toLocaleString()} per entry without asking` : 'fix without asking')
+      : patch.limit !== undefined ? `$${patch.limit.toLocaleString()} per-entry limit` : '',
+    patch.weeklyCap ? `$${patch.weeklyCap.toLocaleString()} weekly cap` : '',
+    patch.textSupervisors === undefined ? '' : patch.textSupervisors ? 'text site supervisors' : 'ask before texting supervisors',
+    patch.textWorkers === undefined ? '' : patch.textWorkers ? 'text workers' : 'ask before texting workers',
+    patch.briefing ? `${patch.briefing} briefing` : '',
+  ].filter(Boolean).join(' · ')
+  return parts.charAt(0).toUpperCase() + parts.slice(1)
+}
+const widens = (patch: Partial<Onboarding['authority']>) => Object.entries(patch).some(([key, value]) => key !== 'briefing' && (value === true || (typeof value === 'number' && value > 0)))
+
+/** Skipped parts read as one human line. Raw action names never reach the user; notes that are already sentences pass through. */
+export function skippedLine(skipped: readonly string[]): { text: string; retry: boolean } {
+  const human = skipped.filter(item => /^[A-Z]/.test(item) && item.includes(' '))
+  const retry = human.length < skipped.length
+  return { text: [...(retry ? ["I couldn't save part of that."] : []), ...human].join(' '), retry }
+}
+
 export function actionSummary(value: unknown): string | null {
   if (!value || typeof value !== 'object' || !('type' in value)) return null
   const action = value as Record<string, unknown>
@@ -288,9 +318,14 @@ export function actionSummary(value: unknown): string | null {
     case 'set_fact': return `Saved ${String(action.kind)} details: ${String(action.key)}`
     case 'set_profile': return `Payroll profile: ${String(action.field)}`
     case 'set_firm': return 'Updated firm details'
-    case 'add_source': return `Added source: ${String(action.label)}`
-    case 'set_authority': return 'Authority changes reviewed; wider permissions need Rulebook confirmation'
-    case 'remove_source': return `Removed source: ${String(action.label)}`
+    // A source is a plan from setup; loading its time entries happens only through a connection or upload.
+    case 'add_source': return `Planned: ${String(action.label)}${typeof action.how === 'string' && action.how ? ` · ${action.how}` : ''}`
+    case 'set_authority': {
+      const patch = (isRecord(action.patch) ? action.patch : {}) as Partial<Onboarding['authority']>
+      // `consent` marks an explicit answer to the authority goal, applied as said. Without it, wider settings wait in the Rulebook.
+      return action.consent || !widens(patch) ? `Saved: ${authorityLine(patch)}` : `Suggested: ${authorityLine(patch)} · confirm it in the Rulebook`
+    }
+    case 'remove_source': return `Removed plan: ${String(action.label)}`
     case 'remove_rule': return `Removed rule: ${String(action.sentence)}`
     case 'never_contact': return `Never contact: ${String(action.name)}`
     case 'cover_topic': return `Covered: ${String(action.topic)}`

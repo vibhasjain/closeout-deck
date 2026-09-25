@@ -59,7 +59,7 @@ vi.mock('@/lib/chat', async (importOriginal) => ({ ...await importOriginal<typeo
 type ElementProps = {
   children?: ReactNode
   right?: ReactNode
-  className?: string
+  className?: string | ((state: { isActive: boolean }) => string)
   to?: string
   disabled?: boolean
   tabIndex?: number
@@ -180,6 +180,15 @@ describe('revisiting onboarding', () => {
     }
     // Logging out is never locked, even mid-setup.
     expect(button(openAccount(render), 'Log Out')!.props.disabled).toBe(false)
+  })
+
+  it.each([['step=intake', 'Timesheets'], ['cycle=2026-09-20&step=review', 'Payroll'], ['', 'Payroll']])('D19: /payroll?%s highlights exactly one nav item (%s)', (query, current) => {
+    router.pathname = '/payroll'
+    router.params = new URLSearchParams(query)
+    const tree = mount(TopNav)()
+    const className = (props: ElementProps) => (typeof props.className === 'function' ? (props.className as (state: { isActive: boolean }) => string)({ isActive: true }) : props.className ?? '')
+    const active = elements(tree).filter(({ props }) => className(props).split(' ').includes('sidebar-nav-item') && className(props).split(' ').includes('active'))
+    expect(active.map(({ props }) => props['aria-label'])).toEqual([current])
   })
 
   it('keeps navigation available outside setup', () => {

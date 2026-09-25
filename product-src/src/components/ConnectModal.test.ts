@@ -15,7 +15,7 @@ const hooks = vi.hoisted(() => ({
   pending: [] as Array<() => void>,
   cleanups: new Set<() => void>(),
 }))
-const desk = vi.hoisted(() => ({ current: undefined as DeskCycle | undefined }))
+const desk = vi.hoisted(() => ({ cycles: [] as DeskCycle[] }))
 const store = vi.hoisted(() => ({ current: undefined as Onboarding | undefined, update: vi.fn() }))
 const overlay = vi.hoisted(() => ({ close: vi.fn(), toast: vi.fn() }))
 const sample = vi.hoisted(() => ({ connectSource: vi.fn() }))
@@ -54,7 +54,7 @@ vi.mock('@/lib/onboarding', async (importOriginal) => ({
 }))
 vi.mock('@/lib/desk', async (importOriginal) => ({
   ...await importOriginal<typeof import('@/lib/desk')>(),
-  useDesk: () => ({ current: desk.current }),
+  useDesk: () => ({ cycles: desk.cycles, current: desk.cycles[0], byId: (id: string) => desk.cycles.find(cycle => cycle.id === id) }),
 }))
 vi.mock('@/components/shell/Overlay', () => ({ useOverlay: () => overlay }))
 vi.mock('@/lib/data', async (importOriginal) => ({ ...await importOriginal<typeof import('@/lib/data')>(), connectSource: sample.connectSource }))
@@ -76,12 +76,15 @@ function clickSignIn(node: ReactNode): boolean {
   return false
 }
 
-function mount(vendor: Vendor, loadSample = false) {
+// The cycle a connection loads: the closing (needs-review) week, never the one still in progress.
+const closing = () => desk.cycles.find(cycle => cycle.status === 'needs-review')!
+
+function mount(vendor: Vendor, loadSample = false, cycleId?: string) {
   const onDone = vi.fn()
   let tree: ReactNode
   const render = () => {
     hooks.cursor = 0
-    tree = ConnectModal({ vendor, onDone, loadSample })
+    tree = ConnectModal({ vendor, onDone, loadSample, cycleId })
     hooks.pending.splice(0).forEach((effect) => effect())
     return renderToStaticMarkup(tree)
   }
@@ -106,7 +109,7 @@ beforeEach(() => {
   hooks.pending = []
   store.current = { ...DEFAULTS, connections: { 'source:existing': { status: 'connected', method: 'api' } } }
   store.update.mockImplementation((patch: Partial<Onboarding>) => { store.current = { ...store.current!, ...patch } })
-  desk.current = buildCycles(DEFAULTS, now)[0]
+  desk.cycles = buildCycles(DEFAULTS, now)
 })
 afterEach(() => {
   unmount()
@@ -115,17 +118,19 @@ afterEach(() => {
 
 describe('simulated browser connection', () => {
   it('waits for the real Sample pipeline before showing Connected in the journey', async () => {
-    let finish!: () => void
-    sample.connectSource.mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve }))
+    let finish!: (result: { files: { entryCount: number }[]; cycles: string[] }) => void
+    sample.connectSource.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
     const modal = mount({ ...ready, set: 2 }, true)
     expect(modal.render()).toContain('>Sample</span>')
     modal.signIn()
     expect(modal.advance(3200)).toContain('Syncing')
     expect(store.update).not.toHaveBeenCalled()
     expect(sample.connectSource).toHaveBeenCalledWith({ set: 2, system: ready.name, site: ready.sites[0] })
-    finish()
+    finish({ files: [{ entryCount: 3000 }, { entryCount: 189 }], cycles: [closing().id] })
     await Promise.resolve()
-    expect(modal.render()).toContain('Connected')
+    const connected = textContent(modal.render())
+    expect(connected).toContain('Connected')
+    expect(connected).toContain('3,189 time entries pulled')
     expect(store.current!.connections[vendorKey(ready)]?.sample).toBe(true)
     modal.advance(700)
     expect(overlay.toast).toHaveBeenCalledWith(`${ready.name} connected · Sample`)
@@ -165,7 +170,7 @@ describe('simulated browser connection', () => {
     { ...ready, status: 'available' },
     { ...ready, status: 'available', sites: [ready.sites[0], 'Mercy General'] },
   ])('reveals real counts for $sites and saves the namespaced browser connection', (vendor) => {
-    const cycle = desk.current!
+    const cycle = closing()
     const count = cycle.run.shifts.filter(({ shift }) => vendor.sites.includes(shift.fac.name)).length
     expect(count).toBeGreaterThan(0)
     const modal = mount(vendor)
@@ -179,10 +184,12 @@ describe('simulated browser connection', () => {
     expect(html).toContain('Granting read-only access to time entries')
     expect(html).not.toContain('Discovering worksites')
     html = modal.advance(800)
-    expect(textContent(html)).toContain(`Discovering worksites · ${vendor.sites.length} found`)
-    expect(html).not.toContain('Pulling punches')
+    expect(textContent(html)).toContain('Discovering worksites')
+    expect(textContent(html)).not.toMatch(/Discovering worksites ·/)
+    expect(html).not.toContain('Pulling time entries')
     html = modal.advance(800)
-    expect(textContent(html)).toContain(`Pulling punches for ${cycle.label} · ${count} records`)
+    expect(textContent(html)).toContain(`Pulling time entries for ${cycle.label}`)
+    expect(textContent(html)).not.toMatch(/records|punches/)
     expect(html.match(/class="spinner"/g)).toHaveLength(1)
     expect(html.match(/class="lucide lucide-check"/g)).toHaveLength(3)
     expect(store.update).not.toHaveBeenCalled()
@@ -190,7 +197,7 @@ describe('simulated browser connection', () => {
     store.current = { ...store.current!, connections: { ...store.current!.connections, 'dest:other': { status: 'connected' } } }
     modal.render()
     html = modal.advance(800)
-    expect(textContent(html)).toContain(`Connected · ${vendor.sites.length} ${vendor.sites.length === 1 ? 'site' : 'sites'} · ${count} punches pulled`)
+    expect(textContent(html)).toContain(`Connected · ${vendor.sites.length} ${vendor.sites.length === 1 ? 'site' : 'sites'} · ${count.toLocaleString()} time entries pulled`)
     expect(store.update).toHaveBeenCalledTimes(1)
     expect(store.current!.connections[vendorKey(vendor)]).toEqual({
       status: 'connected', method: 'browser', lastSync: new Date(now.valueOf() + 3200).toISOString(),
@@ -210,14 +217,32 @@ describe('simulated browser connection', () => {
 
   it('counts every worksite and record when a vendor has no assigned sites (the sample brings its own clients)', () => {
     const modal = mount(available)
-    const sites = new Set(desk.current!.week.map(shift => shift.fac.name)).size
-    const records = desk.current!.run.shifts.length
+    const sites = new Set(closing().week.map(shift => shift.fac.name)).size
+    const records = closing().run.shifts.length
     modal.render()
     modal.signIn()
-    expect(textContent(modal.advance(1600))).toContain(`Discovering worksites · ${sites} found`)
-    expect(textContent(modal.advance(800))).toContain(`Pulling punches for ${desk.current!.label} · ${records} records`)
-    expect(textContent(modal.advance(800))).toContain(`Connected · ${sites} sites · ${records} punches pulled`)
+    expect(textContent(modal.advance(1600))).toContain('Discovering worksites')
+    expect(textContent(modal.advance(800))).toContain(`Pulling time entries for ${closing().label}`)
+    expect(textContent(modal.advance(800))).toContain(`Connected · ${sites} sites · ${records.toLocaleString()} time entries pulled`)
     expect(store.current!.connections[vendorKey(available)]?.method).toBe('browser')
+  })
+
+  it('names the week the connection loads (D11): the closing cycle by default, or the card\'s own cycle', () => {
+    const [inProgress, needsReview] = desk.cycles
+    expect(inProgress.status).toBe('in-progress')
+    let modal = mount(ready)
+    modal.render()
+    modal.signIn()
+    let text = textContent(modal.advance(2400))
+    expect(text).toContain(`Pulling time entries for ${needsReview.label}`)
+    expect(text).not.toContain(inProgress.label)
+    unmount()
+    hooks.slots = []
+    modal = mount(ready, false, inProgress.id)
+    modal.render()
+    modal.signIn()
+    text = textContent(modal.advance(2400))
+    expect(text).toContain(`Pulling time entries for ${inProgress.label}`)
   })
 
   it('cancels connection writes and completion callbacks when unmounted during sync', () => {

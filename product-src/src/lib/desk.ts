@@ -440,15 +440,19 @@ export function topstats(c: DeskCycle, res: Onboarding['resolutions'] = {}): str
   return `${c.label} · ${flags} flagged · ${held} held · +${money(under)} / −${money(over)}`
 }
 
+/** The synthetic generator is an explicit, signed-out demo mode; an account with a session or data always reads the server. */
 export function activeCycles(cal: Onboarding): DeskCycle[] {
+  return synthetic(cal) ? buildCycles(cal) : serverCycles(cal)
+}
+function synthetic(cal: Onboarding): boolean {
   const data = getDataSnapshot()
   const account = viewerSession()?.email ?? 'development'
-  return cal.dataSource === 'server' || (data.owner === account && (data.payloads.length > 0 || data.sources.length > 0 || data.files.length > 0)) ? serverCycles(cal) : buildCycles(cal)
+  return cal.dataSource === 'synthetic' && !viewerSession() && !(data.owner === account && (data.payloads.length > 0 || data.sources.length > 0 || data.files.length > 0))
 }
 
 export function useDesk(): { cycles: DeskCycle[]; current: DeskCycle; loading?: boolean; error?: string | null; byId(id: string): DeskCycle | undefined } {
   const [cal] = useOnboarding()
-  const data = useData(cal.dataSource === 'server' || !!viewerSession())
+  const data = useData(cal.dataSource !== 'synthetic' || !!viewerSession())
   const cycles = activeCycles(cal)
   return useMemo(() => ({ cycles, current: cycles[0], loading: data.loading, error: data.error, byId: (id: string) => cycles.find((c) => c.id === id) }), [cycles, data.loading, data.error])
 }

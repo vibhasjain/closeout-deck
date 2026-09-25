@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { money } from '@/bench/engine.js'
 import { ClusterList } from '@/components/ClusterList'
 import { useDesk } from '@/lib/desk'
+import { pendingAdjustments } from '@/lib/data'
 import { payTotals } from '@/lib/payroll'
 
 /** The shared cycle rows live in navigation so they remain available on every page. */
@@ -53,7 +54,9 @@ export function PayRuns({ onNavigate }: { onNavigate?: () => void } = {}) {
         return {
           id: item.id, label: item.label, count: item.week.length, status: item.sample ? `${item.statusTag} · Sample` : item.week.some(shift => shift.sample) ? `${item.statusTag} · Includes Sample` : item.statusTag,
           tone: item.statusTag === 'Pending' ? 'amber' as const : undefined,
-          sentence: <span role="img" aria-label={`${count} payouts, ${total}`}><Banknote aria-hidden="true" />{count} · {total}</span>,
+          // With time entries the payout total already includes adjustments; before them, say what is pending (N8).
+          sentence: item.server && !item.week.length && (pendingAdjustments(item.adjustments) ?? (item.nextStep?.kind === 'get_timesheets' ? 'No time entries yet' : null))
+            || <span role="img" aria-label={`${count} payouts, ${total}`}><Banknote aria-hidden="true" />{count} · {total}</span>,
         }
       })} />
     </div>

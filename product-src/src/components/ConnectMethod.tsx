@@ -12,7 +12,8 @@ import { METHODS, type Method } from '@/lib/connectMethods'
 import { connectSource } from '@/lib/data'
 
 /** Pick how the agent reaches a system: browser sign-in, API key, or forwarded email. */
-export function ConnectMethod({ vendor, inline = false }: { vendor: Source; inline?: boolean }): JSX.Element {
+/** `onConnect`: called as the user starts a connection, so the host card can keep this set while the data refreshes. `setPicker`: false when the host card already chose the set. */
+export function ConnectMethod({ vendor, inline = false, cycleId, onConnect, setPicker = true }: { vendor: Source; inline?: boolean; cycleId?: string; onConnect?(): void; setPicker?: boolean }): JSX.Element {
   const [state, update] = useOnboarding()
   const { close, toast, openModal } = useOverlay()
   const email = useCurrentEmail()
@@ -25,9 +26,10 @@ export function ConnectMethod({ vendor, inline = false }: { vendor: Source; inli
   const [error, setError] = useState('')
   const save = async (method: Method) => {
     if (busy) return
+    onConnect?.()
     if (inline && method === 'browser') {
       setPicked(method)
-      openModal(<ConnectModal vendor={{ ...vendor, set: vendor.set === 3 || vendor.builtin ? 3 : set }} loadSample onDone={() => setDone(true)} />)
+      openModal(<ConnectModal vendor={{ ...vendor, set: vendor.set === 3 || vendor.builtin ? 3 : set }} cycleId={cycleId} loadSample onDone={() => setDone(true)} />)
       return
     }
     setPicked(method); setBusy(true); setError('')
@@ -59,7 +61,7 @@ export function ConnectMethod({ vendor, inline = false }: { vendor: Source; inli
     </div> : <div className="connect-method-options">
       <p>How do you want to connect?</p>
       <p className="r-note">Simulated connector · loads Sample time entries</p>
-      {!vendor.builtin && vendor.set !== 3 && <div className="chips" role="group" aria-label="Time entry source">
+      {setPicker && !vendor.builtin && vendor.set !== 3 && <div className="chips" role="group" aria-label="Time entry source">
         <Chip disabled={busy} active={set === 1} aria-pressed={set === 1} onClick={() => setSet(1)}>Worker-reported</Chip>
         <Chip disabled={busy} active={set === 2} aria-pressed={set === 2} onClick={() => setSet(2)}>Client-approved</Chip>
       </div>}

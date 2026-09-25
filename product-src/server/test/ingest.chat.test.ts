@@ -122,7 +122,9 @@ test('invalid set_fact is skipped with one app note while valid facts apply with
   assert.equal(logs.mock.callCount(), 1); assert.equal(String(logs.mock.calls[0].arguments).includes('secret site'), false)
   assert.equal(events.at(-1).done, true)
   assert.ok(!events.at(-1).final.includes('secret site'))
-  assert.match(events.at(-1).final, /Skipped set_fact: invalid fields/)
+  // The skip reaches the client as a bare action its validation rejects, shown as a human note, never a raw action name.
+  assert.ok(events.at(-1).final.includes('```action\n{"type":"set_fact"}\n```'))
+  assert.doesNotMatch(events.at(-1).final, /Skipped set_fact/)
   assert.equal(turns, 1)
 })
 

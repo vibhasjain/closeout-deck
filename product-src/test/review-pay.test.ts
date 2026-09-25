@@ -166,11 +166,13 @@ describe('outbound evidence for Asked', () => {
     messages: [{ id: 'message-1', threadId: 'thread-1', dir: 'out', text: 'Confirm the clock-out.', status: 'not_sent_demo', at: '' }] })
   const waiting = (threads: JourneyThread[] = [], neverContact: string[] = []) => carouselFindings(source.payload!, { ...DEFAULTS, neverContact }, threads).find(item => item.group.ruleId === 'TS-COMPLETE')!
 
-  it('does not invent outreach to a listed supervisor and offers the gaps form', () => {
+  it('does not invent outreach to a listed supervisor and offers a real way to ask (N6: not an empty gaps form)', () => {
     expect(waiting().asked).toBeUndefined()
     const html = renderToStaticMarkup(createElement(FindingsCard, { cycleId: source.payload!.cycle.id }))
     expect(html).toContain('Not asked yet')
-    expect(html).toContain('Review gaps')
+    // Missing clock-outs are not intake gaps, so the ask starts from the entry's own conversation.
+    expect(html).toContain('Ask from an entry')
+    expect(html).not.toContain('Review gaps')
     expect(html).not.toContain('Asked Dana')
   })
   it('requires non-draft outbound correspondence in this cycle and excludes never-contact people and sites', () => {

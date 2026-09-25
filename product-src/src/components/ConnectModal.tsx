@@ -8,13 +8,16 @@ import { Btn, Spinner, Tag } from '@/components/ui'
 import { VendorTile, vendorKey } from '@/components/SourcesTable'
 import { useOverlay } from '@/components/shell/Overlay'
 
-export function ConnectModal({ vendor, onDone, loadSample = false }: { vendor: Source | Destination; onDone(): void; loadSample?: boolean }): JSX.Element {
+/** `cycleId`: the cycle this connection loads; by default the closing cycle, the one the server's sample connection fills. */
+export function ConnectModal({ vendor, onDone, loadSample = false, cycleId }: { vendor: Source | Destination; onDone(): void; loadSample?: boolean; cycleId?: string }): JSX.Element {
   const [state, update] = useOnboarding()
-  const { current } = useDesk()
+  const { cycles, current, byId } = useDesk()
+  const cycle = (cycleId ? byId(cycleId) : undefined) ?? cycles.find((item) => item.status === 'needs-review') ?? current
   const { close, toast } = useOverlay()
   const [phase, setPhase] = useState<'login' | 'syncing' | 'done'>('login')
   const [step, setStep] = useState(0)
   const [error, setError] = useState('')
+  const [loaded, setLoaded] = useState<number | null>(null)
   const closeButton = useRef<HTMLButtonElement>(null)
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
   const mounted = useRef(true)
@@ -26,18 +29,19 @@ export function ConnectModal({ vendor, onDone, loadSample = false }: { vendor: S
   }, [])
   const host = vendor.name.normalize('NFKD').toLowerCase().replace(/[^a-z0-9]/g, '')
   const destination = 'format' in vendor
-  const sites = destination || !vendor.sites.length ? new Set(current.week.map((shift) => shift.fac.name)).size : vendor.sites.length
-  const approved = current.run.shifts.filter((row) => !row.held)
+  const sites = destination || !vendor.sites.length ? new Set(cycle.week.map((shift) => shift.fac.name)).size : vendor.sites.length
+  const approved = cycle.run.shifts.filter((row) => !row.held)
   const workers = new Set(approved.map(({ shift }) => shift.worker)).size
-  // Count the current engine's records even before the vendor is connected.
-  const punches = current.run.shifts.filter(({ shift }) => !vendor.sites.length || vendor.sites.includes(shift.fac.name)).length
+  // A sample load reports what it actually loaded; a demo connection reports the entries already in this cycle.
+  const entries = loaded ?? cycle.run.shifts.filter(({ shift }) => !vendor.sites.length || vendor.sites.includes(shift.fac.name)).length
+  // Source steps carry no counts: they run before the load, when the cycle may still be empty.
   const steps = [
     <>Signing in as <span className="mono">payroll.ops@demo.hypertrack.com</span></>,
     destination ? <>Checking destination access</> : <>Granting read-only access to time entries</>,
-    destination ? <>Matching cycle worksites · <span className="mono">{sites}</span> sites</> : <>Discovering worksites · <span className="mono">{sites}</span> found</>,
+    destination ? <>Matching cycle worksites · <span className="mono">{sites}</span> sites</> : <>Discovering worksites</>,
     destination
-      ? <>Previewing <span className="mono">{current.label}</span> · <span className="mono">{approved.length}</span> approved payments · <span className="mono">{workers}</span> workers</>
-      : <>Pulling punches for <span className="mono">{current.label}</span> · <span className="mono">{punches}</span> records</>,
+      ? <>Previewing <span className="mono">{cycle.label}</span> · <span className="mono">{approved.length}</span> approved payments · <span className="mono">{workers}</span> workers</>
+      : <>Pulling time entries for <span className="mono">{cycle.label}</span></>,
   ]
 
   function connect() {
@@ -51,7 +55,10 @@ export function ConnectModal({ vendor, onDone, loadSample = false }: { vendor: S
     }
     timers.current.push(setTimeout(async () => {
       if (loadSample && !destination) {
-        try { await connectSource({ set: vendor.set ?? 2, system: vendor.name, site: vendor.sites[0] }) }
+        try {
+          const result = await connectSource({ set: vendor.set ?? 2, system: vendor.name, site: vendor.sites[0] })
+          if (mounted.current) setLoaded((result?.files ?? []).reduce((total, file) => total + (file.entryCount ?? 0), 0))
+        }
         catch (cause) { if (mounted.current) { setError(cause instanceof Error ? cause.message : 'The sample connection could not be loaded. Try again.'); setPhase('login'); timers.current = [] } return }
       }
       if (!mounted.current) return
@@ -107,7 +114,7 @@ export function ConnectModal({ vendor, onDone, loadSample = false }: { vendor: S
             {phase === 'done' && <>
               <p className="vbrowser-result" role="status">Connected · <span className="mono">{sites}</span> {sites === 1 ? 'site' : 'sites'} · {destination
                 ? <><span className="mono">{approved.length}</span> approved payments previewed</>
-                : <><span className="mono">{punches}</span> punches pulled</>}</p>
+                : <><span className="mono">{entries.toLocaleString()}</span> time entries pulled</>}</p>
               {destination && <p className="r-note">Review and send pay runs from Payroll</p>}
             </>}
           </div>}

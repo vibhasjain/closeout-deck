@@ -15,7 +15,8 @@ export function split(found: Finding[], { autoFix, limit, weeklyCap }: Onboardin
   }))
   let total = 0
   for (const finding of found.filter((f) => !why.get(f)).sort((a, b) => a.amount - b.amount)) {
-    if (total + finding.amount > weeklyCap) why.set(finding, `Over the $${weeklyCap.toLocaleString()} weekly cap`)
+    // An unset cap (null, missing, or a legacy $0) is no cap: it never blocks a fix.
+    if (weeklyCap && total + finding.amount > weeklyCap) why.set(finding, `Over the $${weeklyCap.toLocaleString()} weekly cap`)
     else total += finding.amount
   }
   return { fixed: found.filter((f) => !why.get(f)), stopped: found.filter((f) => why.get(f)).map((finding) => ({ finding, why: why.get(finding)! })) }

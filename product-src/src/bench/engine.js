@@ -218,7 +218,7 @@ const RULES = [
   // sample's reconciliation (src/lib/sample.ts), never on a single week of punches here.
   { id: 'SRC-MISS-01', bucket: 'Common sense', kind: 'det', sentence: 'Every time entry in a client clock must also be in the ATS',
     source: { doc: 'Ops heuristic', cite: 'A missing entry is an unpaid worker' }, scope: () => false, params: {}, evaluate: () => [] },
-  { id: 'SRC-WEEK-01', bucket: 'Common sense', kind: 'det', sentence: 'An overnight time entry belongs to the week it started in',
+  { id: 'SRC-WEEK-01', bucket: 'Legal', kind: 'det', sentence: 'An overnight time entry belongs to the week it started in',
     source: { doc: 'FLSA · 29 CFR 778.104', cite: 'Each workweek stands alone' }, scope: () => false, params: {}, evaluate: () => [] },
   { id: 'CON-MARGIN-01', bucket: 'Contract', kind: 'det', sentence: 'A bill rate must cover the pay rate plus burden',
     source: { doc: 'Ops heuristic', cite: 'Bill below loaded pay loses money every hour' }, scope: () => false, params: {}, evaluate: () => [] },

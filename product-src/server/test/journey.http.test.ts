@@ -126,6 +126,20 @@ test('closeout journey: next step, decisions, asks, send once, dispute adjustmen
     assert.ok(resolved.body.dispute.adjustment.amount > 0)
     assert.equal(resolved.body.thread.status, 'resolved')
     assert.equal((await call(`/data/disputes/${dispute.id}/resolve`, post({ decision: 'reject', note: 'Again' }))).status, 409)
+    // N11: the evidence names the file and row, never internal file or entry ids.
+    assert.doesNotMatch(thread.messages[1].text, /\bf_[a-z0-9]+|\be_[a-z0-9]+|entries /)
+    assert.match(thread.messages[1].text, /\.csv row \d+/)
+    // N11: writing to the worker after the decision keeps the dispute resolved.
+    const after = await call(`/data/threads/${thread.id}/messages`, post({ dir: 'out', text: 'Your adjustment is on the next Payroll.' }))
+    assert.deepEqual([after.status, after.body.thread.status], [201, 'resolved'])
+    // N8: the adjustment lands on a cycle with no time entries yet; its journey state is still readable.
+    const pending = await call(`/data/cycles/${next}`)
+    assert.equal(pending.status, 200)
+    assert.deepEqual([pending.body.runAt, pending.body.week, pending.body.nextStep.kind], [null, [], 'get_timesheets'])
+    assert.deepEqual(pending.body.adjustments.map((a: { id: string; amount: number }) => [a.id, a.amount]), [[dispute.id, resolved.body.dispute.adjustment.amount]])
+    const listed = (await call('/data/cycles')).body.cycles.find((row: { id: string }) => row.id === next)
+    assert.deepEqual([listed.runAt, listed.adjustments], [null, { count: 1, amount: resolved.body.dispute.adjustment.amount }])
+    assert.equal((await call(`/data/cycles/${addDays(id, -7)}`)).status, 404, 'a cycle with no data and no journey state is still no data yet')
     assert.equal((await fetch(url + '/files', { ...bullhorn([['Test Worker', addDays(id, 2)]]), headers: { 'Content-Type': 'text/csv', 'X-File-Name': 'bullhorn_next.csv', 'X-Set': '1' } })).status, 201)
     const nextCycle = await call(`/data/cycles/${next}`)
     assert.deepEqual(nextCycle.body.adjustments, [{ id: dispute.id, cycleId: id, worker: dispute.worker, hours: 0.25, amount: resolved.body.dispute.adjustment.amount }])

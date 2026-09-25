@@ -1,7 +1,7 @@
 import { createElement as h } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { OverlayProvider } from '@/components/shell/Overlay'
 import { AuxProvider } from '@/components/shell/Aux'
 import { PayRuns } from '@/components/shell/PayRuns'
@@ -16,7 +16,7 @@ import { buildCycles, kinds, cycleStats } from '@/lib/desk'
 import { resolutionGroups } from '@/lib/resolution'
 import * as desk from '@/lib/desk'
 import * as onboarding from '@/lib/onboarding'
-import { DEFAULTS } from '@/lib/onboarding'
+import { DEFAULTS as ACCOUNT_DEFAULTS } from '@/lib/onboarding'
 import { defaultThreadParty, recordThreadAction } from '@/lib/threads'
 
 const today = new Date(2026, 8, 22, 12)
@@ -72,6 +72,12 @@ const metrics = (html: string) => [...summary(html).matchAll(/<(button|div)\b([^
 }))
 const selectedMetrics = (html: string) => metrics(html).filter((metric) => metric.selected).map((metric) => metric.label)
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks() })
+// These layouts run on the signed-out synthetic demo desk, which a store opts into explicitly.
+const DEFAULTS = { ...ACCOUNT_DEFAULTS, dataSource: 'synthetic' as const }
+beforeEach(() => {
+  const original = onboarding.useOnboarding
+  vi.spyOn(onboarding, 'useOnboarding').mockImplementation(() => { const [state, update] = original(); return [{ ...state, dataSource: 'synthetic' }, update] })
+})
 
 describe('Payroll review composition', () => {
   it('keeps only one black approval action in the Payroll review pane', () => {
@@ -155,7 +161,9 @@ describe('Payroll review composition', () => {
     expect(html).toContain('Send to Payroll')
     const nextStep = html.match(/<div class="journey-next-step"[\s\S]*?<\/button><\/div>/)![0]
     expect(nextStep.match(/<button\b/g)).toHaveLength(1)
-    expect(nextStep).not.toContain('primary')
+    // H3: the pane's one black button is the next step's.
+    expect(nextStep).toContain('journey-next-button primary')
+    expect([...html.matchAll(/<button\b[^>]*class="[^"]*\bprimary\b[^"]*"/g)]).toHaveLength(1)
     expect(html).not.toMatch(/Review \d+ discrepancies/)
     expect(html).not.toContain('aria-label="Search"')
     expect(html).not.toContain('aria-label="Search time entries"')
