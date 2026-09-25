@@ -129,3 +129,8 @@
 
 ## 2026-09-25 — Shared main: Ashish and Agent Keyboard push concurrently
 - **Rule:** in closeout-deck, never `git add -A`. Commit explicit pathspecs, `git fetch && git pull --rebase` right before every push, and never touch `answers/` unless asked (Ashish owns it right now).
+
+## 2026-09-25 — Server deploy must succeed before the client that needs it ships
+- **What happened:** I pushed the P6-fix commit even though `fly deploy` exited 1. The new server imported a shared client file (`src/lib/inbox.ts`) that the Docker image never copied, so production crash-looped on boot, and the already-deployed client called routes that weren't there. About 10 minutes of downtime.
+- **Rule:** deploy the Fly server first. If `fly deploy` isn't exit 0 with `/health` OK, don't push. Check the exit code in the same command that pushes.
+- **Rule:** every `../../src/…` import in the server must be COPYed in the Dockerfile and whitelisted in `.dockerignore`. `server/test/docker-shared.test.ts` now enforces it.

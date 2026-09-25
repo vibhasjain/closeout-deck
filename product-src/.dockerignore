@@ -11,6 +11,7 @@ src/bench/*
 src/lib/*
 !src/lib/cycles.ts
 !src/lib/sample.ts
+!src/lib/inbox.ts
 server/node_modules
 server/.env*
 server/.data
