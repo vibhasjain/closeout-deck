@@ -5,17 +5,11 @@
 [build.environment]
   NODE_VERSION = "20"
 
-[[edge_functions]]
-  function = "chat"
-  path = "/api/chat"
-
-[[edge_functions]]
-  function = "product-gate"
-  path = "/product"
-
-[[edge_functions]]
-  function = "product-gate"
-  path = "/product/*"
+[[redirects]]
+  from = "/api/*"
+  to = "https://closeout-agent.fly.dev/:splat"
+  status = 200
+  force = true
 
 # Retired pages (Sep 25 2026 cleanup). The Payroll desk demos point at the product.
 [[redirects]]

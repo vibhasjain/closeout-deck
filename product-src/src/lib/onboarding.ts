@@ -85,7 +85,7 @@ export interface Onboarding {
   threads: Record<string, Note[]>
   /** The left pane transcript, capped at 200 lines. */
   chat: ChatMessage[]
-  /** The `claude --resume` id, so the CLI keeps its context between messages. */
+  /** Last server-reported conversation id; continuity is managed by the server. */
   chatSessionId: string | null
   connections: Record<string, Connection>
   approvedCycles: string[]

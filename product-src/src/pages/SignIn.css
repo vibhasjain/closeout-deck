@@ -1,0 +1,19 @@
+.sign-in {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 32px 20px;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  text-align: center;
+}
+
+.sign-in-content { width: 100%; max-width: 360px; }
+.sign-in-logo { display: block; width: auto; height: 40px; margin: 0 auto 28px; }
+.sign-in h1 { margin: 0 0 32px; font-size: 26px; font-weight: 600; line-height: 1.25; letter-spacing: -.035em; }
+.sign-in-google { display: flex; justify-content: center; min-height: 40px; }
+.sign-in-error { margin-top: 24px; font-size: 14px; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+.sign-in-error p { margin: 0; }
+.sign-in-demo { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; margin-top: 16px; padding: 0 20px; border: 1px solid hsl(var(--border)); border-radius: 4px; color: hsl(var(--foreground)); font-weight: 500; text-decoration: none; }
+.sign-in-demo:hover { background: hsl(var(--muted)); }
+.sign-in-demo:focus-visible { outline: 2px solid hsl(var(--foreground)); outline-offset: 3px; }

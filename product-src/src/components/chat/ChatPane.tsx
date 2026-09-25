@@ -6,7 +6,7 @@ import type { NavigateFunction } from 'react-router-dom'
 import { Loader2, Send } from 'lucide-react'
 import { Chip } from '@/components/ui'
 import { Message } from '@/components/chat/Message'
-import { parseActions, stream, systemPrompt } from '@/lib/chat'
+import { parseActions, stream } from '@/lib/chat'
 import type { Action, ChatContext } from '@/lib/chat'
 import { agentHref } from '@/lib/navigation'
 import { cycleNamed, saveCycle, slugId } from '@/lib/cohorts'
@@ -242,9 +242,6 @@ export function ChatPane({ scope: explicitScope }: { scope?: string } = {}) {
     const message = text.trim()
     if (!message || busy.current) return
     const requestId = ++request.current
-    const sessionId = latest.current.chatSessionId
-    const history: { role: 'user' | 'assistant'; text: string }[] = latest.current.chat.slice(-20)
-      .filter((m) => m.text.trim()).map((m) => ({ role: m.role === 'user' ? 'user' : 'assistant', text: m.text }))
     const user: ChatMessage = { id: crypto.randomUUID(), role: 'user', text: message, at: Date.now(), scope }
     busy.current = true
     update((current) => ({ chat: [...current.chat, user].slice(-200) }))
@@ -260,7 +257,7 @@ export function ChatPane({ scope: explicitScope }: { scope?: string } = {}) {
     let textSoFar = ''
     let completed = false
     try {
-      for await (const event of stream(message, systemPrompt(context), sessionId, history)) {
+      for await (const event of stream(message, context)) {
         if (request.current !== requestId) return
         if (event.text) {
           textSoFar += event.text

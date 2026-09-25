@@ -5,14 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:server": "npm --prefix server run dev",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@aws-amplify/auth": "^5.3.4",
-    "@aws-amplify/core": "^5.1.13",
     "@tailwindcss/vite": "^4.2.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
