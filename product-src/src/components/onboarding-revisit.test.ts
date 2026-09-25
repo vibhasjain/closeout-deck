@@ -9,6 +9,7 @@ import { sourcesLine, STAGES, TURNS } from '@/lib/agentOnboarding'
 import { buildCycles } from '@/lib/desk'
 import { HANDOFF_LINE, intakeHref } from '@/lib/intake'
 import { DEFAULTS, getOnboarding, updateOnboarding, type Onboarding } from '@/lib/onboarding'
+import { stream } from '@/lib/chat'
 
 // Node has no DOM renderer. Exercise the components' real event handlers and
 // onboarding store; effects that need layout, focus, or animation stay outside this suite.
@@ -54,6 +55,7 @@ vi.mock('@/lib/onboarding', async (importOriginal) => {
 vi.mock('@/lib/useCurrentEmail', () => ({ useCurrentEmail: () => null }))
 vi.mock('@/components/shell/Overlay', () => ({ useOverlay: () => ({ openModal: vi.fn(), close: vi.fn(), toast: vi.fn() }) }))
 vi.mock('@/components/chat/ChatPane', () => ({ useChatContext: () => ({}), useSetChatContext: () => {} }))
+vi.mock('@/lib/chat', async (importOriginal) => ({ ...await importOriginal<typeof import('@/lib/chat')>(), stream: vi.fn() }))
 
 type ElementProps = {
   children?: ReactNode
@@ -109,6 +111,23 @@ beforeEach(() => {
   store.update.mockImplementation((patch: Partial<Onboarding>) => updateOnboarding(patch))
 })
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals() })
+
+describe('setup agent replies', () => {
+  it('saves and parses the final reply after intermediate text', async () => {
+    vi.mocked(stream).mockImplementation(async function* () {
+      yield { text: 'Checking this for you.' }
+      yield { done: true, final: 'Here is the final answer.\n```action\n{"type":"note","text":"Setup remains read-only"}\n```' }
+    })
+    const render = mount(Agent)
+    const input = elements(render()).find(({ props }) => props.className === 'convo-input') as ReactElement<{ onChange(event: { target: { value: string } }): void }>
+    input.props.onChange({ target: { value: 'How does this work?' } })
+    elements(render()).find(({ props }) => props.className === 'convo-composer')!.props.onSubmit!({ preventDefault() {} })
+    await vi.waitFor(() => expect(label(render())).toContain('Here is the final answer.'))
+    expect(label(render())).not.toContain('Checking this for you.')
+    expect(label(render())).not.toContain('```action')
+    expect(getOnboarding().chat).toEqual([])
+  })
+})
 
 describe('skipping onboarding', () => {
   it.each(Array.from({ length: TURNS }, (_, index) => index + 1))('completes setup from step %i and preserves saved answers', (step) => {

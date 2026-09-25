@@ -5,11 +5,10 @@
 [build.environment]
   NODE_VERSION = "20"
 
-[[redirects]]
-  from = "/api/*"
-  to = "https://closeout-agent.fly.dev/:splat"
-  status = 200
-  force = true
+[[headers]]
+  for = "/product/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
 
 # Retired pages (Sep 25 2026 cleanup). The Payroll desk demos point at the product.
 [[redirects]]

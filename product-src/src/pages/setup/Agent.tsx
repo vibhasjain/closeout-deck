@@ -235,7 +235,12 @@ export function Agent() {
       for await (const event of stream(question, context)) {
         if (event.error) throw new Error(event.error)
         if (event.text) { text += event.text; edit({ reply: parseActions(text).text }) }
-        if (event.done) { session.current = event.sessionId ?? session.current; break }
+        if (event.done) {
+          text = event.final ?? text
+          edit({ reply: parseActions(text).text })
+          session.current = event.sessionId ?? session.current
+          break
+        }
       }
       if (!text.trim()) throw new Error('empty')
     } catch {

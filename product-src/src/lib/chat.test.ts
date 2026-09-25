@@ -30,7 +30,7 @@ describe('chat transport', () => {
     const response = new Response(new ReadableStream({
       start(controller) {
         controller.enqueue(encoder.encode('data: {"text":"Hello'))
-        controller.enqueue(encoder.encode(' there"}\n\ndata: {"done":true,"sessionId":"server-session"}\n\n'))
+        controller.enqueue(encoder.encode(' there"}\n\n: ka\n\ndata: {"done":true,"sessionId":"server-session","final":"Final answer"}\n\n'))
         controller.close()
       },
     }))
@@ -42,8 +42,9 @@ describe('chat transport', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer closeout-token' },
       body: JSON.stringify({ mode: 'chat', message: 'Hi', context }),
+      signal: undefined,
     })
-    expect(events).toEqual([{ text: 'Hello there' }, { done: true, sessionId: 'server-session' }])
+    expect(events).toEqual([{ text: 'Hello there' }, { done: true, sessionId: 'server-session', final: 'Final answer' }])
   })
 
   it('sends the requested mode without a bearer token when development has no session', async () => {
@@ -55,8 +56,22 @@ describe('chat transport', () => {
     expect(fetch).toHaveBeenCalledWith('/api/chat', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mode: 'scribe', message: 'Hi', context }),
+      signal: undefined,
     })
     expect(events).toEqual([{ done: true, error: 'Chat is unavailable right now' }])
+  })
+
+  it('passes the abort signal to fetch and propagates cancellation', async () => {
+    vi.stubGlobal('localStorage', { getItem: () => null })
+    const controller = new AbortController()
+    const fetch = vi.fn((_url: string, options: RequestInit) => new Promise<Response>((_resolve, reject) => {
+      options.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })
+    }))
+    vi.stubGlobal('fetch', fetch)
+    const pending = stream('Hi', context, 'chat', controller.signal).next()
+    expect(fetch.mock.calls[0][1].signal).toBe(controller.signal)
+    controller.abort()
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
   })
 
   it('clears the Closeout session and reloads on an unauthorized response', async () => {

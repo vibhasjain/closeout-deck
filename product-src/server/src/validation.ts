@@ -49,12 +49,12 @@ export function validateChatBody(body: unknown): ChatBody {
 }
 
 export interface StateBody {
-  doc: unknown
+  doc: Record<string, unknown>
   base_updated_at: string | null
 }
 
 export function validateStateBody(body: unknown): StateBody {
-  if (!isPlainObject(body) || !Object.hasOwn(body, 'doc')
+  if (!isPlainObject(body) || !isPlainObject(body.doc)
     || (body.base_updated_at !== null && typeof body.base_updated_at !== 'string')
     || Buffer.byteLength(jsonString(body.doc), 'utf8') > MAX_DOC_BYTES) {
     throw new ValidationError()

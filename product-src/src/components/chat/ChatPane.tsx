@@ -189,6 +189,7 @@ export function ChatPane({ scope: explicitScope }: { scope?: string } = {}) {
   const [requestScope, setRequestScope] = useState<string | undefined>()
   const latest = useRef(state)
   const request = useRef(0)
+  const activeRequest = useRef<AbortController | null>(null)
   const busy = useRef(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const composer = useRef<HTMLTextAreaElement>(null)
@@ -199,7 +200,7 @@ export function ChatPane({ scope: explicitScope }: { scope?: string } = {}) {
   const showRequest = showAll || requestScope === scope
 
   useEffect(() => { latest.current = state }, [state])
-  useEffect(() => () => { request.current += 1 }, [])
+  useEffect(() => () => { request.current += 1; activeRequest.current?.abort() }, [])
   useEffect(() => {
     let focusFrame = 0
     function focus(event: Event) {
@@ -242,6 +243,8 @@ export function ChatPane({ scope: explicitScope }: { scope?: string } = {}) {
     const message = text.trim()
     if (!message || busy.current) return
     const requestId = ++request.current
+    const controller = new AbortController()
+    activeRequest.current = controller
     const user: ChatMessage = { id: crypto.randomUUID(), role: 'user', text: message, at: Date.now(), scope }
     busy.current = true
     update((current) => ({ chat: [...current.chat, user].slice(-200) }))
@@ -257,7 +260,7 @@ export function ChatPane({ scope: explicitScope }: { scope?: string } = {}) {
     let textSoFar = ''
     let completed = false
     try {
-      for await (const event of stream(message, context)) {
+      for await (const event of stream(message, context, 'chat', controller.signal)) {
         if (request.current !== requestId) return
         if (event.text) {
           textSoFar += event.text
@@ -265,7 +268,7 @@ export function ChatPane({ scope: explicitScope }: { scope?: string } = {}) {
         }
         if (event.error) throw new Error(event.error)
         if (event.done) {
-          const parsed = parseActions(textSoFar)
+          const parsed = parseActions(event.final ?? textSoFar)
           if (!parsed.actions.every(isAction)) throw new Error('The agent returned an invalid change. Please ask it to try again.')
           const agent: ChatMessage = { id: crypto.randomUUID(), role: 'agent', ...parsed, at: Date.now(), scope }
           update((current) => ({
@@ -283,6 +286,7 @@ export function ChatPane({ scope: explicitScope }: { scope?: string } = {}) {
     } finally {
       window.clearTimeout(timer)
       if (request.current === requestId) {
+        activeRequest.current = null
         busy.current = false
         setSending(false)
         setThinking(false)
@@ -290,16 +294,6 @@ export function ChatPane({ scope: explicitScope }: { scope?: string } = {}) {
       }
     }
   }, [context, navigate, params, scope, update])
-
-  function clear() {
-    request.current += 1
-    busy.current = false
-    update({ chat: [], chatSessionId: null })
-    setReply('')
-    setError(null)
-    setSending(false)
-    setThinking(false)
-  }
 
   function toggleScope() {
     setParams((current) => {
@@ -318,7 +312,6 @@ export function ChatPane({ scope: explicitScope }: { scope?: string } = {}) {
   return (
     <aside className="queue chat" aria-label="Agent">
       <div ref={scrollRef} className="chat-log" role="log" aria-live="polite" aria-label="Conversation with Agent">
-        {state.chat.length > 0 && <button type="button" className="chat-clear" aria-label="Clear chat" onClick={clear}>Clear</button>}
         {scope && (
           <div className="flex shrink-0 items-center justify-between gap-2">
             <span className="lbl">This case</span>

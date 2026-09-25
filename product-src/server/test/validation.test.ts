@@ -28,11 +28,19 @@ test('chat message and serialized context limits include their exact boundary', 
 })
 
 test('state validation limits the serialized document to 1MB of UTF-8 and requires a version', () => {
-  const doc = 'x'.repeat(MAX_DOC_BYTES - 2)
+  const doc = { a: 'x'.repeat(MAX_DOC_BYTES - 8) }
+  assert.equal(Buffer.byteLength(JSON.stringify(doc)), MAX_DOC_BYTES)
   assert.deepEqual(validateStateBody({ doc, base_updated_at: null }), { doc, base_updated_at: null })
-  assert.throws(() => validateStateBody({ doc: doc + 'x', base_updated_at: null }), ValidationError)
-  assert.throws(() => validateStateBody({ doc: '😀'.repeat(MAX_DOC_BYTES / 4), base_updated_at: null }), ValidationError)
+  assert.throws(() => validateStateBody({ doc: { a: doc.a + 'x' }, base_updated_at: null }), ValidationError)
+  assert.throws(() => validateStateBody({ doc: { a: '😀'.repeat(MAX_DOC_BYTES / 4) }, base_updated_at: null }), ValidationError)
   assert.throws(() => validateStateBody({ doc: {} }), ValidationError)
   assert.throws(() => validateStateBody({ base_updated_at: null }), ValidationError)
   assert.throws(() => validateStateBody({ doc: {}, base_updated_at: 123 }), ValidationError)
+})
+
+test('state doc must be a plain object, including for non-HTTP callers', () => {
+  for (const doc of [null, [], 'text', 0, true, new Date(), new Map(), undefined]) {
+    assert.throws(() => validateStateBody({ doc, base_updated_at: null }), ValidationError)
+  }
+  assert.deepEqual(validateStateBody({ doc: {}, base_updated_at: null }).doc, {})
 })

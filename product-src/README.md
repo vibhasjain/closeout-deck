@@ -9,18 +9,22 @@ Use Node.js 22.12+ and a global Claude Code CLI 2.1.282 on your `PATH`, authenti
 ```bash
 npm install
 npm --prefix server install
-CLOSEOUT_DEV_EMAIL=dev@hypertrack.io npm run dev:server
+NODE_ENV=development ALLOWED_DOMAINS=hypertrack.io SESSION_SECRET="$(openssl rand -hex 32)" CLOSEOUT_DEV_EMAIL=dev@hypertrack.io npm run dev:server
 ```
 
-In a second terminal, run `npm run dev` and visit <http://localhost:9000/product/>. Vite proxies `/api/*` to the Node server on port 8787, removing `/api`. Development renders the app without a session; the server's email bypass is disabled in production.
+In a second terminal, run `npm run dev` and visit <http://localhost:9000/product/>. Vite proxies `/api/*` to the Node server on port 8787, removing `/api`. Development renders the app without a session; the server's email bypass requires explicit `NODE_ENV=development`, a loopback connection, and an allowed email domain. Outside production the server listens only on `127.0.0.1`.
 
-Optional server settings go in `server/.env`. Production requires `SESSION_SECRET`, `GOOGLE_CLIENT_ID`, `ALLOWED_DOMAINS`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` and `CLAUDE_CODE_OAUTH_TOKEN`. `/job/config.js` supplies the public Google client ID. Google sign-in stores a 30-day session under `closeout:session:v1`; `/job` and `/answers` keep their existing session.
+Optional server settings go in `server/.env`. Production requires `SESSION_SECRET`, `GOOGLE_CLIENT_ID`, `ALLOWED_DOMAINS`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` and `CLAUDE_CODE_OAUTH_TOKEN`. Startup requires a `SESSION_SECRET` of at least 32 UTF-8 bytes in every environment. `/job/config.js` supplies the public Google client ID. Google sign-in requires a matching, allowed hosted-domain claim and stores a 7-day session under `closeout:session:v1`; `/job` and `/answers` keep their existing session. The server rechecks allowed domains on every authenticated request.
 
 ## Chat and state
 
-`POST /api/chat` streams Claude Code responses using a server-owned prompt and the current page context. `CLOSEOUT_AGENT_MODEL` selects the model (default `opus`). The server maintains each account's conversation and read-only workspace; `scribe`, `delegate` and `consolidate` are reserved for later phases. Production routes `/api/*` through Netlify to the Fly app `closeout-agent`. `npm run preview` serves static files only.
+`POST /api/chat` streams Claude Code responses using a server-owned prompt and the current page context. `CLOSEOUT_AGENT_MODEL` selects the model (default `opus`). The server maintains each account's conversation and read-only workspace; `scribe`, `delegate` and `consolidate` are reserved for later phases. Production calls `https://closeout-agent.fly.dev` directly through the client's shared `API_BASE`; development uses the Vite `/api` proxy. `npm run preview` serves static files only.
+
+Turns have a 180-second wall-clock limit (`CLOSEOUT_CHAT_TIMEOUT_MS`; other modes use `CLOSEOUT_<MODE>_TIMEOUT_MS` when enabled) and a CLI budget of $2 (`CLOSEOUT_TURN_BUDGET_USD`). Each email can attempt 30 turns per sliding ten minutes. Global admission allows three turns, counting reserved account waiters, with a 30-second wait before HTTP 429. Admission happens before SSE so overload can return an HTTP status; admitted requests get immediate headers and 15-second keepalives while waiting for their account. Each account allows one running and one waiting turn. Leaving the chat aborts the request; conversation history has no clear control.
 
 Workspaces live under `/data/accounts` in production and the OS temporary directory's `closeout-agent/accounts` locally; `CLOSEOUT_DATA_DIR` can override the local data root. HOME remains unchanged. The server ignores npm-injected dependency bins when launching the global CLI.
+
+The container entrypoint briefly runs as root to create and chown the persistent `/data` mount, then uses `gosu` to exec the server as `node`. `HOME=/data` remains writable for Claude session files. CLI children receive only `PATH`, `HOME`, `LANG`, `TZ`, and `CLAUDE_CODE_OAUTH_TOKEN`.
 
 The server exposes authenticated `GET /state` and conditional `PUT /state` endpoints backed by Supabase. The app's current prototype state still lives under `closeout-onboarding-v2` in localStorage; server synchronization is not connected in this phase.
 

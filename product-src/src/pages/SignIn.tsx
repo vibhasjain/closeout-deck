@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { loadGoogleIdentity } from '@/lib/googleIdentity'
 import { saveViewerSession } from '@/lib/viewerSession'
+import { API_BASE } from '@/lib/api'
 import './SignIn.css'
 
 export default function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
@@ -22,7 +23,7 @@ export default function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
           pending.current = true
           setError(null)
           try {
-            const response = await fetch('/api/session', {
+            const response = await fetch(`${API_BASE}/session`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ idToken: credential }),

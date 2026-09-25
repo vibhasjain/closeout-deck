@@ -1,4 +1,5 @@
 import { signOut, viewerSession } from '@/lib/viewerSession'
+import { API_BASE } from '@/lib/api'
 import type { Onboarding } from '@/lib/onboarding'
 
 export type Action =
@@ -21,16 +22,20 @@ export function parseActions(text: string): { text: string; actions: Action[] } 
 
 export interface ChatContext { page: string; step?: string; calendar: object; cycle?: { id: string; label: string; stats: string }; selection?: object; discrepancies?: object[]; rules?: { id: string; sentence: string }[]; connections?: object }
 
-export async function* stream(message: string, context: ChatContext, mode: 'chat' | 'scribe' | 'delegate' | 'consolidate' = 'chat'): AsyncGenerator<{ text?: string; done?: boolean; sessionId?: string; error?: string }> {
+export interface ChatEvent { text?: string; done?: boolean; sessionId?: string; error?: string; final?: string }
+
+export async function* stream(message: string, context: ChatContext, mode: 'chat' | 'scribe' | 'delegate' | 'consolidate' = 'chat', signal?: AbortSignal): AsyncGenerator<ChatEvent> {
   const token = viewerSession()?.sessionToken
-  const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ mode, message, context }) })
+  const res = await fetch(`${API_BASE}/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ mode, message, context }), signal })
   if (res.status === 401) { signOut(); return }
   if (!res.ok || !res.body) { yield { done: true, error: 'Chat is unavailable right now' }; return }
   const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = ''
-  for (;;) {
-    const { value, done } = await reader.read(); if (done) return
-    buf += dec.decode(value, { stream: true })
-    const parts = buf.split('\n\n'); buf = parts.pop() ?? ''
-    for (const p of parts) if (p.startsWith('data: ')) yield JSON.parse(p.slice(6))
-  }
+  try {
+    for (;;) {
+      const { value, done } = await reader.read(); if (done) return
+      buf += dec.decode(value, { stream: true })
+      const parts = buf.split('\n\n'); buf = parts.pop() ?? ''
+      for (const p of parts) if (p.startsWith('data: ')) yield JSON.parse(p.slice(6))
+    }
+  } finally { await reader.cancel().catch(() => {}); reader.releaseLock() }
 }

@@ -18,8 +18,13 @@ type Slot = { waiting?: Waiting }
 export class UserQueue {
   private readonly slots = new Map<string, Slot>()
 
-  acquire(email: string, signal?: AbortSignal): Promise<Release> {
-    if (signal?.aborted) return Promise.reject(new DOMException('Request aborted', 'AbortError'))
+  async acquire(email: string, signal?: AbortSignal): Promise<Release> {
+    return this.reserve(email, signal)
+  }
+
+  /** Reserve synchronously so overload can be rejected before sending SSE headers. */
+  reserve(email: string, signal?: AbortSignal): Promise<Release> {
+    if (signal?.aborted) throw new DOMException('Request aborted', 'AbortError')
     const key = email.trim().toLowerCase()
     const slot = this.slots.get(key)
     if (!slot) {
@@ -27,7 +32,7 @@ export class UserQueue {
       this.slots.set(key, next)
       return Promise.resolve(this.releaseFor(key, next))
     }
-    if (slot.waiting) return Promise.reject(new QueueFullError())
+    if (slot.waiting) throw new QueueFullError()
 
     return new Promise((resolve, reject) => {
       const onAbort = () => {
@@ -58,5 +63,78 @@ export class UserQueue {
         this.slots.delete(key)
       }
     }
+  }
+}
+
+/** Process-wide admission bounds CLI concurrency, including reserved account waiters. */
+export class GlobalSemaphore {
+  private active = 0
+  private readonly waiting: Waiting[] = []
+
+  constructor(private readonly limit = 3, private readonly waitMs = 30_000) {}
+
+  acquire(signal?: AbortSignal): Promise<Release> {
+    if (signal?.aborted) return Promise.reject(new DOMException('Request aborted', 'AbortError'))
+    if (this.active < this.limit) {
+      this.active += 1
+      return Promise.resolve(this.releaseFor())
+    }
+    return new Promise((resolve, reject) => {
+      const remove = () => {
+        const index = this.waiting.indexOf(waiting)
+        if (index !== -1) this.waiting.splice(index, 1)
+        waiting.cleanup()
+      }
+      const onAbort = () => {
+        remove()
+        reject(new DOMException('Request aborted', 'AbortError'))
+      }
+      const timer = setTimeout(() => { remove(); reject(new QueueFullError()) }, this.waitMs)
+      const waiting: Waiting = {
+        resolve,
+        cleanup: () => {
+          clearTimeout(timer)
+          signal?.removeEventListener('abort', onAbort)
+        },
+      }
+      this.waiting.push(waiting)
+      signal?.addEventListener('abort', onAbort, { once: true })
+    })
+  }
+
+  private releaseFor(): Release {
+    let released = false
+    return () => {
+      if (released) return
+      released = true
+      const next = this.waiting.shift()
+      if (next) {
+        next.cleanup()
+        next.resolve(this.releaseFor())
+      } else this.active -= 1
+    }
+  }
+}
+
+/** Sliding window: at most 30 accepted turn attempts per email in ten minutes. */
+export class TurnRateLimit {
+  private readonly turns = new Map<string, number[]>()
+  private nextCleanup = 0
+
+  constructor(private readonly limit = 30, private readonly windowMs = 600_000) {}
+
+  consume(email: string): void {
+    const now = Date.now()
+    if (now >= this.nextCleanup) {
+      for (const [key, times] of this.turns) {
+        if (times.at(-1)! <= now - this.windowMs) this.turns.delete(key)
+      }
+      this.nextCleanup = now + this.windowMs
+    }
+    const key = email.trim().toLowerCase()
+    const recent = (this.turns.get(key) ?? []).filter(time => time > now - this.windowMs)
+    if (recent.length >= this.limit) throw new QueueFullError()
+    recent.push(now)
+    this.turns.set(key, recent)
   }
 }

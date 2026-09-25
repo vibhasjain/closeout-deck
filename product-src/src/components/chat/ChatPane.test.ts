@@ -1,0 +1,110 @@
+import { Children, isValidElement, type EffectCallback, type ReactElement, type ReactNode } from 'react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { ChatPane } from './ChatPane'
+import { stream, type ChatEvent } from '@/lib/chat'
+import { DEFAULTS, getOnboarding, updateOnboarding } from '@/lib/onboarding'
+
+// Exercise the real send handler and effect cleanup without requiring a browser.
+const hooks = vi.hoisted(() => ({ cursor: 0, context: 0, slots: [] as unknown[], effects: [] as EffectCallback[] }))
+vi.mock('react', async (importOriginal) => ({
+  ...await importOriginal<typeof import('react')>(),
+  useState: <T>(initial: T) => {
+    const slot = hooks.cursor++
+    if (!(slot in hooks.slots)) hooks.slots[slot] = initial
+    return [hooks.slots[slot] as T, (next: T | ((previous: T) => T)) => {
+      hooks.slots[slot] = typeof next === 'function' ? (next as (previous: T) => T)(hooks.slots[slot] as T) : next
+    }]
+  },
+  useRef: <T>(initial: T) => {
+    const slot = hooks.cursor++
+    if (!(slot in hooks.slots)) hooks.slots[slot] = { current: initial }
+    return hooks.slots[slot]
+  },
+  useContext: () => hooks.context++ === 0 ? {} : [],
+  useCallback: <T>(callback: T) => callback,
+  useEffect: (effect: EffectCallback) => { hooks.effects.push(effect) },
+  useLayoutEffect: () => {},
+}))
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...await importOriginal<typeof import('react-router-dom')>(),
+  useLocation: () => ({ pathname: '/payroll' }),
+  useNavigate: () => vi.fn(),
+  useSearchParams: () => [new URLSearchParams(), vi.fn()],
+}))
+vi.mock('@/lib/onboarding', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@/lib/onboarding')>()
+  return { ...original, useOnboarding: () => [original.getOnboarding(), original.updateOnboarding] }
+})
+vi.mock('@/lib/chat', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/lib/chat')>(), stream: vi.fn(),
+}))
+
+type Props = {
+  children?: ReactNode
+  'aria-label'?: string
+  onChange?: (event: { target: { value: string } }) => void
+  onSubmit?: (event: { preventDefault(): void }) => void
+}
+function elements(node: ReactNode): ReactElement<Props>[] {
+  return Children.toArray(node).flatMap((child) => isValidElement<Props>(child) ? [child, ...elements(child.props.children)] : [])
+}
+function render() {
+  hooks.cursor = 0
+  hooks.context = 0
+  hooks.effects = []
+  return ChatPane()
+}
+function send(text: string) {
+  elements(render()).find(({ props }) => props['aria-label'] === 'Message the agent')!.props.onChange!({ target: { value: text } })
+  elements(render()).find(({ type }) => type === 'form')!.props.onSubmit!({ preventDefault() {} })
+}
+
+beforeEach(() => {
+  vi.resetAllMocks()
+  vi.useFakeTimers()
+  hooks.slots = []
+  vi.stubGlobal('localStorage', { getItem: () => null, setItem: vi.fn() })
+  vi.stubGlobal('window', { setTimeout, clearTimeout, addEventListener: vi.fn(), removeEventListener: vi.fn(), cancelAnimationFrame: vi.fn() })
+  updateOnboarding(structuredClone(DEFAULTS))
+})
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals() })
+
+describe('chat conversation lifetime', () => {
+  it('has no Clear control even when the conversation has messages', () => {
+    updateOnboarding({ chat: [{ id: 'saved', role: 'agent', text: 'Saved conversation', at: 0 }] })
+    const controls = elements(render()).filter(({ type }) => type === 'button')
+    expect(controls.some(({ props }) => /clear/i.test(`${props['aria-label'] ?? ''} ${String(props.children)}`))).toBe(false)
+    expect(getOnboarding().chat).toHaveLength(1)
+  })
+
+  it('saves the final reply and applies its actions instead of intermediate text', async () => {
+    vi.mocked(stream).mockImplementation(async function* () {
+      yield { text: 'I am checking the calendar.' }
+      yield { done: true, sessionId: 'saved-session', final: 'Thursday it is.\n```action\n{"type":"set_calendar","patch":{"payDay":"Thursday"}}\n```' }
+    })
+    send('Use Thursday')
+    await vi.waitFor(() => expect(getOnboarding().chat).toHaveLength(2))
+    expect(getOnboarding().chat[1]).toMatchObject({ role: 'agent', text: 'Thursday it is.', actions: [{ type: 'set_calendar', patch: { payDay: 'Thursday' } }] })
+    expect(getOnboarding()).toMatchObject({ payDay: 'Thursday', chatSessionId: 'saved-session' })
+  })
+
+  it('aborts the active stream on unmount and preserves saved history', async () => {
+    let signal: AbortSignal | undefined
+    let finished = false
+    vi.mocked(stream).mockImplementation(async function* (_message, _context, _mode, requestSignal): AsyncGenerator<ChatEvent> {
+      signal = requestSignal
+      try {
+        await new Promise<void>((_resolve, reject) => requestSignal!.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true }))
+        yield { done: true }
+      } finally { finished = true }
+    })
+    render()
+    const cleanup = hooks.effects.map((effect) => effect())
+    send('Keep this question')
+    expect(signal?.aborted).toBe(false)
+    cleanup.forEach((dispose) => { if (typeof dispose === 'function') dispose() })
+    expect(signal?.aborted).toBe(true)
+    await vi.waitFor(() => expect(finished).toBe(true))
+    expect(getOnboarding().chat).toMatchObject([{ role: 'user', text: 'Keep this question' }])
+  })
+})
