@@ -1,1293 +1,337 @@
-<!DOCTYPE html>
-<html lang="en">
+<!--
+  Direction: hypertrack.com's own system, unchanged. Satoshi + JetBrains Mono, the custom neutral scale,
+  green only where the allowlist permits, Edgework 1px rails and markers, borders not shadows.
+  Structure: why, what, how. Three human hero slides, Shift Work Summit speakers as social proof,
+  one line on what HyperTrack does, customers, connectors, pricing, demo. Feature detail lives in closeout.html.
+  Every unconfirmed claim is tagged data-confirm.
+-->
+<!doctype html>
+<html data-ht-header="overlay" lang="en">
 <head>
   <meta charset="utf-8">
-  <title>HyperTrack Closeout Agent | Same-Day Time-to-Pay for Staffing</title>
-  <link rel="canonical" href="https://hypertrack.com/closeout">
-  <meta content="AI-powered time-to-pay for staffing teams. Reconcile worker time, client approvals, payroll, and invoices in one auditable closeout." name="description">
-  <meta content="Closeout Agent | Time-to-Pay for Staffing" property="og:title">
-  <meta content="One verified closeout record from worker clock-in to client invoice." property="og:description">
-  <meta content="https://hypertrack.com/images/closeout-enterprise/hero-closeout-intelligence.jpg" property="og:image">
-  <meta property="og:url" content="https://hypertrack.com/closeout">
-  <meta content="Closeout Agent | Time-to-Pay for Staffing" property="twitter:title">
-  <meta content="One verified closeout record from worker clock-in to client invoice." property="twitter:description">
-  <meta content="https://hypertrack.com/images/closeout-enterprise/hero-closeout-intelligence.jpg" property="twitter:image">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HyperTrack — The fastest growing staffing companies run on HyperTrack</title>
+  <meta name="description" content="Middle office AI teams that close out every pay. The best workers pick you first, and your clients stay.">
+  <meta property="og:title" content="HyperTrack — The fastest growing staffing companies run on HyperTrack">
+  <meta property="og:description" content="Middle office AI teams that close out every pay. The best workers pick you first, and your clients stay.">
+  <meta property="og:image" content="https://closeoutcopilot.com/assets/images/home/og-home-r5.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://closeoutcopilot.com/">
+  <meta property="og:url" content="https://closeoutcopilot.com/">
   <meta property="og:type" content="website">
-  <meta content="summary_large_image" name="twitter:card">
-  <meta content="width=device-width, initial-scale=1" name="viewport">
-  <meta content="1LwSqJfYMZFz736CRZyCE57_L5FJ_K40PkA94lLLvr4" name="google-site-verification">
+  <link href="/assets/images/favicon.png" rel="shortcut icon" type="image/x-icon">
+  <link href="/assets/images/webclip.png" rel="apple-touch-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" href="/assets/fonts/Satoshi-Regular.woff" as="font" type="font/woff" crossorigin>
+  <link rel="preload" href="/assets/fonts/Satoshi-Bold.woff" as="font" type="font/woff" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;display=swap">
+  <link rel="stylesheet" href="/assets/css/edgework.css">
+  <link rel="stylesheet" href="/assets/css/tokens.css">
+  <link rel="stylesheet" href="/assets/css/site.css?v=r12">
+  <link rel="stylesheet" href="/assets/css/vignettes.css?v=r12">
 
-  <!-- Site is light-mode-only for now. Force light, ignore any prior localStorage value. -->
-  <script>(function(){ document.documentElement.classList.remove('dark'); })();</script>
 
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            satoshi: ['Satoshi', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-            mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
-          },
-          colors: {
-            neutral: {
-              50:  '#f5f5f6', 100: '#ebebec', 200: '#dbdcdd', 300: '#c4c5c7',
-              400: '#a1a2a4', 500: '#84827e', 600: '#656360', 700: '#4d4a44',
-              800: '#32302c', 900: '#1c1b18', 950: '#0e0d0b',
-            },
-            green: {
-              50:  '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac',
-              400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d',
-              800: '#166534', 900: '#14532d', 950: '#052e16',
-            },
-          }
-        }
-      }
-    }
-  </script>
-
-  <link href="https://fonts.googleapis.com" rel="preconnect">
-  <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin="anonymous">
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
-    @font-face { font-family: 'Satoshi'; src: url('fonts/Satoshi-Light.woff') format('woff'); font-weight: 300; font-display: swap; }
-    @font-face { font-family: 'Satoshi'; src: url('fonts/Satoshi-Regular.woff') format('woff'); font-weight: 400; font-display: swap; }
-    @font-face { font-family: 'Satoshi'; src: url('fonts/Satoshi-Medium.woff') format('woff'); font-weight: 500; font-display: swap; }
-    @font-face { font-family: 'Satoshi'; src: url('fonts/Satoshi-Bold.woff') format('woff'); font-weight: 700; font-display: swap; }
-    @font-face { font-family: 'Satoshi'; src: url('fonts/Satoshi-Black.woff') format('woff'); font-weight: 900; font-display: swap; }
-    body { font-family: 'Satoshi', sans-serif; overflow-x: clip; }
-    html { overflow-x: clip; }
-    /* ===== Canonical top-nav (from index.html) ===== */
-    nav.site-nav { position: sticky; top: 0; z-index: 40; }
-    [data-nav-product][aria-expanded="true"] svg.chev { transform: rotate(180deg); }
-    .mobile-menu { transition: max-height 240ms ease, opacity 200ms ease; max-height: 0; opacity: 0; overflow: hidden; }
-    .mobile-menu.is-open { max-height: 80vh; opacity: 1; }
-    .mobile-submenu { transition: max-height 200ms ease, opacity 180ms ease; max-height: 0; opacity: 0; overflow: hidden; }
-    .mobile-submenu.is-open { max-height: 60vh; opacity: 1; }
-  </style>
-
-  <!-- Shared Edgework frame + zone-box system (do NOT inline primitives) -->
-  <link rel="stylesheet" href="css/edgework.css">
-  <link rel="stylesheet" href="css/deck-base.css">
-  <link rel="stylesheet" href="css/deck-closeout.css">
-  <link rel="stylesheet" href="css/deck-closeout-light.css">
-
-  <link href="images/favicon.png" rel="shortcut icon" type="image/x-icon">
-  <link href="images/webclip.png" rel="apple-touch-icon">
-
-  <script async="" src="https://www.googletagmanager.com/gtag/js?id=G-L5V1GJ51D6"></script>
-  <script type="text/javascript">window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag('set', 'developer_id.dZGVlNj', true);gtag('js', new Date());gtag('config', 'G-L5V1GJ51D6');</script>
-
-  <script>function initApollo(){var n=Math.random().toString(36).substring(7),o=document.createElement("script");
-o.src="https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache="+n,o.async=!0,o.defer=!0,
-o.onload=function(){window.trackingFunctions.onLoad({appId:"66311630953c7805723de5b5"})},
-document.head.appendChild(o)}initApollo();</script>
-
-  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-})(window,document,'script','dataLayer','GTM-5H3R6GZ');</script>
-
-  <style>
-    body #hubspot-messages-iframe-container { z-index: 90; }
-  </style>
-  <script src="/js/hubspot-chat-visibility.js?v=20260716"></script>
 </head>
-<body class="bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 font-satoshi antialiased deck closeout-deck">
-  <!-- Google Tag Manager (noscript) -->
-  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5H3R6GZ" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-  <!-- End Google Tag Manager (noscript) -->
-
-
-  <nav class="site-nav bg-white/80 dark:bg-neutral-950/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800">
-    <div class="max-w-[1200px] mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
-      <div class="flex items-center gap-8">
-        <a href="https://hypertrack.com/index.html" class="flex items-center"><img src="images/Green0svg.svg" class="h-6" alt="HyperTrack"></a>
-        <div class="hidden lg:flex items-center gap-6">
-          <button type="button" data-nav-product aria-expanded="false" aria-haspopup="true" aria-controls="nav-product-panel" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer flex items-center gap-1">
-            Product
-            <svg class="chev w-3 h-3 transition-transform duration-200" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-          <a href="https://hypertrack.com/shift-work-marketplace.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer">Solutions</a>
-          <a href="https://hypertrack.com/customers.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer">Customers</a>
-          <a href="https://hypertrack.com/pricing.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer">Pricing</a>
-          <a href="https://hypertrack.com/docs" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer">Docs</a>
-          <a href="https://stories.hypertrack.com/" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer">Blog</a>
-          <a href="https://hypertrack.com/shiftworksummit.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer">Shift Work Summit</a>
-        </div>
-      </div>
-      <div class="flex items-center gap-3">
-        <a href="https://dashboard.hypertrack.com/login" data-landing-cta="Sign in (nav)" class="hidden lg:inline-flex text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer">Sign in</a>
-        <a href="https://dashboard.hypertrack.com/signup" data-landing-cta="Get started (nav)" class="hidden lg:inline-flex items-center px-4 py-2 bg-white dark:bg-neutral-900 text-sm font-semibold text-neutral-700 dark:text-neutral-300 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer">Get started</a>
-        <!-- Hamburger (lg:hidden) -->
-        <button type="button" id="mobile-menu-toggle" aria-expanded="false" aria-controls="mobile-menu" aria-label="Toggle navigation"
-                class="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-md border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">
-          <svg class="hamburger-open w-5 h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-          <svg class="hamburger-close w-5 h-5 hidden" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M6 18L18 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-        </button>
-      </div>
+<body>
+<!-- HT-HEADER:START — the global HyperTrack header. Source of truth: shared/header.html. Pasted into pages by scripts/rollout-header.py; edit the fragment and re-run the script, never a page's copy. -->
+<style>
+  /* Self-contained: every rule is scoped to .ht-header and needs no Tailwind, no tokens file and no page CSS.
+     Transparent at the top of the page, white blur once scrolled. 64px tall, the same as the header it replaces.
+     Default is sticky (in flow). A page whose hero should run under the header sets data-ht-header="overlay" on <html>. */
+  /* Private family. Webflow pages register "Satoshi" with italic faces only, so a bare
+     Satoshi stack renders the header oblique there. Own the family, own the rendering. */
+  @font-face { font-family:'HT Satoshi'; src:url('/assets/fonts/Satoshi-Regular.woff') format('woff'); font-weight:400; font-style:normal; font-display:swap; }
+  @font-face { font-family:'HT Satoshi'; src:url('/assets/fonts/Satoshi-Medium.woff') format('woff'); font-weight:500; font-style:normal; font-display:swap; }
+  @font-face { font-family:'HT Satoshi'; src:url('/assets/fonts/Satoshi-Bold.woff') format('woff'); font-weight:700; font-style:normal; font-display:swap; }
+  .ht-header, .ht-header *, .ht-header *::before, .ht-header *::after { box-sizing:border-box; }
+  .ht-header { --ht-ink:#1c1b18; --ht-ink-soft:#4d4a44; --ht-line:#dbdcdd; --ht-paper:255,255,255; --ht-green:#15803d; --ht-green-hover:#14532d;
+    position:sticky; top:0; left:0; right:0; z-index:50; color:var(--ht-ink); font:400 14px/1.4 'HT Satoshi', Satoshi, ui-sans-serif, system-ui, sans-serif;
+    background:transparent; border-bottom:1px solid transparent; transition:background-color .2s, border-color .2s; }
+  html[data-ht-header="overlay"] .ht-header { position:fixed; }
+  .ht-header.is-scrolled, .ht-header.is-open { background:rgba(var(--ht-paper),.85); -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); border-bottom-color:var(--ht-line); }
+  html.dark .ht-header { --ht-ink:#f5f5f6; --ht-ink-soft:#c4c5c7; --ht-line:#32302c; --ht-paper:14,13,11; }
+  .ht-header__inner { max-width:1200px; height:63px; margin:0 auto; padding:0 24px; display:flex; align-items:center; gap:40px; }
+  /* two classes: the link colour rule below (.ht-header a) must not soften the logo */
+  .ht-header .ht-header__brand { display:inline-flex; flex:none; color:var(--ht-ink); }
+  .ht-header__brand svg { display:block; height:24px; width:auto; }
+  .ht-header__nav { display:flex; align-items:center; gap:28px; margin-left:auto; }
+  .ht-header a, .ht-header button { font:inherit; color:var(--ht-ink-soft); text-decoration:none; }
+  .ht-header__link:hover, .ht-header__dd-btn:hover, .ht-header__signin:hover { color:var(--ht-ink); text-decoration:underline; text-underline-offset:4px; }
+  .ht-header__link[aria-current="page"] { color:var(--ht-ink); font-weight:500; }
+  .ht-header__dd { position:relative; }
+  .ht-header__dd-btn { display:inline-flex; align-items:center; gap:6px; margin:0; padding:8px 0; border:0; background:transparent; cursor:pointer; }
+  .ht-header__chev { width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:1.5; transition:transform .15s; }
+  .ht-header__dd.is-open .ht-header__chev { transform:rotate(180deg); }
+  /* the menu touches the button (padding, not margin) so hover survives the trip down */
+  .ht-header__menu { display:none; position:absolute; top:100%; left:-16px; padding-top:6px; }
+  .ht-header__dd.is-open .ht-header__menu { display:block; }
+  .ht-header__menu::before { content:""; position:absolute; inset:6px 0 0; z-index:-1; border:1px solid var(--ht-line); border-radius:12px; background:rgb(var(--ht-paper)); }
+  .ht-header__menu a { display:block; min-width:120px; padding:9px 16px; font:400 13px/1.4 "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .ht-header__menu a:first-child { padding-top:14px; } .ht-header__menu a:last-child { padding-bottom:14px; }
+  .ht-header__menu a:hover { color:var(--ht-ink); text-decoration:underline; text-underline-offset:4px; }
+  .ht-header__actions { display:flex; align-items:center; gap:16px; }
+  .ht-header .ht-header__cta { display:inline-flex; align-items:center; height:36px; padding:0 16px; border:1px solid var(--ht-line); border-radius:8px; background:rgb(var(--ht-paper)); color:var(--ht-ink); font-weight:500; transition:border-color .15s; }
+  .ht-header .ht-header__cta:hover { border-color:var(--ht-ink-soft); text-decoration:none; }
+  .ht-header .btn-primary { background:var(--n900); color:#fff; }
+  .ht-header .btn-primary:hover { background:var(--n800); }
+  .ht-header__toggle { display:none; align-items:center; justify-content:center; flex-direction:column; gap:4px; width:40px; height:40px; margin:0; padding:10px; border:1px solid var(--ht-line); border-radius:8px; background:rgb(var(--ht-paper)); cursor:pointer; }
+  .ht-header__toggle span { display:block; width:18px; height:1px; background:var(--ht-ink); }
+  .ht-header__mobile { display:none; }
+  @media (max-width:1023px) {
+    .ht-header__nav, .ht-header__signin { display:none; }
+    .ht-header__actions .btn-primary { display:none; }
+    .ht-header__inner { gap:16px; }
+    .ht-header__actions { margin-left:auto; gap:12px; }
+    .ht-header__toggle { display:flex; }
+    .ht-header.is-open .ht-header__mobile { display:flex; flex-direction:column; gap:8px; max-width:1200px; margin:0 auto; padding:16px 24px 24px; border-top:1px solid var(--ht-line); background:rgb(var(--ht-paper)); }
+    .ht-header__mobile a { padding:8px 0; }
+    .ht-header__mobile-label { margin:8px 0 0; font:400 11px/1.4 "JetBrains Mono", ui-monospace, monospace; letter-spacing:.08em; text-transform:uppercase; color:var(--ht-ink-soft); }
+    .ht-header__mobile-years { display:flex; gap:24px; }
+    .ht-header__mobile-years a { font-family:"JetBrains Mono", ui-monospace, monospace; }
+  }
+  @media (max-width:400px) { .ht-header__inner { padding:0 16px; gap:12px; } .ht-header .ht-header__cta { padding:0 12px; } }
+  @media (prefers-reduced-motion:reduce) { .ht-header, .ht-header * { transition:none !important; } }
+</style>
+<header class="ht-header" data-ht-header-root>
+  <div class="ht-header__inner">
+    <a class="ht-header__brand" href="/" aria-label="HyperTrack home"><svg viewBox="0 0 569 108" aria-hidden="true" focusable="false"> <g id="Artboard" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" transform="translate(-120.000000, -829.000000)"> <g id="Logo/Group/Green" transform="translate(101.000000, 818.000000)" fill="currentColor"> <g id="Logo/text/green" transform="translate(91.000000, 0.000000)"> <path d="M34.08008,26.8976513 L47.8606097,26.8976513 L47.8606097,45.7917109 C51.2407396,41.631551 56.6142795,40.418171 61.6411394,40.418171 C74.9883191,40.591511 78.715129,50.4718908 78.541789,62.1723405 L78.541789,88 L64.7612593,88 L64.7612593,62.2590105 C64.7612593,56.1054407 61.3811294,53.4186707 57.7409895,53.3320007 C53.5808295,53.2453307 48.5539697,56.7988007 48.5539697,62.5190205 L48.5539697,88 L34.08008,88 L34.08008,26.8976513 Z M106.102849,67.9792304 L109.569648,56.1054407 L115.376538,41.111531 L129.503748,41.111531 L129.503748,43.2782809 C121.790118,62.7790305 114.076488,82.1931101 106.449528,101.69386 L92.3223188,101.69386 L92.3223188,99.6137798 L98.3892187,84.1865201 L82.788619,43.2782809 L82.788619,41.111531 L97.0024987,41.111531 L102.809389,56.1054407 L106.102849,67.9792304 Z M160.098257,88.78003 C155.504748,88.78003 151.084578,87.21997 147.964458,83.6665001 L147.964458,101.69386 L134.443938,101.69386 L134.443938,41.111531 L147.964458,41.111531 L147.964458,45.7917109 C151.171248,41.804891 155.764758,40.504841 160.271597,40.504841 C175.178837,40.504841 182.892467,52.4653008 182.805797,65.3791305 C182.632457,78.2062902 175.265507,88.78003 160.098257,88.78003 Z M158.624867,53.5920107 C152.731308,53.5920107 147.964458,58.6188706 147.964458,64.8591105 C147.964458,71.0993504 152.731308,76.2128802 158.624867,76.2128802 C165.558467,76.2128802 169.025267,70.6660004 169.111937,65.0324505 C169.198607,59.3989006 165.645137,53.5920107 158.624867,53.5920107 Z M236.454526,64.4257605 C236.454526,66.3325005 236.281186,68.0659004 235.934506,69.7993004 L202.306547,69.7993004 C203.953277,74.1328003 208.200106,76.2995502 212.360266,76.3862202 C215.393716,76.3862202 218.253826,75.3461803 220.247236,73.1794303 L235.067806,73.1794303 C231.427666,83.5798301 221.547286,88.69336 211.666906,88.52002 C199.793117,88.26001 188.005997,80.2863702 188.005997,64.4257605 C188.005997,48.3051408 200.226467,40.331501 212.446936,40.418171 C224.494066,40.504841 236.454526,48.4784808 236.454526,64.4257605 Z M202.826567,59.1388906 L221.547286,59.1388906 C220.247236,54.4587107 216.433756,52.2919608 212.013586,52.2919608 C207.940096,52.2919608 204.213287,54.5453807 202.826567,59.1388906 Z M256.561966,61.9990005 L256.561966,88 L242.954776,88 L242.954776,41.111531 L255.261916,41.111531 L255.781936,44.2316509 C258.815385,41.371541 262.195515,40.158161 266.008995,40.158161 C267.655725,40.158161 269.475795,40.418171 271.295865,40.851521 L271.122525,53.6786807 C269.735805,53.2453307 268.089075,52.9853207 266.529015,52.9853207 C261.588825,53.0719907 256.561966,55.6720907 256.561966,61.9990005 Z M305.790525,88.08667 C303.103755,88.52002 300.590325,88.78003 298.336905,88.78003 C287.849835,88.8667 281.522925,84.0131801 281.522925,71.7927103 L281.522925,53.3320007 L275.369355,53.3320007 L275.369355,41.631551 L281.522925,41.631551 L281.522925,32.7045412 L295.130115,31.4911612 L295.130115,41.631551 L304.923825,41.631551 L304.923825,53.3320007 L295.130115,53.3320007 L295.130115,71.7927103 C295.130115,75.9528703 298.163565,77.2529202 301.457025,77.2529202 C302.757075,77.2529202 304.143795,77.0795802 305.357175,76.8195702 L305.790525,88.08667 Z M325.464614,61.9990005 L325.464614,88 L311.857425,88 L311.857425,41.111531 L324.164564,41.111531 L324.684584,44.2316509 C327.718034,41.371541 331.098164,40.158161 334.911644,40.158161 C336.558374,40.158161 338.378444,40.418171 340.198514,40.851521 L340.025174,53.6786807 C338.638454,53.2453307 336.991724,52.9853207 335.431664,52.9853207 C330.491474,53.0719907 325.464614,55.6720907 325.464614,61.9990005 Z M367.412893,40.331501 C372.006403,40.331501 376.513243,42.064901 379.546693,45.9650509 L379.546693,41.111531 L393.153883,41.111531 L393.153883,88 L379.546693,88 L379.546693,83.3198201 C376.339903,87.30664 371.746393,88.60669 367.239553,88.60669 C352.332314,88.60669 344.618684,76.6462302 344.705354,63.7324005 C344.878694,50.9052408 352.245644,40.331501 367.412893,40.331501 Z M368.886283,75.5195203 C374.779843,75.5195203 379.546693,70.4926604 379.546693,64.2524205 C379.546693,58.0121806 374.779843,52.8986507 368.886283,52.8986507 C361.952684,52.8986507 358.485884,58.3588606 358.399214,64.0790805 C358.312544,69.7126304 361.866014,75.5195203 368.886283,75.5195203 Z M432.762072,68.0659004 C429.208602,79.6796802 412.394623,77.7729402 412.394623,64.5124305 C412.394623,51.2519208 429.295272,49.4318508 432.762072,61.0456306 L446.282592,61.0456306 C442.469112,32.1845212 399.047443,34.1779311 399.047443,64.5124305 C399.047443,94.8469299 442.382442,96.8403398 446.282592,68.0659004 L432.762072,68.0659004 Z M466.996721,59.5722406 L479.910551,41.111531 L494.817791,41.111531 L494.817791,41.804891 L478.957181,64.4257605 L496.377851,87.39331 L496.377851,88 L480.430571,88 L466.996721,69.7126304 L466.996721,88 L453.389532,88 L453.389532,27.3310013 L466.996721,27.3310013 L466.996721,59.5722406 Z" id="hypertrack"></path> </g> <g id="Logo/box/green"> <g id="Our-logo" transform="translate(19.000000, 11.000000)"> <g id="Group-2" transform="translate(35.000000, 24.000000)" fill-rule="nonzero"> <path d="M11.279,12.895 C5.492,12.895 0.603,10.057 0.603,6.697 C0.603,3.337 5.492,0.498 11.279,0.498 C17.065,0.498 21.955,3.337 21.955,6.697 C21.955,10.057 17.065,12.895 11.279,12.895" id="Shape"></path> </g> <path d="M91.595,28.802 C91.556,28.724 91.516,28.648 91.472,28.574 C91.354,28.375 91.217,28.191 91.069,28.013 C91.004,27.936 90.948,27.853 90.878,27.781 C90.86,27.76 90.846,27.737 90.826,27.718 C90.616,27.508 90.387,27.327 90.143,27.168 C90.135,27.163 90.13,27.155 90.122,27.15 L48.538,0.718 C47.861,0.288 47.08,0.06 46.278,0.06 C45.476,0.06 44.694,0.288 44.017,0.716 L2.439,27.15 C2.402,27.173 2.377,27.207 2.341,27.231 C2.084,27.404 1.841,27.6 1.626,27.826 C1.625,27.826 1.625,27.827 1.624,27.828 C1.62,27.832 1.617,27.837 1.613,27.841 C1.382,28.086 1.196,28.36 1.032,28.646 C1.018,28.671 1.006,28.697 0.992,28.723 C0.658,29.335 0.465,30.017 0.465,30.73 L0.465,77.029 C0.465,78.482 1.198,79.813 2.429,80.593 L44.013,107.04 C44.69,107.472 45.473,107.699 46.278,107.699 C47.083,107.699 47.866,107.471 48.545,107.04 L90.13,80.591 C91.359,79.814 92.093,78.482 92.093,77.029 L92.093,30.73 C92.093,30.06 91.906,29.401 91.595,28.802 Z M47.6680686,79.6878146 C47.8848755,79.6070964 48.0943985,79.5004681 48.2919991,79.3679879 L64.3811427,68.581112 C64.3745752,67.1221336 64.6439465,65.5397595 65.2190284,63.959735 C67.0078059,59.0451092 71.0769757,56.0142848 74.3077737,57.1901991 C77.5385717,58.3661134 78.7075603,63.3034716 76.9187828,68.2180973 C75.1300053,73.132723 71.0608354,76.1635475 67.8300374,74.9876332 C66.8235881,74.6213156 66.0172229,73.8899761 65.4380272,72.9080127 L50.5194815,82.6903849 C49.6445349,83.276988 48.6694092,83.6463704 47.6680686,83.797601 L47.6680686,100.985855 L47.6680686,83.797601 C46.0313922,84.0447852 44.3246816,83.7091675 42.8709085,82.7866815 L0.612644862,56.4411259 L0.612644862,50.8582705 L45.0140393,79.4092578 C45.8173992,79.9190267 46.800985,80.0106337 47.6680686,79.6878146 L47.6680686,55.9006202 L47.6680686,79.6878146 Z M46.278,9.26 L80.005,30.696 L46.278,52.164 L12.55,30.697 L46.278,9.26 Z" id="Shape" fill-rule="nonzero"></path> </g> </g> </g> </g> </svg></a>
+    <nav class="ht-header__nav" aria-label="Main navigation">
+      <a class="ht-header__link" data-ht-nav="product" href="/closeout">Product</a><a class="ht-header__link" data-ht-nav="solutions" href="https://hypertrack.com/shift-work-marketplace">Solutions</a><a class="ht-header__link" data-ht-nav="customers" href="https://hypertrack.com/customers">Customers</a><div class="ht-header__dd"><button type="button" class="ht-header__dd-btn" aria-expanded="false" aria-controls="ht-header-sws">Shift Work Summit<svg class="ht-header__chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5"/></svg></button><div class="ht-header__menu" id="ht-header-sws"><a href="https://hypertrack.com/shiftworksummit">2025</a><a href="https://hypertrack.com/shiftworksummit-sessions">2024</a><a href="https://hypertrack.com/gigworksummit-sessions/all">2023</a><a href="https://hypertrack.com/logisticstechsummit">2022</a></div></div><a class="ht-header__link" data-ht-nav="pricing" href="https://hypertrack.com/pricing">Pricing</a><a class="ht-header__link" data-ht-nav="docs" href="https://hypertrack.com/docs">Docs</a><a class="ht-header__link" data-ht-nav="blog" href="https://stories.hypertrack.com/">Blog</a>
+    </nav>
+    <div class="ht-header__actions">
+      <a class="ht-header__signin" href="/product">Sign in</a>
+      <a class="ht-header__cta btn btn-primary" href="/product">Get started</a>
+      <a class="ht-header__cta btn btn-secondary" href="https://hypertrack.com/contact">Book a demo</a>
+      <button class="ht-header__toggle" type="button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="ht-header-mobile"><span></span><span></span><span></span></button>
     </div>
-
-    <!-- Product mega-dropdown (desktop) — full-width panel anchored below the nav. -->
-    <div id="nav-product-panel" data-nav-product-panel hidden class="absolute inset-x-0 top-full mt-px bg-white dark:bg-neutral-950 border-b border-neutral-200 dark:border-neutral-800">
-      <div class="absolute z-10 inset-0 pointer-events-none">
-        <div class="max-w-[1200px] mx-auto px-6 h-full relative">
-          <div class="absolute left-0 top-0 bottom-0 w-px bg-neutral-300/40 dark:bg-neutral-700/50"></div>
-          <div class="absolute right-0 top-0 bottom-0 w-px bg-neutral-300/40 dark:bg-neutral-700/50"></div>
-        </div>
+  </div>
+  <nav class="ht-header__mobile" id="ht-header-mobile" aria-label="Mobile navigation">
+    <a class="ht-header__link" data-ht-nav="product" href="/closeout">Product</a><a class="ht-header__link" data-ht-nav="solutions" href="https://hypertrack.com/shift-work-marketplace">Solutions</a><a class="ht-header__link" data-ht-nav="customers" href="https://hypertrack.com/customers">Customers</a><p class="ht-header__mobile-label">Shift Work Summit</p><div class="ht-header__mobile-years"><a href="https://hypertrack.com/shiftworksummit" aria-label="Shift Work Summit 2025">2025</a><a href="https://hypertrack.com/shiftworksummit-sessions" aria-label="Shift Work Summit 2024">2024</a><a href="https://hypertrack.com/gigworksummit-sessions/all" aria-label="Shift Work Summit 2023">2023</a><a href="https://hypertrack.com/logisticstechsummit" aria-label="Shift Work Summit 2022">2022</a></div><a class="ht-header__link" data-ht-nav="pricing" href="https://hypertrack.com/pricing">Pricing</a><a class="ht-header__link" data-ht-nav="docs" href="https://hypertrack.com/docs">Docs</a><a class="ht-header__link" data-ht-nav="blog" href="https://stories.hypertrack.com/">Blog</a>
+    <a href="/product">Sign in</a>
+    <a class="ht-header__cta btn btn-primary" href="/product">Get started</a>
+    <a class="ht-header__cta btn btn-secondary" href="https://hypertrack.com/contact">Book a demo</a>
+  </nav>
+</header>
+<script>
+(function () {
+  var root = document.querySelector('[data-ht-header-root]'); if (!root) return;
+  var toggle = root.querySelector('.ht-header__toggle');
+  var closeMenu = function () { root.classList.remove('is-open'); toggle.setAttribute('aria-expanded', 'false'); };
+  toggle.addEventListener('click', function () { toggle.setAttribute('aria-expanded', String(root.classList.toggle('is-open'))); });
+  root.querySelectorAll('.ht-header__mobile a').forEach(function (l) { l.addEventListener('click', closeMenu); });
+  matchMedia('(min-width: 1024px)').addEventListener('change', function (e) { if (e.matches) closeMenu(); });
+  var onScroll = function () { root.classList.toggle('is-scrolled', window.scrollY > 24); };
+  onScroll(); addEventListener('scroll', onScroll, { passive: true });
+  // Shift Work Summit dropdown: hover, click, Enter; Escape, focus-out and outside clicks close it
+  var dd = root.querySelector('.ht-header__dd'), btn = dd.querySelector('.ht-header__dd-btn');
+  var set = function (open) { dd.classList.toggle('is-open', open); btn.setAttribute('aria-expanded', String(open)); };
+  // a mouse click never closes what hover just opened
+  btn.addEventListener('click', function (e) { set(e.pointerType === 'mouse' || btn.getAttribute('aria-expanded') !== 'true'); });
+  dd.addEventListener('pointerenter', function (e) { if (e.pointerType === 'mouse') set(true); });
+  dd.addEventListener('pointerleave', function (e) { if (e.pointerType === 'mouse') set(false); });
+  dd.addEventListener('focusout', function (e) { if (!dd.contains(e.relatedTarget)) set(false); });
+  dd.addEventListener('keydown', function (e) { if (e.key === 'Escape') { set(false); btn.focus(); } });
+  document.addEventListener('click', function (e) { if (!dd.contains(e.target)) set(false); });
+  // mark the current page
+  var here = location.pathname.replace(/\.html$/, '').replace(/\/$/, '') || '/';
+  root.querySelectorAll('a[href^="/"]').forEach(function (l) { if (l.getAttribute('href') === here && here !== '/') l.setAttribute('aria-current', 'page'); });
+})();
+</script>
+<!-- HT-HEADER:END -->
+  <main>
+    <section id="hero" class="bleed bleed--hero carousel" aria-roledescription="carousel" aria-label="HyperTrack" tabindex="0">
+      <div class="slides">
+        <article class="slide is-active slide--text-top" id="hero-1" role="group" aria-roledescription="slide" aria-label="1 of 3">
+          <figure class="art bleed-art" data-art="v7-01-hero"><picture><source media="(max-width:700px)" srcset="/assets/images/home/art/v7-01-hero-p.jpg?v=4"><source media="(max-width:1000px)" srcset="/assets/images/home/art/m/v7-01-hero.jpg?v=4"><img src="/assets/images/home/art/v7-01-hero.jpg?v=4" alt="A home-care nurse on a morning bus into a growing city, smiling at a green check on her phone, a hi-vis crew laughing behind her" width="1600" height="900" loading="eager" fetchpriority="high" decoding="async"></picture></figure>
+          <div class="bleed-scrim" aria-hidden="true"></div>
+          <div class="over"><div class="over-copy"><h1 class="display" id="hero-title">The fastest growing staffing companies run on HyperTrack</h1><p class="sub">Middle office AI teams that close out every pay. The best workers pick you first, and your clients stay.</p><p class="muted proof" data-confirm="growth-140"><span class="dot" aria-hidden="true"></span> Platforms on HyperTrack grew 140% while the US staffing market is forecast to grow 2.4%.</p><p class="fine">Sources: <a href="https://www.staffingindustry.com/research/research-reports/americas/us-staffing-industry-forecast-september-2026-update" target="_blank" rel="noopener" data-confirm="sia-growth-7">SIA US Staffing Industry Forecast, September 2026 update</a> · HyperTrack customer cohort analysis</p><div class="hero-actions"><a class="btn btn-primary btn-lg" href="/product">Get started</a> <a class="btn btn-secondary btn-lg" href="https://hypertrack.com/contact">Book a demo</a></div></div></div>
+        </article>
+        <article class="slide slide--text-top" id="fortune" role="group" aria-roledescription="slide" aria-label="2 of 3" aria-hidden="true" inert>
+          <figure class="art bleed-art" data-art="v7-02-fortune"><picture><source media="(max-width:700px)" srcset="/assets/images/home/art/v7-02-fortune-p.jpg"><source media="(max-width:1000px)" srcset="/assets/images/home/art/m/v7-02-fortune.jpg"><img src="/assets/images/home/art/v7-02-fortune.jpg" alt="A site manager shakes hands with a staffing coordinator at a loading dock at dawn while a crew in hi-vis walks onto the floor" width="1600" height="900" loading="lazy" decoding="async"></picture></figure>
+          <div class="bleed-scrim" aria-hidden="true"></div>
+          <div class="over"><div class="over-copy"><h2 class="display" id="fortune-title">Fortune 1000 companies prefer HyperTrack customers</h2><p class="sub">The largest employers in the country choose staffing platforms that run on HyperTrack</p><a class="cite cite-src" data-confirm="bullhorn-grid-2026" href="https://www.bullhorn.com/grid/2026-industry-trends/" target="_blank" rel="noopener"><img src="/assets/images/home/tiles/bullhorn.png" alt="Bullhorn" width="16" height="16" loading="lazy" decoding="async">Bullhorn's GRID Industry Trends Report 2026: competition is the second biggest challenge to winning new business<span class="cite-arrow" aria-hidden="true">→</span></a><div class="hero-actions"><a class="btn btn-primary btn-lg" href="/product">Get started</a> <a class="btn btn-secondary btn-lg" href="https://hypertrack.com/contact">Book a demo</a></div></div></div>
+        </article>
+        <article class="slide slide--text-top" id="next" role="group" aria-roledescription="slide" aria-label="3 of 3" aria-hidden="true" inert>
+          <figure class="art bleed-art" data-art="v7-03-middle-office"><picture><source media="(max-width:700px)" srcset="/assets/images/home/art/v7-03-middle-office-p.jpg"><source media="(max-width:1000px)" srcset="/assets/images/home/art/m/v7-03-middle-office.jpg"><img src="/assets/images/home/art/v7-03-middle-office.jpg" alt="A cut-away of a three-storey staffing office at dawn, the pay-and-bill team on the middle floor, one of them looking up at a thread of green light" width="1600" height="900" loading="lazy" decoding="async"></picture></figure>
+          <div class="bleed-scrim" aria-hidden="true"></div>
+          <div class="over"><div class="over-copy"><h2 class="display" id="next-title">AI already runs recruiting. The middle office is next.</h2><p class="sub">Pay &amp; Bill still runs on spreadsheets and tribal knowledge — a few people who carry it all in their heads</p><div class="hero-actions"><a class="btn btn-primary btn-lg" href="/product">Get started</a> <a class="btn btn-secondary btn-lg" href="https://hypertrack.com/contact">Book a demo</a></div></div></div>
+        </article>
       </div>
-      <!-- v8: restructured Product submenu.
-           Col 1 (col-span-4): Closeout Agent (NEW chip) + divider + Location-Based Workflows (Backfilling, On-Demand)
-           Col 2 (col-span-5): Basic Vis (Geotags) + Proof-of-Work (Pre-Shift, On-Shift, Nearby)
-           Col 3 (col-span-3): Plan, Assign & Track (Self-Improving Routes) + Partners (Integrations) -->
-      <div class="relative z-20 max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-12 md:divide-x md:divide-neutral-200 md:dark:divide-neutral-800">
-        <!-- COL 1: Location-Based Workflows -->
-        <div class="md:col-span-4 px-6 lg:px-8 py-8">
-          <p class="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-500 mb-4">Location-Based Workflows</p>
-          <ul class="space-y-3.5">
-            <li><a href="https://hypertrack.com/backfilling-last-minute-cancellations.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Backfilling Last-Minute Cancellations</a></li>
-            <li><a href="https://hypertrack.com/on-demand-assignment.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">On-Demand Assignment</a></li>
-          </ul>
-        </div>
-
-        <!-- COL 2: Basic Vis + Proof-of-Work -->
-        <div class="md:col-span-5 px-6 lg:px-8 py-8 border-t md:border-t-0 border-neutral-200 dark:border-neutral-800">
-          <p class="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-500 mb-4">Basic Vis</p>
-          <ul class="space-y-3.5 mb-6">
-            <li><a href="https://hypertrack.com/geotags.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Geotags</a></li>
-          </ul>
-          <p class="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-500 mb-4">Proof-of-Work</p>
-          <ul class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3.5">
-            <li><a href="https://hypertrack.com/pre-shift-tracking.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Pre-Shift Tracking</a></li>
-            <li><a href="https://hypertrack.com/on-shift-tracking.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">On-Shift Tracking</a></li>
-            <li><a href="https://hypertrack.com/nearby-search.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Nearby Search</a></li>
-          </ul>
-        </div>
-
-        <!-- COL 3: Plan, Assign & Track + Partners -->
-        <div class="md:col-span-3 px-6 lg:px-8 py-8 border-t md:border-t-0 border-neutral-200 dark:border-neutral-800">
-          <p class="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-500 mb-4">Plan, Assign &amp; Track</p>
-          <ul class="space-y-3.5 mb-6">
-            <li><a href="https://hypertrack.com/self-improving-routes.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Self-Improving Routes</a></li>
-          </ul>
-          <p class="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-500 mb-4">Partners</p>
-          <ul class="space-y-3.5 mb-6">
-            <li><a href="https://hypertrack.com/partners.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Integrations</a></li>
-          </ul>
-          <p class="text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-500 mb-4">Industries</p>
-          <ul class="space-y-3.5">
-            <li><a href="https://hypertrack.com/customers.html" class="text-base text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Industries</a></li>
-          </ul>
-        </div>
-      </div>
-    </div>
-
-    <!-- Mobile menu (lg:hidden) -->
-    <div id="mobile-menu" class="mobile-menu lg:hidden bg-white dark:bg-neutral-950 border-t border-neutral-200 dark:border-neutral-800">
-      <div class="max-w-[1200px] mx-auto px-4 sm:px-6 py-4 flex flex-col">
-        <div>
-          <button type="button" id="mobile-product-toggle" aria-expanded="false" class="w-full flex items-center justify-between py-3 text-base font-medium text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors">
-            <span>Product</span>
-            <svg class="chev w-3 h-3 transition-transform duration-200" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-          <!-- v8 — flattened mobile Product menu: no eyebrows, single chronological list of 8 items -->
-          <div id="mobile-product-submenu" class="mobile-submenu pl-4">
-            <ul class="space-y-1 mt-1 mb-2">
-              <li><a href="https://hypertrack.com/backfilling-last-minute-cancellations.html" class="block py-1.5 text-sm text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Backfilling Last-Minute Cancellations</a></li>
-              <li><a href="https://hypertrack.com/on-demand-assignment.html" class="block py-1.5 text-sm text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">On-Demand Assignment</a></li>
-              <li><a href="https://hypertrack.com/pre-shift-tracking.html" class="block py-1.5 text-sm text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Pre-Shift Tracking</a></li>
-              <li><a href="https://hypertrack.com/on-shift-tracking.html" class="block py-1.5 text-sm text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">On-Shift Tracking</a></li>
-              <li><a href="https://hypertrack.com/nearby-search.html" class="block py-1.5 text-sm text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Nearby Search</a></li>
-              <li><a href="https://hypertrack.com/self-improving-routes.html" class="block py-1.5 text-sm text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Self-Improving Routes</a></li>
-              <li><a href="https://hypertrack.com/geotags.html" class="block py-1.5 text-sm text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Geotags</a></li>
-              <li><a href="https://hypertrack.com/partners.html" class="block py-1.5 text-sm text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Integrations</a></li>
-              <li><a href="https://hypertrack.com/customers.html" class="block py-1.5 text-sm text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors">Industries</a></li>
-            </ul>
+      <button type="button" class="carousel-arrow carousel-arrow--prev" aria-label="Previous slide"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button><button type="button" class="carousel-arrow carousel-arrow--next" aria-label="Next slide"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+      <div class="over carousel-control-wrap"><div class="carousel-controls">
+        <div class="dots" role="group" aria-label="Choose slide"><button type="button" class="carousel-dot is-active" aria-label="Slide 1" aria-controls="hero-1" aria-current="true"><span class="carousel-progress" aria-hidden="true"></span></button><button type="button" class="carousel-dot" aria-label="Slide 2" aria-controls="fortune"><span class="carousel-progress" aria-hidden="true"></span></button><button type="button" class="carousel-dot" aria-label="Slide 3" aria-controls="next"><span class="carousel-progress" aria-hidden="true"></span></button></div>
+        <span class="carousel-counter" aria-live="off">1 / 3</span>
+      </div></div>
+    </section>
+    <div class="container section-stack">
+      <section id="summit" class="ew-section ew-section-first" aria-labelledby="summit-title">
+        <span class="ew-marker marker-left marker-top" aria-hidden="true"></span><span class="ew-marker marker-right marker-top" aria-hidden="true"></span>
+        <div class="zone-box zone-y-tight center"><p class="eyebrow">Shift Work Summit · Speakers and replays</p><h2 class="h2" id="summit-title">Listen to what leaders in staffing have to say about the future of work</h2><p class="sub-sm">Staffing's operators and builders have taken the stage at HyperTrack's Shift Work Summit since 2022</p></div>
+        <div class="ew-h-divider" aria-hidden="true"><span class="ew-marker marker-left"></span><span class="ew-marker marker-right"></span></div>
+        <div class="spk-wrap"><button type="button" class="spk-arrow spk-arrow--prev" aria-label="Previous speakers"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button><button type="button" class="spk-arrow spk-arrow--next" aria-label="More speakers"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+        <ul class="spk-row" tabindex="0" aria-label="Shift Work Summit speakers">
+          <li class="spk"><div class="spk-top"><div class="spk-faces"><img src="/assets/images/home/speakers/curtis-anderson.jpg" alt="Curtis Anderson" width="56" height="56" loading="lazy" decoding="async"></div><span class="spk-logos"><img src="/assets/images/home/logos/speakers/nursa.png" alt="Nursa" height="18" loading="lazy" decoding="async"></span></div><p class="spk-name">Curtis Anderson</p><p class="muted">CEO</p><p class="muted">Nursa</p><p class="muted spk-session">Building a High-Growth Business in Times of Extreme Uncertainty</p><a class="btn btn-secondary btn-cta" href="https://hypertrack.com/shift-work-summit-2025-sessions/building-a-high-growth-business-in-times-of-extreme-uncertainty" aria-label="Watch the replay: Building a High-Growth Business in Times of Extreme Uncertainty">Watch the replay →</a></li>
+          <li class="spk"><div class="spk-top"><div class="spk-faces"><img src="/assets/images/home/speakers/jarah-euston.jpg" alt="Jarah Euston" width="56" height="56" loading="lazy" decoding="async"></div><span class="spk-logos"><img src="/assets/images/home/logos/speakers/workwhile.png" alt="WorkWhile" height="22" loading="lazy" decoding="async"></span></div><p class="spk-name">Jarah Euston</p><p class="muted">President &amp; COO</p><p class="muted">WorkWhile</p><p class="muted spk-session">Building worker-first automation with AI</p><a class="btn btn-secondary btn-cta" href="https://hypertrack.com/shift-work-summit-2025-sessions/building-worker-first-automation-with-ai" aria-label="Watch the replay: Building worker-first automation with AI">Watch the replay →</a></li>
+          <li class="spk"><div class="spk-top"><div class="spk-faces"><img src="/assets/images/home/speakers/novo-constare.jpg" alt="Novo Constare" width="56" height="56" loading="lazy" decoding="async"></div><span class="spk-logos"><img src="/assets/images/home/logos/speakers/indeed-flex.png" alt="Indeed Flex" height="22" loading="lazy" decoding="async"></span></div><p class="spk-name">Novo Constare</p><p class="muted">CEO</p><p class="muted">Indeed Flex</p><p class="muted spk-session">How Workforce Automation for Deskless Workers Is Transforming with AI</p><a class="btn btn-secondary btn-cta" href="https://hypertrack.com/shift-work-summit-2025-sessions/how-workforce-automation-for-deskless-workers-is-transforming-with-ai" aria-label="Watch the replay: How Workforce Automation for Deskless Workers Is Transforming with AI">Watch the replay →</a></li>
+          <li class="spk"><div class="spk-top"><div class="spk-faces"><img src="/assets/images/home/speakers/barbara-simmer.jpg" alt="Barbara Simmer" width="56" height="56" loading="lazy" decoding="async"></div><span class="spk-logos"><img src="/assets/images/home/logos/speakers/staffmark.png" alt="Staffmark" height="22" loading="lazy" decoding="async"></span></div><p class="spk-name">Barbara Simmer</p><p class="muted">EVP</p><p class="muted">Staffmark</p><p class="muted spk-session">Retaining Humanity in a World of Tech</p><a class="btn btn-secondary btn-cta" href="https://hypertrack.com/shift-work-summit-2025-sessions/retaining-humanity-in-a-world-of-tech" aria-label="Watch the replay: Retaining Humanity in a World of Tech">Watch the replay →</a></li>
+          <li class="spk"><div class="spk-top"><div class="spk-faces"><img src="/assets/images/home/speakers/mike-shebat.jpg" alt="Mike Shebat" width="56" height="56" loading="lazy" decoding="async"></div><span class="spk-logos"><img src="/assets/images/home/logos/speakers/traba.png" alt="Traba" height="17" loading="lazy" decoding="async"></span></div><p class="spk-name">Mike Shebat</p><p class="muted">CEO</p><p class="muted">Traba</p><p class="muted spk-session">How to Build a Culture for Hypergrowth and Excellence in the Staffing Industry</p><a class="btn btn-secondary btn-cta" href="https://hypertrack.com/shift-work-summit-2025-sessions/how-to-build-a-culture-for-hypergrowth-and-excellence-in-the-staffing-industry" aria-label="Watch the replay: How to Build a Culture for Hypergrowth and Excellence in the Staffing Industry">Watch the replay →</a></li>
+          <li class="spk"><div class="spk-top"><div class="spk-faces"><img src="/assets/images/home/speakers/brian-neely.jpg" alt="Brian Neely" width="56" height="56" loading="lazy" decoding="async"></div><span class="spk-logos"><img src="/assets/images/home/logos/speakers/jobandtalent.png" alt="Job&amp;Talent" height="20" loading="lazy" decoding="async"></span></div><p class="spk-name">Brian Neely</p><p class="muted">Chief Sales Officer</p><p class="muted">Job&amp;Talent</p><p class="muted spk-session">Revolutionizing staffing: how Job&amp;Talent leverages technology to shape the future of workforce solution</p><a class="btn btn-secondary btn-cta" href="https://hypertrack.com/gigworksummit-sessions/revolutionizing-staffing-how-job-talent-leverages-technology-to-shape-the-future-of-workforce-solution" aria-label="Watch the replay: Revolutionizing staffing: how Job&amp;Talent leverages technology to shape the future of workforce solution">Watch the replay →</a></li>
+          <li class="spk"><div class="spk-top"><div class="spk-faces"><img src="/assets/images/home/speakers/curt-baldwin.jpg" alt="Curt Baldwin" width="56" height="56" loading="lazy" decoding="async"></div><span class="spk-logos"><img src="/assets/images/home/logos/speakers/medical-solutions.png" alt="Medical Solutions" height="32" loading="lazy" decoding="async"></span></div><p class="spk-name">Curt Baldwin</p><p class="muted">CTO</p><p class="muted">Medical Solutions</p><p class="muted spk-session">The Tech Evolution of Flex Worker Pools</p><a class="btn btn-secondary btn-cta" href="https://hypertrack.com/shift-work-summit-2025-sessions/the-tech-evolution-of-flex-worker-pools" aria-label="Watch the replay: The Tech Evolution of Flex Worker Pools">Watch the replay →</a></li>
+          <li class="spk"><div class="spk-top"><div class="spk-faces"><img src="/assets/images/home/speakers/waynn-lue.jpg" alt="Waynn Lue" width="56" height="56" loading="lazy" decoding="async"></div><span class="spk-logos"><img src="/assets/images/home/logos/speakers/wonolo.png" alt="Wonolo" height="16" loading="lazy" decoding="async"></span></div><p class="spk-name">Waynn Lue</p><p class="muted">VP Engineering</p><p class="muted">Wonolo</p><p class="muted spk-session">Building AI Agents with Empathy for Workers</p><a class="btn btn-secondary btn-cta" href="https://hypertrack.com/shift-work-summit-2025-sessions/building-ai-agents-with-empathy-for-workers" aria-label="Watch the replay: Building AI Agents with Empathy for Workers">Watch the replay →</a></li>
+          <li class="spk"><div class="spk-top"><div class="spk-faces"><img src="/assets/images/home/speakers/ivan-sathianathan.jpg" alt="Ivan Sathianathan" width="56" height="56" loading="lazy" decoding="async"><img src="/assets/images/home/speakers/kirti-shenoy.jpg" alt="Kirti Shenoy" width="56" height="56" loading="lazy" decoding="async"></div><span class="spk-logos"><img src="/assets/images/home/logos/speakers/wonolo.png" alt="Wonolo" height="16" loading="lazy" decoding="async"><img src="/assets/images/home/logos/speakers/zeal.png" alt="Zeal" height="17" loading="lazy" decoding="async"></span></div><p class="spk-name">Ivan Sathianathan · Kirti Shenoy</p><p class="muted">Staff Product Manager, Wonolo</p><p class="muted">Founder &amp; CEO, Zeal</p><p class="muted spk-session">How Wonolo does daily pay for W-2 workers</p><a class="btn btn-secondary btn-cta" href="https://hypertrack.com/gigworksummit-sessions/how-wonolo-does-daily-pay-for-w-2-workers-with-payroll-built-for-shift-work" aria-label="Watch the replay: How Wonolo does daily pay for W-2 workers">Watch the replay →</a></li>
+        </ul></div>
+        <div class="ew-divider" aria-hidden="true"></div><span class="ew-marker marker-left" aria-hidden="true"></span><span class="ew-marker marker-right" aria-hidden="true"></span>
+      </section>
+      <section id="what" class="ew-section" aria-labelledby="what-title">
+        <div class="zone-box zone-y-spacious center"><h2 class="display" id="what-title">Timesheet reconciliation AI for staffing</h2><p class="sub">Validated Time &amp; Attendance, reconciled against a rulebook that already carries federal, state and county wage law, tuned to your client contracts, to pay right and bill right, every pay</p></div>
+        <div class="ew-h-divider" aria-hidden="true"><span class="ew-marker marker-left"></span><span class="ew-marker marker-right"></span></div>
+        <div class="grid ew-grid-2 zone-divided what-row"><span class="ew-marker marker-half marker-top" aria-hidden="true"></span><span class="ew-marker marker-half" aria-hidden="true"></span>
+          <div class="zone-box what-copy"><img class="what-emblem" src="/assets/images/home/art/st/3-collect.webp" alt="A telephone whose cord becomes a timesheet" width="200" height="200" loading="lazy" decoding="async"><p class="eyebrow">Collect</p><h3 class="h3">Chases every hour until it lands</h3><p>Worker-reported time — a text, a photo of the client's clock screen, your app — and client-approved time from the facility's own system. In whatever shape it lands, whenever in the week it lands.</p></div>
+          <div class="zone-box what-visual">
+            <div class="vig" id="vig-collect" data-steps="1400,900,2200,1600,1000,1400">
+              <div class="vig-hd"><span>Agent · SMS</span><span class="vig-meta">Maria R.</span></div>
+              <div class="vig-bd">
+                <div class="dm-thread">
+                  <div class="dm-msg dm-worker" data-step="1"><span class="dm-avatar" aria-hidden="true">MR</span><div class="dm-bubble"><p class="dm-meta">Maria <time>16:58</time></p>
+                    <div class="photo-attachment">
+                      <svg viewBox="0 0 150 112" width="150" height="112" role="img" aria-label="Phone photo of a paper timesheet on a clipboard with handwritten shift entries">
+                        <defs><radialGradient id="timesheet-photo-vignette" cx="50%" cy="45%" r="70%"><stop offset="45%" stop-color="var(--n900)" stop-opacity="0"/><stop offset="100%" stop-color="var(--n900)" stop-opacity=".18"/></radialGradient></defs>
+                        <rect width="150" height="112" fill="var(--n100)"/>
+                        <path d="M0 92L150 77M12 0L8 112" stroke="var(--n200)" stroke-width="1"/>
+                        <rect x="24" y="15" width="110" height="94" rx="3" fill="var(--n900)" opacity=".12"/>
+                        <rect x="21" y="11" width="110" height="96" rx="3" fill="var(--n400)"/>
+                        <rect x="26" y="16" width="100" height="86" fill="#fff"/>
+                        <rect x="30" y="22" width="92" height="9" fill="var(--n100)"/>
+                        <path d="M34 26.5H65M99 26.5H118" stroke="var(--n600)" stroke-width="1.6"/>
+                        <path d="M30 36H121V98H30ZM48.2 36V98M66.4 36V98M84.6 36V98M102.8 36V98M30 46.33H121M30 56.67H121M30 67H121M30 77.33H121M30 87.67H121" fill="none" stroke="var(--n300)" stroke-width=".65"/>
+                        <path d="M34 41H44M52 41H61M70 41H80M89 41H99M107 41H117" stroke="var(--n700)" stroke-width="1.6"/>
+                        <g fill="none" stroke="var(--n800)" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M33 52q2-5 3-1t4 0q1-2 4 0M51 52q1-4 3-1t3-1l4 1M69 52q2-5 3 0t3-1q1-2 3 0M88 52q1-4 3-1t3 1q1-3 4-1M106 52q2-5 3-1t3 0q2-3 6-1"/>
+                          <path d="M33 62q1-3 3 0t3-1q1-2 5 1M51 63q2-5 3-1t3-1l3 1M69 63q1-5 3-1t3 0q1-3 4-1M88 63q2-5 3-1t3-1q2-1 5 0M106 62q1-3 3 0t3 0q2-4 7 0"/>
+                          <path d="M33 73q2-5 3-1t3-1q2-2 5 1M51 73q1-4 3 0t3-1l4 0M69 73q2-5 3-1t3 0q2-3 4-1M88 72q1-3 3 0t3-1q2-2 5 1M106 73q2-5 3-1t3-1q2-2 7 1"/>
+                          <path d="M33 83q1-4 3-1t3-1q1-2 5 1M51 83q2-5 3-1t3 0l3-1M69 83q1-4 3-1t3 1q2-4 4-1M88 83q2-5 3-1t3 0q1-3 5-1M106 83q1-4 3 0t3-1q1-2 7 0"/>
+                        </g>
+                        <path d="M65 8h23v10H65z" fill="var(--n300)" stroke="var(--n600)" stroke-width=".75"/><path d="M71 8V5h11v3" fill="none" stroke="var(--n600)" stroke-width="1.5"/><path d="M68 13h17" stroke="var(--n100)" stroke-width="2"/>
+                        <rect width="150" height="112" fill="url(#timesheet-photo-vignette)"/>
+                      </svg>
+                    </div><p class="photo-caption">IMG_2041 · Timesheet · Mercy General</p>
+                  </div></div>
+                  <div class="chip-row" data-step="2"><span class="tag">Photo received</span><span class="tag tag-ok">4 rows read</span></div>
+                  <div class="dm-msg" data-step="3"><span class="dm-avatar" aria-hidden="true">A</span><div class="dm-bubble"><p class="dm-meta">Agent <time>16:59</time></p><p><span class="type">Thanks Maria.</span> <span class="type">I read 4 rows:</span> <span class="type">in 08:58,</span> <span class="type">break 30 min,</span> <span class="type">out written</span> <span class="type">as 17:00.</span> <span class="type">ADP has no</span> <span class="type">clock-out.</span> <span class="type">Did you leave</span> <span class="type">at 5?</span></p></div></div>
+                  <div class="dm-msg dm-worker" data-step="4"><span class="dm-avatar" aria-hidden="true">MR</span><div class="dm-bubble"><p class="dm-meta">Maria <time>17:02</time></p><p>5:01, we ran late on the east wing.</p></div></div>
+                  <div class="dm-msg" data-step="5"><span class="dm-avatar" aria-hidden="true">A</span><div class="dm-bubble"><p class="dm-meta">Agent <time>17:02</time></p><p>Got it. 17:01 recorded.</p></div></div>
+                </div><p class="dm-recon" data-step="6">Clock-out · 17:01 · from worker reply + photo</p>
+              </div><div class="vig-ft">synthetic data</div>
+            </div>
           </div>
         </div>
-        <a href="https://hypertrack.com/shift-work-marketplace.html" class="block py-3 text-base font-medium text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors">Solutions</a>
-        <a href="https://hypertrack.com/customers.html" class="block py-3 text-base font-medium text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors">Customers</a>
-        <a href="https://hypertrack.com/pricing.html" class="block py-3 text-base font-medium text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors">Pricing</a>
-        <a href="https://hypertrack.com/docs" class="block py-3 text-base font-medium text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors">Docs</a>
-        <a href="https://stories.hypertrack.com/" class="block py-3 text-base font-medium text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors">Blog</a>
-        <a href="https://hypertrack.com/shiftworksummit.html" class="block py-3 text-base font-medium text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors">Shift Work Summit</a>
-        <hr class="my-3 border-neutral-200 dark:border-neutral-800">
-        <a href="https://dashboard.hypertrack.com/login" class="block py-3 text-base font-medium text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors">Sign in</a>
-        <a href="https://dashboard.hypertrack.com/signup" class="block py-3 text-base font-medium text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-colors">Get started</a>
-      </div>
+        <div class="ew-h-divider" aria-hidden="true"><span class="ew-marker marker-left"></span><span class="ew-marker marker-right"></span></div>
+        <div class="grid ew-grid-2 zone-divided what-row what-row--flip"><span class="ew-marker marker-half marker-top" aria-hidden="true"></span><span class="ew-marker marker-half" aria-hidden="true"></span>
+          <div class="zone-box what-copy"><img class="what-emblem" src="/assets/images/home/art/st/4-collate.webp" alt="A lightbox comparing four sources of time" width="200" height="200" loading="lazy" decoding="async"><p class="eyebrow">Reconcile</p><h3 class="h3">Settles every disagreement before payroll closes</h3><p>Every source on one timeline for the pay period. The agent settles what disagrees with the worker and the supervisor, and attaches the evidence. Location confirms what actually happened.</p></div>
+          <div class="zone-box what-visual">
+            <div class="vig" id="vig-collate" data-steps="600,600,600,600,1200,1400,1400">
+              <div class="vig-hd"><span>Sources · shift #4821</span><span class="vig-meta">Maria R. · Mercy General</span></div>
+              <div class="vig-bd">
+                <div class="ts-grid"><div class="ts-card" data-step="1"><p>Paper timesheet</p><p class="mono">09:00 → 17:00</p></div><div class="ts-card" data-step="2"><p>Worker reply</p><p class="mono">— → 17:01</p></div><div class="ts-card" data-step="3"><p>Phone location</p><p class="mono">08:52 → 17:01</p></div><div class="ts-card" data-step="4"><p>ADP punch</p><p class="mono">08:58 → —</p></div></div>
+                <div class="ts-timeline" data-step="5" role="img" aria-label="Source timeline from 06:00 to 18:00. Arrival evidence agrees. The missing ADP clock-out is an exception.">
+                  <div class="ts-axis"><span>06</span><span>09</span><span>12</span><span>15</span><span>18</span></div>
+                  <div class="ts-track"><span class="ts-mark dot ok" style="left:25%"></span><span class="ts-mark" style="left:91.67%"></span></div>
+                  <div class="ts-track"><span class="ts-mark" style="left:91.81%"></span></div>
+                  <div class="ts-track"><span class="ts-mark dot ok" style="left:23.89%"></span><span class="ts-mark" style="left:91.81%"></span></div>
+                  <div class="ts-track"><span class="ts-mark dot ok" style="left:24.72%"></span><span class="tag tag-hold ts-exception">Exception</span></div>
+                </div><div class="ts-card ts-final" data-step="6"><p>Reconciled</p><p class="mono">08:58 → 17:01 · 8.05 h</p></div>
+              </div><div class="vig-ft">synthetic data</div>
+            </div>
+          </div>
+        </div>
+        <div class="ew-h-divider" aria-hidden="true"><span class="ew-marker marker-left"></span><span class="ew-marker marker-right"></span></div>
+        <div class="grid ew-grid-2 zone-divided what-row"><span class="ew-marker marker-half marker-top" aria-hidden="true"></span><span class="ew-marker marker-half" aria-hidden="true"></span>
+          <div class="zone-box what-copy"><img class="what-emblem" src="/assets/images/home/art/st/7-pay.webp" alt="A sealed pay envelope beside a stack of coins" width="200" height="200" loading="lazy" decoding="async"><p class="eyebrow">Pay &amp; Bill</p><h3 class="h3">Pays the worker and invoices the client</h3><p>Wage law, overtime and your client contracts, applied in the order they have to run. One set of approved hours then becomes both the payroll run and the client invoice, so what you pay and what you bill can never disagree. When a client queries a line, the evidence is already attached to it.</p></div>
+          <div class="zone-box what-visual">
+            <div class="vig" id="vig-pay" data-steps="1000,1000,1200,1400,1200,1600">
+              <div class="vig-hd"><span>Pay &amp; Bill · Aug 24 – 30</span><span class="vig-meta">ADP · Mercy General</span></div>
+              <div class="vig-bd">
+                <table class="vig-table pay-table"><thead><tr><th scope="col">Worker</th><th scope="col">Hours</th><th scope="col">Gross</th><th scope="col">Status</th></tr></thead><tbody>
+                  <tr data-step="1"><th scope="row">Maria R.</th><td>8.05</td><td>$197.23</td><td><span class="tag tag-ok">Paid</span></td></tr>
+                  <tr data-step="2"><th scope="row">Luis M.</th><td>9.50</td><td>$232.75</td><td><span class="tag tag-ok">Paid</span></td></tr>
+                  <tr data-step="3"><th scope="row">Aisha B.</th><td>40.00</td><td>$980.00</td><td><span class="tag tag-hold">Held</span></td></tr>
+                  <tr class="pay-note" data-step="3"><td colspan="4" class="muted">3.0 h OT under review · TW-1187</td></tr>
+                </tbody></table>
+                <div class="tile-row"><div class="tile t-adp" data-letter="A"><img src="/assets/images/home/tiles/adp.png" alt="ADP" width="32" height="32" loading="lazy" decoding="async"></div><div class="tile" data-letter="P"><img src="/assets/images/home/tiles/paylocity.png" alt="Paylocity" width="32" height="32" loading="lazy" decoding="async"></div><div class="tile" data-letter="G"><img src="/assets/images/home/tiles/paychex.png" alt="Paychex" width="32" height="32" loading="lazy" decoding="async"></div></div>
+                <div class="pay-progress" data-step="4" aria-hidden="true"><span></span></div><div class="vig-twoup" data-step="5"><p class="mono"><span class="muted">Payroll</span><br>ADP-0901 · 41 workers · $58,420 · Thu 18:00</p><p class="mono"><span class="muted">Invoice</span><br>MERCY-0901 · same 41 workers · $71,240 · Thu 18:02</p></div>
+              </div><div class="vig-ft">synthetic data</div>
+            </div>
+          </div>
+        </div>
+        <div class="ew-h-divider" aria-hidden="true"><span class="ew-marker marker-left"></span><span class="ew-marker marker-right"></span></div>
+        <div class="zone-box zone-y-tight center"><p class="eyebrow">The jobs your payroll team does today</p><ul class="team-strip"><li><img src="/assets/images/home/art/st/1-ingest.webp" alt="" aria-hidden="true" width="96" height="96" loading="lazy" decoding="async"><span>Ingest</span></li><li><img src="/assets/images/home/art/st/2-locate.webp" alt="" aria-hidden="true" width="96" height="96" loading="lazy" decoding="async"><span>Locate</span></li><li><img src="/assets/images/home/art/st/3-collect.webp" alt="" aria-hidden="true" width="96" height="96" loading="lazy" decoding="async"><span>Collect</span></li><li><img src="/assets/images/home/art/st/4-collate.webp" alt="" aria-hidden="true" width="96" height="96" loading="lazy" decoding="async"><span>Collate</span></li><li><img src="/assets/images/home/art/st/5-rules.webp" alt="" aria-hidden="true" width="96" height="96" loading="lazy" decoding="async"><span>Apply the rules</span></li><li><img src="/assets/images/home/art/st/8-discrepancies.webp" alt="" aria-hidden="true" width="96" height="96" loading="lazy" decoding="async"><span>Spot discrepancies</span></li><li><img src="/assets/images/home/art/st/7-pay.webp" alt="" aria-hidden="true" width="96" height="96" loading="lazy" decoding="async"><span>Pay &amp; Bill</span></li><li><img src="/assets/images/home/art/st/6-mediate.webp" alt="" aria-hidden="true" width="96" height="96" loading="lazy" decoding="async"><span>Mediate</span></li></ul><a class="btn btn-primary" href="/closeout">See the product →</a></div>
+        <div class="ew-h-divider" aria-hidden="true"><span class="ew-marker marker-left"></span><span class="ew-marker marker-right"></span></div>
+        <div class="zone-box zone-y-tight center impact"><button type="button" class="cite cite-ht" data-label="Shift Reliability Report 2026" data-confirm="report-locked" aria-live="polite"><img src="/assets/logo-small.svg" alt="" aria-hidden="true">Shift Reliability Report 2026<span class="cite-arrow" aria-hidden="true">→</span></button><p class="muted">What a million validated shifts a month look like, across healthcare and light industrial.</p>
+          <div class="report-chart" data-confirm="report-locked"><figure class="chart spread-chart"><figcaption class="chart-title h4">Show-Rates and OTA spread between worst and best performing staffing platforms</figcaption><p class="chart-sub muted">Healthcare and light industrial, Q2 2026. The bar runs worst operator to best; the line is the aggregate.</p><svg class="chart-svg" viewBox="0 0 420 224" role="img" aria-label="Show-Rate and on-time-arrival spread, worst to best operator. Healthcare Show-Rate 87.5% to 98.7%, aggregate 94.9%. Healthcare OTA 71.2% to 85.9%, aggregate 80.8%. Light industrial Show-Rate 71.5% to 97.4%, aggregate 89.6%. Light industrial OTA 57.1% to 84.4%, aggregate 76.6%."><text class="sp-ind" x="112" y="31" text-anchor="end">Healthcare</text><text class="sp-met" x="112" y="45" text-anchor="end">Show-Rates</text><line class="sp-rail" x1="124" y1="36" x2="410" y2="36"></line><line class="sp-band sp-a" x1="330.6" y1="36" x2="401.7" y2="36"><title>Healthcare Show-Rate: worst 87.5%, aggregate 94.9%, best 98.7%</title></line><line class="sp-agg" x1="377.6" y1="28" x2="377.6" y2="44"></line><text class="sp-aggv" x="377.6" y="23" text-anchor="middle">94.9%</text><text class="sp-end" x="330.6" y="57" text-anchor="middle">87.5%</text><text class="sp-end" x="401.7" y="57" text-anchor="middle">98.7%</text><text class="sp-ind" x="112" y="79" text-anchor="end">Healthcare</text><text class="sp-met" x="112" y="93" text-anchor="end">OTA</text><line class="sp-rail" x1="124" y1="84" x2="410" y2="84"></line><line class="sp-band sp-b" x1="227.0" y1="84" x2="320.4" y2="84"><title>Healthcare OTA: worst 71.2%, aggregate 80.8%, best 85.9%</title></line><line class="sp-agg" x1="288.0" y1="76" x2="288.0" y2="92"></line><text class="sp-aggv" x="288.0" y="71" text-anchor="middle">80.8%</text><text class="sp-end" x="227.0" y="105" text-anchor="middle">71.2%</text><text class="sp-end" x="320.4" y="105" text-anchor="middle">85.9%</text><text class="sp-ind" x="112" y="133" text-anchor="end">Light Industrial</text><text class="sp-met" x="112" y="147" text-anchor="end">Show-Rates</text><line class="sp-rail" x1="124" y1="138" x2="410" y2="138"></line><line class="sp-band sp-a" x1="228.9" y1="138" x2="393.5" y2="138"><title>Light Industrial Show-Rate: worst 71.5%, aggregate 89.6%, best 97.4%</title></line><line class="sp-agg" x1="343.9" y1="130" x2="343.9" y2="146"></line><text class="sp-aggv" x="343.9" y="125" text-anchor="middle">89.6%</text><text class="sp-end" x="228.9" y="159" text-anchor="middle">71.5%</text><text class="sp-end" x="393.5" y="159" text-anchor="middle">97.4%</text><text class="sp-ind" x="112" y="181" text-anchor="end">Light Industrial</text><text class="sp-met" x="112" y="195" text-anchor="end">OTA</text><line class="sp-rail" x1="124" y1="186" x2="410" y2="186"></line><line class="sp-band sp-b" x1="137.3" y1="186" x2="310.9" y2="186"><title>Light Industrial OTA: worst 57.1%, aggregate 76.6%, best 84.4%</title></line><line class="sp-agg" x1="261.3" y1="178" x2="261.3" y2="194"></line><text class="sp-aggv" x="261.3" y="173" text-anchor="middle">76.6%</text><text class="sp-end" x="137.3" y="207" text-anchor="middle">57.1%</text><text class="sp-end" x="310.9" y="207" text-anchor="middle">84.4%</text><line class="chart-axis" x1="124" y1="210" x2="410" y2="210"></line><text class="sp-tick" x="155.8" y="224" text-anchor="middle">60%</text><text class="sp-tick" x="219.3" y="224" text-anchor="middle">70%</text><text class="sp-tick" x="282.9" y="224" text-anchor="middle">80%</text><text class="sp-tick" x="346.4" y="224" text-anchor="middle">90%</text><text class="sp-tick" x="410.0" y="224" text-anchor="middle">100%</text></svg><p class="chart-note muted">The gap between the worst, aggregate and best operators is the opportunity to continuously improve.</p></figure></div></div>
+        <div class="ew-divider" aria-hidden="true"></div><span class="ew-marker marker-left" aria-hidden="true"></span><span class="ew-marker marker-right" aria-hidden="true"></span>
+      </section>
+      <section id="proof" class="ew-section" aria-label="Customer proof">
+        <div class="grid ew-grid-2 zone-divided proof-grid"><span class="ew-marker marker-center marker-top" aria-hidden="true"></span><span class="ew-marker marker-center" aria-hidden="true"></span>
+<div class="zone-box zone-y-spacious testimonial">
+          <blockquote class="quote">“We are now able to track 100% of shifts. Workforce automation helps us deliver 98.3% fulfillment rate with high worker quality.”</blockquote>
+          <div class="logo-mono"><img src="/assets/images/home/logos/speakers/traba.png" alt="Traba" height="20" loading="lazy" decoding="async"></div>
+          <div class="quote-author"><img src="/assets/images/home/ui/akshay.jpg" alt="Akshay Buddiga" width="56" height="56" loading="lazy" decoding="async"><div class="quote-person"><p>Akshay Buddiga</p><p class="muted">Co-founder, Traba</p></div></div>
+          <a class="btn btn-secondary btn-cta" href="https://hypertrack.com/traba-case-study">Read the Traba case study →</a>
+        </div>
+<div class="zone-box zone-y-spacious testimonial" data-confirm="nursa-case-study">
+          <blockquote class="quote">“Tech such as geo-location capabilities transformed the consumer experience and they are improving the experience of healthcare staffing.”</blockquote>
+          <div class="logo-mono" data-confirm="naming-rights-nursa"><img src="/assets/images/home/logos/speakers/nursa.png" alt="Nursa" height="20" loading="lazy" decoding="async"></div>
+          <div class="quote-author"><img src="/assets/images/home/ui/ben-chapman.jpg" alt="Ben Chapman" width="56" height="56" loading="lazy" decoding="async"><div class="quote-person"><p>Ben Chapman</p><p class="muted">Product Leader, Nursa</p></div></div>
+          <a class="btn btn-secondary btn-cta" href="https://hypertrack.com/nursa-case-study">Read the Nursa case study →</a>
+        </div>
+</div>
+        <div class="ew-divider" aria-hidden="true"></div><span class="ew-marker marker-left" aria-hidden="true"></span><span class="ew-marker marker-right" aria-hidden="true"></span>
+      </section>
+      <section id="connectors" class="ew-section" data-confirm="connectors-live" aria-labelledby="connectors-title">
+        <div class="zone-box zone-y-tight center"><h2 class="h2" id="connectors-title">Works with the systems you already run</h2><p class="sub-sm">Your agent signs in and reads what it needs, the way your team does: a CSV export, a file drop, or a browser session on the system itself. No integration project, and nothing for your client's IT to approve.</p></div><div class="ew-h-divider" aria-hidden="true"><span class="ew-marker marker-left"></span><span class="ew-marker marker-right"></span></div>
+        <div class="grid ew-grid-3 zone-divided"><span class="ew-marker marker-third marker-top" aria-hidden="true"></span><span class="ew-marker marker-third" aria-hidden="true"></span><span class="ew-marker marker-two-thirds marker-top" aria-hidden="true"></span><span class="ew-marker marker-two-thirds" aria-hidden="true"></span>
+          <div class="zone-box"><p class="eyebrow">Timekeeping</p><div class="connector-grid">
+            <div class="connector-item"><div class="tile" data-letter="U"><img src="/assets/images/home/tiles/ukg.png" alt="UKG" width="32" height="32" loading="lazy" decoding="async"></div><p class="muted">UKG</p></div>
+            <div class="connector-item"><div class="tile" data-letter="A"><img src="/assets/images/home/tiles/adp.png" alt="ADP" width="32" height="32" loading="lazy" decoding="async"></div><p class="muted">ADP</p></div>
+            <div class="connector-item"><div class="tile" data-letter="W"><img src="/assets/images/home/tiles/workday.png" alt="Workday" width="32" height="32" loading="lazy" decoding="async"></div><p class="muted">Workday</p></div>
+            <div class="connector-item"><div class="tile" data-letter="D"><img src="/assets/images/home/tiles/dayforce.png" alt="Dayforce" width="32" height="32" loading="lazy" decoding="async"></div><p class="muted">Dayforce</p></div>
+            <div class="connector-item"><div class="tile" data-letter="I"><img src="/assets/images/home/tiles/infor.png" alt="Infor" width="32" height="32" loading="lazy" decoding="async"></div><p class="muted">Infor</p></div>
+            <div class="connector-item"><div class="tile" data-letter="O"><img src="/assets/images/home/tiles/oracle.png" alt="Oracle" width="32" height="32" loading="lazy" decoding="async"></div><p class="muted">Oracle</p></div>
+            <div class="connector-item"><div class="tile tile-custom" aria-hidden="true"></div><p class="muted">Your system</p></div>
+          </div></div>
+          <div class="zone-box"><p class="eyebrow">Payroll</p><div class="connector-grid">
+            <div class="connector-item"><div class="tile" data-letter="A"><img src="/assets/images/home/tiles/adp.png" alt="ADP" width="32" height="32" loading="lazy" decoding="async"></div><p class="muted">ADP</p></div>
+            <div class="connector-item"><div class="tile" data-letter="P"><img src="/assets/images/home/tiles/paychex.png" alt="Paychex" width="32" height="32" loading="lazy" decoding="async"></div><p class="muted">Paychex</p></div>
+            <div class="connector-item"><div class="tile" data-letter="P"><img src="/assets/images/home/tiles/paylocity.png" alt="Paylocity" width="32" height="32" loading="lazy" decoding="async"></div><p class="muted">Paylocity</p></div>
+            <div class="connector-item"><div class="tile" data-letter="U"><img src="/assets/images/home/tiles/ukg.png" alt="UKG" width="32" height="32" loading="lazy" decoding="async"></div><p class="muted">UKG</p></div>
+            <div class="connector-item"><div class="tile" data-letter="R"><img src="/assets/images/home/tiles/rippling.png" alt="Rippling" width="32" height="32" loading="lazy" decoding="async"></div><p class="muted">Rippling</p></div>
+            <div class="connector-item"><div class="tile" data-letter="Z"><img src="/assets/images/home/tiles/zeal.png" alt="Zeal" width="32" height="32" loading="lazy" decoding="async"></div><p class="muted">Zeal</p></div>
+            <div class="connector-item"><div class="tile tile-custom" aria-hidden="true"></div><p class="muted">Your system</p></div>
+          </div></div>
+          <div class="zone-box"><p class="eyebrow">Billing</p><div class="connector-grid">
+            <div class="connector-item"><div class="tile" data-letter="B"><img src="/assets/images/home/tiles/bullhorn.png" alt="Bullhorn" width="32" height="32" loading="lazy" decoding="async"></div><p class="muted">Bullhorn</p></div>
+            <div class="connector-item"><div class="tile" data-letter="A"><img src="/assets/images/home/tiles/avionte.png" alt="Avionté" width="32" height="32" loading="lazy" decoding="async"></div><p class="muted">Avionté</p></div>
+            <div class="connector-item"><div class="tile" data-letter="T"><img src="/assets/images/home/tiles/tempworks.png" alt="TempWorks" width="32" height="32" loading="lazy" decoding="async"></div><p class="muted">TempWorks</p></div>
+            <div class="connector-item"><div class="tile" data-letter="N"><img src="/assets/images/home/tiles/netsuite.png" alt="NetSuite" width="32" height="32" loading="lazy" decoding="async"></div><p class="muted">NetSuite</p></div>
+            <div class="connector-item"><div class="tile" data-letter="Q"><img src="/assets/images/home/tiles/quickbooks.png" alt="QuickBooks" width="32" height="32" loading="lazy" decoding="async"></div><p class="muted">QuickBooks</p></div>
+            <div class="connector-item"><div class="tile" data-letter="S"><img src="/assets/images/home/tiles/sap.png" alt="SAP" width="32" height="32" loading="lazy" decoding="async"></div><p class="muted">SAP</p></div>
+            <div class="connector-item"><div class="tile tile-custom" aria-hidden="true"></div><p class="muted">Your system</p></div>
+          </div></div>
+        </div><div class="ew-divider" aria-hidden="true"></div><span class="ew-marker marker-left" aria-hidden="true"></span><span class="ew-marker marker-right" aria-hidden="true"></span>
+      </section>
+      <section id="pricing" class="ew-section" aria-labelledby="pricing-title">
+        <div class="grid ew-grid-2 zone-divided"><span class="ew-marker marker-half marker-top" aria-hidden="true"></span><span class="ew-marker marker-half" aria-hidden="true"></span><div class="zone-box"><h2 class="h2" id="pricing-title" data-confirm="pricing-per-pay">Priced per pay</h2><a class="btn btn-secondary btn-cta" href="https://hypertrack.com/pricing">Full pricing →</a></div><div class="zone-box"><ul class="zone-list"><li><span class="dot" aria-hidden="true"></span> Priced on your unit economics.</li><li><span class="dot" aria-hidden="true"></span> Contracts from $10k a year.</li><li><span class="dot" aria-hidden="true"></span> Paid pilots available.</li></ul></div></div>
+        <div class="ew-divider" aria-hidden="true"></div><span class="ew-marker marker-left" aria-hidden="true"></span><span class="ew-marker marker-right" aria-hidden="true"></span>
+      </section>
+      <section id="demo" class="ew-section" aria-labelledby="demo-title">
+        <div class="zone-box zone-y-spacious center"><h2 class="h2" id="demo-title">See it close out a pay</h2><p class="sub-sm" data-confirm="call-expectations">We close out a sample of your real shifts and show you every discrepancy the agent finds</p><a class="btn btn-primary" href="/product">Get started</a> <a class="btn btn-secondary" href="https://hypertrack.com/contact">Book a demo</a></div>
+      </section>
     </div>
-  </nav>
+  </main>
+  <footer class="site-footer"><figure class="closing-art" aria-hidden="true"><img src="/assets/images/home/art/v8-closing.jpg" alt="" width="1600" height="900" loading="lazy" decoding="async"></figure><div class="container"><div class="footer-top"><a href="/"><img src="/assets/images/home/Green0svg.svg" alt="HyperTrack" height="20" loading="lazy" decoding="async"></a></div><p class="muted">© 2026 HyperTrack Inc.</p><nav class="footer-links" aria-label="Footer navigation"><a href="/">hypertrack.com</a><a href="https://hypertrack.com/privacy">Privacy</a><a href="https://hypertrack.com/terms">Terms</a></nav></div></footer>
+  <script src="/assets/js/claims.js?v=r6"></script>
+  <script src="/assets/js/site.js?v=r6"></script>
 
-    <!-- SVG Icon Sprite -->
-    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
-        <symbol id="icon-building" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4M9 9v.01M9 12v.01M9 15v.01M9 18v.01"/>
-        </symbol>
-        <symbol id="icon-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>
-        </symbol>
-        <symbol id="icon-location" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/>
-        </symbol>
-        <symbol id="icon-wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/><circle cx="16" cy="14" r="1.5"/>
-        </symbol>
-        <symbol id="icon-invoice" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/>
-        </symbol>
-        <symbol id="icon-check-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>
-        </symbol>
-        <symbol id="icon-ai" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.5"/><circle cx="15" cy="10" r="1.5"/><path d="M9 15c.83.67 2 1 3 1s2.17-.33 3-1"/><path d="M12 2v2M4 8h2M18 8h2"/>
-        </symbol>
-        <symbol id="icon-radar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/><path d="M12 3v4M12 17v4"/>
-        </symbol>
-        <symbol id="icon-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/>
-        </symbol>
-        <symbol id="icon-user-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M18 8l5 5M23 8l-5 5"/>
-        </symbol>
-        <symbol id="icon-coffee" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><path d="M6 1v3M10 1v3M14 1v3"/>
-        </symbol>
-        <symbol id="icon-fingerprint" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M2 12C2 6.5 6.5 2 12 2a10 10 0 018 4"/><path d="M5 19.5C5.5 18 6 15 6 12c0-3.5 2.5-6 6-6 2.5 0 4.5 1.5 5.5 3.5"/><path d="M10 12c0-1 .5-2 2-2s2 1 2 2c0 4-1 8-3 10"/><path d="M17.5 8A6 6 0 0118 12c0 2-.5 4-1 6"/><path d="M14 16c-.5 1.5-1.5 3-2.5 4"/>
-        </symbol>
-        <symbol id="icon-plug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 22v-5"/><path d="M9 8V2M15 8V2"/><path d="M18 8v4a6 6 0 01-12 0V8h12z"/>
-        </symbol>
-        <symbol id="icon-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 12a8 8 0 0114.5-4.5"/><path d="M20 12a8 8 0 01-14.5 4.5"/><path d="M19 3v5h-5M5 21v-5h5"/>
-        </symbol>
-        <symbol id="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-        </symbol>
-        <symbol id="icon-trending-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/>
-        </symbol>
-        <symbol id="icon-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
-        </symbol>
-        <symbol id="icon-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/><path d="M10 8l6 4-6 4V8z" fill="currentColor"/>
-        </symbol>
-        <symbol id="icon-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/>
-        </symbol>
-    </svg>
-
-    <div class="progress-bar" id="progressBar"></div>
-
-    <main class="deck">
-        <!-- Slide 1: Title -->
-        <section class="slide slide--title active" data-slide="0">
-            <div class="hero-wrapper">
-                <!-- Futuristic Closeout intelligence hero -->
-                <div class="hero-image-panel">
-                    <video class="hero-closeout-photo" autoplay muted loop playsinline preload="auto" poster="images/closeout-enterprise/hero-closeout-loop-poster.webp" aria-label="Closeout intelligence converging shift evidence into one verified record for worker pay and client billing">
-                        <source src="videos/closeout-hero-loop.mp4" type="video/mp4">
-                    </video>
-                </div>
-                <div class="slide__content hero-content">
-                    <h1 class="title">Closeout Agent</h1>
-                    <p class="subtitle">AI-Powered Time-to-Pay for Staffing</p>
-                    <div class="tagline-box">
-                        <span class="tagline">Close every shift with confidence</span>
-                    </div>
-                    <p class="quote">Faster pay. Accurate billing. Defensible records.</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Slide: The Crisis (three-party human interest) -->
-        <section class="slide slide--crisis" data-slide="13">
-            <div class="slide__content">
-                <h2 class="slide__title">One shift. Three parties waiting to get paid right.</h2>
-                <p class="slide__lead">Start with the staffing buyer and work backward: confirmed worked hours are the shared record every party needs.</p>
-
-                <div class="crisis-grid">
-                    <div class="crisis-card">
-                        <img src="images/closeout-enterprise/buyer-coverage-review.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(31vw, 510px)" width="1600" height="900" loading="lazy" decoding="async" alt="Staffing buyer and agency partner reviewing coverage and confirmed hours" class="crisis-card__photo">
-                        <div class="crisis-card__head">
-                            <svg class="crisis-card__icon"><use href="#icon-building"/></svg>
-                            <h3 class="crisis-card__title">Staffing buyers</h3>
-                        </div>
-                        <ul class="crisis-card__list">
-                            <li>Consolidate different agency T&amp;A systems</li>
-                            <li>Pay only for confirmed worked hours</li>
-                            <li>Stop chasing approvals across vendors</li>
-                            <li>Defend invoices and compliance with evidence</li>
-                        </ul>
-                        <span class="crisis-card__tag">Reliable evidence makes every client relationship easier.</span>
-                    </div>
-
-                    <div class="crisis-card">
-                        <img src="images/closeout-enterprise/exception-resolution.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(31vw, 510px)" width="1600" height="900" loading="lazy" decoding="async" alt="Staffing operations lead coordinating a shift exception across systems" class="crisis-card__photo">
-                        <div class="crisis-card__head">
-                            <svg class="crisis-card__icon"><use href="#icon-wallet"/></svg>
-                            <h3 class="crisis-card__title">Agencies &amp; marketplaces</h3>
-                        </div>
-                        <ul class="crisis-card__list">
-                            <li>Get paid faster and protect working capital</li>
-                            <li>Validate client-controlled T&amp;A correctly</li>
-                            <li>Resolve worker–client discrepancies fast</li>
-                            <li>Reduce misclassification and underpayment risk</li>
-                        </ul>
-                        <span class="crisis-card__tag">Exception handling should not become a branch queue.</span>
-                    </div>
-
-                    <div class="crisis-card">
-                        <img src="images/closeout-enterprise/worker-clock-in.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(31vw, 510px)" width="1600" height="900" loading="lazy" decoding="async" alt="Worker checking a shift app after clocking out" class="crisis-card__photo">
-                        <div class="crisis-card__head">
-                            <svg class="crisis-card__icon"><use href="#icon-user-x"/></svg>
-                            <h3 class="crisis-card__title">Workers</h3>
-                        </div>
-                        <ul class="crisis-card__list">
-                            <li>Get paid faster — ideally the same day</li>
-                            <li>Get paid accurately for every hour</li>
-                            <li>Report time easily and focus on the work</li>
-                            <li>Avoid repeated questions about hours and breaks</li>
-                        </ul>
-                        <span class="crisis-card__tag">A better closeout experience builds trust.</span>
-                    </div>
-                </div>
-
-                <div class="crisis-footer">
-                    <p class="crisis-footer__text">One verified closeout aligns the client, the staffing team, and the worker — <strong>without another reconciliation queue.</strong></p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Slide: Live Customers -->
-        <section class="slide slide--customers" data-slide="9">
-            <div class="slide__content">
-                <h2 class="slide__title">Built for staffing at scale</h2>
-                <p class="slide__lead">Across local branches, centralized delivery, onsite programs, and digital marketplaces, every shift needs one trusted record.</p>
-
-                <div class="customer-cards customer-cards--closeout">
-                    <article class="customer-card staffing-model-card">
-                        <div class="staffing-model-visual" aria-hidden="true">
-                            <svg class="staffing-model-icon" viewBox="0 0 80 80" fill="none">
-                                <rect class="icon-panel" x="13" y="17" width="54" height="48" rx="9"/>
-                                <path class="icon-ink" d="M24 11v13M56 11v13M13 31h54"/>
-                                <path class="icon-ink" d="M23 43h15M23 52h11"/>
-                                <circle class="icon-accent-fill" cx="53" cy="50" r="11"/>
-                                <path class="icon-accent" d="M53 44v7l5 3"/>
-                            </svg>
-                        </div>
-                        <div class="customer-card__logo staffing-model-copy">
-                            <span class="customer-name">Temporary staffing</span>
-                            <span class="staffing-model-note">Rapid capacity for changing demand</span>
-                        </div>
-                    </article>
-                    <article class="customer-card staffing-model-card">
-                        <div class="staffing-model-visual" aria-hidden="true">
-                            <svg class="staffing-model-icon" viewBox="0 0 80 80" fill="none">
-                                <circle class="icon-panel" cx="32" cy="29" r="12"/>
-                                <path class="icon-ink" d="M13 61c2-14 9-21 19-21s17 7 19 21"/>
-                                <rect class="icon-accent-fill" x="45" y="42" width="24" height="22" rx="7"/>
-                                <path class="icon-accent" d="m51 53 5 5 8-10"/>
-                            </svg>
-                        </div>
-                        <div class="customer-card__logo staffing-model-copy">
-                            <span class="customer-name">Permanent hiring</span>
-                            <span class="staffing-model-note">Long-term placement with confidence</span>
-                        </div>
-                    </article>
-                    <article class="customer-card staffing-model-card">
-                        <div class="staffing-model-visual" aria-hidden="true">
-                            <svg class="staffing-model-icon" viewBox="0 0 80 80" fill="none">
-                                <circle class="icon-panel" cx="19" cy="40" r="11"/>
-                                <path class="icon-ink" d="M19 34v7l4 3M30 40h18"/>
-                                <path class="icon-accent" d="m42 34 7 6-7 6"/>
-                                <rect class="icon-accent-fill" x="51" y="28" width="19" height="24" rx="5"/>
-                                <path class="icon-accent" d="M56 28v-4h9v4M56 41l4 4 6-8"/>
-                            </svg>
-                        </div>
-                        <div class="customer-card__logo staffing-model-copy">
-                            <span class="customer-name">Flex-to-perm</span>
-                            <span class="staffing-model-note">Convert proven talent without friction</span>
-                        </div>
-                    </article>
-                    <article class="customer-card staffing-model-card">
-                        <div class="staffing-model-visual" aria-hidden="true">
-                            <svg class="staffing-model-icon" viewBox="0 0 80 80" fill="none">
-                                <path class="icon-panel" d="M11 63V29l24-11v45M35 63V36h18v27"/>
-                                <path class="icon-ink" d="M20 34h6M20 44h6M20 54h6M42 44h5M42 53h5M8 63h48"/>
-                                <path class="icon-accent-fill" d="M68 35c0 9-10 18-10 18S48 44 48 35a10 10 0 1 1 20 0Z"/>
-                                <circle class="icon-accent" cx="58" cy="35" r="3"/>
-                            </svg>
-                        </div>
-                        <div class="customer-card__logo staffing-model-copy">
-                            <span class="customer-name">Onsite delivery</span>
-                            <span class="staffing-model-note">Embedded coordination at the worksite</span>
-                        </div>
-                    </article>
-                    <article class="customer-card staffing-model-card">
-                        <div class="staffing-model-visual" aria-hidden="true">
-                            <svg class="staffing-model-icon" viewBox="0 0 80 80" fill="none">
-                                <path class="icon-ink" d="M24 24 40 39M56 24 40 39M19 57l21-18M61 57 40 39"/>
-                                <circle class="icon-panel" cx="19" cy="19" r="9"/>
-                                <circle class="icon-panel" cx="61" cy="19" r="9"/>
-                                <circle class="icon-panel" cx="16" cy="61" r="9"/>
-                                <circle class="icon-panel" cx="64" cy="61" r="9"/>
-                                <rect class="icon-accent-fill" x="29" y="28" width="22" height="22" rx="7"/>
-                                <path class="icon-accent" d="m34 39 5 5 8-10"/>
-                            </svg>
-                        </div>
-                        <div class="customer-card__logo staffing-model-copy">
-                            <span class="customer-name">MSP / RPO</span>
-                            <span class="staffing-model-note">One program across suppliers and teams</span>
-                        </div>
-                    </article>
-                </div>
-
-                <p class="slide__tagline">From worker clock-in to client approval, every exception has an owner.</p>
-            </div>
-        </section>
-
-        <!-- Slide 2: The Problem -->
-        <section class="slide slide--problem" data-slide="1">
-            <div class="slide__content">
-                <h2 class="slide__title">There Is No Single Timesheet</h2>
-                <p class="slide__lead">Your T&A data comes from multiple sources — all different, all conflicting.</p>
-
-                <div class="sources-grid">
-                    <div class="source-card">
-                        <div class="source-card__image">
-                            <img src="images/closeout-enterprise/client-approval.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(31vw, 510px)" width="1600" height="900" loading="lazy" decoding="async" alt="Paper timecard, client system, punch receipt, and phone clock arriving as separate evidence" class="source-card__sprite source-card__photo">
-                        </div>
-                        <div class="source-card__title-row">
-                            <h3 class="source-card__title">Client Systems</h3>
-                            <svg class="source-card__icon"><use href="#icon-building"/></svg>
-                        </div>
-                        <p class="source-card__desc">Client clocks, VMS exports, paper forms, and vendor portals — each with its own approval path.</p>
-                        <span class="source-card__tag">Approval data arrives in different shapes</span>
-                    </div>
-
-                    <div class="source-card">
-                        <div class="source-card__image">
-                            <img src="images/closeout-enterprise/unique/mobile-time-record.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(31vw, 510px)" width="1376" height="768" loading="lazy" decoding="async" alt="Phone shift timeline beside a worksite time-clock terminal and worker equipment" class="source-card__sprite source-card__photo">
-                        </div>
-                        <div class="source-card__title-row">
-                            <h3 class="source-card__title">App Clock-in/out</h3>
-                            <svg class="source-card__icon"><use href="#icon-clock"/></svg>
-                        </div>
-                        <p class="source-card__desc">Your app, marketplace, or staffing time system captures the worker’s submitted hours.</p>
-                        <span class="source-card__tag">Worker-submitted or system-captured</span>
-                    </div>
-
-                    <div class="source-card">
-                        <div class="source-card__image">
-                            <img src="images/closeout-enterprise/location-evidence.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(31vw, 510px)" width="1600" height="900" loading="lazy" decoding="async" alt="Worksite geofence, arrival, departure, and time-at-site evidence on a tablet" class="source-card__sprite source-card__photo">
-                        </div>
-                        <div class="source-card__title-row">
-                            <h3 class="source-card__title">Location Intelligence</h3>
-                            <svg class="source-card__icon"><use href="#icon-location"/></svg>
-                        </div>
-                        <p class="source-card__desc">Background location and geofencing from mobile apps — optional evidence of where workers actually were.</p>
-                        <span class="source-card__tag">Optional presence evidence</span>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Slide 3: The Pain -->
-        <section class="slide slide--pain" data-slide="2">
-            <div class="slide__content">
-                <h2 class="slide__title">What's the actual T&A for this shift?</h2>
-
-                <div class="pain-split">
-                    <div class="pain-box">
-                        <div class="pain-box__image">
-                            <img src="images/closeout-enterprise/unique/worker-pay-decision.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(48vw, 700px)" width="1376" height="768" loading="lazy" decoding="async" alt="Worker reviewing an approved-hours and payout confirmation after a shift" class="pain-box__img">
-                        </div>
-                        <div class="pain-box__title-row">
-                            <h3>Worker pay</h3>
-                        </div>
-                        <p>How much do I pay the worker?</p>
-                    </div>
-                    <div class="pain-box">
-                        <div class="pain-box__image">
-                            <img src="images/closeout-enterprise/reconciliation-desk.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(48vw, 700px)" width="1200" height="675" loading="lazy" decoding="async" alt="Client timesheet reconciled to a final invoice amount" class="pain-box__img">
-                        </div>
-                        <div class="pain-box__title-row">
-                            <h3>Client billing</h3>
-                        </div>
-                        <p>How much do I invoice the client?</p>
-                    </div>
-                </div>
-
-                <div class="pain-reality">
-                    <p class="pain-reality__text">Today, staffing operations manually reconciles every shift.</p>
-                    <div class="pain-reality__tags">
-                        <span><svg class="tag-icon"><use href="#icon-clock"/></svg>Slow</span>
-                        <span><svg class="tag-icon"><use href="#icon-alert"/></svg>Error-prone</span>
-                        <span><svg class="tag-icon"><use href="#icon-trending-up"/></svg>Unscalable</span>
-                    </div>
-                </div>
-
-                <div class="insight-box">
-                    <div class="insight-box__sides">
-                        <div class="insight-box__left">
-                            <svg class="insight-box__icon"><use href="#icon-wallet"/></svg>
-                            <span>You pay workers now</span>
-                        </div>
-                        <div class="insight-box__center">
-                            <p>You're a fintech company</p>
-                            <p>Even if you don't know it</p>
-                        </div>
-                        <div class="insight-box__right">
-                            <span>Clients pay you later</span>
-                            <svg class="insight-box__icon"><use href="#icon-calendar"/></svg>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Slide 6: Everything Included -->
-        <section class="slide slide--included" data-slide="5">
-            <div class="slide__content">
-                <h2 class="slide__title">Closeout Agent works in three modes</h2>
-                <p class="slide__lead">Start with the exception that costs you most, then add optional presence evidence where it creates value.</p>
-
-                <div class="pricing-grid">
-                    <article class="pricing-card">
-                        <div class="pricing-card__eyebrow">Data collection mode</div>
-                        <div class="pricing-card__head">
-                            <svg class="pricing-card__icon"><use href="#icon-coffee"/></svg>
-                            <h3>Meal Breaks</h3>
-                        </div>
-                        <div class="pricing-card__price"><span>$0.35</span><small>/ shift</small></div>
-                        <ul class="pricing-card__features">
-                            <li>SMS and app collection for missing time</li>
-                            <li>Policy-aware break and attestation prompts</li>
-                            <li>Audit-ready response history</li>
-                        </ul>
-                    </article>
-
-                    <article class="pricing-card pricing-card--featured">
-                        <div class="pricing-card__eyebrow">Exception handling mode</div>
-                        <div class="pricing-card__head">
-                            <svg class="pricing-card__icon"><use href="#icon-ai"/></svg>
-                            <h3>Payment Reconciliation</h3>
-                        </div>
-                        <div class="pricing-card__price"><span>$1</span><small>/ shift</small></div>
-                        <ul class="pricing-card__features">
-                            <li>Worker + client outreach</li>
-                            <li>Exceptions resolved across every T&amp;A source</li>
-                            <li>Payroll- and invoice-ready closeout decision</li>
-                        </ul>
-                        <div class="pricing-card__included">Location Intelligence included</div>
-                    </article>
-
-                    <article class="pricing-card">
-                        <div class="pricing-card__eyebrow">Optional evidence layer</div>
-                        <div class="pricing-card__head">
-                            <svg class="pricing-card__icon"><use href="#icon-location"/></svg>
-                            <h3>Location Intelligence</h3>
-                        </div>
-                        <div class="pricing-card__price"><span>$0.35</span><small>/ shift</small></div>
-                        <ul class="pricing-card__features">
-                            <li>App clock-in/out geotags</li>
-                            <li>On-shift presence at the worksite</li>
-                            <li>Arrival and departure evidence</li>
-                        </ul>
-                    </article>
-                </div>
-            </div>
-        </section>
-
-        <!-- Slide 4: The Solution -->
-        <section class="slide slide--solution" data-slide="3">
-            <div class="slide__content">
-                <h2 class="slide__title">One shift in. One closeout decision out.</h2>
-
-                <div class="flow-layout">
-                    <!-- Input Sources -->
-                    <div class="flow-column flow-column--left">
-                        <div class="flow-input-card">
-                            <div class="flow-input-header">
-                                <svg class="flow-input-icon"><use href="#icon-building"/></svg>
-                                <span>Client T&amp;A</span>
-                            </div>
-                            <div class="flow-input-preview">
-                                <div class="source-row">
-                                    <span class="source-tag source-tag--supervisor">Client approval</span>
-                                    <span class="source-times">7:00 AM - 4:00 PM</span>
-                                </div>
-                                <div class="source-row">
-                                    <span class="source-tag source-tag--customer">VMS / export</span>
-                                    <span class="source-times">7:00 AM - 4:00 PM</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flow-input-card">
-                            <div class="flow-input-header">
-                                <svg class="flow-input-icon"><use href="#icon-clock"/></svg>
-                                <span>App Clock-in/out</span>
-                            </div>
-                            <div class="flow-input-preview">
-                                <div class="source-row">
-                                    <span class="source-tag source-tag--mobile">Mobile</span>
-                                    <span class="source-times">7:15 AM - 4:02 PM</span>
-                                </div>
-                                <div class="source-row">
-                                    <span class="source-tag source-tag--self-report">Worker report</span>
-                                    <span class="source-times">7:00 AM - 4:00 PM</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flow-input-card flow-input-card--location">
-                            <div class="flow-input-header">
-                                <svg class="flow-input-icon"><use href="#icon-location"/></svg>
-                                <span>Location Intelligence</span>
-                                <span class="optional-badge">Optional</span>
-                            </div>
-                            <div class="location-split">
-                                <div class="location-map-side">
-                                    <svg viewBox="0 0 120 100" class="location-map-svg">
-                                        <!-- Dark background -->
-                                        <rect width="120" height="100" fill="#161618"/>
-                                        <!-- Roads network -->
-                                        <g stroke="#2a2a2e" stroke-width="1.5" fill="none">
-                                            <path d="M 0,25 L 120,25"/>
-                                            <path d="M 0,50 L 60,50 L 60,80 L 120,80"/>
-                                            <path d="M 0,75 L 40,75"/>
-                                            <path d="M 30,0 L 30,100"/>
-                                            <path d="M 60,0 L 60,100"/>
-                                            <path d="M 90,0 L 90,100"/>
-                                        </g>
-                                        <!-- Route path (white) -->
-                                        <path d="M 15,85 L 30,85 L 30,50 L 60,50 L 60,25 L 105,25" fill="none" stroke="#a1a1aa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                        <!-- Start marker (smaller) -->
-                                        <circle cx="15" cy="85" r="4" fill="#161618" stroke="#22c55e" stroke-width="1.5"/>
-                                        <circle cx="15" cy="85" r="1.5" fill="#22c55e"/>
-                                        <!-- End marker (smaller) -->
-                                        <rect x="101" y="21" width="8" height="8" rx="1.5" fill="#22c55e"/>
-                                    </svg>
-                                </div>
-                                <div class="location-activity-side">
-                                    <div class="activity-item">
-                                        <span class="activity-icon activity-icon--drive">
-                                            <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><circle cx="12" cy="12" r="8"/></svg>
-                                        </span>
-                                        <span class="activity-label">Drive</span>
-                                        <span class="activity-meta">21.9 mi</span>
-                                    </div>
-                                    <div class="activity-item activity-item--break">
-                                        <span class="activity-icon activity-icon--meal">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-                                        </span>
-                                        <span class="activity-label">Tracking Stopped</span>
-                                        <span class="activity-meta activity-meta--green">1h 15m</span>
-                                    </div>
-                                    <div class="activity-item">
-                                        <span class="activity-icon activity-icon--drive">
-                                            <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><circle cx="12" cy="12" r="8"/></svg>
-                                        </span>
-                                        <span class="activity-label">Drive</span>
-                                        <span class="activity-meta">55.5 mi</span>
-                                    </div>
-                                    <div class="activity-item">
-                                        <span class="activity-icon activity-icon--idle">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M12 6v6l4 2"/></svg>
-                                        </span>
-                                        <span class="activity-label">On Site</span>
-                                        <span class="activity-meta">8h 45m</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Simple Arrow In -->
-                    <div class="flow-arrow">
-                        <svg class="arrow-svg" viewBox="0 0 40 24">
-                            <path d="M 0,12 L 30,12 M 22,6 L 30,12 L 22,18" fill="none" stroke="#52525b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </div>
-
-                    <!-- Agent Center -->
-                    <div class="flow-copilot">
-                        <div class="flow-copilot-container">
-                            <div class="copilot-video-wrapper">
-                            <video class="copilot-video copilot-motion" autoplay muted loop playsinline preload="auto" poster="images/closeout-enterprise/agent-poster.jpg" aria-label="Staffing operations coordinator using the Closeout Agent to reconcile a shift">
-                                    <source src="videos/closeout-agent-loop.mp4" type="video/mp4">
-                                </video>
-                            </div>
-                            <div class="copilot-label">
-                                <span class="copilot-label-text">Closeout Agent</span>
-                            </div>
-                            <div class="flow-copilot-note">
-                                <div class="copilot-note-label">Reconciliation Notes</div>
-                                <div class="copilot-note-text"><span class="highlight-info">Location data</span> <span class="highlight-positive">confirms</span> 6:58 AM arrival. <span class="highlight-info">Client approval</span> verified 4:00 PM <span class="highlight-warning">departure</span>. <span class="highlight-positive">All sources corroborate</span>.</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Simple Arrow Out -->
-                    <div class="flow-arrow">
-                        <svg class="arrow-svg" viewBox="0 0 40 24">
-                            <path d="M 0,12 L 30,12 M 22,6 L 30,12 L 22,18" fill="none" stroke="#52525b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </div>
-
-                    <!-- Output -->
-                    <div class="flow-column flow-column--right">
-                        <div class="flow-output-card">
-                            <div class="flow-output-header">
-                                <svg class="flow-output-icon"><use href="#icon-check-shield"/></svg>
-                                <span>Validated Timesheet</span>
-                                <span class="confidence-text">95% confidence</span>
-                            </div>
-                            <div class="flow-output-preview">
-                                <div class="time-boxes">
-                                    <div class="time-box">
-                                        <span class="time-box-label">Clock In</span>
-                                        <span class="time-box-value">7:00 AM</span>
-                                    </div>
-                                    <div class="time-box">
-                                        <span class="time-box-label">Clock Out</span>
-                                        <span class="time-box-value">4:00 PM</span>
-                                    </div>
-                                    <div class="time-box time-box--total">
-                                        <span class="time-box-label">Total</span>
-                                        <span class="time-box-value">9h 0m</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flow-output-card flow-output-card--payout">
-                            <div class="flow-output-header">
-                                <svg class="flow-output-icon"><use href="#icon-wallet"/></svg>
-                                <span>Recommended Payout</span>
-                            </div>
-                            <div class="flow-output-preview">
-                                <div class="payout-boxes">
-                                    <div class="payout-box">
-                                        <span class="payout-box-label">Claimed</span>
-                                        <span class="payout-box-value">$180</span>
-                                    </div>
-                                    <div class="payout-box payout-box--recommended">
-                                        <span class="payout-box-label">Recommended</span>
-                                        <span class="payout-box-value">$180</span>
-                                    </div>
-                                    <div class="payout-box">
-                                        <span class="payout-box-label">Adjustment</span>
-                                        <span class="payout-box-value payout-box-value--neutral">$0</span>
-                                    </div>
-                                </div>
-                                <button class="approve-btn">
-                                    <svg class="approve-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                        <path d="M9 12l2 2 4-4"/>
-                                    </svg>
-                                    Approve
-                                </button>
-                            </div>
-                        </div>
-                        <div class="flow-dest-card">
-                            <div class="dest-arrows">
-                                <svg class="dest-arrow-svg" viewBox="0 0 24 30">
-                                    <path d="M 12,0 L 12,20 M 6,14 L 12,20 L 18,14" fill="none" stroke="#52525b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                                <svg class="dest-arrow-svg" viewBox="0 0 24 30">
-                                    <path d="M 12,0 L 12,20 M 6,14 L 12,20 L 18,14" fill="none" stroke="#52525b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </div>
-                            <div class="flow-dest-boxes">
-                                <div class="dest-box dest-box--tall">
-                                    <div class="dest-box-header">
-                                        <svg class="dest-box-icon"><use href="#icon-wallet"/></svg>
-                                        <span class="dest-box-label">Payout Systems</span>
-                                    </div>
-                                    <div class="dest-logos">
-                                        <div class="dest-logo-item">
-                                            <span class="dest-logo-badge dest-logo-badge--branch" aria-hidden="true">B</span>
-                                            <span class="dest-logo-name">Branch</span>
-                                        </div>
-                                        <div class="dest-logo-item">
-                                            <span class="dest-logo-badge dest-logo-badge--dailypay" aria-hidden="true">D</span>
-                                            <span class="dest-logo-name">DailyPay</span>
-                                        </div>
-                                        <div class="dest-logo-item">
-                                            <span class="dest-logo-badge dest-logo-badge--gusto" aria-hidden="true">G</span>
-                                            <span class="dest-logo-name">Gusto</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="dest-box dest-box--tall">
-                                    <div class="dest-box-header">
-                                        <svg class="dest-box-icon"><use href="#icon-invoice"/></svg>
-                                        <span class="dest-box-label">Billing Systems</span>
-                                    </div>
-                                    <div class="dest-logos">
-                                        <div class="dest-logo-item">
-                                            <span class="dest-logo-badge dest-logo-badge--quickbooks" aria-hidden="true">Q</span>
-                                            <span class="dest-logo-name">QuickBooks</span>
-                                        </div>
-                                        <div class="dest-logo-item">
-                                            <span class="dest-logo-badge dest-logo-badge--bullhorn" aria-hidden="true">B</span>
-                                            <span class="dest-logo-name">Bullhorn</span>
-                                        </div>
-                                        <div class="dest-logo-item">
-                                            <span class="dest-logo-badge dest-logo-badge--netsuite" aria-hidden="true">N</span>
-                                            <span class="dest-logo-name">NetSuite</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Slide 5: How It Works -->
-        <section class="slide slide--how" data-slide="4">
-            <div class="slide__content">
-                <h2 class="slide__title">It coordinates the work your team does today</h2>
-
-                <div class="features-grid">
-                    <div class="feature-card">
-                        <div class="feature-card__image">
-                            <img src="images/closeout-enterprise/unique/agent-outreach.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(31vw, 510px)" width="1376" height="768" loading="lazy" decoding="async" alt="Staffing operations specialist coordinating a missing-time exception across two evidence screens" class="feature-card__img">
-                        </div>
-                        <div class="feature-card__title-row">
-                            <h3 class="feature-card__title">AI Agent</h3>
-                            <svg class="feature-card__icon"><use href="#icon-ai"/></svg>
-                        </div>
-                        <p class="feature-card__desc">When data is missing, the agent talks to workers, client teams, and your systems to retrieve it. Human-like coordination, automated.</p>
-                        <span class="feature-card__tag">Does what a human would do</span>
-                    </div>
-
-                    <div class="feature-card">
-                        <div class="feature-card__image">
-                            <img src="images/closeout-enterprise/unique/location-presence-proof.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(31vw, 510px)" width="1376" height="768" loading="lazy" decoding="async" alt="Worksite-mounted tablet showing an optional geofence and presence path" class="feature-card__img">
-                        </div>
-                        <div class="feature-card__title-row">
-                            <h3 class="feature-card__title">Location Intelligence <span class="optional-badge">Optional</span></h3>
-                            <svg class="feature-card__icon"><use href="#icon-radar"/></svg>
-                        </div>
-                        <p class="feature-card__desc">Background location, geofencing, and clock-in geotags provide optional presence evidence that paper can never match.</p>
-                        <span class="feature-card__tag">Add objective presence evidence when needed</span>
-                    </div>
-
-                    <div class="feature-card">
-                        <div class="feature-card__image">
-                            <img src="images/closeout-enterprise/unique/exception-variance.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(31vw, 510px)" width="1376" height="768" loading="lazy" decoding="async" alt="Three shift timelines with one clearly isolated end-time variance" class="feature-card__img">
-                        </div>
-                        <div class="feature-card__title-row">
-                            <h3 class="feature-card__title">Exception Handling</h3>
-                            <svg class="feature-card__icon"><use href="#icon-alert"/></svg>
-                        </div>
-                        <p class="feature-card__desc">Cross-reference sources, detect anomalies, surface plan vs. actual variances. Flag what needs attention.</p>
-                        <span class="feature-card__tag">Catch what humans miss</span>
-                    </div>
-                </div>
-
-                <p class="slide__tagline">Fast. Accurate. Scalable.</p>
-                <p class="slide__subtagline">Additional data + better algorithms + human-like coordination</p>
-            </div>
-        </section>
-
-        <!-- Slide: Architecture -->
-        <section class="slide slide--architecture" data-slide="10">
-            <div class="slide__content">
-                <h2 class="slide__title">Built to show its work</h2>
-                <p class="slide__lead">Every closeout follows your rulebook, cites its evidence, and leaves an audit-ready trail.</p>
-
-                <img src="images/closeout-enterprise/unique/auditable-trace.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(44vw, 700px)" width="1376" height="768" loading="lazy" decoding="async" alt="Rulebook and source evidence connected to an inspectable closeout case file" class="architecture-photo">
-
-                <div class="features-grid">
-                    <div class="feature-card">
-                        <div class="feature-card__title-row">
-                            <h3 class="feature-card__title">Multi-step reasoning</h3>
-                            <svg class="feature-card__icon"><use href="#icon-ai"/></svg>
-                        </div>
-                        <p class="feature-card__desc">Reconciles 4+ conflicting evidence sources per shift: schedule, supervisor sign-off, mobile clock, location intelligence.</p>
-                        <span class="feature-card__tag">Resolves conflict like a human</span>
-                    </div>
-
-                    <div class="feature-card">
-                        <div class="feature-card__title-row">
-                            <h3 class="feature-card__title">Tool use</h3>
-                            <svg class="feature-card__icon"><use href="#icon-plug"/></svg>
-                        </div>
-                        <p class="feature-card__desc">Calls scheduling, time-tracking, location, and notification APIs to gather evidence and dispatch outreach mid-conversation.</p>
-                        <span class="feature-card__tag">Talks to every system</span>
-                    </div>
-
-                    <div class="feature-card">
-                        <div class="feature-card__title-row">
-                            <h3 class="feature-card__title">Rulebook-driven</h3>
-                            <svg class="feature-card__icon"><use href="#icon-fingerprint"/></svg>
-                        </div>
-                        <p class="feature-card__desc">Client escalation tiers, payment authority, source-priority logic — versioned, A/B-evaluatable, human-readable.</p>
-                        <span class="feature-card__tag">Your rules, not hardcoded heuristics</span>
-                    </div>
-
-                    <div class="feature-card">
-                        <div class="feature-card__title-row">
-                            <h3 class="feature-card__title">Eval-driven iteration</h3>
-                            <svg class="feature-card__icon"><use href="#icon-radar"/></svg>
-                        </div>
-                        <p class="feature-card__desc">Run a rule change against the last 100 shifts before promoting. Langfuse traces every input, tool call, and decision rationale end-to-end.</p>
-                        <span class="feature-card__tag">Auditable from input to outcome</span>
-                    </div>
-                </div>
-
-                <p class="slide__tagline">Model agnostic. Running on AWS. US headquartered. Global team.</p>
-            </div>
-        </section>
-
-        <!-- Slide: Why Now -->
-        <section class="slide slide--whynow" data-slide="11">
-            <div class="slide__content">
-                <h2 class="slide__title">Every shift closes with one defensible record</h2>
-
-                <div class="whynow-layout">
-                    <div class="whynow-visual">
-                        <img src="images/closeout-enterprise/unique/defensible-record.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(44vw, 700px)" width="1376" height="768" loading="lazy" decoding="async" alt="One completed closeout dossier containing verified time, worker, pay, and invoice evidence" class="whynow-image">
-                    </div>
-                    <div class="whynow-body">
-                        <p class="whynow-para">High-volume staffing teams cannot catch every discrepancy by hand. The cost shows up as overpayment, delayed invoices, worker frustration, and compliance exposure.</p>
-
-                        <p class="whynow-para">Closeout Agent turns client T&amp;A, worker reports, app clocks, and optional location evidence into <strong>one auditable closeout decision</strong> that every party can trust.</p>
-                    </div>
-                </div>
-
-                <div class="tagline-box whynow-tagline">
-                    <span class="tagline">Not another dashboard. A completed, explainable decision for every shift.</span>
-                </div>
-            </div>
-        </section>
-
-        <!-- Slide 7: Integrations -->
-        <section class="slide slide--integrations" data-slide="6">
-            <div class="slide__content">
-                <h2 class="slide__title">Connected to Your Systems</h2>
-                <p class="slide__lead">Ready adapters to billing and payout platforms. Tell us what you use.</p>
-
-                <div class="integrations-layout">
-                    <div class="integrations-column">
-                        <h3><svg class="section-icon"><use href="#icon-invoice"/></svg>Billing Systems</h3>
-                        <div class="logo-cards">
-                            <div class="logo-card">
-                                <img src="images/closeout/quickbooks.jpg" alt="QuickBooks" class="logo-card__img" style="background-color: #0077C5;">
-                                <div class="logo-card__fallback" style="background-color: #0077C5;">Q</div>
-                                <span class="logo-card__name">QuickBooks</span>
-                            </div>
-                            <div class="logo-card">
-                                <img src="images/closeout/bullhorn.jpg" alt="Bullhorn" class="logo-card__img" style="background-color: #FFFFFF;">
-                                <div class="logo-card__fallback" style="background-color: #F37A20;">B</div>
-                                <span class="logo-card__name">Bullhorn</span>
-                            </div>
-                            <div class="logo-card">
-                                <img src="images/closeout/sap.jpg" alt="SAP" class="logo-card__img" style="background-color: #FFFFFF;">
-                                <div class="logo-card__fallback" style="background-color: #0FAAFF;">S</div>
-                                <span class="logo-card__name">SAP</span>
-                            </div>
-                            <div class="logo-card">
-                                <img src="images/closeout/netsuite.jpg" alt="NetSuite" class="logo-card__img" style="background-color: #1A1A2E;">
-                                <div class="logo-card__fallback" style="background-color: #1A1A2E;">N</div>
-                                <span class="logo-card__name">NetSuite</span>
-                            </div>
-                            <div class="logo-card">
-                                <img src="images/closeout/workday.jpg" alt="Workday" class="logo-card__img" style="background-color: #002E5D;">
-                                <div class="logo-card__fallback" style="background-color: #002E5D;">W</div>
-                                <span class="logo-card__name">Workday</span>
-                            </div>
-                            <div class="logo-card logo-card--custom">
-                                <svg class="logo-card__icon"><use href="#icon-plug"/></svg>
-                                <span class="logo-card__name">Your System</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="integrations-center">
-                        <div class="integrations-hub">
-                            <svg class="hub-icon"><use href="#icon-sync"/></svg>
-                            <span>Closeout</span>
-                            <span>Agent</span>
-                        </div>
-                        <div class="integrations-sync">Bi-directional sync</div>
-                    </div>
-
-                    <div class="integrations-column">
-                        <h3><svg class="section-icon"><use href="#icon-wallet"/></svg>Payout Systems</h3>
-                        <div class="logo-cards">
-                            <div class="logo-card">
-                                <img src="images/closeout/zeal.jpg" alt="Zeal" class="logo-card__img" style="background-color: #FFFFFF;">
-                                <div class="logo-card__fallback" style="background-color: #FFFFFF;">Z</div>
-                                <span class="logo-card__name">Zeal</span>
-                            </div>
-                            <div class="logo-card">
-                                <img src="images/closeout/branch.jpg" alt="Branch" class="logo-card__img" style="background-color: #00C281;">
-                                <div class="logo-card__fallback" style="background-color: #00C281;">B</div>
-                                <span class="logo-card__name">Branch</span>
-                            </div>
-                            <div class="logo-card">
-                                <img src="images/closeout/dailypay.jpg" alt="DailyPay" class="logo-card__img" style="background-color: #FF6200;">
-                                <div class="logo-card__fallback" style="background-color: #FF6200;">D</div>
-                                <span class="logo-card__name">DailyPay</span>
-                            </div>
-                            <div class="logo-card">
-                                <img src="images/closeout/gusto.jpg" alt="Gusto" class="logo-card__img" style="background-color: #F45D48;">
-                                <div class="logo-card__fallback" style="background-color: #F45D48;">G</div>
-                                <span class="logo-card__name">Gusto</span>
-                            </div>
-                            <div class="logo-card">
-                                <img src="images/closeout/adp.jpg" alt="ADP" class="logo-card__img" style="background-color: #D0271D;">
-                                <div class="logo-card__fallback" style="background-color: #D0271D;">A</div>
-                                <span class="logo-card__name">ADP</span>
-                            </div>
-                            <div class="logo-card logo-card--custom">
-                                <svg class="logo-card__icon"><use href="#icon-plug"/></svg>
-                                <span class="logo-card__name">Your System</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Slide 8: Data Confidence -->
-        <section class="slide slide--confidence" data-slide="7">
-            <div class="slide__content">
-                <h2 class="slide__title">Start with the data you have</h2>
-
-                <div class="confidence-cards">
-                    <div class="confidence-card">
-                        <div class="confidence-card__image">
-                            <img src="images/closeout-enterprise/unique/partial-data-reality.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(31vw, 510px)" width="1376" height="768" loading="lazy" decoding="async" alt="Paper and mobile shift records with visible gaps in the available evidence" class="confidence-card__img">
-                        </div>
-                        <div class="confidence-card__title-row">
-                            <svg class="confidence-card__icon"><use href="#icon-eye"/></svg>
-                            <h3>The Reality</h3>
-                        </div>
-                        <p>You might not have location data yet. App clock-ins may be unreliable. A client may still use paper or a VMS export.</p>
-                    </div>
-                    <div class="confidence-card">
-                        <div class="confidence-card__image">
-                            <img src="images/closeout-enterprise/unique/evidence-confidence.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(31vw, 510px)" width="1376" height="768" loading="lazy" decoding="async" alt="Evidence tokens with one missing source routed honestly to human review" class="confidence-card__img">
-                        </div>
-                        <div class="confidence-card__title-row">
-                            <svg class="confidence-card__icon"><use href="#icon-check-shield"/></svg>
-                            <h3>Our Promise</h3>
-                        </div>
-                        <p>We use the evidence available. When it is insufficient, we say so clearly and route the shift for review.</p>
-                    </div>
-                    <div class="confidence-card">
-                        <div class="confidence-card__image">
-                            <img src="images/closeout-enterprise/unique/data-quality-roadmap.jpg" sizes="(max-width: 768px) calc(100vw - 2.3rem), min(31vw, 510px)" width="1376" height="768" loading="lazy" decoding="async" alt="Clock, mobile, and location evidence layers increasing confidence step by step" class="confidence-card__img">
-                        </div>
-                        <div class="confidence-card__title-row">
-                            <svg class="confidence-card__icon"><use href="#icon-trending-up"/></svg>
-                            <h3>The Path Forward</h3>
-                        </div>
-                        <p>We show you exactly which data sources would improve accuracy. Add mobile → better. Add location → even better. Incremental improvement at your pace.</p>
-                    </div>
-                </div>
-
-
-            </div>
-        </section>
-
-        <!-- Slide: Team -->
-        <section class="slide slide--team" data-slide="12">
-            <div class="slide__content">
-                <h2 class="slide__title">The core team behind Closeout Agent</h2>
-                <p class="slide__lead">Product, engineering, mobile, and go-to-market leaders working as one global team.</p>
-
-                <div class="team-grid">
-                    <article class="team-member">
-                        <img src="images/closeout-enterprise/team/kashyap.jpg" sizes="132px" width="800" height="800" loading="lazy" decoding="async" alt="Kashyap Deorah" class="team-member__photo">
-                        <div class="team-member__meta"><h3>Kashyap Deorah</h3><p>CEO</p></div>
-                    </article>
-                    <article class="team-member">
-                        <img src="images/closeout-enterprise/team/vibhas.jpg" sizes="132px" width="800" height="800" loading="lazy" decoding="async" alt="Vibhas Jain" class="team-member__photo">
-                        <div class="team-member__meta"><h3>Vibhas Jain</h3><p>Product</p></div>
-                    </article>
-                    <article class="team-member">
-                        <img src="images/closeout-enterprise/team/thomas.jpg" sizes="132px" width="800" height="800" loading="lazy" decoding="async" alt="Thomas Raffetseder" class="team-member__photo">
-                        <div class="team-member__meta"><h3>Thomas Raffetseder</h3><p>CTO</p></div>
-                    </article>
-                    <article class="team-member">
-                        <img src="images/closeout-enterprise/team/alex.jpg" sizes="132px" width="800" height="800" loading="lazy" decoding="async" alt="Alexander Kishinevsky" class="team-member__photo">
-                        <div class="team-member__meta"><h3>Alex Kishinevsky</h3><p>VP Engineering</p></div>
-                    </article>
-                    <article class="team-member">
-                        <img src="images/closeout-enterprise/team/jared-crop.jpg" sizes="132px" width="800" height="800" loading="lazy" decoding="async" alt="Jared McGriff" class="team-member__photo team-member__photo--jared">
-                        <div class="team-member__meta"><h3>Jared McGriff</h3><p>Marketing</p></div>
-                    </article>
-                    <article class="team-member">
-                        <img src="images/closeout-enterprise/team/eugene.jpg" sizes="132px" width="800" height="800" loading="lazy" decoding="async" alt="Eugene Tulushev" class="team-member__photo">
-                        <div class="team-member__meta"><h3>Eugene Tulushev</h3><p>Mobile</p></div>
-                    </article>
-                    <article class="team-member">
-                        <img src="images/closeout-enterprise/team/sanchit.jpg" sizes="132px" width="800" height="800" loading="lazy" decoding="async" alt="Sanchit Sharma" class="team-member__photo">
-                        <div class="team-member__meta"><h3>Sanchit Sharma</h3><p>Engineering</p></div>
-                    </article>
-                </div>
-
-                <p class="slide__tagline">US headquartered. Global team. Building HyperTrack since 2016.</p>
-            </div>
-        </section>
-
-        <!-- Slide 9: CTA -->
-        <section class="slide slide--cta" data-slide="8">
-                            <img src="images/closeout-enterprise/cta-shift-closed.jpg" sizes="(max-width: 768px) 100vw, min(64vw, 1200px)" width="1200" height="675" loading="lazy" decoding="async" alt="Worker leaving a completed shift with pay confirmation" class="cta-photo">
-            <div class="slide__content">
-                <h2 class="slide__title">Bring us one shift.</h2>
-                <p class="slide__lead">We’ll show you the evidence, the decision, and exactly how it gets workers paid and client invoices out the door.</p>
-
-                <div class="cta-buttons">
-                    <a href="https://hypertrack.com/dashboard-demo" target="_blank" rel="noopener noreferrer" class="cta-button cta-button--primary">
-                        <svg class="cta-icon"><use href="#icon-play"/></svg>
-                        Try Demo
-                    </a>
-                    <a href="https://meetings.hubspot.com/jared-mcgriff" target="_blank" rel="noopener noreferrer" class="cta-button cta-button--secondary">
-                        <svg class="cta-icon"><use href="#icon-calendar"/></svg>
-                        Schedule a Call
-                    </a>
-                </div>
-
-                <div class="contact-info">
-                    <a href="mailto:hello@hypertrack.com" class="contact-link">
-                        <svg class="contact-icon"><use href="#icon-mail"/></svg>
-                        hello@hypertrack.com
-                    </a>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <div class="nav-arrows">
-        <button class="nav-arrow nav-arrow--prev" id="prevBtn" aria-label="Previous slide">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M15 18l-6-6 6-6"/>
-            </svg>
-        </button>
-        <button class="nav-arrow nav-arrow--next" id="nextBtn" aria-label="Next slide">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M9 18l6-6-6-6"/>
-            </svg>
-        </button>
-    </div>
-
-    <!-- Deck nav is built by js/deck.js — shared across all decks. -->
-
-  <footer>
-    <div class="max-w-[1200px] mx-auto px-6 py-12">
-      <div class="flex flex-col md:flex-row items-center md:justify-between gap-6 mb-8">
-        <img src="images/Green0svg.svg" class="h-5" alt="HyperTrack">
-        <nav aria-label="Social" class="flex items-center gap-5">
-          <a href="https://www.facebook.com/HyperTrackHQ" aria-label="Facebook" class="text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors">
-            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/></svg>
-          </a>
-          <a href="https://twitter.com/HyperTrackHQ" aria-label="Twitter" class="text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors">
-            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-          </a>
-          <a href="https://github.com/hypertrack" aria-label="GitHub" class="text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors">
-            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.27-.01-1.17-.02-2.12-3.2.7-3.88-1.37-3.88-1.37-.53-1.34-1.3-1.7-1.3-1.7-1.06-.72.08-.71.08-.71 1.17.08 1.79 1.2 1.79 1.2 1.04 1.79 2.74 1.27 3.41.97.11-.76.41-1.27.74-1.56-2.55-.29-5.24-1.28-5.24-5.7 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a10.98 10.98 0 0 1 5.8 0c2.21-1.49 3.18-1.18 3.18-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.43-2.69 5.4-5.25 5.69.42.37.8 1.09.8 2.21 0 1.6-.01 2.89-.01 3.28 0 .31.21.68.8.56A11.51 11.51 0 0 0 23.5 12C23.5 5.73 18.27.5 12 .5z"/></svg>
-          </a>
-          <a href="https://www.linkedin.com/company/hypertrack" aria-label="LinkedIn" class="text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors">
-            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554V14.83c0-1.34-.026-3.063-1.867-3.063-1.868 0-2.154 1.46-2.154 2.968v5.718H9.318V9h3.414v1.561h.048c.476-.9 1.637-1.85 3.37-1.85 3.602 0 4.268 2.372 4.268 5.455v6.286zM5.337 7.433a2.063 2.063 0 0 1-2.063-2.064 2.063 2.063 0 1 1 2.063 2.064zm1.777 13.019H3.558V9h3.556v11.452zM22.225 0H1.771C.791 0 0 .775 0 1.728v20.543C0 23.226.792 24 1.771 24h20.451C23.2 24 24 23.226 24 22.271V1.728C24 .775 23.2 0 22.222 0h.003z"/></svg>
-          </a>
-          <a href="https://hypertrackcommunity.slack.com" aria-label="Slack" class="text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors">
-            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M6.194 14.644a2.062 2.062 0 0 1-2.058 2.057A2.062 2.062 0 0 1 2.08 14.644a2.062 2.062 0 0 1 2.057-2.058h2.058v2.058zm1.042 0a2.062 2.062 0 0 1 2.058-2.058 2.062 2.062 0 0 1 2.057 2.058v5.164A2.062 2.062 0 0 1 9.294 21.87a2.062 2.062 0 0 1-2.058-2.062v-5.164zm2.058-8.307A2.062 2.062 0 0 1 7.236 4.28a2.062 2.062 0 0 1 2.058-2.058 2.062 2.062 0 0 1 2.057 2.058v2.057H9.294zm0 1.042a2.062 2.062 0 0 1 2.057 2.058 2.062 2.062 0 0 1-2.057 2.058H4.136A2.062 2.062 0 0 1 2.08 9.437 2.062 2.062 0 0 1 4.136 7.38h5.158zm8.298 2.058a2.062 2.062 0 0 1 2.058-2.058 2.062 2.062 0 0 1 2.057 2.058 2.062 2.062 0 0 1-2.057 2.058h-2.058V9.437zm-1.042 0a2.062 2.062 0 0 1-2.057 2.058 2.062 2.062 0 0 1-2.058-2.058V4.272A2.062 2.062 0 0 1 14.493 2.21a2.062 2.062 0 0 1 2.057 2.062v5.165zm-2.057 8.301a2.062 2.062 0 0 1 2.057 2.058 2.062 2.062 0 0 1-2.057 2.058 2.062 2.062 0 0 1-2.058-2.058v-2.058h2.058zm0-1.042a2.062 2.062 0 0 1-2.058-2.058 2.062 2.062 0 0 1 2.058-2.057h5.164a2.062 2.062 0 0 1 2.058 2.057 2.062 2.062 0 0 1-2.058 2.058h-5.164z"/></svg>
-          </a>
-        </nav>
-      </div>
-      <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
-        <a href="https://status.hypertrack.com" class="text-sm font-semibold text-neutral-700 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">Status</a>
-        <a href="https://hypertrack.com/press.html" class="text-sm font-semibold text-neutral-700 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">Press</a>
-        <a href="https://hypertrack.com/contact.html" class="text-sm font-semibold text-neutral-700 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">Get In Touch</a>
-        <a href="https://hypertrack.com/jobs.html" class="text-sm font-semibold text-neutral-700 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">We Are Hiring</a>
-        <a href="https://hypertrack.com/about.html" class="text-sm font-semibold text-neutral-700 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">About HyperTrack</a>
-        <a href="https://hypertrack.com/faq.html" class="text-sm font-semibold text-neutral-700 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">FAQ</a>
-        <a href="https://hypertrack.com/privacy.html" class="text-sm font-semibold text-neutral-700 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">Privacy</a>
-        <a href="https://hypertrack.com/terms.html" class="text-sm font-semibold text-neutral-700 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">Terms</a>
-      </div>
-      <p class="mt-6 text-center text-xs text-neutral-500 dark:text-neutral-500">&copy; 2026 HyperTrack Inc. All rights reserved.</p>
-    </div>
-  </footer>
-
-  <!-- HubSpot chat -->
-  <script type="text/javascript" id="hs-script-loader" async="" defer="" src="https://js.hs-scripts.com/8405582.js"></script>
-  <!-- Warmly -->
-  <script id="warmly-script-loader" src="https://opps-widget.getwarmly.com/warmly.js?clientId=e6dadb5aa6100334bb606c707534d9d4" defer=""></script>
-  <!-- Valley -->
-  <script src="https://valley-intent.nyc3.digitaloceanspaces.com/script.js?id=1963" async=""></script>
-
-  <!-- Canonical top-nav interactivity (chrome.js, verbatim) -->
-  <script>
-// Canonical top-nav interactivity — frozen from index.html.
-// Include as an external <script src> or inline both IIFEs verbatim.
-
-// ===== Product mega-dropdown =====
-(function () {
-      var trigger = document.querySelector('[data-nav-product]');
-      var panel = document.querySelector('[data-nav-product-panel]');
-      if (!trigger || !panel) return;
-      var closeTimer = null;
-      function show() { if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; } panel.removeAttribute('hidden'); trigger.setAttribute('aria-expanded', 'true'); }
-      function hide() { panel.setAttribute('hidden', ''); trigger.setAttribute('aria-expanded', 'false'); }
-      function scheduleHide() { if (closeTimer) clearTimeout(closeTimer); closeTimer = setTimeout(hide, 160); }
-      function cancelHide() { if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; } }
-      trigger.addEventListener('mouseenter', show);
-      trigger.addEventListener('mouseleave', scheduleHide);
-      panel.addEventListener('mouseenter', cancelHide);
-      panel.addEventListener('mouseleave', scheduleHide);
-      trigger.addEventListener('click', function (e) {
-        e.preventDefault();
-        if (trigger.getAttribute('aria-expanded') === 'true') hide();
-        else show();
-      });
-      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') hide(); });
-      document.addEventListener('click', function (e) {
-        if (trigger.contains(e.target) || panel.contains(e.target)) return;
-        hide();
-      });
-    })();
-
-// ===== Mobile menu toggle =====
-(function () {
-      var btn = document.getElementById('mobile-menu-toggle');
-      var menu = document.getElementById('mobile-menu');
-      var openIcon = btn && btn.querySelector('.hamburger-open');
-      var closeIcon = btn && btn.querySelector('.hamburger-close');
-      var prodToggle = document.getElementById('mobile-product-toggle');
-      var prodSubmenu = document.getElementById('mobile-product-submenu');
-      if (btn && menu) {
-        btn.addEventListener('click', function () {
-          var open = menu.classList.toggle('is-open');
-          btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-          if (openIcon && closeIcon) {
-            openIcon.classList.toggle('hidden', open);
-            closeIcon.classList.toggle('hidden', !open);
-          }
-        });
-      }
-      if (prodToggle && prodSubmenu) {
-        prodToggle.addEventListener('click', function () {
-          var open = prodSubmenu.classList.toggle('is-open');
-          prodToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-        });
-      }
-    })();
-  </script>
-
-  <script src="js/theme-switcher.js" defer></script>
-  <script src="js/deck.js" defer></script>
-  <script src="/widget/solutioner-loader.js?v=20260702e" defer></script>
-<script src="https://agent-keyboard.fly.dev/widget.js" data-site="closeout" defer></script>
 </body>
 </html>

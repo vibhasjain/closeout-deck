@@ -4,8 +4,7 @@
 set -e
 cd "$(dirname "$0")/.."
 rm -rf dist && mkdir dist
-for p in index.html closeout assets favicon.svg logo-small.svg og-image.png _headers \
-         css js fonts images videos widget answers job product; do
+for p in index.html closeout assets favicon.svg logo-small.svg og-image.png _headers answers job product; do
   [ -e "$p" ] && cp -R "$p" dist/
 done
 # dotfiles and docs never ship, even inside whitelisted dirs
