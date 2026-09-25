@@ -1,6 +1,6 @@
 /* One persistent shell: navigation, agent, then the routed page. */
 .app { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 48px minmax(0, 1fr); height: 100dvh; overflow: hidden; }
-.main { display: flex; min-width: 0; min-height: 0; overflow: hidden; container: main-pane / inline-size; }
+.main { display: flex; min-width: 0; min-height: 0; overflow: hidden; container: main-pane / inline-size; background: var(--page, #fbfbfa); }
 .main > * { min-width: 0; min-height: 0; flex: 1; }
 .app-setup { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
 .app-setup > .main { grid-column: 1; grid-row: 1; }
@@ -58,7 +58,7 @@
 .sidebar .icon-box { display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0; flex: 0 0 auto; }
 .sidebar .icon-box[aria-expanded="true"] { background: hsl(var(--muted)); }
 .sidebar button:disabled { opacity: .45; pointer-events: none; }
-.sidebar-surface { position: fixed; inset: 0 auto 0 0; display: flex; flex-direction: column; width: min(288px, calc(100vw - 48px)); min-height: 0; z-index: 45; background: hsl(var(--background)); border-right: 1px solid hsl(var(--border)); transform: translateX(-100%); visibility: hidden; transition: transform 180ms var(--ease-out), visibility 180ms var(--ease-out); }
+.sidebar-surface { position: fixed; inset: 0 auto 0 0; display: flex; flex-direction: column; width: min(288px, calc(100vw - 48px)); min-height: 0; z-index: 45; background: var(--page, #fbfbfa); border-right: 1px solid hsl(var(--border)); transform: translateX(-100%); visibility: hidden; transition: transform 180ms var(--ease-out), visibility 180ms var(--ease-out); }
 .sidebar-open .sidebar-surface { transform: none; visibility: visible; }
 .sidebar-scrim { position: fixed; inset: 0; z-index: 40; background: rgb(0 0 0 / .2); }
 .sidebar-brand-row { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: .25rem; min-height: 56px; padding: .5rem .75rem; }
@@ -86,21 +86,28 @@
 .sidebar-pay-runs .cluster-sentence > span { display: inline-flex; align-items: center; gap: .375rem; }
 .sidebar-pay-runs .cluster-sentence svg { width: 13px; height: 13px; flex: 0 0 auto; }
 .sidebar .pay-runs-toggle { display: none; }
-.getting-started { flex: 0 0 auto; padding: .625rem .75rem; border-top: 1px solid hsl(var(--border)); }
-.getting-started-head { display: flex; align-items: center; justify-content: space-between; gap: .25rem; }
-.getting-started-head h2 { margin: 0; font-size: 12px; font-weight: 500; }
-.getting-started-head h2 > span { padding-left: .25rem; color: hsl(var(--muted-foreground)); font-weight: 400; }
-.getting-started-head .icon-btn { width: 24px; height: 24px; padding: 0; border: 0; color: hsl(var(--muted-foreground)); }
-.getting-started-list { list-style: none; margin: .375rem 0 0; padding: 0; }
-.getting-started-list a { display: flex; align-items: flex-start; gap: .5rem; padding: .375rem .125rem; color: hsl(var(--muted-foreground)); text-decoration: none; font-size: 11px; line-height: 1.5; }
-.getting-started-list a:hover .checklist-label { text-decoration: underline; text-underline-offset: 2px; }
-.checklist-mark { display: inline-flex; flex: 0 0 13px; align-items: center; justify-content: center; height: 16px; }
-.checklist-mark > span { width: 6px; height: 6px; border: 1px solid currentColor; border-radius: 50%; }
-.checklist-copy { min-width: 0; }
-.checklist-label, .checklist-hint { display: block; }
-.getting-started-list .done .checklist-label { text-decoration: line-through; }
-.getting-started-list .expanded .checklist-label { color: hsl(var(--foreground)); }
-.checklist-hint { margin-top: .25rem; color: hsl(var(--muted-foreground)); }
+.getting-started { flex: 0 0 auto; padding: 8px; border-top: .5px solid rgb(0 0 0 / .1); background: rgb(255 255 255 / .4); }
+.getting-started-head { display: flex; align-items: center; justify-content: space-between; gap: 4px; padding: 0 6px 6px; }
+.getting-started-head h2 { margin: 0; font-size: 13px; line-height: 21px; font-weight: 400; letter-spacing: -.01em; }
+.getting-started-head h2 > span { padding-left: 4px; color: #716f6f; font-size: 12px; font-weight: 400; }
+.getting-started-head .icon-btn { width: 24px; height: 24px; padding: 0; border: 0; color: #716f6f; }
+.getting-started-list { display: grid; gap: 2px; list-style: none; margin: 0; padding: 0 4px; }
+.getting-started-list a { display: flex; align-items: flex-start; gap: 8px; min-height: 33px; padding: 6px 8px; border-radius: 6px; color: #716f6f; text-decoration: none; font-size: 12px; line-height: 21px; letter-spacing: -.01em; }
+.getting-started-list a:hover { background: rgb(0 0 0 / .03); }
+.checklist-mark { position: relative; display: inline-grid; flex: 0 0 16px; place-items: center; height: 21px; color: #100f0f; }
+.checklist-mark > * { grid-area: 1 / 1; transition: opacity 180ms cubic-bezier(.2,.8,.2,1), transform 220ms cubic-bezier(.2,.8,.2,1); }
+.checklist-mark > [data-visible="false"] { opacity: 0; transform: scale(.4); }
+.checklist-mark > span { width: 12px; height: 12px; border: 1px solid #716f6f; border-radius: 50%; }
+.expanded .checklist-mark > span { border-color: #100f0f; }
+.checklist-copy { flex: 1; min-width: 0; }
+/* Craft completion pattern: https://craft.gustavofior.com/novelty-budget.
+   Draw the strike with a background instead of snapping text-decoration on. */
+.checklist-label { display: inline; background: linear-gradient(currentColor,currentColor) 0 55% / 0% 1px no-repeat; transition: background-size 220ms cubic-bezier(.2,.8,.2,1), color 180ms ease; }
+.getting-started-list .done .checklist-label { background-size: 100% 1px; }
+.getting-started-list .expanded .checklist-label { color: #100f0f; }
+.checklist-hint { display: block; padding-top: 4px; padding-bottom: 2px; color: #716f6f; font-size: 12px; line-height: 1.6; }
+.checklist-chevron { flex: 0 0 14px; margin-top: 3px; transition: transform 180ms cubic-bezier(.2,.8,.2,1); }
+.expanded .checklist-chevron { transform: rotate(90deg); }
 .sidebar-account { position: relative; flex: 0 0 auto; margin-top: auto; padding: .625rem .5rem; }
 .sidebar-account-trigger { display: flex; align-items: center; gap: .5rem; width: 100%; min-height: 40px; padding: .25rem; border-radius: .375rem; text-align: left; }
 .sidebar-account-trigger:hover { background: hsl(var(--muted)); }
@@ -114,6 +121,8 @@
 
 @media (max-width: 1023.98px) {
   .sidebar-surface { overflow-y: auto; overscroll-behavior: contain; }
+  /* 48px floating orb + 16px bottom offset + 16px clearance, inside each work scroll area. */
+  .app:not(.app-setup) .main :is(.payroll-summary, .sheet-wrap, .intake, .detail-body, .sources-table-wrap, .settings-columns, .payroll-profile-page-content, .shift-page) { padding-bottom: calc(80px + env(safe-area-inset-bottom)); scroll-padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
 }
 @media (min-width: 1024px) {
   .topbar.sidebar { border: 0; border-right: 1px solid hsl(var(--border)); }

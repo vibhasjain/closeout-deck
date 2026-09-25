@@ -2,6 +2,7 @@ import { useSearchParams } from 'react-router-dom'
 import { StatRow } from '@/components/StatRow'
 import { payrollView, type PayrollView } from '@/lib/navigation'
 import type { cycleStats, DeskCycle } from '@/lib/desk'
+import { useTweened } from '@/lib/useTweened'
 
 type Stats = ReturnType<typeof cycleStats>
 
@@ -9,6 +10,10 @@ type Stats = ReturnType<typeof cycleStats>
 export function CycleKpis({ stats }: { cycle: DeskCycle; stats: Stats }) {
   const [params, setParams] = useSearchParams()
   const view = payrollView(params)
+  const payments = useTweened(stats.payments)
+  const discrepancies = useTweened(stats.total)
+  const resolved = useTweened(stats.agentResolved)
+  const review = useTweened(stats.needsReview)
   const pick = (value: PayrollView) => ({
     pressed: view === value,
     onSelect: () => setParams((previous) => {
@@ -20,10 +25,10 @@ export function CycleKpis({ stats }: { cycle: DeskCycle; stats: Stats }) {
   })
 
   return <StatRow label="Cycle summary" stats={[
-    { label: 'Payments', value: stats.payments.toLocaleString(), ...pick('all') },
-    { label: 'Discrepancies', value: stats.total.toLocaleString(), ...pick('total') },
-    { label: 'Resolved', value: stats.agentResolved.toLocaleString(), ...pick('agent-resolved') },
-    { label: 'Review', value: stats.needsReview.toLocaleString(), tone: 'flagged', ...pick('needs-review') },
+    { label: 'Payments', value: Math.round(payments).toLocaleString(), ...pick('all') },
+    { label: 'Discrepancies', value: Math.round(discrepancies).toLocaleString(), ...pick('total') },
+    { label: 'Resolved', value: Math.round(resolved).toLocaleString(), ...pick('agent-resolved') },
+    { label: 'Review', value: Math.round(review).toLocaleString(), tone: 'flagged', ...pick('needs-review') },
     // No dispute data yet: an empty, inert tile (the space keeps the row height).
     { label: 'Disputes', value: '\u00a0' },
   ]} />

@@ -28,7 +28,7 @@ export function ProfileEditor({ onEditRulebook }: { onEditRulebook(): void }) {
     update({ profile: { ...getOnboarding().profile, [field]: value } })
   }
   return <div className="payroll-profile-editor">
-    <section className="profile-edit-section"><h3>The firm</h3>
+    <section className="profile-edit-section" id="profile-firm"><h3>The firm</h3>
       <div className="profile-field-stack">
         <input className="q-input" aria-label="Firm name" placeholder="Firm name" value={firm?.name ?? ''} maxLength={200} onChange={(event) => changeFirm({ name: event.target.value })} />
         <textarea className="q-input profile-textarea" aria-label="Firm summary" placeholder="What your firm does" value={firm?.summary ?? ''} maxLength={200} onChange={(event) => changeFirm({ summary: event.target.value })} />
@@ -36,7 +36,7 @@ export function ProfileEditor({ onEditRulebook }: { onEditRulebook(): void }) {
         <input className="q-input" aria-label="Verticals" placeholder="Verticals, separated by commas" defaultValue={firm?.verticals.join(', ') ?? ''} maxLength={200} onChange={(event) => changeFirm({ verticals: event.target.value.split(',').map((item) => item.trim()).filter(Boolean) })} />
       </div>
     </section>
-    <section className="profile-edit-section"><h3>Pay calendar</h3><div onChange={() => {
+    <section className="profile-edit-section" id="profile-calendar"><h3>Pay calendar</h3><div onChange={() => {
       const current = getOnboarding()
       if (!current.covered.includes('calendar')) update({ covered: [...current.covered, 'calendar'] })
     }}><PayrollCalendar />
@@ -45,15 +45,15 @@ export function ProfileEditor({ onEditRulebook }: { onEditRulebook(): void }) {
       </div>)}</div>
       <ValueEditor value={state.profile.payrollRunBy} placeholder="Who runs Payroll" onChange={(value) => changeProfile('payrollRunBy', value)} />
     </section>
-    {profileSections.map(({ field, title, placeholder }) => <section className="profile-edit-section" key={field}>
+    {profileSections.map(({ field, title, placeholder }) => <section className="profile-edit-section" key={field} id={`profile-${field}`}>
       <h3>{title}</h3><ValueEditor value={state.profile[field]} placeholder={placeholder} onChange={(value) => changeProfile(field, value)} />
     </section>)}
-    <section className="profile-edit-section"><h3>What I fix on my own</h3>
+    <section className="profile-edit-section" id="profile-authority"><h3>What I fix on my own</h3>
       <p>{state.authorityConfigured ? state.authority.autoFix
         ? `Fix up to $${state.authority.limit.toLocaleString()} per entry${state.authority.weeklyCap ? `, within $${state.authority.weeklyCap.toLocaleString()} each week` : ''}.`
         : 'Approval required before every change.' : 'Configure permission to make changes in your Rulebook.'}</p>
       <button className="btn" type="button" onClick={onEditRulebook}>Edit in Rulebook</button>
     </section>
-    <section className="profile-edit-section"><h3>Notes</h3><ValueEditor value={state.profile.notes} placeholder="Additional Payroll details" onChange={(value) => changeProfile('notes', value)} /></section>
+    <section className="profile-edit-section" id="profile-notes"><h3>Notes</h3><ValueEditor value={state.profile.notes} placeholder="Additional Payroll details" onChange={(value) => changeProfile('notes', value)} /></section>
   </div>
 }

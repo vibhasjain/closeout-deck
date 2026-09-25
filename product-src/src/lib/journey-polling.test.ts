@@ -5,6 +5,7 @@ import { DEFAULTS } from '@/lib/onboarding'
 import { getDataSnapshot, invalidate, publishCycle, refreshCycle, type CyclePayload, type CycleSummary } from '@/lib/data'
 import { decide, journeyRead, watchJourneyCycle, type JourneyDecision } from '@/lib/journey'
 import fixture from '@/lib/fixtures/server-cycle.json'
+import { startPipeline } from '@/lib/pipeline'
 
 const payload = fixture.payload as CyclePayload
 const row: CycleSummary = { ...payload.cycle, sample: false, runAt: null, totals: null, counts: { set1: 0, set2: 0, set3: 0 }, findings: 0 }
@@ -81,6 +82,18 @@ describe('cycle cards before a run exists', () => {
     await vi.advanceTimersByTimeAsync(60000)
     expect(detailReads()).toBe(completedReads)
     stop()
+  })
+  it('keeps polling a second set load when an invalidation publishes an earlier completed run', async () => {
+    ready = true
+    const finish = startPipeline(payload.cycle.id)
+    const stop = watchJourneyCycle(payload.cycle.id, vi.fn())
+    await vi.advanceTimersByTimeAsync(0)
+    await invalidate()
+    await vi.advanceTimersByTimeAsync(0)
+    const before = vi.mocked(api.authedFetch).mock.calls.length
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(vi.mocked(api.authedFetch).mock.calls.length).toBeGreaterThan(before)
+    finish(); stop()
   })
   it('keeps a stale list row with a missing detail in Running without a global error', async () => {
     vi.mocked(api.authedFetch).mockImplementation(path => path === '/data/cycles'

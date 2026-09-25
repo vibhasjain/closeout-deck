@@ -4,12 +4,16 @@
    Grayscale; color exists only as two tinted status pills. */
 :root {
   --background: 0 0% 100%;
-  --foreground: 0 0% 9%;
+  --foreground: 0 3% 6%;
   --muted: 0 0% 96%;
-  --muted-foreground: 0 0% 42%;
+  --muted-foreground: 0 1% 44%;
   --border: 0 0% 90%;
   --input: 0 0% 89%;
-  --radius: 0.6rem;
+  --radius: 10px;
+  --page: #fbfbfa;
+  --card: #fff;
+  --hairline: .5px solid rgb(0 0 0 / .1);
+  --card-shadow: 0 1px 2px rgb(0 0 0 / .05);
   --verify: 38 92% 45%;     /* amber tint: flag / review */
   --pending: 220 70% 52%;   /* blue tint: held */
   --overpay: 4 52% 44%;     /* muted brick: money paid and not owed */
@@ -21,7 +25,7 @@
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 html, body { margin: 0; height: 100%; overflow-x: hidden; }
 body { font-family: var(--sans); font-size: 13px; line-height: 1.5;
-  color: hsl(var(--foreground)); background: hsl(var(--background));
+  color: hsl(var(--foreground)); background: var(--page);
   -webkit-font-smoothing: antialiased; font-feature-settings: 'cv02','cv03','cv04','cv11'; }
 *:focus-visible { outline: none; box-shadow: 0 0 0 1px hsl(var(--foreground) / .45); }
 h4, h5, h6 { text-wrap: balance; }
@@ -46,7 +50,7 @@ button { font-family: var(--sans); font-size: inherit; line-height: inherit; bor
 .lnk:hover, .memo-link:hover { color: hsl(var(--foreground)); }
 /* THE button — shadcn outline: real, clickable, never a floating link. */
 .btn, .src-link { display: inline-flex; align-items: center; gap: .4rem; height: 2rem;
-  padding: 0 .75rem; border-radius: calc(var(--radius) - 2px); border: 1px solid hsl(var(--input));
+  padding: 0 .75rem; border-radius: 5px; border: var(--hairline);
   background: hsl(var(--background)); box-shadow: 0 1px 2px 0 rgb(0 0 0 / .05);
   font-size: 12px; font-weight: 500; color: hsl(var(--foreground));
   text-decoration: none; white-space: nowrap; max-width: 100%; overflow: hidden;
@@ -675,7 +679,7 @@ button:disabled { cursor: default; opacity: .6; }
 .result-summary .lbl { font-family: inherit; text-transform: none; letter-spacing: 0; font-size: 12px; }
 .result-summary .stat-value { font-family: inherit; font-variant-numeric: tabular-nums; }
 .result-summary .stat-value { font-size: 16px; letter-spacing: 0; }
-.result-summary .stat.flagged .stat-value { color: hsl(38 50% 34%); }
+.result-summary .stat.flagged .stat-value { color: hsl(var(--foreground)); }
 /* Setup result stats: equal columns split by hairlines. */
 .result-summary { display: flex; gap: 0; padding: 0; }
 .result-summary > .stat { flex: 1 1 0; padding: .875rem 1.25rem; }

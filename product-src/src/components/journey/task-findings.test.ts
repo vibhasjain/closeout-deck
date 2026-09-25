@@ -11,14 +11,18 @@ import { FirstCloseoutChoice } from '@/components/chat/FirstCloseoutChoice'
 import { FindingsCard, carouselFindings, findingEvidence, findingsLayout, hasAskableGaps, payChange } from './FindingsCard'
 import { PayDelta } from '@/components/ui'
 import { TaskCard, taskProgress } from './TaskCard'
+import { NextStepRow } from './NextStepRow'
+import { findingCounts } from '@/lib/findingCounts'
 
-const source = vi.hoisted(() => ({ cycle: undefined as CyclePayload | undefined, row: undefined as CycleSummary | undefined, error: null as string | null, threads: [] as JourneyThread[] }))
+const source = vi.hoisted(() => ({ cycle: undefined as CyclePayload | undefined, row: undefined as CycleSummary | undefined, error: null as string | null, threads: [] as JourneyThread[], reduced: false, pipelineRunning: false }))
 const actions = vi.hoisted(() => ({ navigate: vi.fn(), openDrawer: vi.fn() }))
 vi.mock('react', async original => ({
   ...await original<typeof import('react')>(),
   useState: <T>(value: T | (() => T)) => [typeof value === 'function' ? (value as () => T)() : value, vi.fn()],
   useEffect: vi.fn(), useRef: <T>(current: T) => ({ current }),
 }))
+vi.mock('@/lib/useReducedMotion', () => ({ useReducedMotion: () => source.reduced }))
+vi.mock('@/lib/useTweened', () => ({ useTweened: (value: number) => value }))
 vi.mock('react-router-dom', () => ({ useNavigate: () => actions.navigate }))
 vi.mock('@/components/shell/Overlay', () => ({ useOverlay: () => actions }))
 vi.mock('@/lib/onboarding', async original => {
@@ -28,11 +32,11 @@ vi.mock('@/lib/onboarding', async original => {
 vi.mock('@/lib/data', async original => ({ ...await original<typeof import('@/lib/data')>(), invalidate: vi.fn().mockResolvedValue(undefined), refreshCycleList: vi.fn().mockResolvedValue(undefined) }))
 vi.mock('@/lib/journey', async original => ({
   ...await original<typeof import('@/lib/journey')>(),
-  useJourneyCycle: () => ({ cycle: source.cycle, row: source.row, running: !source.cycle?.runAt, loading: false, error: source.error }),
+  useJourneyCycle: () => ({ cycle: source.cycle, row: source.row, running: !source.cycle?.runAt, loading: false, error: source.error, pipelineRunning: source.pipelineRunning }),
   useJourneyThreads: () => ({ threads: source.threads, loading: false, error: null }),
 }))
-type ElementProps = { children?: ReactNode; className?: string; onClick?(): void; 'data-state'?: string }
-const elements = (tree: ReactNode): ReactElement<ElementProps>[] => Children.toArray(tree).flatMap(child => isValidElement<ElementProps>(child) ? [child, ...elements(child.props.children)] : [])
+type ElementProps = { children?: ReactNode; footer?: ReactNode; className?: string; onClick?(): void; 'data-state'?: string }
+const elements = (tree: ReactNode): ReactElement<ElementProps>[] => Children.toArray(tree).flatMap(child => isValidElement<ElementProps>(child) ? [child, ...elements(child.props.children), ...elements(child.props.footer)] : [])
 const textOf = (tree: ReactNode): string => Children.toArray(tree).map(child => isValidElement<ElementProps>(child) ? textOf(child.props.children) : String(child)).join('')
 const button = (tree: ReactNode, text: string) => elements(tree).find(item => typeof item.props.onClick === 'function' && textOf(item.props.children) === text)!
 function cycleFixture() {
@@ -51,11 +55,42 @@ beforeEach(() => {
   source.row = undefined
   source.error = null
   source.threads = []
+  source.reduced = false
+  source.pipelineRunning = false
   vi.stubGlobal('localStorage', { getItem: () => null, setItem: vi.fn() })
 })
 afterEach(() => vi.unstubAllGlobals())
 
 describe('server-driven task card', () => {
+  it('keeps a running scan still and removes the beam under reduced motion', () => {
+    source.cycle = { ...source.cycle!, runAt: '' }
+    source.reduced = true
+    const still = renderToStaticMarkup(createElement(TaskCard, { cycleId: source.cycle.cycle.id }))
+    expect(still).toContain('<canvas')
+    expect(still).not.toContain('data-testid="running-beam"')
+    source.reduced = false
+    expect(renderToStaticMarkup(createElement(TaskCard, { cycleId: source.cycle.cycle.id }))).toContain('data-testid="running-beam"')
+  })
+  it('shows actual request progress before runAt and does not offer another sample load during it', () => {
+    source.pipelineRunning = true
+    const cycle = source.cycle!
+    expect(taskProgress(cycle, undefined, false, true).status).toBe('Running')
+    const html = renderToStaticMarkup(createElement(TaskCard, { cycleId: cycle.cycle.id }))
+    expect(html).toContain('Running')
+    expect(html).toContain('<canvas')
+    expect(html).not.toContain('data-timesheet-set=')
+  })
+  it('shows Interrupted after a refresh failure even when an earlier runAt exists', () => {
+    source.error = 'The latest cycle could not be loaded. Try again.'
+    expect(taskProgress(source.cycle, undefined, false, false, source.error).status).toBe('Interrupted')
+    const html = renderToStaticMarkup(createElement(TaskCard, { cycleId: source.cycle!.cycle.id }))
+    expect(html).toContain('Interrupted')
+    expect(html).toContain('role="alert"')
+    expect(html).not.toContain('>Done<')
+    expect(html).not.toContain('data-testid="running-beam"')
+    expect(html).not.toContain('<canvas')
+  })
+
   it('uses only runAt for Running versus Done, including before any entries arrive', () => {
     const cycle = source.cycle!
     const running = { ...cycle, runAt: '' }
@@ -113,8 +148,8 @@ describe('server-driven task card', () => {
     expect(onAnswer).toHaveBeenCalledWith('Set 1: Use sample')
     const html = renderToStaticMarkup(tree)
     expect(html).toContain('role="alert"')
-    expect(html).toContain('Running')
-    expect(html).toContain('<canvas')
+    expect(html).toContain('Interrupted')
+    expect(html).not.toContain('<canvas')
   })
   it('keeps Running after a missing detail even when the cycle list still advertises a run', () => {
     const cycle = source.cycle!
@@ -130,6 +165,26 @@ describe('server-driven task card', () => {
 })
 
 describe('findings carousel', () => {
+  it('reconciles the row and carousel before and after a decision, while the footer includes every issue', () => {
+    const cycle = source.cycle!
+    const renderBoth = () => {
+      const counts = findingCounts(carouselFindings(source.cycle!, DEFAULTS).map(item => item.resolution))
+      const row = renderToStaticMarkup(createElement(NextStepRow, { cycle: { id: cycle.cycle.id, label: 'Sep 14–20' }, nextStep: { kind: 'review', label: 'Review issues', detail: '3 open groups', counts: { missingSets: 0, gaps: 0, openGroups: 2 } }, findingCounts: counts }))
+      const carousel = renderToStaticMarkup(createElement(FindingsCard, { cycleId: cycle.cycle.id }))
+      return { row, carousel }
+    }
+    const before = renderBoth()
+    expect(before.row).toContain('2 to decide · 1 waiting on evidence')
+    expect(before.carousel).toContain('2 to decide · 1 waiting on evidence')
+    expect(before.row).not.toContain('3 open groups')
+    const item = carouselFindings(cycle, DEFAULTS)[0]
+    source.cycle = { ...cycle, decisions: [{ id: 'approved', cycleId: cycle.cycle.id, groupId: item.group.ruleId, shiftIds: item.resolution.cases.map(entry => entry.shiftId), decision: 'approved', reason: null, by: 'user', at: '' }] }
+    const after = renderBoth()
+    expect(after.row).toContain('1 to decide · 1 waiting on evidence')
+    expect(after.carousel).toContain('1 to decide · 1 waiting on evidence')
+    expect(after.carousel).toContain('View all issues')
+  })
+
   it('uses the work-pane triage in proposed, waiting, judgment order', () => {
     expect(carouselFindings(source.cycle!, DEFAULTS).map(item => item.resolution.state)).toEqual(['proposed', 'waiting', 'judgment'])
     const html = renderToStaticMarkup(createElement(FindingsCard, { cycleId: source.cycle!.cycle.id }))
@@ -228,10 +283,11 @@ describe('findings carousel', () => {
     expect(carouselFindings(cycle, DEFAULTS, [thread])[1].asked).toBe('Taylor Chen')
   })
   it('focuses the review list and contains a swipeable carousel at 390px', () => {
-    button(FindingsCard({ cycleId: source.cycle!.cycle.id }), 'View 3 issues').props.onClick!()
+    button(FindingsCard({ cycleId: source.cycle!.cycle.id }), 'View all issues').props.onClick!()
     expect(actions.navigate).toHaveBeenCalledWith('/payroll?cycle=2026-09-20&step=review&filter=needs-review')
     const layout = findingsLayout(390, 16, 3)
-    expect(layout).toEqual({ width: 358, cardWidth: 320, contentWidth: 984, scrollWidth: 984, pageWidth: 390, pageOverflow: false, scrollSnap: 'x mandatory' })
+    expect(layout).toMatchObject({ width: 358, pageWidth: 390, pageOverflow: false, scrollSnap: 'x mandatory' })
+    expect(layout.cardWidth).toBeCloseTo((358 - 24) * 8 / 9)
     expect(layout.scrollWidth).toBeGreaterThan(layout.width)
     for (const width of [300, 390, 768]) {
       const narrow = findingsLayout(width, 16, 10)
@@ -242,7 +298,7 @@ describe('findings carousel', () => {
     }
     const css = readFileSync(new URL('./task-findings.css', import.meta.url), 'utf8')
     expect(css).toMatch(/\.journey-findings \{ overflow: hidden;/)
-    expect(css).toContain('flex: 0 0 min(320px, 100%)')
+    expect(css).toContain('flex: 0 0 min(320px, 80%)')
     expect(css).toContain('overflow-x: auto')
     expect(css).toContain('scroll-snap-type: x mandatory')
     expect(css).toContain('overscroll-behavior-x: contain')

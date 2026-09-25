@@ -17,6 +17,8 @@ import { cycleStats, useDesk } from '@/lib/desk'
 import { cycleIntake, stepOf, type Step } from '@/lib/intake'
 import { isTableView, payrollView, shiftHref } from '@/lib/navigation'
 import { useJourneyThreads } from '@/lib/journey'
+import { findingCounts } from '@/lib/findingCounts'
+import { resolutionGroups } from '@/lib/resolution'
 import { useOnboarding } from '@/lib/onboarding'
 import { payTotals } from '@/lib/payroll'
 import './reconcile.css'
@@ -66,7 +68,7 @@ export function Payroll() {
     <section className="detail reconcile-payments" aria-label="Payroll">
       <PageTitle title="Payroll" description="Collect time entries, resolve discrepancies, and prepare each pay run." />
       {/* One black button per pane: the next step's, unless the visible Review list carries its own Approve. */}
-      {cycle.nextStep && <NextStepRow nextStep={cycle.nextStep} cycle={cycle} primary={cycle.nextStep.kind !== 'done' && !(cycle.nextStep.kind === 'review' && step === 'review')} onReview={() => {
+      {cycle.nextStep && <NextStepRow nextStep={cycle.nextStep} cycle={cycle} findingCounts={findingCounts(resolutionGroups(cycle, state.resolutions, state.undone[cycle.id], threads, state.neverContact ?? []))} primary={cycle.nextStep.kind !== 'done' && !(cycle.nextStep.kind === 'review' && step === 'review')} onReview={() => {
         setParams((previous) => { const next = new URLSearchParams(previous); next.set('step', 'review'); next.set('filter', 'needs-review'); return next })
         requestAnimationFrame(() => document.getElementById('payroll-review-list')?.focus())
       }} />}

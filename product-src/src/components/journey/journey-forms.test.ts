@@ -543,3 +543,17 @@ describe('journey dispute form', () => {
     expect(html).not.toContain(dispute.description)
   })
 })
+
+
+describe('polished form action hierarchy', () => {
+  it.each(['connect', 'gaps', 'send', 'dispute'] as const)('keeps at most one black next step in the %s form', async form => {
+    const cycle = form === 'gaps' ? gapsPayload() : form === 'dispute' ? { ...payload(), batch } : payload()
+    const render = form === 'connect' ? () => ConnectForm({ cycle }) : form === 'gaps' ? () => GapsForm({ cycle }) : form === 'send' ? () => SendForm({ cycle }) : () => DisputeForm({ cycle })
+    const screen = mount(render)
+    const html = await screen.ready()
+    expect(html).toContain('journey-form')
+    // Connection methods are equal-weight choices; all other ready forms have one next step.
+    expect(primaryCount(html)).toBe(form === 'connect' ? 0 : 1)
+    expect(html).not.toContain('Approve cycle')
+  })
+})

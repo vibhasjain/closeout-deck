@@ -2,8 +2,8 @@
 import { createContext, Fragment, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { Loader2, Mic, Phone, Plus, Send, Square } from 'lucide-react'
-import { ThinkingOrb } from 'thinking-orbs'
+import { ArrowUp, Loader2, Mic, Phone, Plus, Square } from 'lucide-react'
+import { AgentAvatar } from '@/components/chat/AgentAvatar'
 import { Chip } from '@/components/ui'
 import { Message } from '@/components/chat/Message'
 import { memoryHistory } from '@/components/memory/chatMemory'
@@ -375,10 +375,10 @@ export function ChatPane({ scope: explicitScope, headerAction, onCallingChange }
   }
 
   return (
-    <section className="queue chat" aria-label="Closeout Agent conversation">
+    <section className="queue chat" data-composer-action={sending ? 'stop' : draft.trim() ? 'send' : 'phone'} aria-label="Closeout Agent conversation">
       <header className="chat-header">
         <div className="chat-heading">
-          <ThinkingOrb size={20} theme="light" state={sending ? 'working' : 'breathing'} />
+          <AgentAvatar size={20} working={sending} />
           <h2>Closeout Agent</h2>
         </div>
         {headerAction && <div className="chat-header-actions">{headerAction}</div>}
@@ -393,7 +393,7 @@ export function ChatPane({ scope: explicitScope, headerAction, onCallingChange }
         )}
         {messages.length === 0 && !(showRequest && (sending || reply || error)) && (
           <div className="chat-empty">
-            <ThinkingOrb size={32} theme="light" state="breathing" />
+            <AgentAvatar size={32} />
             <p>Ask the Closeout Agent about your Payroll</p>
           </div>
         )}
@@ -432,7 +432,7 @@ export function ChatPane({ scope: explicitScope, headerAction, onCallingChange }
           <Plus size={16} aria-hidden="true" />
         </button>
         <textarea
-          ref={composer} className="chat-input" aria-label="Message the Closeout Agent" placeholder="Ask the Closeout Agent anything…" rows={1} value={draft} readOnly={dictation.active || dictation.finishing || calling}
+          ref={composer} className="chat-input" aria-label="Message the Closeout Agent" placeholder="Ask the Closeout Agent…" rows={1} value={draft} readOnly={dictation.active || dictation.finishing || calling}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
@@ -443,9 +443,9 @@ export function ChatPane({ scope: explicitScope, headerAction, onCallingChange }
         />
         {VOICE_ENABLED && <button type="button" className="icon-btn chat-dictate" aria-label={dictation.active ? 'Stop dictation' : 'Dictate message'} aria-pressed={dictation.active}
           disabled={sending || calling || dictation.finishing} onClick={() => { if (dictation.active) void dictation.stop().catch(() => {}); else dictation.start() }}>{dictation.finishing || dictation.state === 'connecting' ? <Loader2 className="chat-dictate-spinner" size={16} aria-hidden /> : dictation.active ? <Square size={14} fill="currentColor" aria-hidden /> : <Mic size={16} aria-hidden />}</button>}
-        <button type={sending || !draft.trim() ? 'button' : 'submit'} className="icon-btn chat-send" aria-label={sending ? 'Stop reply' : draft.trim() || !VOICE_ENABLED ? 'Send message' : 'Call your Closeout Agent'}
+        <button type={sending || !draft.trim() ? 'button' : 'submit'} className="icon-btn chat-send" data-action={sending ? 'stop' : draft.trim() ? 'send' : 'phone'} aria-label={sending ? 'Stop reply' : draft.trim() || !VOICE_ENABLED ? 'Send message' : 'Call your Closeout Agent'}
           disabled={!sending && (dictation.finishing || calling || (!VOICE_ENABLED && !draft.trim()))} onClick={sending ? stop : !draft.trim() && VOICE_ENABLED ? startDeskCall : undefined}>
-          {sending ? <Square size={14} fill="currentColor" aria-hidden="true" /> : draft.trim() || !VOICE_ENABLED ? <Send size={16} aria-hidden="true" /> : <Phone size={16} aria-hidden="true" />}
+          {sending ? <Square size={14} fill="currentColor" aria-hidden="true" /> : draft.trim() || !VOICE_ENABLED ? <ArrowUp size={16} aria-hidden="true" /> : <Phone size={16} aria-hidden="true" />}
         </button>
       </form>
     </section>

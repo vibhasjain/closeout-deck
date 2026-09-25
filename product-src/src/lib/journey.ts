@@ -4,6 +4,7 @@ import { getCycle, getDataSnapshot, invalidate, onDataInvalidated, publishCycle,
 import { viewerSession } from '@/lib/viewerSession'
 import { flushOnboarding } from '@/lib/onboarding'
 import { scheduleMemoryRefresh } from '@/lib/memory'
+import { ownsRun, pipelineRunning, usePipeline } from '@/lib/pipeline'
 
 export type JourneyFormName = 'connect' | 'gaps' | 'send' | 'dispute'
 export interface NextStep {
@@ -71,13 +72,13 @@ export function watchJourneyCycle(cycleId: string, receive: (result: CycleReadRe
     receive(result)
     if (again) { again = false; void poll(); return }
     // Only a failed read retries on a timer. No data yet (empty) waits for the next invalidation.
-    if (result.state === 'error' || result.state === 'running') timer = setTimeout(() => { void poll() }, Math.min(2000 * 2 ** Math.min(attempt++, 4), 30000))
+    if (result.state === 'error' || result.state === 'running' || pipelineRunning(cycleId)) timer = setTimeout(() => { void poll() }, Math.min(2000 * 2 ** Math.min(attempt++, 4), 30000))
   }
   const unsubscribe = onDataInvalidated(() => {
     clearTimeout(timer)
     attempt = 0
     const data = getDataSnapshot()
-    if (data.owner === account() && data.payloads.some(item => item.cycle.id === cycleId && item.runAt)) receive({ state: 'done', error: null })
+    if (!pipelineRunning(cycleId) && data.owner === account() && data.payloads.some(item => item.cycle.id === cycleId && item.runAt)) receive({ state: 'done', error: null })
     else void poll()
   })
   void poll()
@@ -93,9 +94,14 @@ export function journeyRead(data: Pick<DataSnapshot, 'loaded' | 'list' | 'payloa
   return { cycle, row, running: (!cycle?.runAt && !!row?.runAt) || pending, empty: data.loaded && !cycle?.runAt && !row?.runAt && !pending }
 }
 
-export function useJourneyCycle(cycleId: string) {
+/** `card`: the task card's message id; a pipeline run shows only on the card it posted. */
+export function useJourneyCycle(cycleId: string, card?: string) {
   const data = useData()
-  const { cycle, row, running, empty } = journeyRead(data, cycleId)
+  const { cycle, row, running: reading, empty } = journeyRead(data, cycleId)
+  const pipeline = usePipeline(cycleId)
+  const ours = ownsRun(pipeline, card)
+  const piped = ours && pipeline.running
+  const running = reading || piped
   const owner = account()
   const key = `${owner}:${cycleId}`
   const [read, setRead] = useState<{ key: string; result: CycleReadResult } | null>(null)
@@ -104,8 +110,8 @@ export function useJourneyCycle(cycleId: string) {
     return watchJourneyCycle(cycleId, result => setRead({ key, result }))
   }, [cycleId, key, running])
   const current = read?.key === key ? read.result : undefined
-  const none = empty || current?.state === 'empty'
-  return { cycle, row, running: running && !none, empty: none, loading: !cycle && !none && !current, error: running && current ? current.error : data.cycleErrors[cycleId] ?? null }
+  const none = !piped && (empty || current?.state === 'empty')
+  return { cycle, row, running: running && !none, pipelineRunning: piped, empty: none, loading: !cycle && !none && !current, error: (ours ? pipeline.error : null) ?? (running && current ? current.error : data.cycleErrors[cycleId] ?? null) }
 }
 
 export async function decide(cycleId: string, input: DecisionInput) {

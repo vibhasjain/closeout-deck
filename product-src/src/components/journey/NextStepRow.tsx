@@ -3,16 +3,25 @@ import { Btn } from '@/components/ui'
 import { postToChat } from '@/lib/chatBus'
 import type { NextStep } from '@/lib/journey'
 import { getOnboarding } from '@/lib/onboarding'
+import type { FindingCounts } from '@/lib/findingCounts'
+import { useTweened } from '@/lib/useTweened'
+import { FindingCountSummary } from './FindingCountSummary'
 import './next-step.css'
 
-export function NextStepRow({ nextStep, cycle, onReview, primary = false }: {
+function CollectionCounts({ missingSets, gaps }: { missingSets: number; gaps: number }) {
+  const sets = Math.round(useTweened(missingSets)), missing = Math.round(useTweened(gaps))
+  return <span className="journey-next-counts tabular-nums">{[sets ? `${sets.toLocaleString()} missing ${sets === 1 ? 'set' : 'sets'}` : '', missing ? `${missing.toLocaleString()} gaps` : ''].filter(Boolean).join(' · ')}</span>
+}
+
+export function NextStepRow({ nextStep, cycle, onReview, primary = false, findingCounts }: {
   nextStep: NextStep
   cycle: { id: string; label: string }
   onReview?: () => void
   /** The pane's one black button, when it is the next step's action. */
   primary?: boolean
+  findingCounts?: FindingCounts
 }) {
-  const { missingSets, gaps, openGroups } = nextStep.counts
+  const { openGroups, missingSets, gaps } = nextStep.counts
   const label = nextStep.kind === 'done' ? 'Disputes' : nextStep.label
   function open() {
     if (nextStep.kind === 'review') onReview?.()
@@ -26,8 +35,10 @@ export function NextStepRow({ nextStep, cycle, onReview, primary = false }: {
   return <div className="journey-next-step" role="region" aria-label="Next step" data-next-step={nextStep.kind}>
     <div className="journey-next-copy">
       <strong>{nextStep.label}</strong>
-      <span className="journey-next-detail">{nextStep.detail}</span>
-      <span className="journey-next-counts">{missingSets.toLocaleString()} missing sets · {gaps.toLocaleString()} gaps · {openGroups.toLocaleString()} open groups</span>
+      {nextStep.kind !== 'review' && <span className="journey-next-detail">{nextStep.detail}</span>}
+      {nextStep.kind === 'review' || findingCounts && findingCounts.total > 0
+        ? <FindingCountSummary className="journey-next-counts" counts={findingCounts ?? { toDecide: openGroups, waiting: 0, total: openGroups }} />
+        : (missingSets > 0 || gaps > 0) && <CollectionCounts missingSets={missingSets} gaps={gaps} />}
     </div>
     <Btn className={`journey-next-button${primary ? ' primary' : ''}`} onClick={open}>{label}<ArrowRight size={13} aria-hidden="true" /></Btn>
   </div>

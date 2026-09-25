@@ -65,6 +65,8 @@ vi.mock('@/lib/desk', async (importOriginal) => {
   } }
 })
 vi.mock('@/components/shell/Overlay', () => ({ useOverlay: () => overlay }))
+// These event-handler tests inspect target values; rAF interpolation has its own tests.
+vi.mock('@/lib/useTweened', () => ({ useTweened: (value: number) => value }))
 vi.mock('@/components/chat/ChatPane', () => ({ useSetChatContext: vi.fn(), useSetChatSuggestions: vi.fn(), focusChatComposer: vi.fn() }))
 vi.mock('@/lib/journey', async (original) => ({ ...await original<typeof import('@/lib/journey')>(), decide: vi.fn(), useJourneyThreads: () => ({ threads: [] }) }))
 

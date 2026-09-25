@@ -47,6 +47,26 @@ describe('one black next step per setup pane', () => {
   it('personalizes the welcome from the viewer session', () => {
     expect(renderToStaticMarkup(createElement(MemoryRouter, null, createElement(Agent)))).toContain('Welcome, Morgan')
   })
+  it('keeps document previews secondary and Finish primary when the completed profile is ready', () => {
+    state.value.setupStep = 'ready'
+    state.value.setupClosing = 'Your Payroll profile is ready to use.'
+    state.value.firm = { name: 'Summit Staffing', domain: 'sample', summary: '', states: ['CA'], verticals: [], clientTypes: [], size: '', staffing: true }
+    const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(Agent)))
+    expect(html).toContain('aria-label="Open your Rulebook"')
+    expect(html).toContain('aria-label="Open your Payroll profile"')
+    expect(html).toContain('profile-card-compact')
+    expect(primaryCount(html)).toBe(1)
+    expect(html).toMatch(/class="btn primary setup-bottom"[^>]*>Finish →/)
+  })
+  it('keeps the populated never-contact dialog as the only primary while ready is inert', () => {
+    state.value.setupStep = 'never-contact'
+    state.value.neverContact = ['Alex at Pacific']
+    const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(Agent)))
+    expect(html).toContain('Anyone I should never contact?')
+    expect(html).toContain('Remove Alex at Pacific')
+    expect(primaryCount(html)).toBe(1)
+    expect(html).toContain('class="btn primary">Save and continue')
+  })
   it('never shows a previous call summary for an unconnected call, and shows only this call once it is carded', () => {
     state.value.setupStep = 'intro'
     state.value.chat = [{ id: 'call-old', role: 'agent', text: 'Previous call summary', at: 1, cards: [{ kind: 'call', callId: 'old', seconds: 24 }] }]

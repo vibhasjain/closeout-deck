@@ -128,7 +128,11 @@ export function RulebookModal({ onClose, initialSection = 'states' }: { onClose(
   return <ProfileDialog title="Your Rulebook" description="The rules used before every pay run. Only your team sees them." onClose={onClose} className="rulebook-modal">
     <div className="rulebook-modal-body">
       <nav className="rulebook-rail" aria-label="Rulebook sections">{sections.map((section) => <button key={section.id} type="button" aria-current={active === section.id ? 'location' : undefined} aria-label={`${section.title}: ${complete[section.id] ? 'Complete' : 'Not Yet'}`} onClick={() => { setActive(section.id); sectionNodes.current[section.id]?.scrollIntoView({ block: 'start', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' }) }}>{complete[section.id] ? <Check size={14} aria-hidden /> : <Circle size={14} aria-hidden />}<span>{section.title}</span></button>)}</nav>
-      <div className="rulebook-content">
+      <div className="rulebook-content" onScroll={(event) => {
+        const top = event.currentTarget.getBoundingClientRect().top + 140
+        const current = [...sections].reverse().find((section) => (sectionNodes.current[section.id]?.getBoundingClientRect().top ?? Infinity) <= top)
+        if (current) setActive(current.id)
+      }}>
         {sections.map((section) => <section className="rulebook-section" key={section.id} ref={(element) => { if (element) sectionNodes.current[section.id] = element }} aria-labelledby={`rulebook-${section.id}`}>
           <h3 id={`rulebook-${section.id}`}>{section.title}</h3>
           {section.id === 'states' && <JurisdictionRules states={state.firm?.states ?? []} />}

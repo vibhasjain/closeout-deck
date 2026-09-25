@@ -58,6 +58,8 @@ type Props = {
   placeholder?: string
   'aria-label'?: string
   'aria-pressed'?: boolean
+  'data-action'?: string
+  'data-composer-action'?: string
   onClick?: () => void
   onSubmit?: (event: { preventDefault(): void }) => void
   onChange?: (event: { target: { value: string; files?: FileList } }) => void
@@ -88,11 +90,13 @@ afterEach(() => vi.unstubAllGlobals())
 describe('permanent Closeout Agent conversation', () => {
   it('has an empty-state orb, exact placeholder, one phone trailing action, and no Clear control', () => {
     const tree = render()
-    expect(textarea(tree).props.placeholder).toBe('Ask the Closeout Agent anything…')
+    expect(textarea(tree).props.placeholder).toBe('Ask the Closeout Agent…')
     expect(button(tree, 'Call your Closeout Agent').props.disabled).toBe(false)
     expect(elements(tree).filter(({ props }) => props.className === 'icon-btn chat-send')).toHaveLength(1)
     expect(elements(tree).some(({ props }) => props.className === 'chat-empty')).toBe(true)
     expect(elements(tree).some(({ props }) => /clear/i.test(props['aria-label'] ?? ''))).toBe(false)
+    expect(button(tree, 'Call your Closeout Agent').props['data-action']).toBe('phone')
+    expect(tree.props['data-composer-action']).toBe('phone')
   })
 
   it('starts a desk call from the single empty trailing button and switches to Send with text', async () => {
@@ -107,6 +111,8 @@ describe('permanent Closeout Agent conversation', () => {
     type('Review this Payroll')
     expect(button(render(), 'Send message').props.disabled).toBe(false)
     expect(button(render(), 'Call your Closeout Agent')).toBeUndefined()
+    expect(button(render(), 'Send message').props['data-action']).toBe('send')
+    expect(render().props['data-composer-action']).toBe('send')
   })
 
   it('blocks suggestions and posted chat turns for the full live call', async () => {
@@ -193,6 +199,8 @@ describe('permanent Closeout Agent conversation', () => {
     submit()
     await vi.waitFor(() => expect(elements(render()).some(({ props }) => props.className === 'icon-btn chat-send' && props['aria-label'] === 'Stop reply')).toBe(true))
     await vi.waitFor(() => expect(elements(render()).some(({ props }) => props.message?.text.startsWith('Checking your run.'))).toBe(true))
+    expect(button(render(), 'Stop reply').props['data-action']).toBe('stop')
+    expect(render().props['data-composer-action']).toBe('stop')
     button(render(), 'Stop reply').props.onClick!()
     await vi.waitFor(() => expect(getOnboarding().chat).toHaveLength(2))
     expect(signal?.aborted).toBe(true)

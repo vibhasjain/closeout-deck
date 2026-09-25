@@ -13,7 +13,7 @@ function ProfileRow({ title, value }: { title: string; value: string }) {
 }
 
 /** The same live readout appears before the conversation and on the finished profile. */
-export function ProfileCard({ state: supplied, className = '' }: { state?: Onboarding; className?: string }) {
+export function ProfileCard({ state: supplied, className = '', compact = false }: { state?: Onboarding; className?: string; compact?: boolean }) {
   const [stored] = useOnboarding()
   const state = supplied ?? stored
   const { firm, profile, covered, authority, sources } = state
@@ -23,7 +23,7 @@ export function ProfileCard({ state: supplied, className = '' }: { state?: Onboa
   const own = state.authorityConfigured ? authority.autoFix
     ? `Up to $${authority.limit.toLocaleString()} per entry${authority.weeklyCap ? ` · $${authority.weeklyCap.toLocaleString()} per week` : ''}`
     : 'Approval required before every change' : ''
-  return <article className={`payroll-profile-card ${className}`} aria-label="Payroll profile preview" aria-live="polite">
+  return <article className={`payroll-profile-card${compact ? ' profile-card-compact' : ''} ${className}`} aria-label="Payroll profile preview" aria-live="polite">
     <header className="profile-card-firm">
       <span className="profile-favicon" aria-hidden="true">
         <Building2 size={22} />{icon && <img src={icon} alt="" onError={(event) => { event.currentTarget.hidden = true }} />}
@@ -32,7 +32,7 @@ export function ProfileCard({ state: supplied, className = '' }: { state?: Onboa
         {firm && <span className="profile-firm-details">{[firm.states.join(', '), firm.verticals.join(' · ')].filter(Boolean).join(' · ')}</span>}
       </div>
     </header>
-    <dl>
+    {!compact && <dl>
       <ProfileRow title="Pay calendar" value={calendar} />
       <ProfileRow title="How worker hours arrive" value={profileSummary(profile.workerHours) || source(1)} />
       <ProfileRow title="How client-approved hours arrive" value={profileSummary(profile.clientHours) || source(2)} />
@@ -40,6 +40,6 @@ export function ProfileCard({ state: supplied, className = '' }: { state?: Onboa
       <ProfileRow title="Rates and client rules" value={profileSummary(profile.ratesWhere)} />
       <ProfileRow title="Pay complaints" value={profileSummary(profile.complaints)} />
       <ProfileRow title="What I fix on my own" value={own} />
-    </dl>
+    </dl>}
   </article>
 }

@@ -1,6 +1,6 @@
 .call-screen { --call-ink: #242423; --call-muted: #777774; width: 100%; color: var(--call-ink); min-height: calc(100dvh - 182px); display: flex; flex-direction: column; }
 .call-stage { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 232px; align-items: center; gap: clamp(38px, 6vw, 100px); width: min(100%, 1000px); margin: 0 auto; }
-.call-agent { min-width: 0; display: flex; flex-direction: column; align-items: center; text-align: center; padding-top: 35px; }
+.call-agent { min-width: 0; display: flex; flex-direction: column; align-items: center; text-align: center; padding-top: 32px; }
 .call-orb { flex: none; width: 240px; height: 240px; transition: transform 110ms linear; transform-origin: center; }
 .call-orb canvas { width: 100%; height: 100%; display: block; }
 .call-orb--compact { width: 32px; height: 32px; }
@@ -9,11 +9,11 @@
 .call-time, .call-bar time { color: #767672; font-size: 11px; font-variant-numeric: tabular-nums; }
 .call-caption { min-height: 84px; width: min(100%, 460px); padding: 22px 0 10px; font-size: 13px; line-height: 1.65; color: #646461; text-wrap: pretty; }
 .call-checklist { align-self: center; padding-bottom: 28px; }
-.call-checklist h2 { font-size: 12px; font-weight: 550; margin: 0 0 25px; letter-spacing: -.01em; }
-.call-topic-group + .call-topic-group { margin-top: 25px; }
-.call-topic-group h3 { font-size: 10px; font-weight: 450; color: #878782; margin: 0 0 11px; letter-spacing: .045em; text-transform: uppercase; }
+.call-checklist h2 { font-size: 13px; font-weight: 500; margin: 0 0 24px; letter-spacing: -.01em; }
+.call-topic-group + .call-topic-group { margin-top: 24px; }
+.call-topic-group h3 { font-size: 12px; font-weight: 400; color: #878782; margin: 0 0 12px; letter-spacing: -.01em; text-transform: uppercase; }
 .call-topic-group ul { padding: 0; margin: 0; list-style: none; display: grid; gap: 10px; }
-.call-topic { display: flex; align-items: baseline; gap: 8px; color: #868682; font-size: 12px; line-height: 1.45; }
+.call-topic { display: flex; align-items: baseline; gap: 8px; color: #868682; font-size: 13px; line-height: 1.5; }
 .call-topic > svg, .call-topic-dot { width: 12px; flex: 0 0 12px; }
 .call-topic > svg { align-self: flex-start; margin-top: 2px; }
 .call-topic-dot { height: 6px; position: relative; }
@@ -26,7 +26,7 @@
 .call-screen .call-preread-pending { font-size: 12px; color: #898984; margin: 0; }
 .call-checklist-mobile { display: none; }
 .call-footer { margin-top: 30px; display: flex; flex-direction: column; align-items: center; padding-bottom: 6px; }
-.call-controls { display: flex; align-items: center; gap: 5px; min-height: 60px; padding: 7px; background: #f7f7f5; border: 1px solid #f0f0ed; border-radius: 34px; }
+.call-controls { display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 12px; background: #f7f7f5; border: 1px solid #f0f0ed; border-radius: 34px; }
 .call-level { width: 49px; height: 40px; flex-shrink: 0; display: grid; align-items: center; }
 .call-level-bars { display: flex; align-items: center; justify-content: center; height: 26px; gap: 3px; }
 .call-level-bars i { display: block; width: 2px; height: 20px; border-radius: 2px; background: #52524d; transition: transform 100ms linear; }
@@ -37,7 +37,7 @@
 .call-control:disabled { cursor: default; opacity: .45; }
 .call-control.call-end { color: #fff; background: #d9364b; }
 .call-control.call-end:hover { background: #c52b40; }
-.call-help { display: flex; align-items: center; font-size: 11px; color: #888882; }
+.call-help { display: flex; align-items: center; font-size: 12px; color: #888882; }
 .call-help button { min-height: 44px; padding: 0 6px; border: 0; background: transparent; color: #555550; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font: inherit; }
 .call-screen button:focus-visible, .call-bar button:focus-visible, .call-checklist summary:focus-visible { outline: 2px solid #3e3e39; outline-offset: 3px; }
 .call-error { width: min(100%, 410px); padding: 21px 0; text-align: left; }

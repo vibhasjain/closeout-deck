@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronLeft, Mic, Phone, Square, Upload } from 'lucide-react'
-import { ThinkingOrb } from 'thinking-orbs'
+import { AgentAvatar } from '@/components/chat/AgentAvatar'
 import { PayrollCalendar } from '@/components/PayrollCalendar'
 import { Btn, Spinner } from '@/components/ui'
 import { VOICE_ENABLED } from '@/lib/flags'
@@ -11,21 +11,26 @@ import { uploadOnboardingFiles } from '@/lib/onboardingFlow'
 
 const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
-function TypedQuestion({ text, onDone }: { text: string; onDone(): void }) {
-  const [count, setCount] = useState(() => reducedMotion() ? text.length : 0)
+function TypedQuestion({ text, skip, onDone }: { text: string; skip: boolean; onDone(): void }) {
+  const [count, setCount] = useState(() => skip || reducedMotion() ? text.length : 0)
   const callback = useRef(onDone)
   useEffect(() => { callback.current = onDone })
   useEffect(() => {
-    if (reducedMotion()) { callback.current(); return }
-    const start = performance.now()
-    const timer = window.setInterval(() => {
-      const next = Math.min(text.length, Math.ceil((performance.now() - start) / 650 * text.length))
-      setCount(next)
-      if (next === text.length) { window.clearInterval(timer); callback.current() }
-    }, 16)
-    return () => window.clearInterval(timer)
-  }, [text])
-  return <h1 aria-label={text}><span aria-hidden>{text.slice(0, count)}{count < text.length && <span className="setup-caret" />}</span></h1>
+    if (skip || reducedMotion()) { callback.current(); return }
+    // J&J StreamingText: the entire question types in 260ms, after a 60ms lead-in.
+    const charsPerTick = Math.max(1, Math.ceil(text.length / Math.max(1, Math.round(260 / 16))))
+    let visible = 0
+    let timer: number
+    const tick = () => {
+      visible = Math.min(text.length, visible + charsPerTick)
+      setCount(visible)
+      if (visible === text.length) callback.current()
+      else timer = window.setTimeout(tick, 16)
+    }
+    timer = window.setTimeout(tick, 60)
+    return () => window.clearTimeout(timer)
+  }, [text, skip])
+  return <h1 className="setup-typed-question" aria-label={text}><span className="setup-question-measure" aria-hidden>{text}</span><span aria-hidden>{text.slice(0, count)}<span className={`setup-caret${count === text.length ? ' is-done' : ''}`} /></span></h1>
 }
 
 /** Input structure and wording come entirely from the agent's validated card. */
@@ -40,7 +45,7 @@ export function QuestionScreen({ question, card, initialAnswer = '', busy = fals
   const [selected, setSelected] = useState<string[]>(() => answeredLines.filter((line) => options.includes(line)))
   const [files, setFiles] = useState<string[]>([])
   const [calendarReady, setCalendarReady] = useState(false)
-  const [typing, setTyping] = useState(() => !reducedMotion())
+  const [typing, setTyping] = useState(() => !initialAnswer && !reducedMotion())
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const picker = useRef<HTMLInputElement>(null)
@@ -88,14 +93,10 @@ export function QuestionScreen({ question, card, initialAnswer = '', busy = fals
   }
 
   return <section className="setup-question">
-    <ThinkingOrb size={32} theme="light" state={busy ? 'working' : 'breathing'} />
-    <TypedQuestion text={question} onDone={() => setTyping(false)} />
-    <form onSubmit={(event) => { event.preventDefault(); submitAnswer() }}>
+    <AgentAvatar size={32} working={busy} />
+    <TypedQuestion text={question} skip={!!initialAnswer} onDone={() => setTyping(false)} />
+    <form data-typing={typing || undefined} onSubmit={(event) => { event.preventDefault(); submitAnswer() }}>
       <fieldset disabled={locked} className="setup-inputs">
-        {(card.input === 'chips' || card.input === 'multi') && <div className="setup-chips">{card.chips?.map((chip, index) =>
-          <button type="button" key={chip} className={`setup-chip${selected.includes(chip) ? ' selected' : ''}`} aria-pressed={selected.includes(chip)} onClick={() => pick(chip)}>
-            <span className="setup-key">{index + 1}</span>{chip}{selected.includes(chip) && <Check size={13} aria-hidden />}
-          </button>)}</div>}
         {card.input === 'choice' && card.choice && <div className="setup-choice">{[card.choice.yours, card.choice.sample].map((choice) =>
           <button type="button" key={choice} className={`setup-option${selected.includes(choice) ? ' selected' : ''}`} aria-pressed={selected.includes(choice)} onClick={() => pick(choice)}>{choice}</button>)}</div>}
         {card.input === 'calendar' && <div className="setup-calendar" onChange={() => setCalendarReady(true)}>
@@ -113,8 +114,12 @@ export function QuestionScreen({ question, card, initialAnswer = '', busy = fals
           <textarea aria-label="Your answer" placeholder={card.placeholder || 'Answer in your own words…'} value={draft} rows={3} readOnly={dictation.active || dictation.finishing} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); submitAnswer() }
           }} />
-          {VOICE_ENABLED && <div className="setup-voice"><Btn className="setup-dictate" aria-label={dictation.finishing ? 'Finishing dictation' : dictation.active ? 'Stop dictation' : 'Dictate your answer'} aria-pressed={dictation.active} disabled={dictation.finishing} onClick={() => { if (dictation.active) void dictation.stop().catch(() => {}); else dictation.start() }}>{dictation.finishing || dictation.state === 'connecting' ? <Spinner /> : dictation.active ? <Square size={14} fill="currentColor" aria-hidden /> : <Mic size={16} aria-hidden />}</Btn>{onCall && <Btn aria-label="Call your Closeout Agent" onClick={() => { dictation.dismiss(); onCall() }}><Phone size={16} /></Btn>}</div>}
+          {VOICE_ENABLED && <div className="setup-voice">{onCall && <Btn aria-label="Call your Closeout Agent" onClick={() => { dictation.dismiss(); onCall() }}><Phone size={16} /></Btn>}<Btn className="setup-dictate" aria-label={dictation.finishing ? 'Finishing dictation' : dictation.active ? 'Stop dictation' : 'Dictate your answer'} aria-pressed={dictation.active} disabled={dictation.finishing} onClick={() => { if (dictation.active) void dictation.stop().catch(() => {}); else dictation.start() }}>{dictation.finishing || dictation.state === 'connecting' ? <Spinner /> : dictation.active ? <Square size={14} fill="currentColor" aria-hidden /> : <Mic size={16} aria-hidden />}</Btn></div>}
         </div>
+        {(card.input === 'chips' || card.input === 'multi') && <div className="setup-chips">{card.chips?.map((chip, index) =>
+          <button type="button" key={chip} className={`setup-chip${selected.includes(chip) ? ' selected' : ''}`} aria-pressed={selected.includes(chip)} onClick={() => pick(chip)}>
+            <span className="setup-key">{index + 1}</span>{chip}{selected.includes(chip) && <Check size={13} aria-hidden />}
+          </button>)}</div>}
       </fieldset>
       {dictation.status && <p className="setup-dictate-status" role="status">{dictation.status}</p>}
       {dictation.error && <div className="setup-error" role="alert"><p>{dictation.error}</p><Btn onClick={dictation.start}>Retry</Btn><Btn onClick={dictation.dismiss}>Keep typing</Btn></div>}

@@ -46,6 +46,13 @@ describe('Payroll profile surfaces', () => {
       expect(markup).toContain('>Done</button>')
     }
   })
+  it('connects the Payroll profile rail to every editor section without extra primary actions', () => {
+    const markup = renderToStaticMarkup(createElement(ProfileModal, { onClose() {} }))
+    expect(markup).toContain('aria-label="Payroll profile sections"')
+    for (const id of ['firm', 'calendar', 'workerHours', 'clientHours', 'whoseHours', 'ratesWhere', 'complaints', 'authority', 'notes']) expect(markup).toContain(`id="profile-${id}"`)
+    expect(markup.match(/aria-current="location"/g)).toHaveLength(1)
+    expect(markup.match(/class="btn primary"/g)).toHaveLength(1)
+  })
 
   it('shows the actual engine rules only for the firm jurisdictions plus federal', () => {
     store.state!.firm = { name: 'Texas firm', summary: '', states: ['TX'], verticals: [], clientTypes: [], size: '', staffing: true }

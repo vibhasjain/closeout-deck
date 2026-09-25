@@ -1,9 +1,11 @@
-.journey-form { min-width: 0; max-width: 100%; display: flex; flex-direction: column; gap: 14px; padding: 16px; border: 1px solid var(--line, #e7e7e5); border-radius: 8px; background: var(--surface, #fff); font-size: 13px; overflow-wrap: anywhere; }
-.journey-form-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.journey-form-head h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.journey-form { min-width: 0; max-width: 100%; display: flex; flex-direction: column; gap: 16px; padding: 16px; border: .5px solid rgba(0,0,0,.1); border-radius: 10px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.05); font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; }
+.journey-form-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; margin: -16px -16px 0; padding: 10px 14px; border-bottom: .5px solid rgba(0,0,0,.1); }
+.journey-form-head h3 { margin: 0; font-size: 13px; font-weight: 500; line-height: 20px; letter-spacing: -.01em; }
 .journey-form p { margin: 0; }
-.journey-form .btn { flex-shrink: 0; }
-.journey-form-input { display: block; width: 100%; min-width: 0; box-sizing: border-box; border: 1px solid var(--line, #e7e7e5); border-radius: 5px; padding: 9px 10px; font: inherit; color: inherit; background: transparent; }
+.journey-form .btn { flex-shrink: 0; min-height: 32px; border-radius: 5px; }
+.journey-form .btn.primary { min-height: 44px; justify-content: center; }
+.journey-form-input { display: block; width: 100%; min-width: 0; min-height: 44px; box-sizing: border-box; border: .5px solid rgba(0,0,0,.1); border-radius: 5px; padding: 10px 12px; font: inherit; color: inherit; background: #fff; }
+.journey-form-input::placeholder { color: #716f6f; opacity: 1; }
 .journey-form textarea { resize: vertical; }
 .journey-form-input:focus-visible, .journey-gap-row input:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 .journey-form-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
@@ -32,4 +34,4 @@
 .journey-connect-form .connect-method { min-width: 0; width: 100%; }
 .journey-connect-form .connect-method-option { min-width: 0; }
 .journey-connect-form .connect-method-hint { white-space: normal; }
-@media (max-width: 440px) { .journey-form { padding: 12px; } .journey-form-actions > .btn { flex-shrink: 1; } }
+@media (max-width: 440px) { .journey-form { padding: 12px; } .journey-form-head { margin: -12px -12px 0; padding-inline: 12px; } .journey-form-actions > .btn { flex-shrink: 1; } }

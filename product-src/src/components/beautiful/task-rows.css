@@ -1,0 +1,21 @@
+/* Source: https://www.beautifului.dev/r/task-rows.json; J&J row geometry, monochrome. */
+.beautiful-task-rows { display: flex; flex-direction: column; gap: 2px; }
+.beautiful-task-row { min-width: 0; overflow: hidden; border-radius: 5px; }
+.beautiful-task-row > button { display: flex; align-items: center; gap: 10px; min-height: 32px; width: 100%; padding: 4px; color: #716f6f; text-align: left; background: transparent; border: 0; cursor: pointer; font: inherit; font-size: 12px; }
+.beautiful-task-row > button:hover { background: rgba(0,0,0,.025); }
+.beautiful-task-row[data-state='running'] > button { color: #100f0f; }
+.beautiful-task-ring { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; flex: 0 0 24px; }
+.beautiful-task-ring > svg { position: absolute; inset: 0; }
+.beautiful-task-ring > svg[data-active='true'] { animation: beautiful-task-spin .85s linear infinite; }
+.beautiful-task-ring > span { position: relative; display: flex; align-items: center; font-size: 11px; font-variant-numeric: tabular-nums; }
+.beautiful-task-label { min-width: 0; flex: 1; line-height: 1.4; }
+.beautiful-task-amount { flex-shrink: 0; font-size: 11px; }
+.beautiful-task-chevron { flex-shrink: 0; color: #716f6f; transition: transform .15s ease; }
+.beautiful-task-details { display: grid; transition: grid-template-rows .22s cubic-bezier(.2,.8,.2,1), opacity .18s ease; }
+.beautiful-task-details > div { overflow: hidden; }
+.beautiful-task-details-inner { display: grid; grid-template-columns: 24px 1fr; gap: 10px; margin: 3px 4px 10px; }
+.beautiful-task-guide { width: .5px; margin-inline: auto; background: rgba(0,0,0,.1); }
+.beautiful-task-detail { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; color: #716f6f; font-size: 11px; line-height: 1.5; margin-bottom: 4px; }
+.beautiful-task-detail .tabular-nums { flex-shrink: 0; }
+@keyframes beautiful-task-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .beautiful-task-ring > svg[data-active='true'] { animation: none; } .beautiful-task-details, .beautiful-task-chevron { transition: none; } }

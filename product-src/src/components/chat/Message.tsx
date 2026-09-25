@@ -10,6 +10,8 @@ import { CallCard } from './CallCard'
 import { retryCallSave } from '@/lib/callRecovery'
 import { RememberLine } from '@/components/memory/RememberLine'
 import { isRememberReceipt } from '@/components/memory/chatMemory'
+import { Check } from 'lucide-react'
+import { StreamText } from '@/components/beautiful/stream-text'
 import './journey-chat.css'
 
 /** `liveCard`: the index of the newest actionable card in the pane, if it is in this message; only it keeps a black button. */
@@ -20,11 +22,11 @@ export function Message({ message, onAnswer, liveCard = -1 }: { message: ChatMes
     <article className={`chat-message${user ? ' user' : ''}`} aria-label={user ? 'You' : 'Closeout Agent'}>
       <div className={user ? 'chat-bubble' : 'chat-agent-text'}>
         {message.contextChip && <span className="chat-context-chip">{message.contextChip}</span>}
-        {!!message.traces?.length && <div className="chat-traces" role="group" aria-label="Agent trace">{message.traces.map((trace, index) => <div key={index}>✓ {trace}</div>)}</div>}
-        {message.text && <div className="chat-text">{message.text}</div>}
+        {!!message.traces?.length && <div className="chat-traces" role="group" aria-label="Agent trace">{message.traces.map((trace, index) => <div key={index}><Check size={12} aria-hidden /><span>{trace}</span></div>)}</div>}
+        {message.text && <div className="chat-text">{message.id === 'streaming' ? <StreamText text={message.text} /> : message.text}</div>}
         {message.cards?.map((card, index) => {
           if (card.kind === 'call') return <CallCard key={card.callId} card={card} transcript={message.callTranscript} saveError={message.callSaveError} onRetrySave={() => { void retryCallSave(card.callId).catch(() => {}) }} />
-          if (card.kind === 'task') return <TaskCard key={index} cycleId={card.cycleId} onAnswer={onAnswer} />
+          if (card.kind === 'task') return <TaskCard key={index} cycleId={card.cycleId} messageId={message.id} onAnswer={onAnswer} />
           if (card.kind === 'findings') return <FindingsCard key={index} cycleId={card.cycleId} live={index === liveCard} />
           if (card.kind === 'form') return <FormCard key={index} {...card} live={index === liveCard} />
           if (card.kind === 'choice') return <div key={index}><p>{card.ask}</p><FirstCloseoutChoice card={{ kind: 'question', input: 'choice', topics: [], choice: { yours: card.yours, sample: card.sample }, set: card.set }} onAnswer={onAnswer} /></div>

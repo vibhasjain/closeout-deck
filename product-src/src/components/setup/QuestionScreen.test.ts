@@ -39,3 +39,26 @@ it('shows an outline Retry alongside a filled Next after partial dictation fails
   expect(html.match(/class="btn primary"/g)).toHaveLength(1)
   expect(html).toContain('Keep typing')
 })
+
+it('shows a revisited answer immediately even when motion is enabled, with one next step', () => {
+  vi.stubGlobal('window', { matchMedia: () => ({ matches: false }) })
+  const html = render()
+  expect(html).not.toContain('data-typing="true"')
+  expect(html).toContain('When do you run Payroll?')
+  expect(html).toContain('setup-caret is-done')
+  expect(html.match(/class="btn primary"/g)).toHaveLength(1)
+})
+
+it.each([true, false])('keeps a new question single-primary and respects reduced motion %s', (reduced) => {
+  vi.stubGlobal('window', { matchMedia: () => ({ matches: reduced }) })
+  const html = renderToStaticMarkup(createElement(QuestionScreen, {
+    question: 'How do hours arrive?', card: { kind: 'question', input: 'chips', topics: ['workerHours'], chips: ['Email', 'Sheet'] },
+    canBack: true, onBack() {}, onAnswer() {},
+  }))
+  expect(html).not.toContain('btn primary')
+  expect(html.includes('data-typing="true"')).toBe(!reduced)
+  expect(html.includes('setup-caret is-done')).toBe(reduced)
+  expect(html).toContain('aria-label="How do hours arrive?"')
+  // The full line reserves its final height; assistive technology gets only the h1 name.
+  expect(html).toContain('class="setup-question-measure" aria-hidden="true"')
+})

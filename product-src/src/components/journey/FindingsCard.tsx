@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { FindingDetail } from '@/components/SampleResult'
+import { ApprovalCard, RollingDigits } from '@/components/beautiful/approval-card'
 import { FormCard, gapRows } from '@/components/journey/FormCard'
 import { useOverlay } from '@/components/shell/Overlay'
 import { Btn, PayDelta, Tag } from '@/components/ui'
@@ -13,7 +14,10 @@ import { decide, groupId, useJourneyCycle, useJourneyThreads, type JourneyThread
 import type { FindingEvidence } from '@/lib/issueEmail'
 import { useOnboarding, type Onboarding } from '@/lib/onboarding'
 import { resolutionGroups, type ResolutionGroup } from '@/lib/resolution'
+import { findingCounts } from '@/lib/findingCounts'
+import { useTweened } from '@/lib/useTweened'
 import type { EvidenceRow } from '@/lib/sample'
+import { FindingCountSummary } from './FindingCountSummary'
 import './task-findings.css'
 
 export interface CarouselFinding { group: FindingGroup; resolution: ResolutionGroup; asked?: string }
@@ -45,16 +49,26 @@ export function carouselFindings(payload: CyclePayload, state: Onboarding, threa
   })
 }
 
-/** The CSS has the same 320px cap and contains the scroll track inside the pane. */
+/** J&J's 80% slides (8/9 on phones) retain a glimpse of the next finding. */
 // eslint-disable-next-line react-refresh/only-export-components
 export function findingsLayout(viewportWidth: number, panePadding = 16, itemCount = 1) {
   const width = Math.max(0, viewportWidth - 2 * panePadding)
-  const cardWidth = Math.min(320, width)
+  const cardWidth = Math.min(320, Math.max(0, width - 24) * (viewportWidth < 768 ? 8 / 9 : .8))
   const contentWidth = cardWidth * itemCount + Math.max(0, itemCount - 1) * 12
   const scrollWidth = Math.max(width, contentWidth)
   // The track owns its horizontal overflow; only its clipped viewport contributes to the page.
   const pageWidth = Math.min(width, scrollWidth) + 2 * panePadding
   return { width, cardWidth, contentWidth, scrollWidth, pageWidth, pageOverflow: pageWidth > viewportWidth, scrollSnap: 'x mandatory' as const }
+}
+
+function FindingCount({ value }: { value: number }) {
+  return <span className="tabular-nums">{Math.round(useTweened(value)).toLocaleString()}</span>
+}
+
+/** The approval card's rolling step counter; screen readers get the settled text. */
+function CarouselPosition({ current, total }: { current: number; total: number }) {
+  const text = `${current} of ${total}`
+  return <span className="tabular-nums" aria-live="polite"><span className="sr-only">{text}</span><span aria-hidden="true"><RollingDigits value={text} /></span></span>
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -91,7 +105,7 @@ export function FindingsCard({ cycleId, live = true }: { cycleId: string; live?:
   const items = carouselFindings(cycle, state, threads)
   const askable = new Set(items.filter(item => item.resolution.state === 'waiting' && !item.asked && hasAskableGaps(cycle, item.resolution, state, threads)))
   const index = Math.min(position, Math.max(0, items.length - 1))
-  const count = items.length
+  const counts = findingCounts(items.map(item => item.resolution))
   const days = hydrate(cycle, state).days
   // One black button, and only when approving is the cycle's next step.
   const primary = live && (!cycle.nextStep || cycle.nextStep.kind === 'review')
@@ -112,33 +126,35 @@ export function FindingsCard({ cycleId, live = true }: { cycleId: string; live?:
   }
 
   return <section className="journey-findings" aria-label="Closeout findings">
-    <div className="journey-findings-head"><span>Issues{cycle.sample && <> · <Tag>Sample</Tag></>}</span><span className="tabular-nums" aria-live="polite">{items.length ? index + 1 : 0} of {items.length}</span></div>
+    <div className="journey-findings-head"><span>Issues{cycle.sample && <> · <Tag>Sample</Tag></>}</span><CarouselPosition current={items.length ? index + 1 : 0} total={items.length} /></div>
+    <FindingCountSummary counts={counts} className="journey-findings-counts" />
     {items.length ? <>
+      <div className="journey-carousel-band">
       <div className="journey-carousel-viewport" data-at-start={index === 0} data-at-end={index === items.length - 1}>
         <div className="journey-carousel-track" ref={track} role="list" aria-label="Findings" onScroll={event => {
           const node = event.currentTarget, first = node.children[0] as HTMLElement | undefined
           if (first) setPosition(Math.round(node.scrollLeft / (first.offsetWidth + 12)))
         }}>
-          {items.map((item, at) => <article className="journey-finding" key={`${groupId(item.group)}:${item.resolution.state}`} role="listitem" data-state={item.resolution.state}>
-            <Tag>{item.resolution.state === 'proposed' ? 'Proposed' : item.resolution.state === 'waiting' ? 'Waiting' : item.resolution.state === 'escalated' ? `Escalated · ${item.resolution.owner}` : 'Needs Judgment'}</Tag>
-            <h4>{item.group.title}</h4><p>{item.group.summary}</p>
-            <div className="journey-finding-data"><span className="tabular-nums">{item.resolution.cases.length.toLocaleString()} time {item.resolution.cases.length === 1 ? 'entry' : 'entries'}</span><PayDelta current={item.resolution.current} resolved={item.resolution.resolved} size="sm" /></div>
-            {item.resolution.state === 'waiting' && <p className="journey-asked">{item.asked ? `Asked ${item.asked}` : 'Not asked yet'}</p>}
-            <div className="journey-finding-actions">
-              {/* N6: the gaps form only helps with missing time; other waiting entries are asked from their own conversation. */}
+          {items.map((item, at) => <ApprovalCard className="journey-finding" key={`${groupId(item.group)}:${item.resolution.state}`} role="listitem" data-state={item.resolution.state} data-active={at === index} inert={at !== index} footer={<div className="journey-finding-actions">
+              {/* N6: only askable missing time uses the gaps form; other waiting entries keep their conversation. */}
               {item.resolution.state === 'waiting' && !item.asked && (askable.has(item)
                 ? <Btn onClick={() => openDrawer(<FormCard form="gaps" cycleId={cycleId} />, 'Missing time entries')}>Review gaps</Btn>
                 : <Btn onClick={() => navigate(shiftHref(cycleId, item.resolution.cases[0].shiftId))}>Ask from an entry</Btn>)}
               {item.resolution.state === 'proposed' && <Btn className={primary && at === index ? 'primary' : undefined} disabled={pending !== null} onClick={() => void act(item, 'approved')}>{pending === groupId(item.group) ? 'Approving…' : `Approve ${item.resolution.cases.length.toLocaleString()}`}</Btn>}
               {item.resolution.state === 'judgment' && <Btn disabled={pending !== null} onClick={() => void act(item, 'escalated')}>{pending === groupId(item.group) ? 'Escalating…' : 'Escalate'}</Btn>}
               <Btn onClick={() => openDrawer(<FindingDetail finding={findingEvidence(cycle, item)} dayLabel={day => days[day] ?? ''} />, 'Evidence', cycle.sample ? 'Sample' : undefined)}>Evidence</Btn>
-            </div>
-          </article>)}
+            </div>}>
+            <Tag>{item.resolution.state === 'proposed' ? 'Proposed' : item.resolution.state === 'waiting' ? 'Waiting' : item.resolution.state === 'escalated' ? `Escalated · ${item.resolution.owner}` : 'Needs Judgment'}</Tag>
+            <h4>{item.group.title}</h4><p>{item.group.summary}</p>
+            <div className="journey-finding-data"><span className="tabular-nums"><FindingCount value={item.resolution.cases.length} /> time {item.resolution.cases.length === 1 ? 'entry' : 'entries'}</span><PayDelta current={item.resolution.current} resolved={item.resolution.resolved} size="sm" /></div>
+            {item.resolution.state === 'waiting' && <p className="journey-asked">{item.asked ? `Asked ${item.asked}` : 'Not asked yet'}</p>}
+          </ApprovalCard>)}
         </div>
       </div>
       <div className="journey-carousel-controls"><button type="button" className="icon-btn" aria-label="Previous finding" disabled={index === 0} onClick={() => move(index - 1)}><ChevronLeft size={15} aria-hidden /></button><button type="button" className="icon-btn" aria-label="Next finding" disabled={index === items.length - 1} onClick={() => move(index + 1)}><ChevronRight size={15} aria-hidden /></button></div>
+      </div>
     </> : <p className="r-note">No issues waiting for review.</p>}
     {failure && <p role="alert">{failure}</p>}
-    <Btn className="journey-view-issues" onClick={() => navigate(`/payroll?${new URLSearchParams({ cycle: cycleId, step: 'review', filter: 'needs-review' })}`)}>View {count.toLocaleString()} issues</Btn>
+    <Btn className="journey-view-issues" onClick={() => navigate(`/payroll?${new URLSearchParams({ cycle: cycleId, step: 'review', filter: 'needs-review' })}`)}>View all issues</Btn>
   </section>
 }

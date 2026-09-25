@@ -1,0 +1,10 @@
+/* Source: https://www.beautifului.dev/r/stream-text.json; its companion stream styles,
+   copied individually from https://www.beautifului.dev/r/foundation.json (MIT). */
+.stream-tail { filter: blur(1.6px); mask-image: linear-gradient(to right, black 20%, rgb(0 0 0 / .2)); }
+.stream-caret { display: inline-block; width: 2px; height: 1.05em; margin-left: 1.5px; translate: 0 -.5px; border-radius: 1px; background: currentColor; vertical-align: text-bottom; animation: stream-caret-blink 1s step-end infinite; }
+.stream-caret.is-streaming { animation: none; }
+@keyframes stream-caret-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .stream-caret { display: none; animation: none; }
+  .stream-tail { filter: none; mask-image: none; }
+}

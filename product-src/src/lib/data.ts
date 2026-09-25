@@ -7,6 +7,7 @@ import { flushOnboarding, getOnboarding, updateOnboarding, type Onboarding } fro
 import { viewerSession } from '@/lib/viewerSession'
 import type { JourneyBatch, JourneyDecision, NextStep } from '@/lib/journey'
 import { effectiveJourneyRun, journeyPayroll, type JourneyPayAdjustment } from '@/lib/journeyPay'
+import { startPipeline } from '@/lib/pipeline'
 
 /** JSON wire types mirror the data service without importing Node modules into the app. */
 export interface DataProvenance { file: string; sheet?: string; row: number; cols: Partial<Record<string, string>>; hoursOnly?: boolean; fileId?: string; sample?: boolean; system?: string }
@@ -74,17 +75,32 @@ export function getEntries(cycle: string, options: { shift?: string; offset?: nu
   return request<{ entries: TimeEntry[] }>(`/data/entries?${params}`)
 }
 export const getFindings = (cycle: string) => request<{ groups: FindingGroup[]; cases: FindingCase[] }>(`/data/findings?${new URLSearchParams({ cycle })}`)
-async function mutated<T>(work: () => Promise<T>): Promise<T> {
+async function mutated<T>(work: () => Promise<T>, pipeline = false): Promise<T> {
+  const account = owner()
+  const cycleId = pipeline ? recentCycles(getOnboarding(), 2)[1].id : undefined
+  const sameAccount = () => {
+    if (owner() !== account) throw new Error('The account changed. Reopen this cycle and try again.')
+  }
   // The pipeline reads the canonical state doc, including this calendar.
   await flushOnboarding()
-  const result = await work()
-  updateOnboarding({ dataSource: 'server' })
-  await invalidate()
-  return result
+  sameAccount()
+  const finish = pipeline ? startPipeline(cycleId) : undefined
+  try {
+    const result = await work()
+    sameAccount()
+    updateOnboarding({ dataSource: 'server' })
+    await invalidate()
+    sameAccount()
+    // A refresh retains old data on failure. It cannot confirm a completed run.
+    const error = pipeline && (snapshot.error ?? (cycleId ? snapshot.cycleErrors[cycleId] : null))
+    if (error) throw new Error(error)
+    finish?.()
+    return result
+  } catch (cause) { finish?.(cause); throw cause }
 }
-export const seedSample = () => mutated(() => request<SampleResult>('/data/sample', { method: 'POST' }))
+export const seedSample = () => mutated(() => request<SampleResult>('/data/sample', { method: 'POST' }), true)
 export const setFact = (fact: FactInput) => mutated(() => request<{ ok: true; cycles: string[] }>('/data/facts', json(fact)))
-export const connectSource = (source: { set: 1 | 2 | 3; system?: string; site?: string }) => mutated(() => request<{ files: FileRecord[]; cycles: string[] }>('/data/connect', json(source)))
+export const connectSource = (source: { set: 1 | 2 | 3; system?: string; site?: string }) => mutated(() => request<{ files: FileRecord[]; cycles: string[] }>('/data/connect', json(source)), true)
 export function uploadFile(file: File, options: { set: 1 | 2; system?: string; site?: string; sourceId?: string }) {
   const headers = new Headers({ 'Content-Type': file.type || 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name), 'X-Set': String(options.set) })
   if (options.system) headers.set('X-System', encodeURIComponent(options.system))

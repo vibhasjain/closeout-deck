@@ -21,8 +21,13 @@ describe('Payroll next step', () => {
   it.each(steps)('renders the server label, detail and counts for %s with exactly one outline button', (kind, label) => {
     const html = renderToStaticMarkup(h(NextStepRow, { nextStep: next(kind, label), cycle }))
     expect(html).toContain(`<strong>${label}</strong>`)
-    expect(html).toContain('Cycle detail from the server')
-    expect(html).toContain('1 missing sets · 2 gaps · 4 open groups')
+    if (kind === 'review') {
+      expect(html).not.toContain('Cycle detail from the server')
+      expect(html).toContain('4 to decide · 0 waiting on evidence')
+    } else {
+      expect(html).toContain('Cycle detail from the server')
+      expect(html).toContain('1 missing set · 2 gaps')
+    }
     expect(html).toContain('role="region" aria-label="Next step"')
     expect(html.match(/<button\b/g)).toHaveLength(1)
     expect(html).toContain('class="btn journey-next-button"')

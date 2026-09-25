@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { ChatPane } from '@/components/chat/ChatPane'
-import { ThinkingOrb } from 'thinking-orbs'
+import { AgentAvatar } from '@/components/chat/AgentAvatar'
 
 type Phase = 'closed' | 'entering' | 'open' | 'closing'
 
@@ -97,6 +97,6 @@ export function AgentPanel({ docked = false, suppressed = false }: { docked?: bo
         next.set('agent', '1')
         return next
       })
-    }}><ThinkingOrb size={32} theme="light" state="breathing" /></button>}
+    }}><AgentAvatar size={32} /></button>}
   </>
 }
