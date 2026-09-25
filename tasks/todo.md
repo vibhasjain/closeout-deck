@@ -85,8 +85,8 @@ Plan: ~/.claude/plans/okay-huge-message-incoming-flickering-clock.md (rewritten 
 - [x] P2 landing = hypertrack.com homepage + /closeout, no trackers, no Agent Keyboard: ff54517
 - [x] P3 Fly backend (Claude Code CLI) + Google sign-in + review fixes, live and signed-in verified: 2801926, 3042991
 - [x] P4 J&J shell: left nav + Getting started, agent in the middle, no Clear, live: 20aeecc
-- [ ] P5 real-data backbone: A (server, engine, migration, sample regression) running · B (agent ingest + desk switch)
-- [ ] P6 agent-driven onboarding (no question script) + /firm pre-read + profile/rulebook/never-contact
+- [x] P5 real-data backbone: A 13fe31c (sample → 28,240 entries, $12,100 regression) · B a1c0e34 (agent ingest, desk on real data)
+- [x] P6 agent-driven onboarding 4770afe (live-verified signed in) · [ ] P6 review fixes (Opus lane; Codex out of credits until Sep 26 2:42 PM)
 - [ ] P7 journey on real/sample data: task card, carousel, next steps, mediation, Send to Payroll (real export), disputes
 - [ ] P8 voice: GPT-Live-1 + scribe + delegation + dictation
 - [ ] P9 memory: instincts, consolidation, what the agent knows

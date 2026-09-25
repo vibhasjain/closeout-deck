@@ -48,6 +48,15 @@ describe('onboarding stays agent-driven', () => {
     })
     expect(offenders, 'Onboarding questions must come from the server agent, never an array in src/.').toEqual([])
   })
+  it('keeps welcome, introduction and consent copy neutral rather than scripting agent speech', () => {
+    const page = readFileSync(join(import.meta.dirname, '../pages/setup/Agent.tsx'), 'utf8')
+    for (const step of ['welcome', 'intro'] as const) {
+      const pane = page.match(new RegExp("step === '" + step + "'[\\s\\S]*?</section>"))?.[0]
+      expect(pane).toBeTruthy()
+      expect(pane).not.toMatch(/\bI(?:['’](?:m|ll|ve|d)| (?:read|ask|only|work|can|will))\b|Let['’]s/)
+    }
+    expect(readFileSync(join(import.meta.dirname, 'trust.ts'), 'utf8')).not.toMatch(/['"]I /)
+  })
   it('detects unnamed and object-based question scripts as well as named constants', () => {
     expect(questionArrays('const prompts = ["Who?", "When?", "Where?"]', 'fixture.ts')).toBe(1)
     expect(questionArrays('const prompts = [{ question: "Who" }, { question: "When" }, { question: "Where" }]', 'fixture.ts')).toBe(1)

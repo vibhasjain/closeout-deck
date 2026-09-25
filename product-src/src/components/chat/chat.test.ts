@@ -154,6 +154,12 @@ describe('permanent Closeout Agent conversation', () => {
     expect(router.params.get('chatScope')).toBe('case:12')
   })
 
+  it('names skipped model actions in one quiet line', () => {
+    const tree = Message({ message: { id: 'partial', role: 'agent', text: 'Saved the valid answers.', at: 1, skipped: ['set_firm', 'set_profile'] } })
+    const note = elements(tree).find(({ props }) => props.className === 'chat-skipped')!
+    expect(Children.toArray(note.props.children).join('')).toBe('Skipped: set_firm; set_profile.')
+  })
+
   it('renders full-width agent text, user bubbles, and Applied action lines', () => {
     const agent = Message({ message: { id: 'a', role: 'agent', text: 'Done', at: 1, actions: [{ type: 'note', text: 'Saved' }] } })
     const user = Message({ message: { id: 'u', role: 'user', text: 'Hello', at: 1 } })

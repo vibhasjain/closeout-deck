@@ -1,3 +1,4 @@
+import type { ChatRecord } from './datastore.ts'
 export const MAX_MESSAGE_CHARS = 8_000
 export const MAX_CONTEXT_CHARS = 60_000
 export const MAX_DOC_BYTES = 1024 * 1024
@@ -63,4 +64,36 @@ export function validateStateBody(body: unknown): StateBody {
     throw new ValidationError()
   }
   return { doc: body.doc, base_updated_at: body.base_updated_at as string | null }
+}
+
+const CHAT_CONTEXT_KEYS = ['actions', 'contextChip', 'ingestFileIds', 'skipped'] as const
+const strings = (value: unknown, count: number, length: number) => Array.isArray(value) && value.length <= count
+  && value.every(item => typeof item === 'string' && item.length <= length)
+
+/** POST /chat/history: append-only transcript lines. Everything else in a line is presentation, capped. */
+export function validateChatHistory(body: unknown): ChatRecord[] {
+  if (!isPlainObject(body) || !Array.isArray(body.messages) || body.messages.length < 1 || body.messages.length > 50) throw new ValidationError()
+  return body.messages.map((message: unknown): ChatRecord => {
+    if (!isPlainObject(message) || typeof message.id !== 'string' || !/^[\w-]{1,100}$/.test(message.id)
+      || (message.role !== 'user' && message.role !== 'agent') || typeof message.text !== 'string' || message.text.length > 20_000
+      || typeof message.at !== 'number' || !Number.isFinite(message.at) || message.at <= 0 || message.at > 8_640_000_000_000_000
+      || (message.scope !== undefined && (typeof message.scope !== 'string' || message.scope.length > 200))
+      || (message.cards !== undefined && (!Array.isArray(message.cards) || message.cards.length > 3 || !message.cards.every(isPlainObject)
+        || jsonString(message.cards).length > 8_192))
+      || (message.actions !== undefined && (!Array.isArray(message.actions) || message.actions.length > 30 || jsonString(message.actions).length > 16_384))
+      || (message.contextChip !== undefined && (typeof message.contextChip !== 'string' || message.contextChip.length > 300))
+      || (message.ingestFileIds !== undefined && !strings(message.ingestFileIds, 5, 20))
+      || (message.skipped !== undefined && !strings(message.skipped, 10, 200))) throw new ValidationError()
+    const context = Object.fromEntries(CHAT_CONTEXT_KEYS.filter(key => message[key] !== undefined).map(key => [key, message[key]]))
+    return { id: message.id, role: message.role, text: message.text, at: message.at,
+      ...(message.scope !== undefined ? { scope: message.scope as string } : {}), ...(message.cards !== undefined ? { cards: message.cards as unknown[] } : {}),
+      ...(Object.keys(context).length ? { context } : {}) }
+  })
+}
+
+/** The stored row back in the client's ChatMessage shape. */
+export function chatMessage(record: ChatRecord): Record<string, unknown> {
+  const context = Object.fromEntries(CHAT_CONTEXT_KEYS.filter(key => record.context?.[key] !== undefined).map(key => [key, record.context![key]]))
+  return { ...context, id: record.id, role: record.role, text: record.text, at: record.at,
+    ...(record.scope !== undefined ? { scope: record.scope } : {}), ...(record.cards ? { cards: record.cards } : {}) }
 }

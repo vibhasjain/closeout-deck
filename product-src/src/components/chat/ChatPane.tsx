@@ -11,9 +11,10 @@ import { parseActions, parseCards, stream } from '@/lib/chat'
 import type { ChatContext } from '@/lib/chat'
 import { CHAT_POST_EVENT, reportIngest, type ChatPost } from '@/lib/chatBus'
 import { invalidate } from '@/lib/data'
-import { FREQUENCIES, WEEKDAYS, flushOnboarding, useOnboarding } from '@/lib/onboarding'
+import { FREQUENCIES, WEEKDAYS, effectiveAuthority, inboxAddress, flushOnboarding, useOnboarding } from '@/lib/onboarding'
 import type { ChatMessage } from '@/lib/onboarding'
-import { applyAction, isAction, type ChatUpdate } from '@/lib/chatActions'
+import { viewerSession } from '@/lib/viewerSession'
+import { applyAction, validatedActions, safeModelCard, safeModelText, type ChatUpdate } from '@/lib/chatActions'
 export { applyAction, isAction, actionSummary } from '@/lib/chatActions'
 export { postToChat } from '@/lib/chatBus'
 
@@ -58,6 +59,8 @@ export function useChatContext(): ChatContext {
     },
     discrepancies: partial.discrepancies?.slice(0, 10),
     connections: state.connections,
+    firm: state.firm, profile: state.profile, sources: state.sources,
+    inbox: inboxAddress(viewerSession()?.email ?? null), authorityConfigured: state.authorityConfigured, authority: effectiveAuthority(state),
   }
 }
 
@@ -192,7 +195,7 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
     let textSoFar = ''
     let completed = false
     try {
-      await flushOnboarding()
+      await flushOnboarding().catch(() => { /* durable sync retries separately; the current profile is in turnContext */ })
       if (request.current !== requestId || pending.controller.signal.aborted) return
       for await (const event of stream(message, turnContext, mode, pending.controller.signal)) {
         if (request.current !== requestId) return
@@ -214,15 +217,19 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
         if (event.done) {
           const cards = parseCards(event.final ?? textSoFar)
           const parsed = parseActions(cards.text)
-          parsed.actions = parsed.actions.filter((action) => action?.type !== 'set_fact' || isAction(action))
-          if (!parsed.actions.every(isAction)) throw new Error('The agent returned an invalid change. Please ask it to try again.')
-          if (cards.invalid) throw new Error('The agent returned an incomplete question. Please ask it to try again.')
-          const agent: ChatMessage = { id: crypto.randomUUID(), role: 'agent', ...parsed, cards: cards.cards.slice(0, 1), at: Date.now(), scope,
+          const validated = validatedActions(parsed.actions, latest.current.firm)
+          const skipped = [...(parsed.skipped ?? []), ...validated.skipped, ...(cards.invalid ? ['invalid card'] : [])]
+          const safeCards = cards.cards.slice(0, 3).flatMap((card) => {
+            const safe = safeModelCard(card, latest.current.firm)
+            if (JSON.stringify(safe) !== JSON.stringify(card)) skipped.push('card URL')
+            return safe ? [safe] : []
+          })
+          const agent: ChatMessage = { id: crypto.randomUUID(), role: 'agent', text: safeModelText(parsed.text, latest.current.firm), actions: validated.actions, skipped: [...new Set(skipped)], cards: safeCards, at: Date.now(), scope,
             ...(fileIds.length ? { ingestFileIds: [...fileIds] } : {}) }
           update((current) => ({
             chat: [...current.chat, agent], chatSessionId: event.sessionId ?? current.chatSessionId,
           }))
-          for (const action of parsed.actions) applyAction(action, update, navigate, params, context.cycle?.id)
+          for (const action of validated.actions) applyAction(action, update, navigate, params, context.cycle?.id)
           completed = true
           setReply('')
           break
@@ -262,7 +269,7 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
     request.current += 1
     pending?.controller.abort()
     // A stopped reply stays in the conversation, but never applies unfinished actions.
-    const text = parseCards(parseActions(pending?.text ?? '').text).text.replace(/```(?:action|card)[\s\S]*$/, '').trim()
+    const text = safeModelText(parseCards(parseActions(pending?.text ?? '').text).text.replace(/```(?:action|card)[\s\S]*$/, '').trim(), latest.current.firm)
     if (text) update((current) => ({ chat: [...current.chat, {
       id: crypto.randomUUID(), role: 'agent', text, at: Date.now(), scope: pending?.scope,
       ...(pending?.fileIds.length ? { ingestFileIds: [...pending.fileIds] } : {}),
@@ -328,7 +335,7 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
             </Fragment>
           )
         })}
-        {showRequest && reply && <Message message={{ id: 'streaming', role: 'agent', text: parseCards(parseActions(reply).text).text.replace(/```(?:action|card)[\s\S]*$/, '').trim(), at: 0, scope: requestScope }} />}
+        {showRequest && reply && <Message message={{ id: 'streaming', role: 'agent', text: safeModelText(parseCards(parseActions(reply).text).text.replace(/```(?:action|card)[\s\S]*$/, '').trim(), state.firm), at: 0, scope: requestScope }} />}
         {showRequest && sending && thinking && (
           <div className="chat-busy">
             <Loader2 size={12} aria-hidden="true" />

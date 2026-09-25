@@ -2,7 +2,7 @@ import { Children, isValidElement, type EffectCallback, type ReactElement, type 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ChatPane } from './ChatPane'
 import { stream, type ChatEvent } from '@/lib/chat'
-import { DEFAULTS, getOnboarding, updateOnboarding } from '@/lib/onboarding'
+import { DEFAULTS, flushOnboarding, getOnboarding, updateOnboarding } from '@/lib/onboarding'
 import { CHAT_POST_EVENT, postToChat } from '@/lib/chatBus'
 import { invalidate } from '@/lib/data'
 
@@ -118,6 +118,30 @@ describe('chat conversation lifetime', () => {
     await vi.waitFor(() => expect(getOnboarding().chat).toHaveLength(2))
     expect(getOnboarding().chat[1]).toMatchObject({ role: 'agent', text: 'Thursday it is.', actions: [{ type: 'set_calendar', patch: { payDay: 'Thursday' } }] })
     expect(getOnboarding()).toMatchObject({ payDay: 'Thursday', chatSessionId: 'saved-session' })
+  })
+
+  it('sends despite unrelated sync failure and keeps valid actions when a neighboring model action is invalid', async () => {
+    vi.mocked(flushOnboarding).mockRejectedValueOnce(new Error('profile save unavailable'))
+    vi.mocked(stream).mockImplementation(async function* () {
+      yield { done: true, final: 'Thursday it is.\n```action {"type":"set_calendar","patch":{"payDay":"Thursday"}}```\n```action {"type":"never_contact","name":""}```\n```action {invalid}```' }
+    })
+    send('Use Thursday')
+    await vi.waitFor(() => expect(getOnboarding().chat).toHaveLength(2))
+    expect(stream).toHaveBeenCalledOnce()
+    expect(getOnboarding().payDay).toBe('Thursday')
+    expect(getOnboarding().chat[1]).toMatchObject({ text: 'Thursday it is.', skipped: ['malformed action', 'never_contact'], actions: [{ type: 'set_calendar', patch: { payDay: 'Thursday' } }] })
+  })
+
+  it('drops unsafe model URLs from choices and chips before persisting them', async () => {
+    updateOnboarding({ firm: { name: 'Acme', domain: 'acme.com', summary: '', states: [], verticals: [], clientTypes: [], size: '', staffing: true } })
+    vi.mocked(stream).mockImplementation(async function* () {
+      yield { done: true, final: 'Choose your source.\n```card {"kind":"question","input":"choice","set":1,"topics":["workerHours"],"choice":{"yours":"Your hours https://evil.tld/exfil","sample":"Sample hours"}}```\n```card {"kind":"question","input":"chips","topics":[],"chips":["https://evil.tld","Safe"]}```' }
+    })
+    send('Use my hours')
+    await vi.waitFor(() => expect(getOnboarding().chat).toHaveLength(2))
+    expect(getOnboarding().chat[1].cards).toMatchObject([{ choice: { yours: 'Your hours', sample: 'Sample hours' } }, { chips: ['Safe'] }])
+    expect(getOnboarding().chat[1].skipped).toEqual(['card URL'])
+    expect(JSON.stringify(getOnboarding().chat[1])).not.toContain('evil.tld')
   })
 
   it('aborts the active stream on unmount and preserves saved history', async () => {

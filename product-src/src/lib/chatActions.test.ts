@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { actionSummary, applyAction, isAction } from '@/components/chat/ChatPane'
+import { actionSummary, applyAction, isAction, allowedModelUrl, validatedActions, safeModelText } from '@/lib/chatActions'
 import { DEFAULTS, getOnboarding, updateOnboarding } from '@/lib/onboarding'
 import type { Onboarding } from '@/lib/onboarding'
 import type { Action } from '@/lib/chat'
@@ -74,8 +74,8 @@ describe('onboarding action writes', () => {
         profile: { workerHours: 'Email from workers', ratesWhere: { source: 'Client contract', owner: 'Payroll' } },
         firm: { name: 'Acme Staffing', states: ['CA', 'TX'], staffing: true },
         sources: [{ set: 1, kind: 'email', label: 'Worker time entries', how: 'Forward weekly emails' }],
-        authority: { autoFix: false, limit: 200, weeklyCap: 2000, textSupervisors: false, textWorkers: true, briefing: 'Email' },
-        authorityConfigured: true, neverContact: ['Pat Smith'], covered: ['workerHours'], frequency: 'Weekly',
+        authority: { autoFix: false, limit: 0, weeklyCap: 0, textSupervisors: false, textWorkers: false, briefing: 'Email' },
+        authoritySuggestion: { limit: 200, weeklyCap: 2000, textWorkers: true }, authorityConfigured: false, neverContact: ['Pat Smith'], covered: ['workerHours'], frequency: 'Weekly',
       })
       expect(JSON.parse(storage.get('closeout-onboarding-v2')!).covered).toEqual(['workerHours'])
       applyAction({ type: 'set_firm', patch: { size: '250 people' } }, update, () => {}, new URLSearchParams())
@@ -92,5 +92,45 @@ describe('onboarding action writes', () => {
   it.each(valid)('summarizes $type as an applied change', (action) => {
     expect(actionSummary(action)).toEqual(expect.any(String))
     expect(actionSummary(action)).not.toBe('')
+  })
+})
+
+
+describe('model output boundaries', () => {
+  const firm = { name: 'Acme', domain: 'acme.com', summary: '', states: [], verticals: [], clientTypes: [], size: '', staffing: true }
+  it('allows only HTTPS on the selected firm domain or its apple-touch-icon path', () => {
+    expect(allowedModelUrl('https://acme.com/icon.png', firm, true)).toBe('https://acme.com/icon.png')
+    expect(allowedModelUrl('/apple-touch-icon.png', firm, true)).toBe('https://acme.com/apple-touch-icon.png')
+    for (const url of ['https://evil.tld/payroll.png', 'http://acme.com/icon.png', 'https://acme.com.evil.tld/icon', 'javascript:alert(1)', 'https://acme.com@evil.tld/icon', '//evil.tld/icon']) expect(allowedModelUrl(url, firm, true)).toBeNull()
+    expect(validatedActions([{ type: 'set_firm', patch: { name: 'Acme Updated', domain: 'evil.tld', icon: 'https://evil.tld/steal' } }], firm))
+      .toEqual({ actions: [{ type: 'set_firm', patch: { name: 'Acme Updated' } }], skipped: ['set_firm.domain', 'set_firm.icon'] })
+  })
+  it('removes unsafe URLs from any nested model value and prose, preserving valid actions', () => {
+    const result = validatedActions([{ type: 'add_source', set: 1, kind: 'sheet', label: 'Hours', how: 'Share at https://evil.tld/private' }, { type: 'never_contact', name: 'Pat' }, { type: 'set_profile', field: 'notes', value: 'x'.repeat(201) }], firm)
+    expect(result.actions).toEqual([{ type: 'add_source', set: 1, kind: 'sheet', label: 'Hours', how: 'Share at' }, { type: 'never_contact', name: 'Pat' }])
+    expect(result.skipped).toEqual(['add_source URL', 'set_profile'])
+    expect(safeModelText('Open https://evil.tld and https://acme.com/about', firm)).toBe('Open  and https://acme.com/about')
+  })
+  it('proposes wider authority, applies narrowing, and deduplicates and removes rules and sources', () => {
+    let state: Onboarding = { ...structuredClone(DEFAULTS), authorityConfigured: true }
+    const update = (patch: Partial<Onboarding> | ((state: Onboarding) => Partial<Onboarding>)) => { state = { ...state, ...(typeof patch === 'function' ? patch(state) : patch) } }
+    const apply = (action: Action) => applyAction(action, update, () => {}, new URLSearchParams())
+    apply({ type: 'set_authority', patch: { limit: 500, textWorkers: true, textSupervisors: false } })
+    expect(state.authority).toMatchObject({ limit: 100, textWorkers: false, textSupervisors: false })
+    expect(state.authoritySuggestion).toEqual({ limit: 500, textWorkers: true })
+    apply({ type: 'set_authority', patch: { autoFix: false, limit: 0 } })
+    expect(state.authority).toMatchObject({ autoFix: false, limit: 0 })
+    apply({ type: 'add_rule', sentence: 'Ask about gaps' }); apply({ type: 'add_rule', sentence: ' ask about gaps ' })
+    expect(state.customRules).toHaveLength(1)
+    apply({ type: 'remove_rule', sentence: 'ASK ABOUT GAPS' })
+    apply({ type: 'add_source', set: 1, kind: 'email', label: 'Old inbox' })
+    apply({ type: 'remove_source', set: 1, label: 'old inbox' })
+    expect(state.customRules).toEqual([]); expect(state.sources).toEqual([])
+  })
+  it('accepts US territories and rejects long strings and external navigation', () => {
+    expect(isAction({ type: 'set_firm', patch: { states: ['PR', 'FL'] } })).toBe(true)
+    expect(isAction({ type: 'add_rule', sentence: 'x'.repeat(201) })).toBe(false)
+    expect(isAction({ type: 'go', to: 'https://evil.tld' })).toBe(false)
+    expect(isAction({ type: 'go', to: '//evil.tld' })).toBe(false)
   })
 })

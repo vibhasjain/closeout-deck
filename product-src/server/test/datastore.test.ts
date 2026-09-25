@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { createClient } from '@supabase/supabase-js'
-import { accountHash, createDataStore, createMemoryDataStore, DuplicateFileError, validateFact, verifyRebuiltEntries } from '../src/datastore.ts'
+import { accountHash, CHAT_HISTORY_LIMIT, createDataStore, createMemoryDataStore, DuplicateFileError, validateFact, verifyRebuiltEntries } from '../src/datastore.ts'
 import type { FileRecord, RunRecord, SourceRecord } from '../src/datastore.ts'
 import type { TimeEntry } from '../src/ingest.ts'
 import type { CyclePayload, FindingCase } from '../src/pipeline.ts'
@@ -38,6 +38,21 @@ test('memory store isolates accounts, hides incomplete and superseded data, pres
   const copied = await store.getFile(email, 'f_one')
   copied!.name = 'changed.csv'
   assert.equal((await store.getFile(email, 'f_one'))?.name, 'time.csv')
+})
+
+test('chat rows are append-only, account scoped and bounded when loading the latest history', async () => {
+  const store = createMemoryDataStore()
+  const row = { id: 'same-id', role: 'agent' as const, text: 'Original closing line', at: 1 }
+  await store.appendChat(email, [row])
+  await store.appendChat(email, [{ ...row, text: 'Overwritten' }])
+  await store.appendChat(other, [{ ...row, text: 'Other account' }])
+  assert.equal((await store.listChat(email))[0].text, row.text)
+  assert.equal((await store.listChat(other))[0].text, 'Other account')
+  await store.appendChat(email, Array.from({ length: CHAT_HISTORY_LIMIT + 10 }, (_, n) => ({ ...row, id: `line-${n}`, at: n + 2 })))
+  const history = await store.listChat(email)
+  assert.equal(history.length, CHAT_HISTORY_LIMIT)
+  assert.equal(history[0].id, 'line-10')
+  assert.ok(history[0].at < history.at(-1)!.at)
 })
 
 test('memory run publication serves only current findings and gzip payload, paths are account scoped', async () => {
@@ -133,6 +148,23 @@ test('Supabase manifest uses three narrow account-scoped queries', async () => {
     assert.equal(request.url.searchParams.get('email'), `eq.${email}`)
     assert.notEqual(request.url.searchParams.get('select'), '*')
   }
+})
+
+test('Supabase chat append namespaces local ids and reads only the authenticated account', async () => {
+  const line = { id: 'local-id', role: 'agent' as const, text: 'Ready', at: Date.parse('2026-09-25T12:00:00.000Z'), scope: 'setup', cards: [] }
+  const { store, requests } = mockStore((url, method) => method === 'GET' && url.pathname.endsWith('/closeout_chat')
+    ? [{ ...line, id: `${accountHash(email)}:${line.id}`, at: new Date(line.at).toISOString() }]
+    : [])
+  await store.appendChat(email, [line])
+  const append = requests.find(request => request.url.pathname.endsWith('/closeout_chat'))!
+  assert.equal(append.method, 'POST')
+  assert.equal(append.url.searchParams.get('on_conflict'), 'id')
+  assert.deepEqual((append.body as { id: string; email: string }[]).map(row => [row.id, row.email]), [[`${accountHash(email)}:${line.id}`, email]])
+  assert.deepEqual(await store.listChat(email), [line])
+  const read = requests.at(-1)!
+  assert.equal(read.url.searchParams.get('email'), `eq.${email}`)
+  assert.equal(read.url.searchParams.get('limit'), String(CHAT_HISTORY_LIMIT))
+  assert.equal(read.url.searchParams.get('order'), 'at.desc')
 })
 
 test('Supabase entry reads filter normalized files and paginate beyond the default 1000', async () => {

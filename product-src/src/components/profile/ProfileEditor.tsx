@@ -51,9 +51,9 @@ export function ProfileEditor({ onEditRulebook }: { onEditRulebook(): void }) {
     <section className="profile-edit-section"><h3>What I fix on my own</h3>
       <p>{state.authorityConfigured ? state.authority.autoFix
         ? `Fix up to $${state.authority.limit.toLocaleString()} per entry, within $${state.authority.weeklyCap.toLocaleString()} each week.`
-        : 'Check with me before making changes.' : 'Set the changes I can make for you in your Rulebook.'}</p>
+        : 'Approval required before every change.' : 'Configure permission to make changes in your Rulebook.'}</p>
       <button className="btn" type="button" onClick={onEditRulebook}>Edit in Rulebook</button>
     </section>
-    <section className="profile-edit-section"><h3>Notes</h3><ValueEditor value={state.profile.notes} placeholder="Anything else I should remember" onChange={(value) => changeProfile('notes', value)} /></section>
+    <section className="profile-edit-section"><h3>Notes</h3><ValueEditor value={state.profile.notes} placeholder="Additional Payroll details" onChange={(value) => changeProfile('notes', value)} /></section>
   </div>
 }

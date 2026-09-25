@@ -36,6 +36,11 @@ export interface DataManifest {
   runs: Pick<RunRecord, 'cycleId' | 'runId'>[]
   factsUpdatedAt: string | null
 }
+/** One persisted chat line (closeout_chat). The client owns the id; rows are append-only. */
+export interface ChatRecord {
+  id: string; role: 'user' | 'agent'; text: string; at: number; scope?: string; cards?: unknown[]; context?: Record<string, unknown>
+}
+export const CHAT_HISTORY_LIMIT = 500
 export interface EntryQuery {
   from?: string; to?: string; fileId?: string; sourceId?: string; ids?: string[]; offset?: number; limit?: number
   includeSuperseded?: boolean; includeUnnormalized?: boolean
@@ -68,6 +73,10 @@ export interface DataStore {
   putObject(email: string, path: string, bytes: Uint8Array, mime?: string): Promise<void>
   getObject(email: string, path: string): Promise<Buffer | null>
   deleteSample(email: string): Promise<void>
+  /** The latest CHAT_HISTORY_LIMIT lines, oldest first. */
+  listChat(email: string): Promise<ChatRecord[]>
+  /** Idempotent by id: a replayed line is ignored. */
+  appendChat(email: string, messages: ChatRecord[]): Promise<void>
 }
 
 export function accountHash(email: string): string {
@@ -110,13 +119,13 @@ export function createMemoryDataStore(): DataStore {
   interface Account {
     sources: Map<string, SourceRecord>; mappings: Map<string, MappingRecord>; files: Map<string, FileRecord>
     entries: Map<string, TimeEntry>; facts: Map<string, FactRecord>; runs: Map<string, RunRecord>
-    findings: Map<string, FindingCase[]>; objects: Map<string, Buffer>
+    findings: Map<string, FindingCase[]>; objects: Map<string, Buffer>; chat: Map<string, ChatRecord>
   }
   const accounts = new Map<string, Account>()
   function account(email: string): Account {
     let current = accounts.get(email)
     if (!current) {
-      current = { sources: new Map(), mappings: new Map(), files: new Map(), entries: new Map(), facts: new Map(), runs: new Map(), findings: new Map(), objects: new Map() }
+      current = { sources: new Map(), mappings: new Map(), files: new Map(), entries: new Map(), facts: new Map(), runs: new Map(), findings: new Map(), objects: new Map(), chat: new Map() }
       accounts.set(email, current)
     }
     return current
@@ -217,6 +226,11 @@ export function createMemoryDataStore(): DataStore {
       for (const [id, row] of state.runs) if (row.sample) { state.runs.delete(id); state.findings.delete(row.runId); state.objects.delete(row.storagePath) }
       // Mappings are reusable layout knowledge; only data tagged sample is removed.
       for (const row of state.entries.values()) if (row.supersededBy && !state.files.has(row.supersededBy)) row.supersededBy = null
+    },
+    async listChat(email) { return clone([...account(email).chat.values()].sort((a, b) => a.at - b.at).slice(-CHAT_HISTORY_LIMIT)) },
+    async appendChat(email, messages) {
+      const chat = account(email).chat
+      for (const message of messages) if (!chat.has(message.id)) chat.set(message.id, clone(message))
     },
   }
   return store
@@ -468,6 +482,26 @@ export function createDataStore(client: SupabaseClient): DataStore {
         const { error } = await bucket.remove(paths.slice(offset, offset + 1000).map(path => checkedPath(email, path)))
         if (error) throw new Error('data_object_cleanup_failed')
       }
+    },
+    async listChat(email) {
+      const { data, error } = await table('chat').select('id,role,text,at,scope,cards,context').eq('email', email)
+        .order('at', { ascending: false }).limit(CHAT_HISTORY_LIMIT)
+      if (error) throw new Error('data_chat_read_failed')
+      return (data as Row[]).reverse().map(row => ({
+        id: String(row.id).replace(new RegExp(`^${accountHash(email)}:`), ''), role: row.role === 'user' ? 'user' : 'agent', text: String(row.text ?? ''), at: Date.parse(String(row.at)),
+        ...(typeof row.scope === 'string' ? { scope: row.scope } : {}), ...(Array.isArray(row.cards) ? { cards: row.cards } : {}),
+        ...(row.context && typeof row.context === 'object' ? { context: row.context as Record<string, unknown> } : {}),
+      }))
+    },
+    async appendChat(email, messages) {
+      if (!messages.length) return
+      await store.ensureAccount(email)
+      // The table has a global text primary key. Namespace client ids so two accounts
+      // can append the same local id without suppressing each other's transcript.
+      const { error } = await table('chat').upsert(messages.map(message => ({ id: `${accountHash(email)}:${message.id}`, email, role: message.role, text: message.text,
+        at: new Date(message.at).toISOString(), scope: message.scope ?? null, cards: message.cards ?? null, context: message.context ?? null })),
+      { onConflict: 'id', ignoreDuplicates: true })
+      if (error) throw new Error('data_chat_write_failed')
     },
   }
   return store

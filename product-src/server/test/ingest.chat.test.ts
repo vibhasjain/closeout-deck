@@ -104,13 +104,22 @@ test('set_fact saves agent provenance, reruns and closes the rate gap before don
   assert.equal((await app.store.getRunPayload(email, next))?.totals.gross, 192)
 })
 
-test('malformed set_fact is ignored, logged privately and removed from the terminal reply', async t => {
+test('invalid set_fact is skipped with one app note while valid facts apply without a retry', async t => {
   const logs = t.mock.method(console, 'warn', () => {})
-  const app = await setup(t, async options => finish(options, fence('action', { type: 'set_fact', kind: 'site', key: 'secret site', value: { state: 'INVALID' } })))
+  let turns = 0
+  const app = await setup(t, async options => {
+    turns++
+    finish(options, fence('action', { type: 'set_fact', kind: 'site', key: 'secret site', value: { state: 'INVALID' } })
+      + '\n' + fence('action', { type: 'set_fact', kind: 'rate', key: 'pacific cold storage|*', value: { pay: 24 } }))
+  })
   const events = await app.chat([], 'onboard')
-  assert.equal((await app.store.listFacts(email)).length, 0); assert.equal(events.some(e => e.facts), false)
+  assert.equal((await app.store.listFacts(email)).length, 1); assert.equal(events.find(e => e.facts)?.facts.applied, 1)
+  assert.equal((await app.store.listFacts(email))[0].value.pay, 24)
   assert.equal(logs.mock.callCount(), 1); assert.equal(String(logs.mock.calls[0].arguments).includes('secret site'), false)
-  assert.equal(events.at(-1).done, true); assert.equal(events.at(-1).final.includes('set_fact'), false)
+  assert.equal(events.at(-1).done, true)
+  assert.ok(!events.at(-1).final.includes('secret site'))
+  assert.match(events.at(-1).final, /Skipped set_fact: invalid fields/)
+  assert.equal(turns, 1)
 })
 
 test('ingest rejects absent, normalized, repeated, oversized and other-account files before SSE', async t => {

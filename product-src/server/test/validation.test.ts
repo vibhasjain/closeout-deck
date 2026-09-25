@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { MAX_CONTEXT_CHARS, MAX_DOC_BYTES, MODES, validateChatBody, validateStateBody, ValidationError } from '../src/validation.ts'
+import { MAX_CONTEXT_CHARS, MAX_DOC_BYTES, MODES, chatMessage, validateChatBody, validateChatHistory, validateStateBody, ValidationError } from '../src/validation.ts'
 
 test('chat validation accepts each known mode and keeps message and context intact', () => {
   for (const mode of MODES) {
@@ -43,4 +43,19 @@ test('state doc must be a plain object, including for non-HTTP callers', () => {
     assert.throws(() => validateStateBody({ doc, base_updated_at: null }), ValidationError)
   }
   assert.deepEqual(validateStateBody({ doc: {}, base_updated_at: null }).doc, {})
+})
+
+test('history validates bounded transcript rows and round trips their presentation context', () => {
+  const message = { id: 'line-1', role: 'agent', text: 'Send the worker emails to my inbox', at: Date.now(), scope: 'setup',
+    cards: [{ kind: 'question', input: 'choice', set: 1, topics: ['workerHours'], choice: { yours: 'Forward worker emails', sample: 'Use sample worker time' } }],
+    actions: [{ type: 'cover_topic', topic: 'workerHours' }], skipped: ['set_firm: invalid URL'], contextChip: 'Worker time', ingestFileIds: ['f_abcdefghijkl'] }
+  const [stored] = validateChatHistory({ messages: [message] })
+  assert.deepEqual(chatMessage(stored), message)
+  assert.equal('actions' in stored, false, 'presentation fields live in the existing context column')
+  for (const patch of [{ id: '../bad' }, { role: 'system' }, { text: 'x'.repeat(20_001) }, { at: Infinity }, { at: 9e15 }, { at: -1 },
+    { cards: Array.from({ length: 4 }, () => ({})) }, { cards: ['not a card'] }, { skipped: ['x'.repeat(201)] }]) {
+    assert.throws(() => validateChatHistory({ messages: [{ ...message, ...patch }] }), ValidationError)
+  }
+  assert.throws(() => validateChatHistory({ messages: [] }), ValidationError)
+  assert.throws(() => validateChatHistory({ messages: Array.from({ length: 51 }, () => message) }), ValidationError)
 })

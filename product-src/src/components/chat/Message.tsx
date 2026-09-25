@@ -12,7 +12,8 @@ export function Message({ message, onAnswer }: { message: ChatMessage; onAnswer?
         {message.contextChip && <span className="chat-context-chip">{message.contextChip}</span>}
         {message.text && <div className="chat-text">{message.text}</div>}
         {message.cards?.map((card, index) => card.kind !== 'question' ? null : card.input === 'choice' && card.choice
-          ? <FirstCloseoutChoice key={index} choice={card.choice} /> : onAnswer ? <FactQuestion key={index} card={card} onAnswer={onAnswer} /> : null)}
+          ? <FirstCloseoutChoice key={index} card={card} onAnswer={onAnswer} /> : onAnswer ? <FactQuestion key={index} card={card} onAnswer={onAnswer} /> : null)}
+        {!!message.skipped?.length && <p className="chat-skipped" role="status">Skipped: {message.skipped.join('; ')}.</p>}
         {message.actions?.map((action, index) => {
           const summary = actionSummary(action)
           return summary === null ? null : (

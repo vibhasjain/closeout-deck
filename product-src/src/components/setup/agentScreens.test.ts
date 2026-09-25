@@ -2,7 +2,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { Agent } from '@/pages/setup/Agent'
+import { Agent, WritingProfile } from '@/pages/setup/Agent'
 import { QuestionScreen } from './QuestionScreen'
 import { DEFAULTS, type Onboarding } from '@/lib/onboarding'
 import type { QuestionCard } from '@/lib/chat'
@@ -21,8 +21,28 @@ describe('one black next step per setup pane', () => {
     if (step === 'basics' || step === 'conversation' || step === 'writing') expect(primaryCount(html)).toBe(0)
     expect(html).not.toContain('Jump on a call')
   })
+  it('keeps the ready screen visible and inert under the never-contact dialog', () => {
+    state.value.setupStep = 'never-contact'
+    const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(Agent)))
+    expect(html).toContain('class="setup-stage" inert="" aria-hidden="true"')
+    expect(html).toContain('Your Payroll profile is ready')
+    expect(html).not.toContain('class="setup-stage" hidden')
+  })
+  it('shows the agent closing line during writing and on ready, with uncovered rows marked Not Yet', () => {
+    state.value.setupClosing = 'I will ask before every fix and spend nothing on my own.'
+    const writing = renderToStaticMarkup(createElement(WritingProfile, { state: state.value, onDone() {} }))
+    expect(writing).toContain(state.value.setupClosing)
+    expect(writing.match(/>Not Yet</g)).toHaveLength(9)
+    expect(writing).not.toContain('class="done"')
+    state.value.setupStep = 'ready'
+    expect(renderToStaticMarkup(createElement(MemoryRouter, null, createElement(Agent)))).toContain(state.value.setupClosing)
+  })
+  it('offers Forward while reviewing a previous question', () => {
+    const html = renderToStaticMarkup(createElement(QuestionScreen, { question: 'How do hours arrive?', card: { kind: 'question', input: 'text', topics: ['workerHours'] }, initialAnswer: 'Email', canBack: true, canForward: true, onBack() {}, onForward() {}, onAnswer() {} }))
+    expect(html).toContain('Forward →')
+  })
   it('personalizes the welcome from the viewer session', () => {
-    expect(renderToStaticMarkup(createElement(MemoryRouter, null, createElement(Agent)))).toContain('Hey Morgan!')
+    expect(renderToStaticMarkup(createElement(MemoryRouter, null, createElement(Agent)))).toContain('Welcome, Morgan')
   })
   it('restores previous chips as selections so a replacement does not retain stale free text', () => {
     const html = renderToStaticMarkup(createElement(QuestionScreen, { question: 'Where should I pick those up?', card: { kind: 'question', input: 'chips', topics: ['workerHours'], chips: ['Email', 'Shared sheet'] }, initialAnswer: 'Email', canBack: true, onBack: () => {}, onAnswer: () => {} }))

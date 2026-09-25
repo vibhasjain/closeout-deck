@@ -10,7 +10,7 @@ import { FirmError, FirmReader, extractFirm, firmCacheFromEnv } from './firm.ts'
 import { GlobalSemaphore, QueueFullError, TurnRateLimit, UserQueue } from './queue.ts'
 import { stateStoreFromEnv } from './state.ts'
 import type { StateStore } from './state.ts'
-import { isPlainObject, MAX_DOC_BYTES, validateChatBody, validateStateBody, ValidationError } from './validation.ts'
+import { chatMessage, isPlainObject, MAX_DOC_BYTES, validateChatBody, validateChatHistory, validateStateBody, ValidationError } from './validation.ts'
 import type { ChatMode } from './validation.ts'
 import { prepareWorkspace, materialize } from './workspace.ts'
 import { DataError, DataService, cycleDates, localToday } from './data.ts'
@@ -19,6 +19,7 @@ import type { DataStore } from './datastore.ts'
 import { calendarFrom, engineSha } from './pipeline.ts'
 import { parseFile, IngestError } from './ingest.ts'
 import { recentCycles } from '../../src/lib/cycles.ts'
+import { inboxAddress } from '../../src/lib/inbox.ts'
 
 const ALLOWED_ORIGINS = new Set(['https://closeoutcopilot.com', 'http://localhost:9000'])
 
@@ -188,8 +189,20 @@ export function createServer(options: ServerOptions = {}) {
         json(response, 200, await stateStore.get(user.email) ?? { doc: null })
       } else {
         const body = validateStateBody(await readJson(request, MAX_DOC_BYTES + 65_536))
+        // Chat lives in closeout_chat; an older client's copy is dropped so the document stays small.
+        delete body.doc.chat
         const result = await stateStore.put(user.email, body.doc, body.base_updated_at)
         json(response, result.status, result.row ?? { doc: null })
+      }
+      return
+    }
+    // The transcript lives in closeout_chat, never in the state document.
+    if (path === '/chat/history' && (request.method === 'GET' || request.method === 'POST')) {
+      const store = getDataStore()
+      if (request.method === 'GET') json(response, 200, { messages: (await store.listChat(user.email)).map(chatMessage) })
+      else {
+        await store.appendChat(user.email, validateChatHistory(await readJson(request, 512 * 1024)))
+        json(response, 200, { ok: true })
       }
       return
     }
@@ -353,7 +366,7 @@ export function createServer(options: ServerOptions = {}) {
         await runDataTurn({ options: {
           cwd,
           message: body.message,
-          prompt: body.mode === 'onboard' ? onboardPrompt(body.context) : body.mode === 'ingest' ? ingestPrompt(ingestFiles.filter(file => file !== null), body.context) : systemPrompt(body.context),
+          prompt: body.mode === 'onboard' ? onboardPrompt({ ...body.context, inbox: inboxAddress(user.email) }) : body.mode === 'ingest' ? ingestPrompt(ingestFiles.filter(file => file !== null), body.context) : systemPrompt(body.context),
           model: env.CLOSEOUT_AGENT_MODEL ?? 'opus',
           env,
           signal: abort.signal,

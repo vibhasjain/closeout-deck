@@ -86,5 +86,8 @@ export async function runDataTurn(input: {
   if (changed) await input.sync()
   for (const fileId of pending) emit({ ingest: { fileId, status: 'needs_mapping', errors: failures.get(fileId) ?? ['The mapping turn did not complete'] } })
   if (applied) emit({ facts: { applied, cycles: [...factCycles] } })
+  // Validation feedback is an app note, not a replacement agent answer. A bad fact
+  // must not hide valid actions or cause another turn with the same bad output.
+  if (sanitized) allText += '\n\n```action\n' + JSON.stringify({ type: 'note', text: 'Skipped set_fact: invalid fields' }) + '\n```'
   emit({ ...held, ...(sanitized || (allText && (held.final !== undefined || turns > 1)) ? { final: allText } : {}) })
 }

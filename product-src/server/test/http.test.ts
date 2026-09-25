@@ -8,6 +8,8 @@ import { createServer, listenHost, turnTimeoutMs } from '../src/index.ts'
 import { GlobalSemaphore } from '../src/queue.ts'
 import { engineSha } from '../src/pipeline.ts'
 import { MAX_DOC_BYTES } from '../src/validation.ts'
+import { createMemoryDataStore } from '../src/datastore.ts'
+import { inboxAddress } from '../../src/lib/inbox.ts'
 
 const devEnv = {
   NODE_ENV: 'development', CLOSEOUT_DEV_EMAIL: 'dev@hypertrack.io',
@@ -39,8 +41,8 @@ test('health is public but production never enables the dev identity', async t =
   const health = await fetch(`${url}/health`)
   assert.equal(health.status, 200)
   assert.deepEqual(await health.json(), { ok: true, claude: '2.1.282 (Claude Code)', engineSha })
-  for (const path of ['/chat', '/state', '/live-session', '/dictate', '/firm']) {
-    const response = await fetch(`${url}${path}`, path === '/state' ? {} : post(chatBody))
+  for (const path of ['/chat', '/chat/history', '/state', '/live-session', '/dictate', '/firm']) {
+    const response = await fetch(`${url}${path}`, path === '/state' || path === '/chat/history' ? {} : post(chatBody))
     assert.equal(response.status, 401, path)
     assert.deepEqual(await response.json(), { error: 'invalid_token' })
   }
@@ -272,15 +274,26 @@ test('onboard uses the chat account workspace and server-owned evidence prompt',
         assert.match(options.prompt, /never pay a worker less than they reported without evidence/)
         assert.match(options.prompt, /onboard_complete/)
         assert.match(options.prompt, /Email\/photos\/paper can be forwarded/)
+        assert.ok(options.prompt.includes(`"inbox":"${inboxAddress(devEnv.CLOSEOUT_DEV_EMAIL)}"`))
+        assert.match(options.prompt, /record that address in add_source.how/)
+        assert.match(options.prompt, /closing line.*ready screen and in chat/s)
+      }
+      if (options.message === 'Start the first closeout') {
+        assert.match(options.prompt, /exactly one choice card per set in context.missingSets/)
+        assert.match(options.prompt, /overrides all earlier one-question\/one-card instructions/)
+        assert.ok(options.prompt.includes('"phase":"first_closeout"'))
+        assert.ok(options.prompt.includes('"missingSets":[1,2,3]'))
       }
       options.onEvent({ done: true, sessionId: 'same-session', final: 'Ready' })
     },
   })
-  for (const body of [chatBody, { mode: 'onboard', message: 'Start onboarding', context: { firm: SAMPLE_CONTEXT_FIRM, profile: {}, covered: [] } }]) {
+  for (const body of [chatBody, { mode: 'onboard', message: 'Start onboarding', context: { firm: SAMPLE_CONTEXT_FIRM, profile: {}, covered: [], inbox: 'incorrect@example.com' } },
+    { mode: 'onboard', message: 'Start the first closeout', context: { phase: 'first_closeout', missingSets: [1, 2, 3], sources: [] } }]) {
     const response = await fetch(`${url}/chat`, post(body)); assert.equal(response.status, 200)
     assert.match(await response.text(), /same-session/)
   }
   assert.equal(paths[0], paths[1])
+  assert.equal(paths[1], paths[2])
 })
 
 const SAMPLE_CONTEXT_FIRM = { name: 'Acme', states: ['CA'] }
@@ -355,4 +368,28 @@ test('state reads and conditional writes are scoped to the authenticated email a
     assert.equal(invalid.status, 400)
   }
   assert.equal(written, false)
+})
+
+test('chat history appends idempotently in closeout_chat and stays out of the state document', async t => {
+  const dataStore = createMemoryDataStore()
+  const messages = [
+    { id: 'user-1', role: 'user', text: 'I forward the worker photos every Monday', at: 1000 },
+    { id: 'agent-1', role: 'agent', text: `Forward them to me at ${inboxAddress(devEnv.CLOSEOUT_DEV_EMAIL)}`, at: 2000,
+      cards: [{ kind: 'question', input: 'text', topics: ['workerHours'] }] },
+  ]
+  let savedDoc: unknown
+  const url = await serve(t, { dataStore, stateStore: {
+    get: async () => null,
+    put: async (_email, doc) => { savedDoc = doc; return { status: 200, row: { doc, updated_at: '2026-09-25T12:00:00.000Z' } } },
+  } })
+  assert.deepEqual(await (await fetch(`${url}/chat/history`)).json(), { messages: [] })
+  for (let n = 0; n < 2; n++) assert.equal((await fetch(`${url}/chat/history`, post({ messages }))).status, 200)
+  assert.deepEqual(await (await fetch(`${url}/chat/history`)).json(), { messages })
+  assert.deepEqual(await dataStore.listChat('someone-else@hypertrack.io'), [])
+  assert.equal((await fetch(`${url}/chat/history`, post({ messages: [{ ...messages[0], role: 'system' }] }))).status, 400)
+  const state = { profile: { workerHours: 'Forwarded photos' }, chat: messages }
+  assert.equal((await fetch(`${url}/state`, { ...post({ doc: state, base_updated_at: null }), method: 'PUT' })).status, 200)
+  assert.deepEqual(savedDoc, { profile: state.profile })
+  assert.ok(Buffer.byteLength(JSON.stringify(savedDoc)) < MAX_DOC_BYTES / 100)
+  assert.deepEqual(await (await fetch(`${url}/chat/history`)).json(), { messages })
 })

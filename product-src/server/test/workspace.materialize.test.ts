@@ -6,6 +6,7 @@ import test from 'node:test'
 import { DataService } from '../src/data.ts'
 import { createMemoryDataStore } from '../src/datastore.ts'
 import { materialize, workspaceFile } from '../src/workspace.ts'
+import { inboxAddress } from '../../src/lib/inbox.ts'
 
 const email = 'workspace@hypertrack.io'
 const bytes = (day = '09/21/2026', comment = '') => Buffer.from(`Candidate,Placement ID,Client,Job Title,Date,Start,End,Break (min),Hours,Pay Rate,Bill Rate,Entered Via,Status,Approved By,Comment\r\nTest Worker,123,Pacific Cold Storage,Warehouse,${day},8:00 AM,4:00 PM,30,7.5,20,30,Clock import,Approved,Supervisor,${comment}\r\n`)
@@ -65,11 +66,24 @@ test('materialize preserves the saved Payroll profile and never-contact instruct
   const root = await mkdtemp(join(tmpdir(), 'closeout-profile-'))
   t.after(() => rm(root, { recursive: true, force: true }))
   const saved = { firm: { name: 'Acme', states: ['CA'] }, timezone: 'America/Los_Angeles', profile: { workerHours: 'Forwarded email' }, covered: ['workerHours'],
-    sources: [{ set: 1, kind: 'email', label: 'Worker hours' }], authority: { autoFix: false }, neverContact: ['Jane'] }
+    sources: [{ set: 1, kind: 'email', label: 'Worker hours', how: `Forward them to ${inboxAddress(email)}` }], authorityConfigured: true, authority: { autoFix: false }, neverContact: ['Jane'] }
   const cwd = await materialize({ email }, { NODE_ENV: 'test', CLOSEOUT_DATA_DIR: root }, createMemoryDataStore(), saved)
-  assert.deepEqual(JSON.parse(await readFile(join(cwd, 'payroll-profile.json'), 'utf8')), saved)
+  assert.deepEqual(JSON.parse(await readFile(join(cwd, 'payroll-profile.json'), 'utf8')), { ...saved, inbox: inboxAddress(email) })
   assert.match(await readFile(join(cwd, 'CLAUDE.md'), 'utf8'), /Read payroll-profile.json/)
   assert.match(await readFile(join(cwd, 'CLAUDE.md'), 'utf8'), /Account time zone: America\/Los_Angeles/)
+})
+
+test('workspace carries unconfigured authority as null and requires approval of every fix or contact', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'closeout-unconfirmed-authority-'))
+  t.after(() => rm(root, { recursive: true, force: true }))
+  const cwd = await materialize({ email }, { NODE_ENV: 'test', CLOSEOUT_DATA_DIR: root }, createMemoryDataStore(), {
+    authority: { autoFix: true, limit: 100, weeklyCap: 1000, textSupervisors: true }, authorityConfigured: false,
+  })
+  const profile = JSON.parse(await readFile(join(cwd, 'payroll-profile.json'), 'utf8'))
+  assert.equal(profile.authorityConfigured, false)
+  assert.equal(profile.authority, null)
+  assert.equal(profile.inbox, inboxAddress(email))
+  assert.match(await readFile(join(cwd, 'CLAUDE.md'), 'utf8'), /authorityConfigured is false.*ask before every fix and every contact/)
 })
 
 test('cache limits evict oldest cycle data first and paths cannot escape cwd', async t => {

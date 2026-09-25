@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { fetchFirmPage, firmFacts, firmUrl, publicAddress, pageLinks, pageText, firmClaudeArgs, firmCache, FirmReader, SAMPLE_FIRM, type Firm, type FetchPage } from '../src/firm.ts'
+import { fetchFirmPage, firmFacts, firmUrl, firmIcon, publicAddress, pageLinks, pageText, firmClaudeArgs, firmCache, FirmReader, SAMPLE_FIRM, MAX_BYTES, type Firm, type FetchPage } from '../src/firm.ts'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 const publicDns = async () => [{ address: '93.184.216.34', family: 4 }]
@@ -43,9 +43,13 @@ test('every redirect rechecks URL and DNS, with at most three redirects', async 
   assert.equal(fetches, 4)
 })
 
-test('fetch limits reject non-html, large pages, slow DNS and mixed private DNS answers', async () => {
+test('fetch limits truncate large pages and reject non-html, slow DNS and mixed private DNS answers', async () => {
   await assert.rejects(fetchFirmPage('example.com', { resolve: publicDns, fetch: async () => ({ ...html(), headers: { 'content-type': 'application/json' } }) }), /firm_html_only/)
-  await assert.rejects(fetchFirmPage('example.com', { resolve: publicDns, fetch: async () => html('x'.repeat(300 * 1024 + 1)) }), /firm_page_too_large/)
+  const large = await fetchFirmPage('example.com', { resolve: publicDns, fetch: async () => html('x'.repeat(MAX_BYTES + 1)) })
+  assert.equal(Buffer.byteLength(large.html), MAX_BYTES)
+  const unicode = await fetchFirmPage('example.com', { resolve: publicDns, fetch: async () => html('x'.repeat(MAX_BYTES - 1) + '😀') })
+  assert.equal(Buffer.byteLength(unicode.html), MAX_BYTES - 1)
+  assert.ok(!unicode.html.includes('�'))
   await assert.rejects(fetchFirmPage('example.com', { resolve: async () => [...await publicDns(), { address: '10.1.2.3', family: 4 }] }), /private_firm_address/)
   const keepAlive = setTimeout(() => {}, 50)
   try { await assert.rejects(fetchFirmPage('example.com', { timeoutMs: 5, resolve: () => new Promise(() => {}) }), /firm_fetch_timeout/) }
@@ -63,6 +67,31 @@ test('facts shape drops unknown keys and non-enum states and caps every string a
   assert.ok(!('unknown' in result)); assert.ok(!('domain' in result))
   for (const invalid of [null, [], {}, { ...SAMPLE_FIRM, staffing: 'yes' }, { ...SAMPLE_FIRM, states: 'CA' }, { ...SAMPLE_FIRM, name: null }]) assert.throws(() => firmFacts(invalid), /invalid_firm_facts/)
   assert.equal(firmFacts({ ...SAMPLE_FIRM, name: '', staffing: false }).name, '', 'unknown firm names remain unknown until the caller uses its domain')
+  assert.deepEqual(firmFacts({ ...SAMPLE_FIRM, states: ['PR', 'FL'] }).states, ['PR', 'FL'])
+})
+
+test('icons stay on the firm domain and the sample names its agency separately from its clients', () => {
+  assert.equal(firmIcon('https://example.com/apple-touch-icon.png', 'example.com'), 'https://example.com/apple-touch-icon.png')
+  assert.equal(firmIcon('https://www.example.com/icon.png', 'example.com'), 'https://www.example.com/icon.png')
+  for (const url of ['https://evil.example/pixel.png', 'https://example.com.evil.example/pixel.png', 'http://example.com/icon.png', 'data:image/png;base64,foo', 'https://user@example.com/icon.png']) assert.equal(firmIcon(url, 'example.com'), undefined)
+  assert.equal(SAMPLE_FIRM.name, 'Summit Staffing')
+  assert.match(SAMPLE_FIRM.summary, /Sample.*Pacific Cold Storage.*Lonestar Packaging/)
+})
+
+test('reader keeps homepage facts when the optional about page fails and falls back on total failure', async () => {
+  const cache = { get: async () => null, put: async () => {} }
+  let extracted = ''
+  const reader = new FirmReader(cache, async text => { extracted = text; return firmFacts({ ...SAMPLE_FIRM, name: 'Acme' }) }, async url => {
+    if (url.endsWith('/about')) throw new Error('403')
+    return { url: new URL(url), html: '<h1>Acme</h1><a href="/about">About</a>' }
+  })
+  assert.equal((await reader.read('a@example.com', { domain: 'example.com' })).firm.name, 'Acme')
+  assert.match(extracted, /Acme/)
+  const failing = new FirmReader(cache, async () => { throw new Error('should not extract') }, async () => { throw new Error('403') })
+  const fallback = (await failing.read('a@example.com', { domain: 'example.com' })).firm
+  assert.equal(fallback.name, 'example.com'); assert.equal(fallback.domain, 'example.com')
+  assert.deepEqual(fallback.states, []); assert.equal(fallback.summary, '')
+  assert.equal(fallback.icon, undefined)
 })
 
 test('HTML extraction keeps same-origin about and apple icon links and strips active content', () => {

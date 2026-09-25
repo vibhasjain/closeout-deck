@@ -1,7 +1,7 @@
-import { useRef, useState } from 'react'
-import { Plus, Upload, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Check, Circle, Plus, Upload, X } from 'lucide-react'
 import { RULES } from '@/bench/engine.js'
-import { getOnboarding, useOnboarding, type Onboarding } from '@/lib/onboarding'
+import { effectiveAuthority, getOnboarding, useOnboarding, type Onboarding } from '@/lib/onboarding'
 import { acceptProposal, compileRule, propose } from '@/lib/ruleIntake'
 import { formatRuleText } from '@/lib/rules'
 import { NeverContactInput } from './NeverContactInput'
@@ -36,13 +36,22 @@ function JurisdictionRules({ states }: { states: string[] }) {
   </div>
 }
 
-function AuthorityEditor() {
+const authorityLabels: Record<keyof Onboarding['authority'], string> = { autoFix: 'Fix on my own', limit: 'Per-entry limit', weeklyCap: 'Weekly cap', textSupervisors: 'Text site supervisors', textWorkers: 'Text workers', briefing: 'Briefing' }
+
+export function AuthorityEditor() {
   const [state, update] = useOnboarding()
   function save(patch: Partial<Onboarding['authority']>) {
     const current = getOnboarding()
-    update({ authority: { ...current.authority, ...patch }, authorityConfigured: true, covered: current.covered.includes('authority') ? current.covered : [...current.covered, 'authority'] })
+    // Editing one suggestion does not accept the rest of the proposed permissions.
+    update({ authority: { ...current.authority, ...patch } })
+  }
+  function accept(patch?: Partial<Onboarding['authority']>) {
+    const current = getOnboarding()
+    const authority = patch ? { ...effectiveAuthority(current), ...patch } : current.authority
+    update({ authority, authorityConfigured: true, authoritySuggestion: null, covered: current.covered.includes('authority') ? current.covered : [...current.covered, 'authority'] })
   }
   return <div className="profile-authority">
+    {!state.authorityConfigured && <div className="profile-authority-suggestion"><span className="tag">Suggested</span><p>These settings are suggestions. Every fix and message requires approval until you accept them.</p></div>}
     <label className="profile-toggle"><span>Fix on my own</span><input type="checkbox" role="switch" checked={state.authority.autoFix} onChange={(event) => save({ autoFix: event.target.checked })} /></label>
     <div className="profile-authority-limits">
       <label><span>Per-entry limit ($)</span><input className="q-input" type="number" aria-label="Per-entry limit in dollars" placeholder="Per-entry limit ($)" min={0} max={10000} value={state.authority.limit} onChange={(event) => save({ limit: Math.max(0, Math.min(10000, Number(event.target.value))) })} /></label>
@@ -50,6 +59,8 @@ function AuthorityEditor() {
     </div>
     <label className="profile-toggle"><span>Text site supervisors</span><input type="checkbox" role="switch" checked={state.authority.textSupervisors} onChange={(event) => save({ textSupervisors: event.target.checked })} /></label>
     <label className="profile-toggle"><span>Text workers</span><input type="checkbox" role="switch" checked={state.authority.textWorkers} onChange={(event) => save({ textWorkers: event.target.checked })} /></label>
+    {!state.authorityConfigured && <button type="button" className="btn" onClick={() => accept()}>Accept these settings</button>}
+    {state.authoritySuggestion && <div className="profile-authority-suggestion"><span className="tag">Suggested changes</span><ul>{Object.entries(state.authoritySuggestion).map(([field, value]) => <li key={field}>{authorityLabels[field as keyof Onboarding['authority']]}: {typeof value === 'boolean' ? value ? 'Allow' : 'Ask first' : typeof value === 'number' ? `$${value.toLocaleString()}` : value}</li>)}</ul><button type="button" className="btn" onClick={() => accept(getOnboarding().authoritySuggestion ?? {})}>Accept suggested changes</button><button type="button" className="btn" onClick={() => update({ authoritySuggestion: null })}>Dismiss</button></div>}
   </div>
 }
 
@@ -65,7 +76,7 @@ function ContractsEditor() {
     try {
       const documents = await Promise.all(Array.from(files, async (file) => ({ name: file.name, text: file.type.startsWith('text/') || /\.(txt|md|csv)$/i.test(file.name) ? await file.text() : undefined })))
       update({ proposals: propose(getOnboarding(), documents).proposals })
-    } catch { setError('I could not read those contracts. Try adding them again.') }
+    } catch { setError('Those contracts could not be read. Try adding them again.') }
     finally { setLoading(false) }
   }
   return <div className="profile-contracts">
@@ -105,16 +116,27 @@ function RefinementsEditor() {
 export function RulebookModal({ onClose, initialSection = 'states' }: { onClose(): void; initialSection?: RulebookSection }) {
   const [state, update] = useOnboarding()
   const [active, setActive] = useState<RulebookSection>(initialSection)
-  return <ProfileDialog title="Your Rulebook" description="What I check before every pay run. Only your team sees it." onClose={onClose} className="rulebook-modal">
+  const sectionNodes = useRef<Partial<Record<RulebookSection, HTMLElement>>>({})
+  useEffect(() => { sectionNodes.current[initialSection]?.scrollIntoView?.({ block: 'start' }) }, [initialSection])
+  const complete: Record<RulebookSection, boolean> = {
+    states: !!state.firm?.states.length,
+    contracts: state.covered.includes('rates') && !!state.profile.ratesWhere || state.rules.length > 0,
+    authority: state.authorityConfigured,
+    refinements: state.customRules.length > 0,
+    'never-contact': state.neverContact !== null,
+  }
+  return <ProfileDialog title="Your Rulebook" description="The rules used before every pay run. Only your team sees them." onClose={onClose} className="rulebook-modal">
     <div className="rulebook-modal-body">
-      <nav className="rulebook-rail" aria-label="Rulebook sections">{sections.map((section) => <button key={section.id} type="button" aria-current={active === section.id ? 'page' : undefined} onClick={() => setActive(section.id)}>{section.title}</button>)}</nav>
+      <nav className="rulebook-rail" aria-label="Rulebook sections">{sections.map((section) => <button key={section.id} type="button" aria-current={active === section.id ? 'location' : undefined} aria-label={`${section.title}: ${complete[section.id] ? 'Complete' : 'Not Yet'}`} onClick={() => { setActive(section.id); sectionNodes.current[section.id]?.scrollIntoView({ block: 'start', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' }) }}>{complete[section.id] ? <Check size={14} aria-hidden /> : <Circle size={14} aria-hidden />}<span>{section.title}</span></button>)}</nav>
       <div className="rulebook-content">
-        <h3>{sections.find((section) => section.id === active)?.title}</h3>
-        {active === 'states' && <JurisdictionRules states={state.firm?.states ?? []} />}
-        {active === 'contracts' && <ContractsEditor />}
-        {active === 'authority' && <AuthorityEditor />}
-        {active === 'refinements' && <RefinementsEditor />}
-        {active === 'never-contact' && <NeverContactInput value={state.neverContact ?? []} onChange={(neverContact) => update({ neverContact })} />}
+        {sections.map((section) => <section className="rulebook-section" key={section.id} ref={(element) => { if (element) sectionNodes.current[section.id] = element }} aria-labelledby={`rulebook-${section.id}`}>
+          <h3 id={`rulebook-${section.id}`}>{section.title}</h3>
+          {section.id === 'states' && <JurisdictionRules states={state.firm?.states ?? []} />}
+          {section.id === 'contracts' && <ContractsEditor />}
+          {section.id === 'authority' && <AuthorityEditor />}
+          {section.id === 'refinements' && <RefinementsEditor />}
+          {section.id === 'never-contact' && <NeverContactInput value={state.neverContact ?? []} onChange={(neverContact) => update({ neverContact })} />}
+        </section>)}
       </div>
     </div>
   </ProfileDialog>

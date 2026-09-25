@@ -28,9 +28,9 @@ function TypedQuestion({ text, onDone }: { text: string; onDone(): void }) {
 }
 
 /** Input structure and wording come entirely from the agent's validated card. */
-export function QuestionScreen({ question, card, initialAnswer = '', busy = false, canBack, onBack, onAnswer }: {
-  question: string; card: QuestionCard; initialAnswer?: string; busy?: boolean; canBack: boolean
-  onBack(): void; onAnswer(answer: string): void
+export function QuestionScreen({ question, card, initialAnswer = '', busy = false, canBack, canForward = false, onBack, onForward, onAnswer }: {
+  question: string; card: QuestionCard; initialAnswer?: string; busy?: boolean; canBack: boolean; canForward?: boolean
+  onForward?(): void; onBack(): void; onAnswer(answer: string): void
 }) {
   const options = card.chips ?? (card.choice ? [card.choice.yours, card.choice.sample] : [])
   const answeredLines = initialAnswer.split('\n')
@@ -113,6 +113,7 @@ export function QuestionScreen({ question, card, initialAnswer = '', busy = fals
       <footer className="setup-controls">
         <Btn className="ghost" disabled={!canBack || locked} onClick={onBack}><ChevronLeft size={14} aria-hidden />Back</Btn>
         <span />
+        {canForward && <Btn disabled={locked} onClick={onForward}>Forward →</Btn>}
         <Btn className="setup-skip" disabled={locked} onClick={() => onAnswer('skip')}>Skip</Btn>
         <Btn type="submit" className={answered && !locked ? 'primary' : ''} disabled={!answered || locked}>Next →</Btn>
       </footer>

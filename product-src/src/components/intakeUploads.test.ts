@@ -7,7 +7,7 @@ import { FactQuestion } from './chat/FactQuestion'
 import { SOURCES } from '@/bench/vendors'
 import { DEFAULTS, getOnboarding, updateOnboarding } from '@/lib/onboarding'
 import { buildCycles, type DeskCycle } from '@/lib/desk'
-import { connectSource, seedSample, uploadFile } from '@/lib/data'
+import { connectSource, uploadFile } from '@/lib/data'
 import { INGEST_RESULT_EVENT, postToChat } from '@/lib/chatBus'
 import type { Intake as IntakeData } from '@/lib/intake'
 
@@ -49,7 +49,8 @@ let cycle: DeskCycle
 const intake: IntakeData = { expected: 1, received: 0, open: 1, closed: [], clients: [{ name: 'Pacific Cold Storage', expected: 1, received: 0, open: 1,
   sources: [{ source, expected: 1, received: 0, pending: 1, missing: [], late: false, lastReceived: new Date(2026, 8, 20) }] }] }
 const renderIntake = () => { hooks.cursor = 0; return Intake({ cycle, intake }) }
-const renderChoice = () => { hooks.cursor = 0; return FirstCloseoutChoice({ choice: { yours: 'Use your timesheets', sample: 'Use sample timesheets' } }) }
+const choiceAnswer = vi.fn()
+const renderChoice = () => FirstCloseoutChoice({ card: { kind: 'question', input: 'choice', topics: ['location'], set: 3, choice: { yours: 'Use our location records', sample: 'Use sample location records' } }, onAnswer: choiceAnswer })
 beforeEach(() => {
   hooks.slots = []; vi.resetAllMocks()
   vi.stubGlobal('localStorage', { getItem: () => null, setItem: vi.fn() })
@@ -109,17 +110,14 @@ describe('real intake actions', () => {
     await vi.waitFor(() => expect(uploadFile).toHaveBeenCalledWith(file, { set: 2, system: 'Spreadsheet', site: 'Pacific Cold Storage' }))
   })
 
-  it('waits for server sample seeding and opens the returned cycle for review', async () => {
-    vi.mocked(seedSample).mockResolvedValue({ cycleId: '2026-09-20', files: ['f_sample'], entries: 28240, groups: [] })
-    findText(renderChoice(), 'Use sample timesheets').props.onClick!()
-    await vi.waitFor(() => expect(router.navigate).toHaveBeenCalledWith('/payroll?cycle=2026-09-20&step=review'))
-    expect(seedSample).toHaveBeenCalledOnce()
-  })
-
-  it('shows a failed sample request and does not navigate on missing server support', async () => {
-    vi.mocked(seedSample).mockRejectedValue(new Error('The sample could not be loaded (404).'))
-    findText(renderChoice(), 'Use sample timesheets').props.onClick!()
-    await vi.waitFor(() => expect(JSON.stringify(renderChoice())).toContain('(404)'))
+  it('renders the agent choice labels and returns the chosen answer to its conversation', () => {
+    choiceAnswer.mockClear()
+    const tree = renderChoice()
+    findText(tree, 'Use sample location records').props.onClick!()
+    expect(choiceAnswer).toHaveBeenCalledWith('Set 3: Use sample location records')
+    findText(tree, 'Use our location records').props.onClick!()
+    expect(choiceAnswer).toHaveBeenLastCalledWith('Set 3: Use our location records')
+    expect(JSON.stringify(tree)).toContain('"data-timesheet-set":3')
     expect(router.navigate).not.toHaveBeenCalled()
   })
 

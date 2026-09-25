@@ -5,6 +5,7 @@ import { withPeriodEnd, type Cohort } from '@/lib/cohorts'
 import { API_BASE } from '@/lib/api'
 import { viewerSession, signOut } from '@/lib/viewerSession'
 import { createOnboardingSync, type SyncPatch, type SyncStatus } from '@/lib/onboardingSync'
+import { createChatHistory, isChatMessage } from '@/lib/chatHistory'
 
 export const FREQUENCIES = ['Weekly', 'Biweekly', 'Semi-monthly', 'Monthly'] as const
 import { WEEKDAYS } from './cycles'
@@ -36,7 +37,11 @@ export interface OnboardingSource {
   how?: string
 }
 export type SetupStep = 'welcome' | 'basics' | 'trust' | 'intro' | 'conversation' | 'writing' | 'ready' | 'never-contact'
-export interface SetupHistoryEntry { question: string; card: QuestionCard; answer?: string }
+export interface SetupHistoryEntry {
+  question: string; card: QuestionCard; answer?: string
+  /** Small reversible source/rule deltas, attached to the answer that produced them. */
+  effects?: { addedSources: OnboardingSource[]; removedSources: OnboardingSource[]; addedRuleIds: string[]; removedRules: CustomDeskRule[] }
+}
 
 /** One line of the left-pane transcript. `scope` (e.g. 'shift:4821') makes per-case threads a filter, not a second store. */
 export interface ChatMessage {
@@ -50,6 +55,8 @@ export interface ChatMessage {
   scope?: string
   contextChip?: string
   ingestFileIds?: string[]
+  /** Parts of the agent's reply that failed validation and were not applied, named in one quiet line. */
+  skipped?: string[]
 }
 
 /** A timesheet source or payroll destination the user has wired up. */
@@ -95,6 +102,11 @@ export interface Onboarding {
   setupStep: SetupStep
   setupHistory: SetupHistoryEntry[]
   setupRequest: string | null
+  /** The agent's own closing line from onboard_complete. */
+  setupClosing: string | null
+  setupNotice: string | null
+  /** Local only: the first-closeout kickoff turn is still owed to the conversation. */
+  kickoffPending: boolean
   frequency: (typeof FREQUENCIES)[number]
   /** Weekly and biweekly only; semi-monthly and monthly boundaries are calendar dates. */
   periodEndDay: (typeof WEEKDAYS)[number]
@@ -129,7 +141,7 @@ export interface Onboarding {
    * context next time, and so the account can read back who decided what and why.
    */
   threads: Record<string, Note[]>
-  /** The left pane transcript, capped at 200 lines. */
+  /** The left pane transcript; persisted separately in closeout_chat. */
   chat: ChatMessage[]
   /** Last server-reported conversation id; continuity is managed by the server. */
   chatSessionId: string | null
@@ -150,12 +162,19 @@ export interface Onboarding {
   /** Discovery intake answers from agent setup, in the sales team's intake sheet terms. */
   discovery: { period: string; payouts: string; payroll: string; billing: string; vms: string[]
     workerChannels: string[]; clientTime: string[]; approved: string[] }
+  /** False until the user answers the authority goal or accepts settings in the Rulebook; until then nothing is authorized. */
   authorityConfigured: boolean
   authority: { autoFix: boolean; limit: number; weeklyCap: number; textSupervisors: boolean; textWorkers: boolean; briefing: 'Email' | 'Slack' }
+  /** Wider settings the agent proposed from chat; they apply only when the user accepts them in the Rulebook. */
+  authoritySuggestion: Partial<Onboarding['authority']> | null
 }
 
+/** What the agent may do before anyone has configured authority: nothing on its own. */
+export const ASK_FIRST: Onboarding['authority'] = { autoFix: false, limit: 0, weeklyCap: 0, textSupervisors: false, textWorkers: false, briefing: 'Email' }
+export const effectiveAuthority = (state: Pick<Onboarding, 'authority' | 'authorityConfigured'>) => state.authorityConfigured ? state.authority : ASK_FIRST
+
 const KEY = 'closeout-onboarding-v2'
-export const DEFAULTS: Onboarding = { dataSource: 'synthetic', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, firm: null, profile: {}, covered: [], sources: [], neverContact: null, setupStep: 'welcome', setupHistory: [], setupRequest: null, frequency: 'Weekly', periodEndDay: 'Sunday', payDay: 'Friday', payDatesOfMonth: [20, 5], cutoffDays: 1, deadlineDays: 2, cohorts: [], intake: [], approver: null, fileName: null, entries: 212, baseRate: null, system: null, forwarded: false, sidebar: 'full', checklistDismissed: false, rules: [], proposals: [], resolutions: {}, payrollConnected: false, sentCycles: [], uploads: {}, threads: {}, chat: [], chatSessionId: null, connections: {}, approvedCycles: [], batches: {}, customRules: [], reasons: {}, decisionTimes: {}, mediation: {}, acceptedGaps: {}, undone: {}, discovery: { period: '', payouts: '', payroll: '', billing: '', vms: [], workerChannels: [], clientTime: [], approved: [] }, authorityConfigured: false, authority: { autoFix: true, limit: 100, weeklyCap: 1000, textSupervisors: true, textWorkers: false, briefing: 'Email' } }
+export const DEFAULTS: Onboarding = { dataSource: 'synthetic', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, firm: null, profile: {}, covered: [], sources: [], neverContact: null, setupStep: 'welcome', setupHistory: [], setupRequest: null, setupClosing: null, setupNotice: null, kickoffPending: false, frequency: 'Weekly', periodEndDay: 'Sunday', payDay: 'Friday', payDatesOfMonth: [20, 5], cutoffDays: 1, deadlineDays: 2, cohorts: [], intake: [], approver: null, fileName: null, entries: 212, baseRate: null, system: null, forwarded: false, sidebar: 'full', checklistDismissed: false, rules: [], proposals: [], resolutions: {}, payrollConnected: false, sentCycles: [], uploads: {}, threads: {}, chat: [], chatSessionId: null, connections: {}, approvedCycles: [], batches: {}, customRules: [], reasons: {}, decisionTimes: {}, mediation: {}, acceptedGaps: {}, undone: {}, discovery: { period: '', payouts: '', payroll: '', billing: '', vms: [], workerChannels: [], clientTime: [], approved: [] }, authorityConfigured: false, authority: { autoFix: true, limit: 100, weeklyCap: 1000, textSupervisors: true, textWorkers: false, briefing: 'Email' }, authoritySuggestion: null }
 const listeners = new Set<() => void>()
 let cache: Onboarding | null = null
 
@@ -195,22 +214,50 @@ function read(): Onboarding {
 }
 
 function write(patch: Partial<Onboarding>) {
+  const previous = read().chat
   cache = { ...read(), ...patch }
   localStorage.setItem(KEY, JSON.stringify(cache))
   listeners.forEach((l) => l())
   canonical.changed(patch)
+  if (patch.chat) history.appended(previous, patch.chat)
+}
+
+/** Replace local fields from the server without echoing them back as edits. */
+function applyLocal(patch: Partial<Onboarding>) {
+  cache = { ...read(), ...patch }
+  localStorage.setItem(KEY, JSON.stringify(cache))
+  listeners.forEach((listener) => listener())
 }
 
 const syncListeners = new Set<() => void>()
 let syncStatus: SyncStatus = { ready: false, loading: false, saving: false, error: null }
 const syncOwner = () => viewerSession()?.email ?? 'development'
 const pendingKey = () => `closeout-onboarding-pending-v1:${syncOwner()}`
+const baseKey = () => `closeout-onboarding-base-v1:${syncOwner()}`
+const chatPendingKey = () => `closeout-chat-pending-v1:${syncOwner()}`
+const stored = <T>(key: string, fallback: T): T => {
+  try { return JSON.parse(localStorage.getItem(key) ?? 'null') ?? fallback } catch { return fallback }
+}
+let legacyChat: unknown[] = []
 const canonical = createOnboardingSync({
+  defaults: DEFAULTS,
   read,
-  apply(patch) {
-    cache = { ...read(), ...patch }
-    localStorage.setItem(KEY, JSON.stringify(cache))
-    listeners.forEach((listener) => listener())
+  apply: applyLocal,
+  loadBase() {
+    const base = stored<unknown>(baseKey(), null)
+    return base && typeof base === 'object' && !Array.isArray(base) ? base as SyncPatch : null
+  },
+  saveBase(base) { localStorage.setItem(baseKey(), JSON.stringify(base)) },
+  adopt(doc) {
+    if (!Array.isArray(doc.chat)) return
+    legacyChat = doc.chat.filter(isChatMessage)
+    // Persist migration rows locally and in the append queue before a state write
+    // can remove the legacy transcript, even when GET /chat/history is offline.
+    const previous = read().chat
+    const known = new Set(previous.map((message) => message.id))
+    const chat = [...previous, ...legacyChat.filter(isChatMessage).filter((message) => !known.has(message.id))].sort((a, b) => a.at - b.at)
+    history.appended([], legacyChat.filter(isChatMessage))
+    applyLocal({ chat })
   },
   loadPending() {
     const owner = localStorage.getItem('closeout-onboarding-owner')
@@ -231,9 +278,34 @@ const canonical = createOnboardingSync({
   },
   status(next) { syncStatus = next; syncListeners.forEach((listener) => listener()) },
 })
+const history = createChatHistory({
+  read: () => read().chat,
+  apply: (chat) => applyLocal({ chat }),
+  loadPending: () => { const saved = stored<unknown>(chatPendingKey(), []); return Array.isArray(saved) ? saved : [] },
+  savePending(messages) { localStorage.setItem(chatPendingKey(), JSON.stringify(messages)) },
+  async request(method, body) {
+    const token = viewerSession()?.sessionToken
+    const response = await fetch(`${API_BASE}/chat/history`, { method, headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      ...(body ? { body: JSON.stringify(body) } : {}) })
+    if (response.status === 401) signOut()
+    return response
+  },
+})
 
-/** Load the canonical profile before enabling setup edits. */
-export const hydrateOnboarding = canonical.hydrate
+/** Load the canonical profile before enabling setup edits. The transcript follows in the background. */
+export async function hydrateOnboarding() {
+  await canonical.hydrate()
+  void history.load(legacyChat).then(() => { legacyChat = [] }, () => { /* the local transcript stays usable offline */ })
+}
+/** Another device may have changed the profile; pull when this tab comes back. */
+function pullOnReturn() {
+  void canonical.pull().catch(() => { /* status reports sync errors */ })
+  void history.load().catch(() => {})
+}
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function' && typeof document !== 'undefined') {
+  window.addEventListener('focus', pullOnReturn)
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pullOnReturn() })
+}
 /** Await this before chat/ingestion or leaving setup so the agent reads the latest profile. */
 export const flushOnboarding = canonical.flush
 export function useOnboardingSyncStatus() {
@@ -276,10 +348,4 @@ export function removeNote(key: string, id: string) {
   write({ threads: { ...threads, [key]: (threads[key] ?? []).filter((n) => n.id !== id) } })
 }
 
-/** Per-account inbox: company slug plus a short hash of the sign-in email so two accounts never collide. */
-export function inboxAddress(email: string | null): string {
-  const slug = (email?.split('@')[1]?.split('.')[0] ?? 'payroll').toLowerCase().replace(/[^a-z0-9]/g, '')
-  let h = 5381
-  for (const ch of email ?? '') h = ((h * 33) ^ ch.charCodeAt(0)) >>> 0
-  return `${slug}-${h.toString(36).slice(0, 4)}@closeout.hypertrack.com`
-}
+export { inboxAddress } from './inbox'

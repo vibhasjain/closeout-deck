@@ -1,9 +1,9 @@
 import type { NavigateFunction } from 'react-router-dom'
-import type { Action } from '@/lib/chat'
+import type { Action, Card } from '@/lib/chat'
 import { agentHref } from '@/lib/navigation'
 import { cycleNamed, saveCycle, slugId } from '@/lib/cohorts'
-import { FREQUENCIES, WEEKDAYS, ONBOARD_TOPICS, PROFILE_FIELDS } from '@/lib/onboarding'
-import type { CustomDeskRule, Onboarding } from '@/lib/onboarding'
+import { FREQUENCIES, WEEKDAYS, ONBOARD_TOPICS, PROFILE_FIELDS, effectiveAuthority } from '@/lib/onboarding'
+import type { CustomDeskRule, FirmFacts, Onboarding } from '@/lib/onboarding'
 import { invalidate } from '@/lib/data'
 
 export type ChatUpdate = (patch: Partial<Onboarding> | ((state: Onboarding) => Partial<Onboarding>)) => void
@@ -15,16 +15,92 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 const shortString = (value: unknown): value is string => typeof value === 'string' && value.length <= 200
 const meaningfulString = (value: unknown): value is string => shortString(value) && value.trim().length > 0
 const finiteRange = (value: unknown, max: number) => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= max
-const stateCodes = new Set('AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY'.split(' '))
+
+const firmHost = (domain?: string) => {
+  try { return new URL(domain?.includes('://') ? domain : `https://${domain}`).hostname.toLowerCase().replace(/^www\./, '') } catch { return '' }
+}
+
+/** A model cannot choose an image or link destination outside the firm the user selected. */
+export function allowedModelUrl(value: string, firm: FirmFacts | null, icon = false): string | null {
+  const host = firm?.domain ? firmHost(firm.domain) : ''
+  if (!host || value.length > 2048) return null
+  if (icon && /^\/apple-touch-icon[^/]*$/.test(value)) value = `https://${host}${value}`
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' && !url.username && !url.password && (!url.port || url.port === '443')
+      && url.hostname.toLowerCase().replace(/^www\./, '') === host ? url.href : null
+  } catch { return null }
+}
+
+/** Free-form model text is plain text; discard unsafe URL tokens before saving/rendering. */
+export function safeModelText(text: string, firm: FirmFacts | null, cap = 20_000): string {
+  return text.slice(0, cap).replace(/(?:[a-z][a-z0-9+.-]*:\/\/|\/\/|(?:javascript|data|file|mailto):|www\.)[^\s<>[\]"']+/gi,
+    (url) => allowedModelUrl(url, firm) ?? '').trim()
+}
+
+export function safeModelCard(card: Card, firm: FirmFacts | null): Card | null {
+  if (card.kind !== 'question') return card
+  const clean = (value: string) => safeModelText(value, firm, 200)
+  const choice = card.choice ? { yours: clean(card.choice.yours), sample: clean(card.choice.sample) } : undefined
+  if (choice && (!choice.yours || !choice.sample)) return null
+  return { ...card, topics: card.topics.map(clean).filter(Boolean),
+    ...(card.placeholder ? { placeholder: clean(card.placeholder) } : {}),
+    ...(card.chips ? { chips: card.chips.map(clean).filter(Boolean) } : {}), ...(choice ? { choice } : {}),
+  }
+}
+
+function safeFirmPatch(patch: Partial<FirmFacts>, firm: FirmFacts | null) {
+  const safe = { ...patch }, skipped: string[] = []
+  if (safe.domain !== undefined && (!firm?.domain || firmHost(safe.domain) !== firmHost(firm.domain))) {
+    delete safe.domain; skipped.push('set_firm.domain')
+  }
+  if (safe.icon !== undefined) {
+    const icon = allowedModelUrl(safe.icon, firm, true)
+    if (icon) safe.icon = icon
+    else { delete safe.icon; skipped.push('set_firm.icon') }
+  }
+  return { patch: safe, skipped }
+}
+
+/** Validate actions independently so one bad action never discards the usable reply. */
+export function validatedActions(values: unknown[], firm: FirmFacts | null): { actions: Action[]; skipped: string[] } {
+  const actions: Action[] = [], skipped: string[] = []
+  for (const value of values.slice(0, 30)) {
+    const name = isRecord(value) && typeof value.type === 'string' ? value.type.slice(0, 40) : 'action'
+    if (!isRecord(value)) { skipped.push(name); continue }
+    let candidate = value
+    if (value.type === 'set_firm' && isRecord(value.patch)) {
+      const filtered = safeFirmPatch(value.patch, firm)
+      skipped.push(...filtered.skipped)
+      candidate = { ...value, patch: filtered.patch }
+      if (!Object.keys(filtered.patch).length) continue
+    }
+    // URL checks apply inside nested profile/source/fact strings too. Keys and total
+    // string lengths remain subject to isAction's strict schema bounds.
+    const clean = (item: unknown): unknown => {
+      if (typeof item === 'string') return safeModelText(item, firm, 2048)
+      if (Array.isArray(item)) return item.map(clean)
+      if (isRecord(item)) return Object.fromEntries(Object.entries(item).map(([key, entry]) => [key, clean(entry)]))
+      return item
+    }
+    const safe = clean(candidate)
+    if (JSON.stringify(safe) !== JSON.stringify(candidate)) skipped.push(`${name} URL`)
+    if (isAction(safe)) actions.push(safe)
+    else skipped.push(name)
+  }
+  if (values.length > 30) skipped.push('extra actions')
+  return { actions, skipped: [...new Set(skipped)] }
+}
+const stateCodes = new Set('AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY PR VI GU AS MP'.split(' '))
 function isFirmPatch(value: unknown) {
   return isRecord(value) && Object.keys(value).length > 0 && Object.entries(value).every(([key, field]) => {
-    if (key === 'states') return Array.isArray(field) && field.length <= 51 && field.every((state) => typeof state === 'string' && stateCodes.has(state))
+    if (key === 'states') return Array.isArray(field) && field.length <= 56 && field.every((state) => typeof state === 'string' && stateCodes.has(state))
     if (key === 'verticals' || key === 'clientTypes') return Array.isArray(field) && field.length <= 10 && field.every(shortString)
     if (key === 'staffing') return typeof field === 'boolean'
     if (key === 'summary') return typeof field === 'string' && field.length <= 1000
     if (key === 'icon') {
       if (typeof field !== 'string' || field.length > 2048) return false
-      try { return new URL(field).protocol === 'https:' } catch { return false }
+      try { return new URL(field).protocol === 'https:' || /^\/apple-touch-icon[^/]*$/.test(field) } catch { return /^\/apple-touch-icon[^/]*$/.test(field) }
     }
     return ['name', 'size', 'domain'].includes(key) && shortString(field)
   })
@@ -45,6 +121,8 @@ export function isAction(value: unknown): value is Action {
       return [1, 2, 3].includes(Number(value.set)) && typeof value.set === 'number'
         && ['email', 'sheet', 'system', 'upload', 'location', 'sample'].includes(String(value.kind))
         && meaningfulString(value.label) && (value.how === undefined || shortString(value.how))
+    case 'remove_source': return [1, 2, 3].includes(Number(value.set)) && typeof value.set === 'number' && meaningfulString(value.label)
+    case 'remove_rule': return meaningfulString(value.sentence)
     case 'set_authority':
       return isRecord(value.patch) && Object.keys(value.patch).length > 0 && Object.entries(value.patch).every(([key, field]) => {
         if (key === 'limit') return finiteRange(field, 10_000)
@@ -68,20 +146,20 @@ export function isAction(value: unknown): value is Action {
       })
     case 'add_cohort': {
       const cohort = value.cohort
-      return isRecord(cohort) && typeof cohort.name === 'string' && cohort.name.trim() !== '' && typeof cohort.frequency === 'string'
-        && (cohort.payDay === undefined || typeof cohort.payDay === 'string')
+      return isRecord(cohort) && meaningfulString(cohort.name) && shortString(cohort.frequency)
+        && (cohort.payDay === undefined || WEEKDAYS.some((item) => item === cohort.payDay))
         && (cohort.periodEndDay === undefined || WEEKDAYS.some((item) => item === cohort.periodEndDay))
     }
     case 'add_rule':
-      return typeof value.sentence === 'string' && (value.bucket === undefined || typeof value.bucket === 'string')
+      return meaningfulString(value.sentence) && (value.bucket === undefined || shortString(value.bucket))
         && (value.kind === undefined || value.kind === 'det' || value.kind === 'llm' || value.kind === 'both')
-    case 'go': return typeof value.to === 'string'
+    case 'go': return meaningfulString(value.to) && /^\/(?!\/)/.test(value.to) && !value.to.includes('\\')
     case 'decide':
-      return typeof value.cycleId === 'string' && typeof value.shiftId === 'string'
+      return meaningfulString(value.cycleId) && meaningfulString(value.shiftId)
         && (value.decision === 'applied' || value.decision === 'dismissed')
-        && (value.reason === undefined || typeof value.reason === 'string')
+        && (value.reason === undefined || shortString(value.reason))
         && (value.decision !== 'dismissed' || (typeof value.reason === 'string' && value.reason.trim().length > 0))
-    case 'note': return typeof value.text === 'string'
+    case 'note': return shortString(value.text)
     default: return false
   }
 }
@@ -96,7 +174,7 @@ export function applyAction(action: Action, update: ChatUpdate, navigate: Naviga
       update((state) => ({ profile: { ...state.profile, [action.field]: action.value } }))
       break
     case 'set_firm':
-      update((state) => ({ firm: { name: '', summary: '', states: [], verticals: [], clientTypes: [], size: '', staffing: true, ...state.firm, ...action.patch } }))
+      update((state) => ({ firm: { name: '', summary: '', states: [], verticals: [], clientTypes: [], size: '', staffing: true, ...state.firm, ...safeFirmPatch(action.patch, state.firm).patch } }))
       break
     case 'add_source':
       update((state) => {
@@ -106,7 +184,25 @@ export function applyAction(action: Action, update: ChatUpdate, navigate: Naviga
       })
       break
     case 'set_authority':
-      update((state) => ({ authority: { ...state.authority, ...action.patch }, authorityConfigured: true }))
+      update((state) => {
+        const current = effectiveAuthority(state)
+        const authority = { ...current }
+        const suggestion: Partial<Onboarding['authority']> = {}
+        for (const [key, value] of Object.entries(action.patch)) {
+          const field = key as keyof Onboarding['authority']
+          const before = current[field]
+          const increase = typeof value === 'boolean' ? value && !before : typeof value === 'number' ? value > Number(before) : false
+          if (increase) Object.assign(suggestion, { [field]: value })
+          else Object.assign(authority, { [field]: value })
+        }
+        return { authority, authoritySuggestion: Object.keys(suggestion).length ? { ...state.authoritySuggestion, ...suggestion } : state.authoritySuggestion }
+      })
+      break
+    case 'remove_source':
+      update((state) => ({ sources: state.sources.filter((source) => source.set !== action.set || source.label.trim().toLowerCase() !== action.label.trim().toLowerCase()) }))
+      break
+    case 'remove_rule':
+      update((state) => ({ customRules: state.customRules.filter((rule) => rule.sentence.trim().toLowerCase() !== action.sentence.trim().toLowerCase()) }))
       break
     case 'never_contact':
       update((state) => ({ neverContact: (state.neverContact ?? []).some((name) => name.toLowerCase() === action.name.trim().toLowerCase())
@@ -133,7 +229,7 @@ export function applyAction(action: Action, update: ChatUpdate, navigate: Naviga
         id: slugId('rule', crypto.randomUUID()), bucket: 'Custom', kind: action.kind ?? 'both',
         sentence: action.sentence, source: { doc: 'You told the agent' }, draft: false, at: Date.now(),
       }
-      update((state) => ({ customRules: [...state.customRules, rule] }))
+      update((state) => ({ customRules: state.customRules.some((item) => item.sentence.trim().toLowerCase() === rule.sentence.trim().toLowerCase()) ? state.customRules : [...state.customRules, rule] }))
       break
     }
     case 'go':
@@ -164,7 +260,9 @@ export function actionSummary(value: unknown): string | null {
     case 'set_profile': return `Payroll profile: ${String(action.field)}`
     case 'set_firm': return 'Updated firm details'
     case 'add_source': return `Added source: ${String(action.label)}`
-    case 'set_authority': return 'Updated what I fix on my own'
+    case 'set_authority': return 'Authority changes reviewed; wider permissions need Rulebook confirmation'
+    case 'remove_source': return `Removed source: ${String(action.label)}`
+    case 'remove_rule': return `Removed rule: ${String(action.sentence)}`
     case 'never_contact': return `Never contact: ${String(action.name)}`
     case 'cover_topic': return `Covered: ${String(action.topic)}`
     case 'set_calendar': return `Calendar: ${JSON.stringify(action.patch)}`

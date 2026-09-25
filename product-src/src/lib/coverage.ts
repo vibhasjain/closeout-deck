@@ -10,10 +10,12 @@ export function goalProgress(covered: readonly string[]) {
 export function onboardingComplete(state: Pick<Onboarding, 'forwarded'>) { return state.forwarded }
 
 export function sectionProgress(state: Pick<Onboarding, 'covered' | 'setupStep' | 'forwarded'>) {
-  const basics = state.forwarded ? 1 : state.setupStep === 'welcome' ? 0 : state.setupStep === 'basics' ? 1 / 3 : state.setupStep === 'trust' ? 2 / 3 : 1
+  const basics = state.setupStep === 'welcome' ? 0 : state.setupStep === 'basics' ? 1 / 3 : state.setupStep === 'trust' ? 2 / 3 : 1
+  const conversationFinished = ['writing', 'ready', 'never-contact'].includes(state.setupStep)
+  const conversation = basics < 1 ? 0 : conversationFinished ? 1 : Math.min(goalProgress(state.covered).progress, 0.99)
   return [
     { id: 'basics' as const, label: 'The basics', progress: basics },
-    { id: 'conversation' as const, label: 'Talk to the Closeout Agent', progress: goalProgress(state.covered).progress },
-    { id: 'kickoff' as const, label: 'Kick off your first closeout', progress: onboardingComplete(state) ? 1 : 0 },
+    { id: 'conversation' as const, label: 'Talk to the Closeout Agent', progress: conversation },
+    { id: 'kickoff' as const, label: 'Kick off your first closeout', progress: basics === 1 && conversation === 1 && state.setupStep === 'ready' && onboardingComplete(state) ? 1 : 0 },
   ]
 }

@@ -1,7 +1,8 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
 import { stream } from './chat'
-import { DEFAULTS, getOnboarding, updateOnboarding } from './onboarding'
-import { applyOnboardReply, finishOnboarding, readFirm, requestOnboarding, uploadOnboardingFiles } from './onboardingFlow'
+import { ASK_FIRST, DEFAULTS, flushOnboarding, getOnboarding, inboxAddress, updateOnboarding } from './onboarding'
+import { applyOnboardReply, finishOnboarding, readFirm, requestOnboarding, rollbackOnboardingAnswer, uploadOnboardingFiles } from './onboardingFlow'
 
 vi.mock('./chat', async (original) => ({ ...await original<typeof import('./chat')>(), stream: vi.fn() }))
 vi.mock('./onboarding', async (original) => ({ ...await original<typeof import('./onboarding')>(), flushOnboarding: vi.fn(async () => {}) }))
@@ -21,7 +22,7 @@ describe('the agent owns the conversation', () => {
   it('sends current context, uses the authoritative final, and applies validated actions', async () => {
     vi.mocked(stream).mockImplementation(async function* () { yield { text: 'Intermediate text' }; yield { done: true, final: valid, sessionId: 'same-session' } })
     const reply = await requestOnboarding('We get hours by email')
-    expect(stream).toHaveBeenCalledWith('We get hours by email', { firm: null, profile: {}, covered: [] }, 'onboard', undefined)
+    expect(stream).toHaveBeenCalledWith('We get hours by email', { firm: null, profile: {}, covered: [], sources: [], inbox: inboxAddress(null), authority: ASK_FIRST, authorityConfigured: false }, 'onboard', undefined)
     expect(reply.question).toBe('Could you share that inbox?')
     expect(getOnboarding().covered).toEqual([])
     applyOnboardReply(reply)
@@ -29,7 +30,7 @@ describe('the agent owns the conversation', () => {
     expect(getOnboarding().setupHistory[0].question).toBe(reply.question)
     expect(getOnboarding().chatSessionId).toBe('same-session')
   })
-  it.each(['No card', '```card\n{"kind":"question","input":"unknown","topics":[]}\n```', valid + '\n```card\n{"kind":"onboard_complete"}\n```', valid + '\n```card\nnot json\n```'])('rejects an invalid reply without a canned question (%s)', async (final) => {
+  it.each(['No card', '```card\n{"kind":"question","input":"unknown","topics":[]}\n```'])('rejects an invalid reply without a canned question (%s)', async (final) => {
     vi.mocked(stream).mockImplementation(async function* () { yield { done: true, final } })
     await expect(requestOnboarding('skip')).rejects.toThrow()
     expect(getOnboarding().covered).toEqual([])
@@ -41,17 +42,70 @@ describe('the agent owns the conversation', () => {
     vi.mocked(stream).mockImplementation(async function* () { yield { error: 'CLI unavailable', done: true } })
     await expect(requestOnboarding('skip')).rejects.toThrow('CLI unavailable')
   })
-  it('lets the agent complete with enough context and keeps the handoff idempotent', async () => {
-    vi.mocked(stream).mockImplementation(async function* () { yield { done: true, final: '```card {"kind":"onboard_complete"}```' } })
-    applyOnboardReply(await requestOnboarding('That is enough for now'))
-    expect(getOnboarding().setupStep).toBe('writing')
+  it('applies valid actions and a valid card beside invalid actions and cards without retrying', async () => {
+    const final = valid + '\n```action {"type":"set_profile","field":"unknown","value":"No"}```\n```card not-json```'
+    vi.mocked(stream).mockImplementation(async function* () { yield { done: true, final } })
+    applyOnboardReply(await requestOnboarding('We get email'))
+    expect(getOnboarding().covered).toEqual(['calendar'])
+    expect(getOnboarding().setupHistory).toHaveLength(1)
+    expect(getOnboarding().setupNotice).toBe('Skipped: set_profile, card.')
+    expect(getOnboarding().setupRequest).toBeNull()
+    expect(stream).toHaveBeenCalledTimes(1)
+  })
+  it('keeps sending if an unrelated profile flush fails', async () => {
+    vi.mocked(flushOnboarding).mockRejectedValueOnce(new Error('state too large'))
+    vi.mocked(stream).mockImplementation(async function* () { yield { done: true, final: valid } })
+    expect((await requestOnboarding('Continue')).card.kind).toBe('question')
+  })
+  it('replaces a malformed card retry with a corrective request and preserves valid edits', async () => {
+    vi.mocked(stream).mockImplementation(async function* () { yield { done: true, final: '```action {"type":"never_contact","name":"Pat"}```\n```card {invalid}```' } })
+    await expect(requestOnboarding('My original answer')).rejects.toThrow('last card was unreadable')
+    expect(getOnboarding().neverContact).toEqual(['Pat'])
+    expect(getOnboarding().setupRequest).toContain('valid actions were saved')
+    expect(getOnboarding().setupRequest).not.toBe('My original answer')
+  })
+  it('does not treat a previously forwarded account as finished during a new setup conversation', async () => {
+    updateOnboarding({ forwarded: true })
+    vi.mocked(stream).mockImplementation(async function* () { yield { done: true, final: valid } })
+    applyOnboardReply(await requestOnboarding('Start onboarding'))
     expect(getOnboarding().forwarded).toBe(false)
-    finishOnboarding(['Taylor'])
-    finishOnboarding(['Taylor', 'Morgan'])
-    expect(getOnboarding().neverContact).toEqual(['Taylor', 'Morgan'])
-    expect(getOnboarding().forwarded).toBe(true)
-    expect(getOnboarding().chat).toHaveLength(1)
-    expect(getOnboarding().chat[0]).toMatchObject({ text: "Let's run last week together.", cards: [{ input: 'choice', choice: { yours: 'Use your timesheets', sample: 'Use sample timesheets' } }] })
+  })
+  it('stores the actual closing line and generates each missing-set kickoff choice in the same session', async () => {
+    const closing = 'I will ask before every fix. Jordan stays off limits.'
+    vi.mocked(stream).mockImplementation(async function* () { yield { done: true, final: closing + '\n```card {"kind":"onboard_complete"}```', sessionId: 'same-session' } })
+    applyOnboardReply(await requestOnboarding('That is enough for now'))
+    expect(getOnboarding()).toMatchObject({ setupStep: 'writing', setupClosing: closing, forwarded: false })
+    expect(getOnboarding().chat[0].text).toBe(closing)
+    updateOnboarding({ sources: [{ set: 1, kind: 'email', label: 'Worker emails' }] })
+    const cards = [2, 3].map((set) => ({ kind: 'question', input: 'choice', set, topics: [], choice: { yours: `Connect set ${set}`, sample: `Sample set ${set}` } }))
+    vi.mocked(stream).mockImplementation(async function* () { yield { done: true, final: 'I have worker hours. Bring client and location time next.\n' + cards.map((card) => '```card ' + JSON.stringify(card) + '```').join('\n'), sessionId: 'same-session' } })
+    await finishOnboarding(['Taylor'])
+    await finishOnboarding(['Taylor', 'Morgan'])
+    expect(stream).toHaveBeenCalledTimes(2)
+    expect(vi.mocked(stream).mock.calls[1][1]).toMatchObject({ phase: 'first_closeout', missingSets: [2, 3], sources: [{ set: 1, kind: 'email', label: 'Worker emails' }], inbox: inboxAddress(null) })
+    expect(getOnboarding()).toMatchObject({ neverContact: ['Taylor', 'Morgan'], forwarded: true, chatSessionId: 'same-session' })
+    expect(getOnboarding().chat).toHaveLength(2)
+    expect(getOnboarding().chat[1]).toMatchObject({ text: 'I have worker hours. Bring client and location time next.', cards })
+  })
+  it('has no scripted kickoff text or client-authored kickoff card', () => {
+    const source = readFileSync(new URL('./onboardingFlow.ts', import.meta.url), 'utf8')
+    expect(source).not.toMatch(/Let.s run last week together|Use your timesheets|Use sample timesheets/)
+    expect(source.slice(source.indexOf('export async function finishOnboarding'))).not.toMatch(/kind: ['"]question/)
+  })
+  it('undoes superseded source and rule effects while retaining independent changes', () => {
+    updateOnboarding({ setupHistory: [{ question: 'Where do hours come from?', card: { kind: 'question', input: 'text', topics: ['workerHours'] }, answer: 'Email' }] })
+    applyOnboardReply({ question: 'Who approves?', card: { kind: 'question', input: 'text', topics: ['clientHours'] }, actions: [
+      { type: 'add_source', set: 1, kind: 'email', label: 'Old inbox' }, { type: 'add_rule', sentence: 'Ask Pat about email gaps' },
+    ] })
+    updateOnboarding({ sources: [...getOnboarding().sources, { set: 3, kind: 'location', label: 'Independent GPS' }] })
+    rollbackOnboardingAnswer(0)
+    expect(getOnboarding().sources).toEqual([{ set: 3, kind: 'location', label: 'Independent GPS' }])
+    expect(getOnboarding().customRules).toEqual([])
+  })
+  it('records an explicit ask-first authority answer as restrictive consent', () => {
+    updateOnboarding({ setupHistory: [{ question: 'What may I do myself?', card: { kind: 'question', input: 'text', topics: ['authority'] }, answer: 'Ask before every fix and spend nothing.' }] })
+    applyOnboardReply({ question: 'All set.', card: { kind: 'onboard_complete' }, actions: [{ type: 'set_authority', patch: { autoFix: true, limit: 1000 } }] })
+    expect(getOnboarding()).toMatchObject({ authority: ASK_FIRST, authorityConfigured: true, authoritySuggestion: null })
   })
 })
 

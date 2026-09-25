@@ -116,3 +116,7 @@ button.setup-option { display: flex; align-items: center; justify-content: cente
   .agent-setup *, .agent-setup *::before, .agent-setup *::after { animation-duration: 0s !important; transition-duration: 0s !important; }
 }
 .setup-chip, .setup-option { overflow-wrap: anywhere; }
+
+.setup-writing-lists .not-yet { align-items: flex-start; flex-wrap: wrap; gap: 6px; color: #777; }
+.setup-writing-lists .not-yet .tag { white-space: nowrap; }
+.setup-notice { font-size: 12px; }
