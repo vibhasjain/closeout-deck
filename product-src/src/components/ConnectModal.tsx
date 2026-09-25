@@ -26,11 +26,11 @@ export function ConnectModal({ vendor, onDone, loadSample = false }: { vendor: S
   }, [])
   const host = vendor.name.normalize('NFKD').toLowerCase().replace(/[^a-z0-9]/g, '')
   const destination = 'format' in vendor
-  const sites = destination ? new Set(current.week.map((shift) => shift.fac.name)).size : vendor.sites.length
+  const sites = destination || !vendor.sites.length ? new Set(current.week.map((shift) => shift.fac.name)).size : vendor.sites.length
   const approved = current.run.shifts.filter((row) => !row.held)
   const workers = new Set(approved.map(({ shift }) => shift.worker)).size
   // Count the current engine's records even before the vendor is connected.
-  const punches = current.run.shifts.filter(({ shift }) => vendor.sites.includes(shift.fac.name)).length
+  const punches = current.run.shifts.filter(({ shift }) => !vendor.sites.length || vendor.sites.includes(shift.fac.name)).length
   const steps = [
     <>Signing in as <span className="mono">payroll.ops@demo.hypertrack.com</span></>,
     destination ? <>Checking destination access</> : <>Granting read-only access to time entries</>,

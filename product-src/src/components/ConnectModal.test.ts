@@ -208,13 +208,15 @@ describe('simulated browser connection', () => {
     expect(modal.onDone).toHaveBeenCalledTimes(1)
   })
 
-  it('reports zero sites and records when an available vendor has no assigned sites', () => {
+  it('counts every worksite and record when a vendor has no assigned sites (the sample brings its own clients)', () => {
     const modal = mount(available)
+    const sites = new Set(desk.current!.week.map(shift => shift.fac.name)).size
+    const records = desk.current!.run.shifts.length
     modal.render()
     modal.signIn()
-    expect(textContent(modal.advance(1600))).toContain('Discovering worksites · 0 found')
-    expect(textContent(modal.advance(800))).toContain(`Pulling punches for ${desk.current!.label} · 0 records`)
-    expect(textContent(modal.advance(800))).toContain('Connected · 0 sites · 0 punches pulled')
+    expect(textContent(modal.advance(1600))).toContain(`Discovering worksites · ${sites} found`)
+    expect(textContent(modal.advance(800))).toContain(`Pulling punches for ${desk.current!.label} · ${records} records`)
+    expect(textContent(modal.advance(800))).toContain(`Connected · ${sites} sites · ${records} punches pulled`)
     expect(store.current!.connections[vendorKey(available)]?.method).toBe('browser')
   })
 

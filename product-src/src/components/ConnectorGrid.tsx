@@ -23,7 +23,8 @@ export function ConnectorGrid() {
           const method = state.connections[vendorKey(item)]?.method
           const Mark = METHODS.find((entry) => entry.id === method)?.Icon
           return <button type="button" key={item.id} className={`source-tile${method ? ' on' : ''}`} title={item.name} aria-label={`${item.name}${method ? ` · connected by ${method}` : ''}`}
-            onClick={() => openModal(<ConnectMethod vendor={item} />)}>
+            // The catalog's sites are illustrative; a sample connection uses the sample's own clients.
+            onClick={() => openModal(<ConnectMethod vendor={{ ...item, sites: [] }} />)}>
             <VendorTile vendor={item} large />
             {Mark && <span className="source-tile-method"><Mark size={11} aria-hidden="true" /></span>}
             {state.connections[vendorKey(item)]?.sample && <span className="tag">Sample</span>}
