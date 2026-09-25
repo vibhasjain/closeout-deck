@@ -9,12 +9,16 @@
 - Compress JPEGs to ~70% quality
 - Use appropriate formats (JPEG for photos, SVG for icons/logos, PNG only when transparency needed)
 
-## /story deck
-- `story/` is the illustrated storyboard deck at closeoutcopilot.com/story. Before editing anything in it, read `story/CLAUDE.md`: it holds the illustration language, the slide anatomy, the Codex image-generation command, and the owner's binding review rules.
+## Site layout (Sep 25 2026 rebuild)
+- The public site is assembled into `dist/` by `scripts/assemble-dist.sh` from an explicit whitelist; `netlify.toml` publishes only `dist/`. Repo docs (this file, `tasks/*.md`, `customer-discovery.md`) are private. Add new public paths to the whitelist.
+- `/` is the landing page (being ported from the hypertrack.com homepage; product page at `/closeout`).
+- `/product` is the Closeout agent app (`product-src/`, Vite + React). Its backend is the Fly app `closeout-agent` (`product-src/server/`, Claude Code CLI), with data in Supabase project `alzxujpjpfqmoqplwfbh`. Plan: `~/.claude/plans/okay-huge-message-incoming-flickering-clock.md`.
+- `/answers` (owned by Ashish right now, don't touch) and `/job` are kept as they are. Everything else was retired on Sep 25 2026 and 301s to `/` or `/product`.
+- Shared `main`: Ashish and Agent Keyboard push concurrently. Commit explicit paths only, and pull --rebase before every push.
 
 ## Project Info
-- Static HTML/CSS/JS presentation deck for HyperTrack Closeout Copilot
-- Dark theme with green (#22c55e) accent colors
+- Landing page + Closeout agent app for HyperTrack Closeout Copilot
+- The app and newer pages are light (see memory payroll-page-light-theme); the dark green deck styling below is legacy
 - Uses Space Grotesk for display, Inter for body text
 
 ---

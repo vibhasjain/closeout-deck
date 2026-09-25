@@ -1,3 +1,0 @@
-[2026-01-16 06:15] AGENT → WORKER: Hi Jamie, are you on your way to Apex Warehouse? Your shift started at 6am.
-[2026-01-16 06:30] AGENT → WORKER: Please respond if you're running late or unable to make it today.
-[2026-01-16 07:00] AGENT → WORKER: We haven't heard from you. Marking as no-show and finding coverage.

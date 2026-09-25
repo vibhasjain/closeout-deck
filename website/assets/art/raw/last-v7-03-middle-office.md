@@ -1,1 +1,0 @@
-IMAGE v7-03-middle-office DONE.

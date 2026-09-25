@@ -6,3 +6,9 @@ node_modules/
 
 # Local Netlify folder
 .netlify
+.gstack/
+
+# Assembled public site (scripts/assemble-dist.sh)
+dist/
+# Built by Netlify from product-src
+product/

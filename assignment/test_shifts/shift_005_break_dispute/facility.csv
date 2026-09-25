@@ -1,2 +1,0 @@
-shift_id,worker_id,worker_name,position,hourly_rate,scheduled_start,scheduled_end,clock_in,clock_out,break_minutes,notes
-SHF-8841E,W-5523,Alex Torres,Inventory Clerk,20.00,2026-01-20 07:00,2026-01-20 15:00,06:58,15:02,60,"Standard 1hr unpaid lunch per facility policy"

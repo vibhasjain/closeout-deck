@@ -1,5 +1,0 @@
-[2026-01-20 11:45] SUPERVISOR → WORKER: Hey Alex, don't forget to take your lunch
-[2026-01-20 11:52] WORKER → SUPERVISOR: Yeah gonna grab something soon
-[2026-01-20 12:03] WORKER → SUPERVISOR: Grabbing food now
-[2026-01-20 14:45] AGENT → WORKER: How was your shift today?
-[2026-01-20 15:10] WORKER → AGENT: Good but busy. Didn't really get a full break - had to finish the inventory count

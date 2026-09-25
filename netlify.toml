@@ -1,13 +1,9 @@
 [build]
-  command = "cd shift-xray && npm install && npm run build && cd ../tasks && npm install && npm run build && cp -r dist/* . && cd ../job-src && npm install && npm run build && cd ../payroll-src && npm install && npm run build && cd ../product-src && npm install && npm run build"
-  publish = "."
+  command = "cd job-src && npm install && npm run build && cd ../product-src && npm install && npm run build && cd .. && sh scripts/assemble-dist.sh"
+  publish = "dist"
 
 [build.environment]
   NODE_VERSION = "20"
-
-[[edge_functions]]
-  function = "linear"
-  path = "/api/linear"
 
 [[edge_functions]]
   function = "chat"
@@ -21,23 +17,176 @@
   function = "product-gate"
   path = "/product/*"
 
-[[edge_functions]]
-  function = "report-gate"
-  path = "/report"
+# Retired pages (Sep 25 2026 cleanup). The Payroll desk demos point at the product.
+[[redirects]]
+  from = "/bench/*"
+  to = "/product"
+  status = 301
 
-[[edge_functions]]
-  function = "report-gate"
-  path = "/report/*"
+[[redirects]]
+  from = "/payroll/*"
+  to = "/product"
+  status = 301
+
+[[redirects]]
+  from = "/report/*"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/plan/*"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/assignment/*"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/outreach/*"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/healthcare/*"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/xray/*"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/shift-xray/*"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/story/*"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/retail/*"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/decks/*"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/website/*"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/tasks/*"
+  to = "/"
+  status = 301
 
 [[redirects]]
   from = "/research/*"
-  to = "https://hypertrack.com/research"
+  to = "/"
   status = 301
 
 [[redirects]]
   from = "/experiment/*"
-  to = "/decks/closeout-scroll-world/:splat"
-  status = 200
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/pitch.html"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/eval.html"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/bench"
+  to = "/product"
+  status = 301
+
+[[redirects]]
+  from = "/payroll"
+  to = "/product"
+  status = 301
+
+[[redirects]]
+  from = "/report"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/plan"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/assignment"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/outreach"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/healthcare"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/xray"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/shift-xray"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/story"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/retail"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/decks"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/website"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/tasks"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/research"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/experiment"
+  to = "/"
+  status = 301
 
 [[redirects]]
   from = "/product/*"
