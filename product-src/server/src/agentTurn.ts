@@ -3,12 +3,28 @@ import { AGENT_ERROR } from './claude.ts'
 import type { DataService } from './data.ts'
 import { validateFact } from './datastore.ts'
 import { isPlainObject } from './validation.ts'
+import { GOALS, SCRIBE_ACTIONS } from './prompts.ts'
 
 export type DataEvent = ClaudeEvent | { ingest: { fileId: string; status: 'normalized' | 'needs_mapping'; entries?: number; rows?: number; unparsed?: number; cycles?: string[]; gaps?: unknown[]; errors?: string[] } } | { facts: { applied: number; cycles: string[] } }
 function blocks(text: string, kind: 'mapping' | 'action'): unknown[] {
   return [...text.matchAll(new RegExp('```' + kind + '\\s*\\n?([\\s\\S]*?)```', 'g'))].map(match => {
     try { return JSON.parse(match[1]) as unknown } catch { return null }
   })
+}
+
+const goal = (value: unknown): value is string => (GOALS as readonly unknown[]).includes(value)
+
+/** mode:scribe output contract: allowed action blocks only, then one next line (the model's, else the first uncovered goal). */
+export function scribeOutput(reply: string, uncovered: unknown): string {
+  const actions = blocks(reply, 'action').filter(action => isPlainObject(action) && SCRIBE_ACTIONS.includes(action.type as string))
+  const said = /^next:\s*(\w+)\s*$/im.exec(reply.replace(/```[\s\S]*?```/g, ''))?.[1]
+  const next = said === 'none' || goal(said) ? said : Array.isArray(uncovered) && goal(uncovered[0]) ? uncovered[0] : 'none'
+  return [...actions.map(action => '```action\n' + JSON.stringify(action) + '\n```'), `next: ${next}`].join('\n')
+}
+
+/** mode:delegate is spoken aloud: card and mapping fences never pass. Action blocks stay for the client to apply. */
+export function spokenAnswer(reply: string): string {
+  return reply.replace(/```(?:card|mapping)\b[\s\S]*?```/g, '').replace(/\n{3,}/g, '\n\n').trim()
 }
 
 /** The terminal event is held until all validated data writes and workspace refreshes finish. */

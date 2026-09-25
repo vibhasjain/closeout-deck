@@ -257,3 +257,17 @@ test('Supabase sample removal limits deletes to sample rows and removes only the
   assert.deepEqual((storageDelete.body as { prefixes: string[] }).prefixes, [sampleFile.storagePath, sampleRun.storagePath])
   assert.ok(!(storageDelete.body as { prefixes: string[] }).prefixes.includes(realFile.storagePath))
 })
+
+test('Supabase call rows upsert after the account row and read back scoped to the account', async () => {
+  const call = { id: '0f9c2b1e-5d7a-4c3b-9e8f-1a2b3c4d5e6f', startedAt: '2026-09-25T12:00:00.000Z', seconds: 276, transcript: [{ role: 'user' as const, text: 'Weekly', startMs: 1_000 }], summary: null }
+  const { store, requests } = mockStore((url, method) => method === 'GET' && url.pathname.endsWith('/closeout_calls')
+    ? { id: call.id, started_at: '2026-09-25T12:00:00+00:00', seconds: 276, transcript: call.transcript, summary: null } : [])
+  await store.putCall(email, call)
+  const [account, write] = requests
+  assert.ok(account.url.pathname.endsWith('/closeout_state'))
+  assert.ok(write.url.pathname.endsWith('/closeout_calls')); assert.equal(write.method, 'POST'); assert.equal(write.url.searchParams.get('on_conflict'), 'id')
+  assert.deepEqual(write.body, { id: call.id, email, started_at: call.startedAt, seconds: 276, transcript: call.transcript, summary: null })
+  assert.deepEqual(await store.getCall(email, call.id), call)
+  const read = requests.at(-1)!
+  assert.equal(read.url.searchParams.get('email'), `eq.${email}`); assert.equal(read.url.searchParams.get('id'), `eq.${call.id}`)
+})

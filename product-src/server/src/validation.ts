@@ -2,6 +2,8 @@ import type { ChatRecord } from './datastore.ts'
 export const MAX_MESSAGE_CHARS = 8_000
 export const MAX_CONTEXT_CHARS = 60_000
 export const MAX_DOC_BYTES = 1024 * 1024
+/** Call ids are server-minted by /live-session (UUIDs) and name calls/<id>.md in the workspace. */
+export const CALL_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 export const MODES = ['chat', 'onboard', 'ingest', 'scribe', 'delegate', 'consolidate'] as const
 export type ChatMode = typeof MODES[number]
 
@@ -49,6 +51,7 @@ export function validateChatBody(body: unknown): ChatBody {
   if (body.mode === 'ingest' && (!Array.isArray(body.context.fileIds) || body.context.fileIds.length < 1
     || body.context.fileIds.length > 5 || new Set(body.context.fileIds).size !== body.context.fileIds.length
     || !body.context.fileIds.every(id => typeof id === 'string' && /^f_[a-z2-7]{12}$/.test(id)))) throw new ValidationError()
+  if (body.mode === 'consolidate' && (typeof body.context.callId !== 'string' || !CALL_ID.test(body.context.callId))) throw new ValidationError()
   return { mode: body.mode as ChatMode, message: body.message, context: body.context }
 }
 

@@ -41,6 +41,10 @@ export interface ChatRecord {
   id: string; role: 'user' | 'agent'; text: string; at: number; scope?: string; cards?: unknown[]; context?: Record<string, unknown>
 }
 export const CHAT_HISTORY_LIMIT = 500
+/** One voice call (closeout_calls). The id is server-minted; summary is left for P9 consolidation. */
+export interface CallRecord {
+  id: string; startedAt: string; seconds: number; transcript: { role: 'user' | 'agent'; text: string; startMs: number }[]; summary: string | null
+}
 export interface EntryQuery {
   from?: string; to?: string; fileId?: string; sourceId?: string; ids?: string[]; offset?: number; limit?: number
   includeSuperseded?: boolean; includeUnnormalized?: boolean
@@ -77,6 +81,8 @@ export interface DataStore {
   listChat(email: string): Promise<ChatRecord[]>
   /** Idempotent by id: a replayed line is ignored. */
   appendChat(email: string, messages: ChatRecord[]): Promise<void>
+  putCall(email: string, call: CallRecord): Promise<void>
+  getCall(email: string, id: string): Promise<CallRecord | null>
 }
 
 export function accountHash(email: string): string {
@@ -119,13 +125,13 @@ export function createMemoryDataStore(): DataStore {
   interface Account {
     sources: Map<string, SourceRecord>; mappings: Map<string, MappingRecord>; files: Map<string, FileRecord>
     entries: Map<string, TimeEntry>; facts: Map<string, FactRecord>; runs: Map<string, RunRecord>
-    findings: Map<string, FindingCase[]>; objects: Map<string, Buffer>; chat: Map<string, ChatRecord>
+    findings: Map<string, FindingCase[]>; objects: Map<string, Buffer>; chat: Map<string, ChatRecord>; calls: Map<string, CallRecord>
   }
   const accounts = new Map<string, Account>()
   function account(email: string): Account {
     let current = accounts.get(email)
     if (!current) {
-      current = { sources: new Map(), mappings: new Map(), files: new Map(), entries: new Map(), facts: new Map(), runs: new Map(), findings: new Map(), objects: new Map(), chat: new Map() }
+      current = { sources: new Map(), mappings: new Map(), files: new Map(), entries: new Map(), facts: new Map(), runs: new Map(), findings: new Map(), objects: new Map(), chat: new Map(), calls: new Map() }
       accounts.set(email, current)
     }
     return current
@@ -232,6 +238,8 @@ export function createMemoryDataStore(): DataStore {
       const chat = account(email).chat
       for (const message of messages) if (!chat.has(message.id)) chat.set(message.id, clone(message))
     },
+    async putCall(email, call) { account(email).calls.set(call.id, clone(call)) },
+    async getCall(email, id) { return clone(account(email).calls.get(id) ?? null) },
   }
   return store
 }
@@ -502,6 +510,19 @@ export function createDataStore(client: SupabaseClient): DataStore {
         at: new Date(message.at).toISOString(), scope: message.scope ?? null, cards: message.cards ?? null, context: message.context ?? null })),
       { onConflict: 'id', ignoreDuplicates: true })
       if (error) throw new Error('data_chat_write_failed')
+    },
+    async putCall(email, call) {
+      await store.ensureAccount(email)
+      const { error } = await table('calls').upsert({ id: call.id, email, started_at: call.startedAt, seconds: call.seconds, transcript: call.transcript, summary: call.summary }, { onConflict: 'id' })
+      if (error) throw new Error('data_calls_write_failed')
+    },
+    async getCall(email, id) {
+      const { data, error } = await table('calls').select('id,started_at,seconds,transcript,summary').eq('email', email).eq('id', id).maybeSingle()
+      if (error) throw new Error('data_calls_read_failed')
+      if (!data) return null
+      const row = data as Row
+      return { id: String(row.id), startedAt: new Date(String(row.started_at)).toISOString(), seconds: Number(row.seconds ?? 0),
+        transcript: Array.isArray(row.transcript) ? row.transcript as CallRecord['transcript'] : [], summary: typeof row.summary === 'string' ? row.summary : null }
     },
   }
   return store

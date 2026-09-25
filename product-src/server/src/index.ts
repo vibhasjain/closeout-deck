@@ -4,15 +4,17 @@ import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { authenticate, AuthError, InviteOnlyError, isAllowedEmail, signSession, validateSessionSecret, verifyGoogleIdToken } from './auth.ts'
 import { AGENT_ERROR, getClaudeVersion, runClaude } from './claude.ts'
-import { systemPrompt, onboardPrompt, ingestPrompt } from './prompts.ts'
-import { runDataTurn } from './agentTurn.ts'
+import { systemPrompt, onboardPrompt, ingestPrompt, livePrompt, scribePrompt, delegatePrompt, consolidatePrompt } from './prompts.ts'
+import { runDataTurn, scribeOutput, spokenAnswer } from './agentTurn.ts'
+import { createLiveSession, LiveSessions, LiveUpstreamError, validateCallEnd, validateLiveBody, validateSdp, VOICE_ERROR } from './live.ts'
+import { createDictation, DictateUpstreamError, DICTATE_ERROR } from './dictate.ts'
 import { FirmError, FirmReader, extractFirm, firmCacheFromEnv } from './firm.ts'
 import { GlobalSemaphore, QueueFullError, TurnRateLimit, UserQueue } from './queue.ts'
 import { stateStoreFromEnv } from './state.ts'
 import type { StateStore } from './state.ts'
 import { chatMessage, isPlainObject, MAX_DOC_BYTES, validateChatBody, validateChatHistory, validateStateBody, ValidationError } from './validation.ts'
 import type { ChatMode } from './validation.ts'
-import { prepareWorkspace, materialize } from './workspace.ts'
+import { prepareWorkspace, materialize, writeCallFile } from './workspace.ts'
 import { DataError, DataService, cycleDates, localToday } from './data.ts'
 import { handleJourney } from './journeyRoutes.ts'
 import { createMemoryJourneyStore, journeyStoreFromEnv } from './journeyStore.ts'
@@ -30,7 +32,7 @@ export function listenHost(env: NodeJS.ProcessEnv): string {
   return env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1'
 }
 
-export const MODE_TIMEOUTS = { chat: 180_000, onboard: 180_000, ingest: 300_000, firm: 60_000, scribe: 180_000, delegate: 180_000, consolidate: 180_000 } as const
+export const MODE_TIMEOUTS = { chat: 180_000, onboard: 180_000, ingest: 300_000, firm: 60_000, scribe: 45_000, delegate: 180_000, consolidate: 120_000 } as const
 export function turnTimeoutMs(mode: ChatMode | 'firm', env: NodeJS.ProcessEnv): number {
   const configured = Number(env[`CLOSEOUT_${mode.toUpperCase()}_TIMEOUT_MS`])
   return Number.isFinite(configured) && configured > 0 ? configured : MODE_TIMEOUTS[mode]
@@ -50,6 +52,8 @@ interface ServerOptions {
   runAgent?: typeof runClaude
   workspace?: typeof prepareWorkspace
   firmReader?: FirmReader
+  /** The OpenAI fetch for GPT-Live sessions and dictation (tests mock it). */
+  liveFetch?: typeof fetch
 }
 
 function json(response: ServerResponse, status: number, body: unknown): void {
@@ -115,6 +119,10 @@ export function createServer(options: ServerOptions = {}) {
   const queue = new UserQueue()
   const capacity = new GlobalSemaphore()
   const rateLimit = new TurnRateLimit()
+  // ponytail: a call scribes every user pause, so voice turns get their own window; the account queue still serializes them.
+  const voiceRateLimit = new TurnRateLimit(120, 600_000)
+  const live = new LiveSessions()
+  const dictations = new TurnRateLimit(30, 600_000)
   let stateStore = options.stateStore
   let dataStore = options.dataStore
   let firmReader = options.firmReader
@@ -175,8 +183,49 @@ export function createServer(options: ServerOptions = {}) {
     }
 
     const user = await authenticate(request.headers.authorization, env, request.socket.remoteAddress)
-    if (request.method === 'POST' && ['/live-session', '/dictate'].includes(path)) {
-      json(response, 501, { error: 'not_yet' })
+    if (request.method === 'POST' && path === '/live-session') {
+      const body = validateLiveBody(await readJson(request, 80_000))
+      if (!env.OPENAI_API_KEY) { json(response, 503, { error: 'voice_not_configured' }); return }
+      const call = live.start(user.email, body.purpose)
+      if (call === 'busy') { json(response, 409, { error: 'call_in_progress' }); return }
+      if (call === 'limited') { json(response, 429, { error: 'too_many_calls' }); return }
+      try {
+        const answer = await createLiveSession({ instructions: livePrompt(body.purpose, body.context, inboxAddress(user.email)),
+          sdp: body.sdp, apiKey: env.OPENAI_API_KEY, fetch: options.liveFetch })
+        call.upstreamId = answer.upstreamId
+        // A tab that went away never connects this session, so it must not hold the one-call lock.
+        if (response.destroyed) live.release(user.email, call.id)
+        json(response, 200, { sdp: answer.sdp, sessionId: call.id })
+      } catch (error) {
+        live.release(user.email, call.id)
+        if (!(error instanceof LiveUpstreamError)) throw error
+        json(response, 502, { error: 'voice_unavailable', message: VOICE_ERROR })
+      }
+      return
+    }
+    const callEnd = /^\/live-session\/([^/]+)\/end$/.exec(path)
+    if (request.method === 'POST' && callEnd) {
+      const body = validateCallEnd(await readJson(request, 131_072))
+      const call = live.get(user.email, callEnd[1])
+      if (!call) { json(response, 404, { error: 'not_found' }); return }
+      const record = { id: call.id, startedAt: new Date(call.startedAt).toISOString(), seconds: body.seconds, transcript: body.transcript, summary: null }
+      await getDataStore().putCall(user.email, record)
+      await writeCallFile(user.email, env, record)
+      live.release(user.email, call.id)
+      json(response, 200, { callId: call.id })
+      return
+    }
+    if (request.method === 'POST' && path === '/dictate') {
+      const body = await readJson(request, 80_000)
+      const sdp = validateSdp(isPlainObject(body) ? body.sdp : undefined)
+      if (!env.OPENAI_API_KEY) { json(response, 503, { error: 'voice_not_configured' }); return }
+      try { dictations.consume(user.email) } catch { json(response, 429, { error: 'too_many_dictations' }); return }
+      try {
+        json(response, 200, { sdp: await createDictation({ sdp, apiKey: env.OPENAI_API_KEY, fetch: options.liveFetch }) })
+      } catch (error) {
+        if (!(error instanceof DictateUpstreamError)) throw error
+        json(response, 502, { error: 'dictation_unavailable', message: DICTATE_ERROR })
+      }
       return
     }
     if (request.method === 'POST' && path === '/firm') {
@@ -323,13 +372,12 @@ export function createServer(options: ServerOptions = {}) {
     }
     if (request.method === 'POST' && path === '/chat') {
       const body = validateChatBody(await readJson(request, 300_000))
-      if (body.mode !== 'chat' && body.mode !== 'onboard' && body.mode !== 'ingest') {
-        json(response, 501, { error: 'not_yet' })
-        return
-      }
+      // Scribe and delegate answers are consumed whole by the call (final), never streamed as chat text.
+      const voice = body.mode === 'scribe' || body.mode === 'delegate'
       const ingestFiles = body.mode === 'ingest' ? await Promise.all((body.context.fileIds as string[]).map(id => getDataStore().getFile(user.email, id))) : []
       if (ingestFiles.some(file => !file || file.status !== 'needs_mapping')) throw new ValidationError()
-      rateLimit.consume(user.email)
+      const turns = voice ? voiceRateLimit : rateLimit
+      turns.consume(user.email)
       const abort = new AbortController()
       let heartbeat: ReturnType<typeof setInterval> | undefined
       const onClose = () => {
@@ -342,6 +390,7 @@ export function createServer(options: ServerOptions = {}) {
       let releaseCapacity: (() => void) | undefined
       let done = false
       let sessionId = ''
+      let spoken = ''
       try {
         accountSlot = queue.reserve(user.email, abort.signal)
         // Observe cancellation even while global admission is still pending.
@@ -368,8 +417,13 @@ export function createServer(options: ServerOptions = {}) {
         await runDataTurn({ options: {
           cwd,
           message: body.message,
-          prompt: body.mode === 'onboard' ? onboardPrompt({ ...body.context, inbox: inboxAddress(user.email) }) : body.mode === 'ingest' ? ingestPrompt(ingestFiles.filter(file => file !== null), body.context) : systemPrompt(body.context),
-          model: env.CLOSEOUT_AGENT_MODEL ?? 'opus',
+          prompt: body.mode === 'onboard' ? onboardPrompt({ ...body.context, inbox: inboxAddress(user.email) })
+            : body.mode === 'ingest' ? ingestPrompt(ingestFiles.filter(file => file !== null), body.context)
+            : body.mode === 'scribe' ? scribePrompt(body.context)
+            : body.mode === 'delegate' ? delegatePrompt(body.context)
+            : body.mode === 'consolidate' ? consolidatePrompt({ callId: body.context.callId as string })
+            : systemPrompt(body.context),
+          model: body.mode === 'scribe' ? env.CLOSEOUT_SCRIBE_MODEL ?? 'sonnet' : env.CLOSEOUT_AGENT_MODEL ?? 'opus',
           env,
           signal: abort.signal,
           timeoutMs: turnTimeoutMs(body.mode, env),
@@ -378,10 +432,15 @@ export function createServer(options: ServerOptions = {}) {
           sync: () => options.workspace ? workspace(user, env) : materialize(user, env, store, doc, body.context, { journey: getJourneyStore() }),
           emit(event) {
             if (abort.signal.aborted || done) return
+            if (voice && 'text' in event) { spoken += event.text; return }
             if ('done' in event) {
               done = true
               sessionId = event.sessionId
               clearInterval(heartbeat)
+              if (voice && !event.error) {
+                const reply = event.final ?? spoken
+                event = { ...event, final: body.mode === 'scribe' ? scribeOutput(reply, body.context.uncovered) : spokenAnswer(reply) }
+              }
             }
             response.write(`data: ${JSON.stringify(event)}\n\n`)
           },

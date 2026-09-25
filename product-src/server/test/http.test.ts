@@ -223,24 +223,17 @@ test('CORS only allows the production and local app origins', async t => {
   }
 })
 
-test('chat validates bodies and unimplemented modes and endpoints remain authenticated stubs', async t => {
+test('chat validates bodies and consolidate requires a server call id', async t => {
   let agentCalled = false
   const url = await serve(t, { env: devEnv, runAgent: async () => { agentCalled = true } })
-  for (const mode of ['scribe', 'delegate', 'consolidate']) {
-    const response = await fetch(`${url}/chat`, post({ ...chatBody, mode }))
-    assert.equal(response.status, 501)
-    assert.deepEqual(await response.json(), { error: 'not_yet' })
+  for (const context of [{}, { callId: '../x' }, { callId: 'CALL' }]) {
+    assert.equal((await fetch(`${url}/chat`, post({ ...chatBody, mode: 'consolidate', context }))).status, 400)
   }
   for (const context of [[], null, 'context', { long: 'x'.repeat(60_000) }]) {
     assert.equal((await fetch(`${url}/chat`, post({ ...chatBody, context }))).status, 400)
   }
   assert.equal((await fetch(`${url}/chat`, post({ ...chatBody, message: 'x'.repeat(8_001) }))).status, 400)
   assert.equal((await fetch(`${url}/chat`, post({ ...chatBody, mode: 'other' }))).status, 400)
-  for (const path of ['/live-session', '/dictate']) {
-    const response = await fetch(`${url}${path}`, { method: 'POST' })
-    assert.equal(response.status, 501)
-    assert.deepEqual(await response.json(), { error: 'not_yet' })
-  }
   assert.equal(agentCalled, false)
 })
 

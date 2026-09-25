@@ -4,7 +4,7 @@ import { MAX_CONTEXT_CHARS, MAX_DOC_BYTES, MODES, chatMessage, validateChatBody,
 
 test('chat validation accepts each known mode and keeps message and context intact', () => {
   for (const mode of MODES) {
-    const body = { mode, message: ' Hi ', context: { page: '/payroll', count: 3, ...(mode === 'ingest' ? { fileIds: ['f_abcdefghijkl'] } : {}) } }
+    const body = { mode, message: ' Hi ', context: { page: '/payroll', count: 3, ...(mode === 'ingest' ? { fileIds: ['f_abcdefghijkl'] } : {}), ...(mode === 'consolidate' ? { callId: '0f9c2b1e-5d7a-4c3b-9e8f-1a2b3c4d5e6f' } : {}) } }
     assert.deepEqual(validateChatBody(body), body)
   }
 })
