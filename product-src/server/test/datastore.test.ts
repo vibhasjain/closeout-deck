@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { createClient } from '@supabase/supabase-js'
-import { accountHash, CHAT_HISTORY_LIMIT, createDataStore, createMemoryDataStore, DuplicateFileError, validateFact, verifyRebuiltEntries } from '../src/datastore.ts'
+import { accountHash, CHAT_HISTORY_LIMIT, createDataStore, createMemoryDataStore, DuplicateFileError, safeMessage, validateFact, verifyRebuiltEntries } from '../src/datastore.ts'
 import type { FileRecord, RunRecord, SourceRecord } from '../src/datastore.ts'
 import type { TimeEntry } from '../src/ingest.ts'
 import type { CyclePayload, FindingCase } from '../src/pipeline.ts'
@@ -132,7 +132,7 @@ function mockStore(reply: (path: URL, method: string, body: unknown) => unknown)
       const url = new URL(String(input)), method = init?.method ?? 'GET'
       const body = typeof init?.body === 'string' ? JSON.parse(init.body) as unknown : init?.body
       requests.push({ url, method, body })
-      const data = reply(url, method, body)
+      const data = await reply(url, method, body)
       if (data instanceof Response) return data
       return new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } })
     } },
@@ -179,6 +179,65 @@ test('Supabase entry reads filter normalized files and paginate beyond the defau
   assert.equal(requests[0].url.searchParams.get('superseded_by'), 'is.null')
   assert.equal(requests[1].url.searchParams.get('offset'), '1000')
   for (const request of requests) assert.equal(request.url.searchParams.get('email'), `eq.${email}`)
+})
+
+/** Counts overlapping requests, so a test can tell parallel round trips from sequential ones. */
+function overlap() {
+  const state = { inFlight: 0, most: 0, async hold() { state.most = Math.max(state.most, ++state.inFlight); await new Promise(resolve => setTimeout(resolve, 5)); state.inFlight-- } }
+  return state
+}
+
+test('Supabase entry reads fetch the pages after the first in parallel, in order', async () => {
+  const pages = overlap()
+  const { store, requests } = mockStore(async url => {
+    await pages.hold()
+    const offset = Number(url.searchParams.get('offset') ?? 0)
+    return Array.from({ length: offset < 3000 ? 1000 : offset === 3000 ? 5 : 0 }, (_, i) => ({ id: `e_${offset + i}`, email, file_id: 'f_one', work_date: '2026-09-20', sched_start: null, sched_end: null, closeout_files: { status: 'normalized' } }))
+  })
+  const rows = await store.listEntries(email)
+  assert.equal(rows.length, 3005)
+  assert.deepEqual(rows.slice(999, 1001).map(row => row.id), ['e_999', 'e_1000'])
+  assert.equal(requests.length, 9); assert.ok(pages.most > 1)
+})
+
+test('Supabase entry inserts go four 1000-row batches at a time', async () => {
+  const batches = overlap()
+  const { store, requests } = mockStore(async (url, method) => {
+    if (method === 'POST' && url.pathname.endsWith('/closeout_entries')) await batches.hold()
+    if (method === 'GET' && url.pathname.endsWith('/closeout_files')) return [{ ...file(), received_at: file().receivedAt, email }]
+    if (method === 'GET' && url.pathname.endsWith('/closeout_sources')) return [{ id: source.id, email }]
+    return []
+  })
+  await store.replaceEntries(email, 'f_one', Array.from({ length: 4500 }, (_, i) => ({ ...entry(), id: `e_${i}` })))
+  assert.deepEqual(requests.filter(r => r.method === 'POST' && r.url.pathname.endsWith('/closeout_entries')).map(r => (r.body as unknown[]).length), [1000, 1000, 1000, 1000, 500])
+  assert.equal(batches.most, 4)
+})
+
+test('Supabase supersede reads only that source on those dates', async () => {
+  const { store, requests } = mockStore((url, method) => {
+    if (method !== 'GET') return []
+    if (url.pathname.endsWith('/closeout_files')) return [{ id: 'f_two', email }]
+    if (url.pathname.endsWith('/closeout_sources')) return [{ id: source.id, email }]
+    return [{ id: 'e_old', email, file_id: 'f_one', source_id: source.id, worker_key: 'worker one', work_date: '2026-09-20', sched_start: null, sched_end: null, closeout_files: { status: 'normalized' } }]
+  })
+  assert.equal(await store.supersedeEntries(email, source.id, 'f_two', [{ workerKey: 'worker one', workDate: '2026-09-20' }, { workerKey: 'worker one', workDate: '2026-09-18' }]), 1)
+  const read = requests.find(r => r.method === 'GET' && r.url.pathname.endsWith('/closeout_entries'))!
+  assert.equal(read.url.searchParams.get('source_id'), `eq.${source.id}`)
+  assert.deepEqual(read.url.searchParams.getAll('work_date'), ['gte.2026-09-18', 'lte.2026-09-20'])
+  assert.equal(requests.filter(r => r.method === 'PATCH').length, 1)
+})
+
+test('a Supabase failure throws its code, carrying the database code and message without row values', async () => {
+  const { store } = mockStore((url, method) => method === 'POST' && url.pathname.endsWith('/closeout_entries')
+    ? new Response(JSON.stringify({ code: '23514', message: 'new row for relation "closeout_entries" violates check constraint "closeout_entries_end_min_check"', details: 'Failing row contains (e_1, first@hypertrack.io, Worker One)', hint: null }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+    : method === 'GET' && url.pathname.endsWith('/closeout_files') ? [{ ...file(), received_at: file().receivedAt, email }]
+      : method === 'GET' && url.pathname.endsWith('/closeout_sources') ? [{ id: source.id, email }] : [])
+  const error = await store.replaceEntries(email, 'f_one', [entry()]).then(() => null, (thrown: Error) => thrown)
+  assert.equal(error?.message, 'data_entries_write_failed')
+  assert.equal(error?.cause, '23514 new row for relation "closeout_entries" violates check constraint "closeout_entries_end_min_check"')
+  assert.equal(safeMessage('invalid input syntax for type integer: "Ana Pena" for ana@example.com'), 'invalid input syntax for type integer: "…" for …')
+  assert.equal(safeMessage("ENOENT: no such file or directory, open '/data/accounts/x/files/ana_pena.csv'"), "ENOENT: no such file or directory, open '…'")
+  assert.equal(safeMessage("Cannot read properties of undefined (reading 'spec')"), "Cannot read properties of undefined (reading 'spec')")
 })
 
 test('Supabase writes payload and batched findings before switching the account cycle pointer', async () => {

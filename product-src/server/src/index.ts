@@ -19,7 +19,7 @@ import { DataError, DataService, cycleDates, dateKey, localToday } from './data.
 import { handleJourney } from './journeyRoutes.ts'
 import { createMemoryJourneyStore, journeyStoreFromEnv } from './journeyStore.ts'
 import type { JourneyStore } from './journeyStore.ts'
-import { dataStoreFromEnv, DuplicateFileError, createMemoryDataStore } from './datastore.ts'
+import { dataStoreFromEnv, DuplicateFileError, createMemoryDataStore, safeMessage } from './datastore.ts'
 import type { DataStore } from './datastore.ts'
 import { calendarFrom, engineSha } from './pipeline.ts'
 import { createMemory, handleMemory, MEMORY_TIMEOUT_MS } from './memory.ts'
@@ -41,8 +41,14 @@ export function turnTimeoutMs(mode: ChatMode | 'firm' | 'memory', env: NodeJS.Pr
   return Number.isFinite(configured) && configured > 0 ? configured : MODE_TIMEOUTS[mode]
 }
 
-function logFailure(error: unknown): void {
-  console.error('Request failed:', error instanceof Error ? error.name : 'Error')
+/** One line per failed request: the route (no query), the error and its cause. Data-layer messages are codes. */
+export function logFailure(error: unknown, route: string): void {
+  let text = 'Error'
+  if (error instanceof Error) {
+    const cause = error.cause instanceof Error ? (error.cause as NodeJS.ErrnoException).code ?? error.cause.message : error.cause
+    text = `${error.name}: ${error.message}${typeof cause === 'string' && cause ? ` (${cause})` : ''}`
+  }
+  console.error('Request failed:', route, safeMessage(text).slice(0, 300))
 }
 
 interface ServerOptions {
@@ -307,11 +313,16 @@ export function createServer(options: ServerOptions = {}) {
     if (path === '/files' || path.startsWith('/files/') || path.startsWith('/data/')) {
       const store = getDataStore(), service = new DataService(store)
       // GET of a stale run can also publish. Serialize it with uploads and the chat turn's own data writes.
-      const release = await dataLocks.acquire(user.email)
+      // Pure reads never publish, so they never queue behind a connect or an upload.
+      const pureRead = request.method === 'GET' && (path === '/files' || path.startsWith('/files/') || /^\/data\/(threads|disputes|batches\/)/.test(path))
+      let locked = !pureRead
+      const unlock = locked ? await dataLocks.acquire(user.email) : () => {}
+      const release = () => { if (locked) { locked = false; unlock() } }
       try {
         const doc = await stateDoc(user.email)
         const url = new URL(request.url!, 'http://localhost')
-        const sync = async () => materialize(user, env, store, await stateDoc(user.email), {}, stores())
+        // The writes are published by now; the workspace rebuild has its own per-account mutex, as chat turns do.
+        const sync = async () => { release(); return materialize(user, env, store, await stateDoc(user.email), {}, stores()) }
         if (path === '/files' && request.method === 'POST') {
           let name: string
           try { name = decodeURIComponent(String(request.headers['x-file-name'] ?? 'upload.csv')) }
@@ -492,7 +503,7 @@ export function createServer(options: ServerOptions = {}) {
       } catch (error) {
         if (abort.signal.aborted) return
         if (!response.headersSent) throw error
-        logFailure(error)
+        logFailure(error, 'POST /chat')
         if (!done) response.write(`data: ${JSON.stringify({ done: true, sessionId, error: AGENT_ERROR })}\n\n`)
         response.end()
       } finally {
@@ -510,6 +521,8 @@ export function createServer(options: ServerOptions = {}) {
 
   const server = createHttpServer((request, response) => {
     void handle(request, response).catch((error: unknown) => {
+      const route = `${request.method} ${(request.url ?? '/').split('?')[0]}`
+      if (error instanceof DataError && error.status >= 500) logFailure(error, route)
       if (error instanceof InviteOnlyError) json(response, 403, { error: 'invite_only' })
       else if (error instanceof AuthError) json(response, 401, { error: 'invalid_token' })
       else if (error instanceof DuplicateFileError) json(response, 409, { error: 'duplicate_file', id: error.id })
@@ -519,7 +532,7 @@ export function createServer(options: ServerOptions = {}) {
       else if (error instanceof ValidationError) json(response, 400, { error: 'invalid_body' })
       else if (error instanceof QueueFullError) json(response, 429, { error: 'queue_full' })
       else {
-        logFailure(error)
+        logFailure(error, route)
         json(response, 500, { error: 'internal_error' })
       }
     })

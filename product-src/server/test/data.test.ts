@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { recentCycles } from '../../src/lib/cycles.ts'
-import { DataService, dateKey, localToday } from '../src/data.ts'
+import { DataError, DataService, dateKey, localToday } from '../src/data.ts'
 import { createMemoryDataStore } from '../src/datastore.ts'
+import type { EntryQuery } from '../src/datastore.ts'
 import { calendarFrom } from '../src/pipeline.ts'
 
 const email = 'data-integration@example.com'
@@ -26,6 +27,18 @@ test('alias facts re-normalize stored originals and update worker identity and e
   assert.ok(result.cycles.includes('2026-09-20'))
   const run = await store.getRunPayload(email, '2026-09-20')
   assert.ok(run?.week.some(shift => shift.entryIds.includes(entries[0].id)))
+})
+
+test('a site fact that leaves time zones and aliases alone does not replay the originals', async () => {
+  const store = createMemoryDataStore()
+  let replays = 0
+  const service = new DataService({ ...store, replaceEntries: (...args) => { replays++; return store.replaceEntries(...args) } })
+  await service.ingestFile(email, { name: 'bullhorn_09-20-2026.csv', bytes: csv(), set: 1 }, {}, now)
+  replays = 0
+  await service.setFact(email, { kind: 'site', key: 'pacific cold storage', value: { state: 'CA', supervisor: { name: 'Maria Castillo' } } }, {}, new Date(now.getTime() + 1000))
+  assert.equal(replays, 0)
+  await service.setFact(email, { kind: 'site', key: 'pacific cold storage', value: { state: 'CA', tz: 'America/Los_Angeles' } }, {}, new Date(now.getTime() + 2000))
+  assert.equal(replays, 1)
 })
 
 test('account and site timezone facts re-normalize DST elapsed minutes from originals', async () => {
@@ -84,6 +97,34 @@ test('a cycle whose overlapping file builds no time entries is not rebuilt on ev
   // Changed inputs still rebuild the cycle.
   await service.setFact(email, { kind: 'account', key: 'burden', value: { value: 0.3 } }, {}, new Date(now.getTime() + 1000))
   assert.equal(reads, 2)
+})
+
+test('a connect reads only its own set and dates for duplicates, and the full entry list once to rebuild', async () => {
+  const store = createMemoryDataStore(), queries: EntryQuery[] = []
+  const service = new DataService({ ...store, listEntries: (account, query = {}) => { queries.push(query); return store.listEntries(account, query) } })
+  await service.connect(email, { set: 2, system: 'UKG Pro', site: 'Pacific Cold Storage' }, {}, now)
+  queries.length = 0
+  const { files } = await service.connect(email, { set: 1, system: 'Bullhorn' }, {}, now)
+  assert.ok(files[0].entryCount! > 6000)
+  assert.deepEqual(queries, [{ set: 1, from: files[0].firstDate, to: files[0].lastDate }, {}])
+})
+
+test('a connect interrupted mid-ingest is resumed by the retry, and a file that is not normalized is never reported as connected', async () => {
+  const store = createMemoryDataStore()
+  let fail = true
+  const service = new DataService({ ...store, replaceEntries: async (...args) => { if (fail) throw new Error('data_entries_write_failed'); return store.replaceEntries(...args) } })
+  const body = { set: 2, system: 'UKG', site: 'Pacific Cold Storage' }
+  await assert.rejects(service.connect(email, body, {}, now), /data_entries_write_failed/)
+  const [stuck] = await store.listFiles(email)
+  assert.equal(stuck.status, 'received')
+  fail = false
+  const retry = await service.connect(email, body, {}, now)
+  assert.equal(retry.files[0].id, stuck.id); assert.equal(retry.files[0].status, 'normalized')
+  assert.equal((await store.listFiles(email)).length, 1)
+  assert.equal((await store.listEntries(email, { fileId: stuck.id })).length, retry.files[0].entryCount)
+  assert.deepEqual(retry.cycles, ['2026-09-20'])
+  await store.upsertFile(email, { ...(await store.getFile(email, stuck.id))!, status: 'needs_mapping' })
+  await assert.rejects(service.connect(email, body, {}, now), (error: unknown) => error instanceof DataError && error.message === 'connect_incomplete')
 })
 
 test('future exports are assigned to future cycles while preserving the biweekly anchor', async () => {

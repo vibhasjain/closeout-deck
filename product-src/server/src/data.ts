@@ -15,6 +15,14 @@ const hash = (value: string | Uint8Array) => createHash('sha256').update(value).
 // An empty week publishes no run, so without this every read reloads all entries to rebuild it.
 // ponytail: in-process, keyed by input hash like the cycle summaries; a restart or second machine rebuilds once.
 const emptyCycles = new Map<string, string>()
+// Every ingest holds the account's data lock from 'received' to its final status, so a 'received' file
+// seen by another ingest was left by one that failed: it is ingested again under its own id, never reused.
+const interrupted = (file: FileRecord | null) => file?.status === 'received'
+/** A connection succeeds only when its time entries are in; otherwise the card shows an error it can retry. */
+function connected<T extends { status: FileRecord['status'] }>(file: T): T {
+  if (file.status !== 'normalized') throw new DataError(500, 'connect_incomplete')
+  return file
+}
 export const dateKey = (date: Date): string => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 
 /** Account-local civil date; calendar arithmetic never depends on the host's UTC date. */
@@ -54,9 +62,9 @@ export class DataService {
     if (input.bytes.length > 10 * 1024 * 1024) throw new DataError(413, 'file_too_large')
     const name = sanitizeFileName(input.name), sha256 = hash(input.bytes)
     const prior = await this.store.getFileBySha(email, sha256)
-    if (prior) throw new DuplicateFileError(prior.id)
+    if (prior && !interrupted(prior)) throw new DuplicateFileError(prior.id)
     const parsed = parseFile(input.bytes, name)
-    const id = 'f_' + Array.from(randomBytes(12), b => 'abcdefghijklmnopqrstuvwxyz234567'[b % 32]).join('')
+    const id = prior?.id ?? 'f_' + Array.from(randomBytes(12), b => 'abcdefghijklmnopqrstuvwxyz234567'[b % 32]).join('')
     let receivedAt = now.toISOString()
     const facts = await this.store.listFacts(email)
     const storedMapping = parsed.fingerprint ? await this.store.getMapping(email, parsed.fingerprint) : null
@@ -111,13 +119,14 @@ export class DataService {
           author: storedMapping?.author ?? 'library', version: storedMapping?.version ?? 1, updatedAt: storedMapping?.updatedAt ?? receivedAt })
         file.mappingId = mappingId
         // Same-source exports replace whole worker-days; other sources can reveal duplicate submissions.
-        const existing = await this.store.listEntries(email)
+        // Only same-set entries on this file's dates can match, so only those are read.
+        const dates = result.entries.map(e => e.workDate).sort()
+        const existing = dates.length ? await this.store.listEntries(email, { set: set ?? undefined, from: dates[0], to: dates.at(-1) }) : []
         const seen = new Map(existing.filter(e => e.sourceId !== sourceId && e.set === set && !e.dupOf)
           .map(e => [entryIdentity(e), e.id]))
         for (const e of result.entries) if (!e.dupOf && e.kind === 'work') e.dupOf = seen.get(entryIdentity(e)) ?? null
         await this.store.replaceEntries(email, id, result.entries)
         replaced = await this.store.supersedeEntries(email, sourceId!, id, result.entries.map(e => ({ workerKey: e.workerKey, workDate: e.workDate })))
-        const dates = result.entries.map(e => e.workDate).sort()
         Object.assign(file, { status: 'normalized', rowCount: result.rowCount, entryCount: result.entries.length,
           unparsed: result.unparsed.slice(0, 200), firstDate: dates[0] ?? null, lastDate: dates.at(-1) ?? null, normalizedAt: receivedAt })
       }
@@ -250,7 +259,7 @@ export class DataService {
       }
     }
     for (const file of generated.files) {
-      if (await this.store.getFileBySha(email, hash(file.bytes))) continue
+      if (await this.storedFile(email, file.bytes)) continue
       await this.ingestFile(email, { ...file, sample: true, method: 'simulated', deferRun: true }, doc, now)
     }
     await this.recompute(email, doc, now)
@@ -264,9 +273,13 @@ export class DataService {
     const checked = validateFact(body)
     if (!checked.ok) throw new DataError(400, 'invalid_fact')
     await this.store.ensureAccount(email)
-    const prior = (await this.store.listFacts(email)).find(f => f.kind === checked.fact.kind && f.key === checked.fact.key)
-    await this.store.upsertFact(email, { ...checked.fact, value: { ...prior?.value, ...checked.fact.value }, source, sample: false, updatedAt: now.toISOString() })
-    if (checked.fact.kind === 'alias' || checked.fact.kind === 'site' || (checked.fact.kind === 'account' && checked.fact.key === 'timezone')) await this.renormalizeOriginals(email, doc, now)
+    const facts = await this.store.listFacts(email), prior = facts.find(f => f.kind === checked.fact.kind && f.key === checked.fact.key)
+    const fact: FactRecord = { ...checked.fact, value: { ...prior?.value, ...checked.fact.value }, source, sample: false, updatedAt: now.toISOString() }
+    await this.store.upsertFact(email, fact)
+    // Normalized entries depend on facts only through time zones and aliases; any other fact (a supervisor,
+    // a state, a rate) leaves them as they are, so replaying every original would only hold the data lock.
+    const shape = (list: FactRecord[]) => JSON.stringify(normalizationContext({ id: '', sourceId: null, sample: false } as FileRecord, list, doc))
+    if (shape(facts) !== shape(prior ? facts.map(f => f === prior ? fact : f) : [...facts, fact])) await this.renormalizeOriginals(email, doc, now)
     return { ok: true, cycles: await this.recompute(email, doc, now) }
   }
 
@@ -299,10 +312,10 @@ export class DataService {
         }
         // A harmless skipped footer gives identical sample shapes distinct upload hashes per connector.
         const bytes = Buffer.from([grid[0], ...rows, [`Total: Sample ${String(body.system ?? 'connection')} ${String(body.site ?? '')}`]].map(row => row.map(csvCell).join(',')).join('\r\n') + '\r\n')
-        const existing = await this.store.getFileBySha(email, hash(bytes))
-        if (existing) { files.push(existing); continue }
-        files.push(await this.ingestFile(email, { ...input, bytes, system: typeof body.system === 'string' ? body.system : undefined,
-          site: typeof body.site === 'string' ? body.site : undefined, sample: true, method: 'simulated', deferRun: true }, doc, now))
+        const existing = await this.storedFile(email, bytes)
+        if (existing) { files.push(connected(existing)); continue }
+        files.push(connected(await this.ingestFile(email, { ...input, bytes, system: typeof body.system === 'string' ? body.system : undefined,
+          site: typeof body.site === 'string' ? body.site : undefined, sample: true, method: 'simulated', deferRun: true }, doc, now)))
       }
       return { files, cycles: await this.recompute(email, doc, now) }
     }
@@ -324,13 +337,19 @@ export class DataService {
     }
     if (rows.length === 1) return { files: [], cycles: [] }
     const bytes = Buffer.from(rows.map(row => row.map(csvCell).join(',')).join('\r\n') + '\r\n')
-    const existing = await this.store.getFileBySha(email, hash(bytes))
-    if (existing) return { files: [existing], cycles: [] }
+    const existing = await this.storedFile(email, bytes)
+    if (existing) return { files: [connected(existing)], cycles: [] }
     // The file name states its period; it must be the week its last row falls in, or ingest rejects the period.
     const last = rows.slice(1).map(row => `${row[2].slice(6)}-${row[2].slice(0, 2)}-${row[2].slice(3, 5)}`).sort().at(-1)!
     const period = last >= dateKey(cycles[0].start) ? cycles[0] : cycles[1]
-    const file = await this.ingestFile(email, { name: `hypertrack_location_${period.id}.csv`, bytes, set: 3, sample: true, method: 'simulated' }, doc, now)
+    const file = connected(await this.ingestFile(email, { name: `hypertrack_location_${period.id}.csv`, bytes, set: 3, sample: true, method: 'simulated' }, doc, now))
     return { files: [file], cycles: file.cycles }
+  }
+
+  /** The stored file with these bytes, unless an interrupted ingest left it behind. */
+  private async storedFile(email: string, bytes: Uint8Array): Promise<FileRecord | null> {
+    const file = await this.store.getFileBySha(email, hash(bytes))
+    return interrupted(file) ? null : file
   }
 }
 

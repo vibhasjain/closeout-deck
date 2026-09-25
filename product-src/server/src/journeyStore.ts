@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { createHash } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { dataFailure } from './datastore.ts'
 import type { Batch, Decision, Dispute, Message, Thread } from './journey.ts'
 
 /** P7 records (migration 0003). Every call is scoped by the session email. */
@@ -122,14 +123,14 @@ export function createJourneyStore(client: SupabaseClient): JourneyStore {
       request = request.order(order)
       if (order !== 'id') request = request.order('id')
       const { data, error } = await request.range(offset, offset + 999)
-      if (error) throw new Error(`journey_${name}_read_failed`)
+      if (error) throw dataFailure(`journey_${name}_read_failed`, error)
       rows.push(...(data as Row[]).map(row => fromRow<T>(row)))
       if (data.length < 1000) return rows
     }
   }
   async function upsert(name: string, email: string, value: object, onConflict = 'id') {
     const { error } = await table(name).upsert(toRow(value, email), { onConflict })
-    if (error) throw new Error(`journey_${name}_write_failed`)
+    if (error) throw dataFailure(`journey_${name}_write_failed`, error)
   }
   return {
     listDecisions: (email, cycleId) => list<Decision>('decisions', email, cycleId ? { cycle_id: cycleId } : {}, 'at'),
@@ -144,7 +145,7 @@ export function createJourneyStore(client: SupabaseClient): JourneyStore {
       const canonical = canonicalDecisions(email, cycleId, old, aliases)
       if (old.length === canonical.length && old.every(d => canonical.some(c => c.id === d.id && c.groupId === d.groupId))) return canonical
       const { error } = await client.rpc('closeout_replace_decisions', { p_email: email, p_cycle_id: cycleId, p_decisions: canonical.map(d => toRow(d, email)) })
-      if (error) throw new Error('journey_decisions_write_failed')
+      if (error) throw dataFailure('journey_decisions_write_failed', error)
       return canonical
     },
     listThreads: (email, cycleId) => list<Thread>('threads', email, cycleId ? { cycle_id: cycleId } : {}, 'created_at'),
@@ -158,7 +159,7 @@ export function createJourneyStore(client: SupabaseClient): JourneyStore {
           let request = table('messages').select('*').eq('email', email).in('thread_id', threadIds.slice(offset, offset + 100)).order('at').order('id').limit(1000)
           if (cursor) request = request.or(`at.gt.${cursor.at},and(at.eq.${cursor.at},id.gt.${cursor.id})`)
           const { data, error } = await request
-          if (error) throw new Error('journey_messages_read_failed')
+          if (error) throw dataFailure('journey_messages_read_failed', error)
           if (!data.length) break
           const page = (data as Row[]).map(row => fromRow<Message>(row))
           rows.push(...page)
@@ -170,20 +171,20 @@ export function createJourneyStore(client: SupabaseClient): JourneyStore {
     },
     async addMessage(email, message) {
       const { error } = await table('messages').insert(toRow(message, email))
-      if (error) throw new Error('journey_messages_write_failed')
+      if (error) throw dataFailure('journey_messages_write_failed', error)
     },
     async saveConversation(email, thread, messages, dispute) {
       validateConversation(thread, messages, dispute)
       const { error } = await client.rpc('closeout_save_conversation', { p_email: email, p_thread: toRow(thread, email),
         p_messages: messages.map(m => toRow(m, email)), p_dispute: dispute ? toRow(dispute, email) : null })
-      if (error) throw new Error('journey_conversation_write_failed')
+      if (error) throw dataFailure('journey_conversation_write_failed', error)
     },
     listBatches: email => list<Batch>('batches', email, {}, 'created_at'),
     async createBatch(email, batch) {
       const { error } = await table('batches').insert(toRow(batch, email))
       if (!error) return { batch, created: true }
       // 23505: the unique (email, cycle_id) row already exists. The first send stands.
-      if (error.code !== '23505') throw new Error('journey_batches_write_failed')
+      if (error.code !== '23505') throw dataFailure('journey_batches_write_failed', error)
       const [existing] = await list<Batch>('batches', email, { cycle_id: batch.cycleId })
       if (!existing) throw new Error('journey_batches_read_failed')
       return { batch: existing, created: false }
@@ -195,7 +196,7 @@ export function createJourneyStore(client: SupabaseClient): JourneyStore {
       // Messages cascade with their threads.
       for (const name of ['decisions', 'threads', 'batches', 'disputes']) {
         const { error } = await table(name).delete().eq('email', email).in('cycle_id', cycleIds)
-        if (error) throw new Error(`journey_${name}_delete_failed`)
+        if (error) throw dataFailure(`journey_${name}_delete_failed`, error)
       }
     },
   }

@@ -46,7 +46,7 @@ export interface CallRecord {
   id: string; startedAt: string; seconds: number; transcript: { role: 'user' | 'agent'; text: string; startMs: number }[]; summary: string | null
 }
 export interface EntryQuery {
-  from?: string; to?: string; fileId?: string; sourceId?: string; ids?: string[]; offset?: number; limit?: number
+  from?: string; to?: string; set?: 1 | 2 | 3; fileId?: string; sourceId?: string; ids?: string[]; offset?: number; limit?: number
   includeSuperseded?: boolean; includeUnnormalized?: boolean
 }
 export interface DataStore {
@@ -85,6 +85,18 @@ export interface DataStore {
   getCall(email: string, id: string): Promise<CallRecord | null>
 }
 
+/** Error text safe for logs: quoted values (row data, JSON snippets, file paths) and emails are redacted;
+ * closeout_* table and constraint names and bare identifiers such as a property name stay. */
+export function safeMessage(text: string): string {
+  return text.replace(/"([^"]*)"/g, (quoted, inner: string) => /^closeout_\w+$/.test(inner) ? quoted : '"…"')
+    .replace(/'([^']*)'/g, (quoted, inner: string) => /^[A-Za-z_$][\w$]{0,40}$/.test(inner) ? quoted : "'…'")
+    .replace(/[^\s@"'(]+@[^\s@"')]+/g, '…')
+}
+/** The thrown message stays a code; the database's own code and message ride along as the cause, never its row details. */
+export function dataFailure(code: string, error?: { code?: string; statusCode?: string | number; message?: string } | null): Error {
+  return new Error(code, error ? { cause: safeMessage(`${error.code ?? error.statusCode ?? ''} ${error.message ?? ''}`.trim()).slice(0, 200) } : undefined)
+}
+
 export function accountHash(email: string): string {
   return createHash('sha256').update(email.trim().toLowerCase()).digest('hex').slice(0, 16)
 }
@@ -118,6 +130,13 @@ export async function verifyRebuiltEntries(
 }
 
 const clone = <T>(value: T): T => structuredClone(value)
+/** At most `width` requests in flight, results in order. ponytail: fixed width; each is one PostgREST round trip. */
+async function inWaves<T, R>(items: T[], width: number, work: (item: T) => PromiseLike<R>): Promise<R[]> {
+  const output: R[] = []
+  for (let i = 0; i < items.length; i += width) output.push(...await Promise.all(items.slice(i, i + width).map(work)))
+  return output
+}
+const chunks = <T>(items: T[], size: number): T[][] => Array.from({ length: Math.ceil(items.length / size) }, (_, i) => items.slice(i * size, (i + 1) * size))
 const nextVersion = (previous?: string) => new Date(Math.max(Date.now(), (previous ? Date.parse(previous) : 0) + 1)).toISOString()
 const factId = (fact: Pick<FactRecord, 'kind' | 'key'>) => `${fact.kind}\u001f${fact.key}`
 
@@ -164,7 +183,7 @@ export function createMemoryDataStore(): DataStore {
       const rows = [...state.entries.values()].filter(entry =>
         (query.includeUnnormalized || state.files.get(entry.fileId)?.status === 'normalized') &&
         (query.includeSuperseded || !entry.supersededBy) &&
-        (!query.from || entry.workDate >= query.from) && (!query.to || entry.workDate <= query.to) &&
+        (!query.from || entry.workDate >= query.from) && (!query.to || entry.workDate <= query.to) && (!query.set || entry.set === query.set) &&
         (!query.fileId || entry.fileId === query.fileId) && (!query.sourceId || entry.sourceId === query.sourceId) && (!ids || ids.has(entry.id)),
       ).sort((a, b) => a.workDate.localeCompare(b.workDate) || a.id.localeCompare(b.id))
       return clone(rows.slice(query.offset ?? 0, query.limit === undefined ? undefined : (query.offset ?? 0) + query.limit))
@@ -282,14 +301,14 @@ export function createDataStore(client: SupabaseClient): DataStore {
       const request = table(name).select(columns).eq('email', email)
       const ordered = name === 'facts' ? request.order('kind').order('key') : request.order(name === 'runs' ? 'cycle_id' : 'id')
       const { data, error } = await ordered.range(offset, offset + 999)
-      if (error) throw new Error(`data_${name}_read_failed`)
+      if (error) throw dataFailure(`data_${name}_read_failed`, error)
       rows.push(...(data as unknown as Row[]).map(row => decode<T>(row)))
       if (data.length < 1000) return rows
     }
   }
   async function one<T>(name: string, email: string, column: string, value: string): Promise<T | null> {
     const { data, error } = await table(name).select('*').eq('email', email).eq(column, value).maybeSingle()
-    if (error) throw new Error(`data_${name}_read_failed`)
+    if (error) throw dataFailure(`data_${name}_read_failed`, error)
     return data ? decode<T>(data as Row) : null
   }
   async function write(name: string, email: string, value: { id: string }) {
@@ -297,12 +316,12 @@ export function createDataStore(client: SupabaseClient): DataStore {
     const existing = await one(name, email, 'id', value.id)
     const row = { ...encode(value), email }
     const { error } = existing ? await table(name).update(row).eq('email', email).eq('id', value.id) : await table(name).insert(row)
-    if (error) throw new Error(`data_${name}_write_failed`)
+    if (error) throw dataFailure(`data_${name}_write_failed`, error)
   }
   const store: DataStore = {
     async ensureAccount(email) {
       const { error } = await table('state').upsert({ email }, { onConflict: 'email', ignoreDuplicates: true })
-      if (error) throw new Error('data_account_write_failed')
+      if (error) throw dataFailure('data_account_write_failed', error)
     },
     listSources: email => all<SourceRecord>('sources', email),
     getSource: (email, id) => one<SourceRecord>('sources', email, 'id', id),
@@ -333,69 +352,79 @@ export function createDataStore(client: SupabaseClient): DataStore {
         }
       }
       const { error } = await table('entries').delete().eq('email', email).eq('file_id', fileId)
-      if (error) throw new Error('data_entries_write_failed')
+      if (error) throw dataFailure('data_entries_write_failed', error)
       try {
-        for (let offset = 0; offset < entries.length; offset += 1000) {
-          const { error: insertError } = await table('entries').upsert(entries.slice(offset, offset + 1000).map(row => ({ ...encode(row), email })), { onConflict: 'id' })
-          if (insertError) throw new Error('data_entries_write_failed')
-        }
-      } catch {
+        // Ids are unique within a file, so batches are independent; the rollback below runs after all have settled.
+        const results = await inWaves(chunks(entries, 1000), 4, batch => table('entries').upsert(batch.map(row => ({ ...encode(row), email })), { onConflict: 'id' }))
+        const failure = results.find(result => result.error)?.error
+        if (failure) throw dataFailure('data_entries_write_failed', failure)
+      } catch (failure) {
         // This is best-effort rollback, not a transaction: a process crash or unavailable
         // database still needs replay from originals. No failed batch publishes the file.
         const { error: deleteError } = await table('entries').delete().eq('email', email).eq('file_id', fileId)
-        if (deleteError) throw new Error('data_entries_restore_failed')
+        if (deleteError) throw dataFailure('data_entries_restore_failed', deleteError)
         const snapshot = [...previous.values()]
         for (let offset = 0; offset < snapshot.length; offset += 1000) {
           const { error: restoreError } = await table('entries').upsert(snapshot.slice(offset, offset + 1000).map(row => ({ ...encode(row), email })), { onConflict: 'id' })
-          if (restoreError) throw new Error('data_entries_restore_failed')
+          if (restoreError) throw dataFailure('data_entries_restore_failed', restoreError)
         }
-        throw new Error('data_entries_write_failed')
+        throw failure
       }
     },
     async listEntries(email, query = {}) {
       if (query.ids?.length === 0) return []
-      const output: TimeEntry[] = [], offsetStart = query.offset ?? 0
-      // Filtering via the file join avoids exposing partially written entries.
-      for (let offset = offsetStart; ; offset += 1000) {
-        const size = Math.min(1000, query.limit === undefined ? 1000 : query.limit - output.length)
-        if (size <= 0) return output
+      const start = query.offset ?? 0, end = query.limit === undefined ? Infinity : start + query.limit
+      const page = async (offset: number) => {
+        // Filtering via the file join avoids exposing partially written entries.
         let request = table('entries').select(query.includeUnnormalized ? '*' : '*,closeout_files!inner(status)').eq('email', email)
         if (!query.includeUnnormalized) request = request.eq('closeout_files.status', 'normalized')
         if (!query.includeSuperseded) request = request.is('superseded_by', null)
         if (query.from) request = request.gte('work_date', query.from)
         if (query.to) request = request.lte('work_date', query.to)
+        if (query.set) request = request.eq('set_no', query.set)
         if (query.fileId) request = request.eq('file_id', query.fileId)
         if (query.sourceId) request = request.eq('source_id', query.sourceId)
         if (query.ids) request = request.in('id', query.ids)
-        const { data, error } = await request.order('work_date').order('id').range(offset, offset + size - 1)
-        if (error) throw new Error('data_entries_read_failed')
-        output.push(...(data as unknown as Row[]).map(row => { const entry = { ...row }; delete entry.closeout_files; return decode<TimeEntry>(entry) }))
-        if (data.length < size) return output
+        const { data, error } = await request.order('work_date').order('id').range(offset, Math.min(offset + 1000, end) - 1)
+        if (error) throw dataFailure('data_entries_read_failed', error)
+        return (data as unknown as Row[]).map(row => { const entry = { ...row }; delete entry.closeout_files; return decode<TimeEntry>(entry) })
       }
+      // One page first; past it, eight pages per round trip (28k rows: ~4 round trips, not 29).
+      const output: TimeEntry[] = []
+      for (let offset = start, width = 1; offset < end; offset += width * 1000, width = 8) {
+        const offsets = Array.from({ length: width }, (_, i) => offset + i * 1000).filter(at => at < end)
+        const pages = await Promise.all(offsets.map(page))
+        for (const [i, rows] of pages.entries()) {
+          output.push(...rows)
+          if (rows.length < Math.min(1000, end - offsets[i])) return output
+        }
+      }
+      return output
     },
     async countEntries(email, fileId) {
       const { count, error } = await table('entries').select('id', { count: 'exact', head: true }).eq('email', email).eq('file_id', fileId)
-      if (error) throw new Error('data_entries_read_failed')
+      if (error) throw dataFailure('data_entries_read_failed', error)
       return count ?? 0
     },
     async supersedeEntries(email, sourceId, newFileId, workerDays) {
       if (!await store.getFile(email, newFileId) || !await store.getSource(email, sourceId)) throw new Error('file_not_found')
-      const keys = new Set(workerDays.map(row => `${row.workerKey}\u001f${row.workDate}`))
-      const ids = (await store.listEntries(email)).filter(row => row.sourceId === sourceId && row.fileId !== newFileId && keys.has(`${row.workerKey}\u001f${row.workDate}`)).map(row => row.id)
+      const keys = new Set(workerDays.map(row => `${row.workerKey}\u001f${row.workDate}`)), dates = workerDays.map(row => row.workDate).sort()
+      if (!dates.length) return 0
+      const ids = (await store.listEntries(email, { sourceId, from: dates[0], to: dates.at(-1) }))
+        .filter(row => row.fileId !== newFileId && keys.has(`${row.workerKey}\u001f${row.workDate}`)).map(row => row.id)
       // Keep PostgREST filter URLs below proxy request-line limits.
-      for (let offset = 0; offset < ids.length; offset += 200) {
-        const { error } = await table('entries').update({ superseded_by: newFileId }).eq('email', email).in('id', ids.slice(offset, offset + 200))
-        if (error) throw new Error('data_entries_write_failed')
-      }
+      const results = await inWaves(chunks(ids, 200), 4, batch => table('entries').update({ superseded_by: newFileId }).eq('email', email).in('id', batch))
+      const failure = results.find(result => result.error)?.error
+      if (failure) throw dataFailure('data_entries_write_failed', failure)
       return ids.length
     },
     listFacts: email => all<FactRecord>('facts', email),
     async upsertFact(email, fact) {
       await store.ensureAccount(email)
       const { data, error: readError } = await table('facts').select('updated_at').eq('email', email).order('updated_at', { ascending: false }).limit(1)
-      if (readError) throw new Error('data_facts_read_failed')
+      if (readError) throw dataFailure('data_facts_read_failed', readError)
       const { error } = await table('facts').upsert({ ...encode(fact), updated_at: nextVersion(data?.[0]?.updated_at as string | undefined), email }, { onConflict: 'email,kind,key' })
-      if (error) throw new Error('data_facts_write_failed')
+      if (error) throw dataFailure('data_facts_write_failed', error)
     },
     async listRuns(email) { return (await all<RunRecord>('runs', email)).sort((a, b) => b.cycleId.localeCompare(a.cycleId)) },
     getRun: (email, id) => one<RunRecord>('runs', email, 'cycle_id', id),
@@ -405,11 +434,11 @@ export function createDataStore(client: SupabaseClient): DataStore {
       // Remove the published pointer before its backing rows/object, so readers
       // never discover a current run whose findings have already disappeared.
       const { error } = await table('runs').delete().eq('email', email).eq('cycle_id', cycleId).eq('run_id', run.runId)
-      if (error) throw new Error('data_runs_delete_failed')
+      if (error) throw dataFailure('data_runs_delete_failed', error)
       const { error: findingsError } = await table('findings').delete().eq('email', email).eq('cycle_id', cycleId).eq('run_id', run.runId)
-      if (findingsError) throw new Error('data_findings_cleanup_failed')
+      if (findingsError) throw dataFailure('data_findings_cleanup_failed', findingsError)
       const { error: objectError } = await bucket.remove([checkedPath(email, run.storagePath)])
-      if (objectError) throw new Error('data_object_cleanup_failed')
+      if (objectError) throw dataFailure('data_object_cleanup_failed', objectError)
     },
     async saveRun(email, run, findings, payload) {
       await store.ensureAccount(email)
@@ -419,15 +448,15 @@ export function createDataStore(client: SupabaseClient): DataStore {
       for (let offset = 0; offset < findings.length; offset += 1000) {
         const rows = findings.slice(offset, offset + 1000).map(row => ({ ...encode(row), email, run_id: run.runId, cycle_id: run.cycleId }))
         const { error } = await table('findings').upsert(rows, { onConflict: 'email,run_id,shift_id,rule_id,seq' })
-        if (error) throw new Error('data_findings_write_failed')
+        if (error) throw dataFailure('data_findings_write_failed', error)
       }
       const { error } = await table('runs').upsert({ ...encode(run), email }, { onConflict: 'email,cycle_id' })
-      if (error) throw new Error('data_runs_write_failed')
+      if (error) throw dataFailure('data_runs_write_failed', error)
       if (previous) {
         const { error: cleanupError } = await table('findings').delete().eq('email', email).eq('run_id', previous.runId)
-        if (cleanupError) throw new Error('data_findings_cleanup_failed')
+        if (cleanupError) throw dataFailure('data_findings_cleanup_failed', cleanupError)
         const { error: objectError } = await bucket.remove([checkedPath(email, previous.storagePath)])
-        if (objectError) throw new Error('data_object_cleanup_failed')
+        if (objectError) throw dataFailure('data_object_cleanup_failed', objectError)
       }
     },
     async getRunPayload(email, input) {
@@ -442,7 +471,7 @@ export function createDataStore(client: SupabaseClient): DataStore {
       const rows: FindingCase[] = []
       for (let offset = 0; ; offset += 1000) {
         const { data, error } = await table('findings').select('*').eq('email', email).eq('cycle_id', cycleId).eq('run_id', run.runId).order('shift_id').order('rule_id').order('seq').range(offset, offset + 999)
-        if (error) throw new Error('data_findings_read_failed')
+        if (error) throw dataFailure('data_findings_read_failed', error)
         rows.push(...(data as Row[]).map(row => { const finding = { ...row }; delete finding.run_id; delete finding.cycle_id; return decode<FindingCase>(finding) }))
         if (data.length < 1000) return rows
       }
@@ -453,18 +482,18 @@ export function createDataStore(client: SupabaseClient): DataStore {
         all<DataManifest['runs'][number]>('runs', email, 'cycle_id,run_id'),
         table('facts').select('updated_at').eq('email', email).order('updated_at', { ascending: false }).limit(1),
       ])
-      if (facts.error) throw new Error('data_facts_read_failed')
+      if (facts.error) throw dataFailure('data_facts_read_failed', facts.error)
       return { files, runs, factsUpdatedAt: facts.data?.[0]?.updated_at as string | undefined ?? null }
     },
     async putObject(email, path, bytes, mime = 'application/octet-stream') {
       const { error } = await bucket.upload(checkedPath(email, path), bytes, { contentType: mime, upsert: true })
-      if (error) throw new Error('data_object_write_failed')
+      if (error) throw dataFailure('data_object_write_failed', error)
     },
     async getObject(email, path) {
       const { data, error } = await bucket.download(checkedPath(email, path))
       if (error) {
         if ('statusCode' in error && [400, 404].includes(Number(error.statusCode))) return null
-        throw new Error('data_object_read_failed')
+        throw dataFailure('data_object_read_failed', error)
       }
       return Buffer.from(await data.arrayBuffer())
     },
@@ -473,28 +502,28 @@ export function createDataStore(client: SupabaseClient): DataStore {
       const paths = [...files.filter(row => row.sample).map(row => row.storagePath), ...runs.filter(row => row.sample).map(row => row.storagePath)]
       for (const run of runs.filter(row => row.sample)) {
         const { error } = await table('findings').delete().eq('email', email).eq('run_id', run.runId)
-        if (error) throw new Error('data_sample_delete_failed')
+        if (error) throw dataFailure('data_sample_delete_failed', error)
       }
       for (const name of ['runs', 'entries', 'files', 'sources', 'facts']) {
         const { error } = await table(name).delete().eq('email', email).eq('sample', true)
-        if (error) throw new Error('data_sample_delete_failed')
+        if (error) throw dataFailure('data_sample_delete_failed', error)
       }
       const remainingFact = (await store.listFacts(email)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0]
       if (remainingFact) await store.upsertFact(email, remainingFact)
       const deletedFiles = files.filter(row => row.sample).map(row => row.id)
       if (deletedFiles.length) {
         const { error } = await table('entries').update({ superseded_by: null }).eq('email', email).in('superseded_by', deletedFiles)
-        if (error) throw new Error('data_sample_delete_failed')
+        if (error) throw dataFailure('data_sample_delete_failed', error)
       }
       for (let offset = 0; offset < paths.length; offset += 1000) {
         const { error } = await bucket.remove(paths.slice(offset, offset + 1000).map(path => checkedPath(email, path)))
-        if (error) throw new Error('data_object_cleanup_failed')
+        if (error) throw dataFailure('data_object_cleanup_failed', error)
       }
     },
     async listChat(email) {
       const { data, error } = await table('chat').select('id,role,text,at,scope,cards,context').eq('email', email)
         .order('at', { ascending: false }).limit(CHAT_HISTORY_LIMIT)
-      if (error) throw new Error('data_chat_read_failed')
+      if (error) throw dataFailure('data_chat_read_failed', error)
       return (data as Row[]).reverse().map(row => ({
         id: String(row.id).replace(new RegExp(`^${accountHash(email)}:`), ''), role: row.role === 'user' ? 'user' : 'agent', text: String(row.text ?? ''), at: Date.parse(String(row.at)),
         ...(typeof row.scope === 'string' ? { scope: row.scope } : {}), ...(Array.isArray(row.cards) ? { cards: row.cards } : {}),
@@ -509,16 +538,16 @@ export function createDataStore(client: SupabaseClient): DataStore {
       const { error } = await table('chat').upsert(messages.map(message => ({ id: `${accountHash(email)}:${message.id}`, email, role: message.role, text: message.text,
         at: new Date(message.at).toISOString(), scope: message.scope ?? null, cards: message.cards ?? null, context: message.context ?? null })),
       { onConflict: 'id', ignoreDuplicates: true })
-      if (error) throw new Error('data_chat_write_failed')
+      if (error) throw dataFailure('data_chat_write_failed', error)
     },
     async putCall(email, call) {
       await store.ensureAccount(email)
       const { error } = await table('calls').upsert({ id: call.id, email, started_at: call.startedAt, seconds: call.seconds, transcript: call.transcript, summary: call.summary }, { onConflict: 'id' })
-      if (error) throw new Error('data_calls_write_failed')
+      if (error) throw dataFailure('data_calls_write_failed', error)
     },
     async getCall(email, id) {
       const { data, error } = await table('calls').select('id,started_at,seconds,transcript,summary').eq('email', email).eq('id', id).maybeSingle()
-      if (error) throw new Error('data_calls_read_failed')
+      if (error) throw dataFailure('data_calls_read_failed', error)
       if (!data) return null
       const row = data as Row
       return { id: String(row.id), startedAt: new Date(String(row.started_at)).toISOString(), seconds: Number(row.seconds ?? 0),

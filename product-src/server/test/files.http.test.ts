@@ -17,9 +17,8 @@ const bullhorn = (name = 'Test Worker', minutes = 0) => Buffer.from([
   `${name},123,Pacific Cold Storage,Warehouse,09/21/2026,8:00 AM,4:00 PM,${minutes},${8-minutes/60},20,30,Clock import,Approved,Supervisor,`,
 ].join('\r\n'))
 const upload = (body: Buffer, name = 'bullhorn.csv') => ({ method: 'POST', headers: { 'Content-Type': 'text/csv', 'X-File-Name': encodeURIComponent(name), 'X-Set': '1' }, body: new Uint8Array(body) })
-async function serve(t: TestContext, signedOut = false) {
+async function serve(t: TestContext, signedOut = false, store = createMemoryDataStore()) {
   const root = await mkdtemp(join(tmpdir(), 'closeout-files-http-'))
-  const store = createMemoryDataStore()
   const server = createServer({ dataStore: store, env: { ...baseEnv, CLOSEOUT_DEV_EMAIL: signedOut ? undefined : baseEnv.CLOSEOUT_DEV_EMAIL, CLOSEOUT_DATA_DIR: root }, claudeVersion: async () => 'test' })
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
   t.after(async () => { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); await rm(root, { recursive: true, force: true }) })
@@ -111,4 +110,52 @@ test('facts validate before mutation and simulated location uses this account ti
   const response = await fetch(url + '/data/connect', post({ set: 3 }))
   assert.equal(response.status, 200)
   assert.equal((await store.listEntries(baseEnv.CLOSEOUT_DEV_EMAIL)).filter(e => e.set === 3).length, 1)
+})
+
+const within = <T>(promise: Promise<T>, ms: number) => Promise.race([promise, new Promise<'pending'>(resolve => setTimeout(() => resolve('pending'), ms))])
+
+test('pure reads do not wait behind a data write; cycle reads still do', async t => {
+  const memory = createMemoryDataStore()
+  let open!: () => void
+  const gate = new Promise<void>(resolve => { open = resolve })
+  const { url } = await serve(t, false, { ...memory, upsertFact: async (...args) => { await gate; return memory.upsertFact(...args) } })
+  try {
+    const write = fetch(url + '/data/facts', post({ kind: 'account', key: 'burden', value: { value: 0.3 } }))
+    await new Promise(resolve => setTimeout(resolve, 50))
+    const cycles = fetch(url + '/data/cycles')
+    assert.equal(await within(fetch(url + '/files').then(r => r.status), 2000), 200)
+    assert.equal(await within(fetch(url + '/data/disputes').then(r => r.status), 2000), 200)
+    assert.equal(await within(cycles, 200), 'pending')
+    open()
+    assert.equal((await write).status, 200); assert.equal((await cycles).status, 200)
+  } finally { open() }
+})
+
+test('the workspace rebuild after a write does not hold the data lock', async t => {
+  const memory = createMemoryDataStore()
+  let open!: () => void, reached!: () => void
+  const gate = new Promise<void>(resolve => { open = resolve }), rebuilding = new Promise<void>(resolve => { reached = resolve })
+  const { url } = await serve(t, false, { ...memory, manifest: async email => { reached(); await gate; return memory.manifest(email) } })
+  try {
+    const write = fetch(url + '/data/facts', post({ kind: 'account', key: 'burden', value: { value: 0.3 } }))
+    await rebuilding
+    assert.equal(await within(fetch(url + '/data/cycles').then(r => r.status), 2000), 200)
+    assert.equal(await within(write, 50), 'pending')
+    open()
+    assert.equal((await write).status, 200)
+  } finally { open() }
+})
+
+test('a failed request logs its route, code and cause, never the query or row values', async t => {
+  const memory = createMemoryDataStore()
+  const logged = t.mock.method(console, 'error', () => {})
+  const { url } = await serve(t, false, { ...memory, listFiles: async () => { throw new Error('data_files_read_failed', { cause: '57014 canceling statement due to statement timeout' }) } })
+  assert.equal((await fetch(url + '/files?who=dev@hypertrack.io')).status, 500)
+  assert.deepEqual(logged.mock.calls.at(-1)?.arguments, ['Request failed:', 'GET /files', 'Error: data_files_read_failed (57014 canceling statement due to statement timeout)'])
+  t.mock.reset()
+  const { url: other } = await serve(t, false, { ...memory, listFiles: async () => JSON.parse('Ana Pena ana@example.com') })
+  const again = t.mock.method(console, 'error', () => {})
+  assert.equal((await fetch(other + '/files')).status, 500)
+  const line = again.mock.calls.at(-1)?.arguments.join(' ') ?? ''
+  assert.match(line, /^Request failed: GET \/files SyntaxError: /); assert.doesNotMatch(line, /Ana Pena|ana@example\.com/)
 })

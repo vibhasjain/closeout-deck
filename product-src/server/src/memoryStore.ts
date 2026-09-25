@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { dataFailure } from './datastore.ts'
 import { RULES } from '../../src/bench/engine.js'
 import type { Decision } from './journey.ts'
 import { isPlainObject } from './validation.ts'
@@ -239,35 +240,35 @@ export function createMemoryStore(client: SupabaseClient): MemoryStore {
       const rows: InstinctRow[] = []
       for (let offset = 0; ; offset += 1000) {
         const { data, error } = await instincts().select('*').eq('email', email).order('at').order('id').range(offset, offset + 999)
-        if (error) throw new Error('memory_instincts_read_failed')
+        if (error) throw dataFailure('memory_instincts_read_failed', error)
         rows.push(...(data as Row[]).map(fromRow))
         if (data.length < 1000) return rows
       }
     },
     async insertInstinct(email, row) {
       const { error } = await instincts().insert(toRow(email, row))
-      if (error) throw new Error('memory_instincts_write_failed')
+      if (error) throw dataFailure('memory_instincts_write_failed', error)
     },
     async updateInstinct(email, id, patch, from) {
       const { data, error } = await instincts().update(toRow(email, patch)).eq('email', email).eq('id', id).in('status', from).select('*').maybeSingle()
-      if (error) throw new Error('memory_instincts_write_failed')
+      if (error) throw dataFailure('memory_instincts_write_failed', error)
       return data ? fromRow(data as Row) : null
     },
     async replaceInstinct(email, oldId, row) {
       const { data, error } = await client.rpc('closeout_replace_instinct', { p_email: email, p_old_id: oldId, p_new: toRow(email, row) })
-      if (error) throw new Error('memory_instincts_write_failed')
+      if (error) throw dataFailure('memory_instincts_write_failed', error)
       return data === true
     },
     async saveRun(email, run) {
       const { error } = await runs().upsert({ id: run.id, email, trigger: run.trigger, ref: run.ref, started_at: run.startedAt,
         finished_at: run.finishedAt, ops: run.ops, dropped: run.dropped, error: run.error }, { onConflict: 'id' })
-      if (error) throw new Error('memory_runs_write_failed')
+      if (error) throw dataFailure('memory_runs_write_failed', error)
     },
     async listRuns(email, limit = 10, triggers) {
       let request = runs().select('*').eq('email', email)
       if (triggers) request = request.in('trigger', triggers)
       const { data, error } = await request.order('started_at', { ascending: false }).limit(limit)
-      if (error) throw new Error('memory_runs_read_failed')
+      if (error) throw dataFailure('memory_runs_read_failed', error)
       return (data as Row[]).map(row => ({ id: String(row.id), trigger: row.trigger as Trigger, ref: row.ref == null ? null : String(row.ref),
         startedAt: iso(row.started_at)!, finishedAt: iso(row.finished_at), ops: Array.isArray(row.ops) ? row.ops : [],
         dropped: Array.isArray(row.dropped) ? row.dropped as Dropped[] : [], error: row.error == null ? null : String(row.error) }))

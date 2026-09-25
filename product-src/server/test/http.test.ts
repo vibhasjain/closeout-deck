@@ -147,7 +147,7 @@ test('HTTP rate limit rejects the thirty-first turn and expires after ten minute
   await next.text()
 })
 
-test('unexpected failures log only error types and send fixed browser errors', async t => {
+test('unexpected failures log their route and send fixed browser errors', async t => {
   const logged = t.mock.method(console, 'error', () => {})
   const url = await serve(t, {
     workspace: async () => '/test/workspace',
@@ -162,8 +162,8 @@ test('unexpected failures log only error types and send fixed browser errors', a
   assert.equal(state.status, 500)
   assert.deepEqual(await state.json(), { error: 'internal_error' })
   assert.deepEqual(logged.mock.calls.map(call => call.arguments), [
-    ['Request failed:', 'Error'],
-    ['Request failed:', 'Error'],
+    ['Request failed:', 'POST /chat', 'Error'],
+    ['Request failed:', 'GET /state', 'Error'],
   ])
 })
 
