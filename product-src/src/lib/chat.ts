@@ -109,7 +109,8 @@ export interface ChatEvent { text?: string; trace?: string; done?: boolean; sess
 
 /** Persist only the server's bounded handbook/data read traces, never synthesized steps. */
 export function appendTrace(traces: string[], value: unknown): string[] {
-  return typeof value === 'string' && /^Read (?:handbooks|data)\/[^\r\n]+$/.test(value) && value.length <= 300 && traces.length < 3 && !traces.includes(value)
+  return typeof value === 'string' && /^Read (?:handbooks|data)\/[^\r\n]+$/.test(value) && value.length <= 240
+    && (!value.startsWith('Read data/') || traces.filter(trace => trace.startsWith('Read data/')).length < 3) && !traces.includes(value)
     ? [...traces, value] : traces
 }
 

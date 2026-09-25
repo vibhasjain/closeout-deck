@@ -53,7 +53,7 @@ const shiftTable = (html: string) => html.match(/<table\b[^>]*aria-label="Time e
 const textHtml = (value: string) => renderToStaticMarkup(h('span', null, value)).slice(6, -7)
 const payAmounts = (html: string) => [...html.matchAll(/<span class="pay-amounts-(current|resolved)"><span class="pay-amounts-value">([^<]*)<\/span><span class="pay-amounts-caption">([^<]*)<\/span><\/span>/g)]
   .map((match) => [match[1], match[2], match[3]])
-// Review is the summary's own rows, limited to Approve, Waiting on a Reply and Needs Judgment.
+// Review is the summary's own rows, limited to Approve, Waiting for evidence and Needs Judgment.
 const bucketCards = (html: string) => [...html.matchAll(/<div class="decision" data-rule="[^"]+">[\s\S]*?(?=<div class="decision" |<\/section>)/g)].map((match) => match[0])
 const bucketRules = (html: string) => [...new Set(bucketCards(html).map((card) => card.match(/data-rule="([^"]+)"/)![1]))].sort()
 const ruleIds = (items: { ruleId: string }[]) => [...new Set(items.map((item) => item.ruleId))].sort()
@@ -218,7 +218,7 @@ describe('Payroll review composition', () => {
     const html = render(`/payroll?cycle=${cycle.id}&filter=needs-review`)
     expect(bucketRules(html)).toEqual(pendingRules)
     const groups = resolutionGroups(cycle, {}).filter((group) => group.state !== 'fixed')
-    const titles = { proposed: 'Approve', waiting: 'Waiting on a Reply', judgment: 'Needs Judgment' } as const
+    const titles = { proposed: 'Approve', waiting: 'Waiting for evidence', judgment: 'Needs Judgment' } as const
     // Only categories with something in them are shown.
     expect([...html.matchAll(/<h3 id="summary-[^"]+">([^<·]+) ·/g)].map((match) => match[1].trim()))
       .toEqual((['proposed', 'waiting', 'judgment'] as const).filter((state) => groups.some((group) => group.state === state)).map((state) => titles[state]))
@@ -459,7 +459,7 @@ describe('payroll and settings separation', () => {
     // Review without a filter lands on Discrepancies: the grouped summary, not a table.
     const landing = render('/payroll?step=review')
     expect(selectedMetrics(landing)).toEqual(['Discrepancies'])
-    expect(landing).toMatch(/Approve ·[\s\S]*Waiting on a Reply ·[\s\S]*Needs Judgment ·[\s\S]*Fixed ·[\s\S]*By Client/)
+    expect(landing).toMatch(/Approve ·[\s\S]*Waiting for evidence ·[\s\S]*Needs Judgment ·[\s\S]*Fixed ·[\s\S]*By Client/)
     expect(shiftTable(landing)).toBeUndefined()
     // A bare visit opens on Collect, so no stats row yet.
     expect(render('/payroll')).not.toContain('aria-label="Cycle summary"')
@@ -528,7 +528,7 @@ describe('payroll and settings separation', () => {
     expect(html.replace(/<[^>]*>/g, '')).not.toMatch(/\bshifts?\b/i)
   })
 
-  it('shows only undecided flagged or held ledger rows with a Flagged tag', () => {
+  it('keeps held ledger rows visibly Held and labels undecided flags Flagged', () => {
     vi.useFakeTimers().setSystemTime(today)
     const cycle = buildCycles(DEFAULTS, today)[0]
     const open = cycle.run.shifts.filter((row) => row.flagged || row.held)
@@ -546,7 +546,7 @@ describe('payroll and settings separation', () => {
       const cells = [...row.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/g)]
       expect(cells).toHaveLength(7)
       const unresolved = !resolutions[cycle.id][rs.shift.id] && (rs.flagged || rs.held)
-      expect(cells.at(-1)![1]).toBe(unresolved ? '<span class="tag amber">Flagged</span>' : '')
+      expect(cells.at(-1)![1]).toBe(rs.held ? '<span class="tag amber">Held</span>' : unresolved ? '<span class="tag amber">Flagged</span>' : '')
     }
   })
 

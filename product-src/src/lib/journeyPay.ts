@@ -2,7 +2,21 @@ import { rerunEngine, type RunShift, type Shift } from '../bench/engine.js'
 
 export interface PayDecision { id?: string; groupId: string; decision: string; shiftIds?: string[]; at?: string }
 export interface PayrollLine { worker: string; regular_hours: number; ot_hours: number; premium_hours: number; gross: number; held_entries: number }
+export interface JourneyPayAdjustment { id: string; cycleId: string; worker: string; hours: number; amount: number }
+interface AdjustmentDispute { id: string; cycleId: string; worker: string; status: string; adjustment?: { hours: number; amount: number; next_cycle_id: string } | null }
 const cents = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100
+/** Expose only the adjustments assigned to this Payroll cycle, not unrelated disputes. */
+export function journeyAdjustments(cycleId: string, disputes: readonly AdjustmentDispute[]): JourneyPayAdjustment[] {
+  return disputes.flatMap(dispute => dispute.status === 'adjusted' && dispute.adjustment?.next_cycle_id === cycleId
+    ? [{ id: dispute.id, cycleId: dispute.cycleId, worker: dispute.worker, hours: dispute.adjustment.hours, amount: dispute.adjustment.amount }] : [])
+}
+export const journeyAdjustmentLine = (adjustment: JourneyPayAdjustment): PayrollLine => ({
+  worker: `${adjustment.worker} · Adjustment for ${adjustment.cycleId}`, regular_hours: cents(adjustment.hours), ot_hours: 0,
+  premium_hours: 0, gross: cents(adjustment.amount), held_entries: 0,
+})
+/** The export never pays a held entry, including an entry with partial engine pay. */
+export const journeyShiftPay = (result: Pick<RunShift, 'held' | 'pay'>) => result.held ? 0 : result.pay
+export const journeyShiftMinutes = (result: Pick<RunShift, 'held' | 'payableMin'>) => result.held ? 0 : result.payableMin
 
 /** Canonical identities and latest-write ordering also repair older numeric-alias decisions. */
 export function effectiveJourneyRun(week: Shift[], results: Omit<RunShift, 'shift'>[], decisions: PayDecision[], aliases = new Map<string, string>()): RunShift[] {
@@ -18,11 +32,11 @@ export function effectiveJourneyRun(week: Shift[], results: Omit<RunShift, 'shif
   if (!results.some((result, i) => result.rows.some(row => row.effect && dismissed(week[i].id, row.ruleId)))) {
     return results.map((result, i) => ({ ...result, shift: week[i] }))
   }
-  return rerunEngine(week, results, dismissed)
+  return rerunEngine(week, results, dismissed).map((result, i) => ({ ...result, held: results[i].held || result.held }))
 }
 
 /** Identical rounding and effective-engine amounts for the browser preview and server export. */
-export function journeyPayroll(week: Shift[], results: Omit<RunShift, 'shift'>[], decisions: PayDecision[], aliases = new Map<string, string>()) {
+export function journeyPayroll(week: Shift[], results: Omit<RunShift, 'shift'>[], decisions: PayDecision[], aliases = new Map<string, string>(), adjustments: readonly JourneyPayAdjustment[] = []) {
   const byWorker = new Map<string, { regular: number; ot: number; premium: number; gross: number; held: number }>()
   for (const result of effectiveJourneyRun(week, results, decisions, aliases)) {
     const worker = result.shift.worker
@@ -35,12 +49,14 @@ export function journeyPayroll(week: Shift[], results: Omit<RunShift, 'shift'>[]
       premium += row.effect.premiumHours ?? 0
     }
     // Weekly overtime is assessed on the final entry but may cover hours on earlier days.
-    line.regular += result.payableMin / 60
-    line.ot += ot / 60; line.premium += premium; line.gross += result.pay
+    line.regular += journeyShiftMinutes(result) / 60
+    line.ot += ot / 60; line.premium += premium; line.gross += journeyShiftPay(result)
   }
   const lines: PayrollLine[] = [...byWorker].sort(([a], [b]) => a.localeCompare(b)).map(([worker, line]) => ({
     worker, regular_hours: cents(Math.max(0, line.regular - line.ot)), ot_hours: cents(Math.min(line.ot, line.regular)), premium_hours: cents(line.premium),
     gross: cents(line.gross), held_entries: line.held,
   }))
-  return { lines, workers: byWorker.size, gross: cents(lines.reduce((n, line) => n + line.gross, 0)), held: lines.reduce((n, line) => n + line.held_entries, 0) }
+  lines.push(...adjustments.map(journeyAdjustmentLine))
+  const workers = new Set([...byWorker.keys(), ...adjustments.map(adjustment => adjustment.worker)]).size
+  return { lines, workers, gross: cents(lines.reduce((n, line) => n + line.gross, 0)), held: lines.reduce((n, line) => n + line.held_entries, 0) }
 }

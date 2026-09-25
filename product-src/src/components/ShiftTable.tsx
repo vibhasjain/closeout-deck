@@ -18,13 +18,18 @@ export function ShiftTable({ cycle, children, shifts = cycle.run.shifts, flag = 
   const filter = params.get('filter') ?? defaultFilter
   const matches = (shift: RunShift) => {
     if (filterMode !== 'discrepancies' || !['total', 'agent-resolved', 'needs-review'].includes(filter)) return true
+    if (cycle.server && shift.held) return filter !== 'agent-resolved'
     return shift.rows.some((row) => {
       // Server cross-source corrections also count when the engine has no pay effect.
-      if (row.status === 'applied') return appliedCorrection(cycle, row) && (filter === 'total' || filter === 'agent-resolved')
+      if (row.status === 'applied') {
+        if (!appliedCorrection(cycle, row)) return false
+        const resolved = rowResolution(cycle, shift.shift.id, row.ruleId, state.resolutions)
+        return resolved !== 'dismissed' && (filter === 'total' || (resolved === 'escalated' ? filter === 'needs-review' : filter === 'agent-resolved'))
+      }
       if (row.status !== 'flag' && row.status !== 'held') return false
       const resolved = rowResolution(cycle, shift.shift.id, row.ruleId, state.resolutions)
       if (resolved === 'dismissed') return false
-      return filter === 'total' || (filter === 'agent-resolved' ? resolved === 'applied' : !resolved)
+      return filter === 'total' || (filter === 'agent-resolved' ? resolved === 'applied' : !resolved || resolved === 'escalated')
     })
   }
   const visible = shifts.filter(matches)
@@ -32,8 +37,8 @@ export function ShiftTable({ cycle, children, shifts = cycle.run.shifts, flag = 
 
   return <>
     {children}
-    {visible.length > 0 && <div className="sheet-wrap reconcile-sheet scroll flex-1 min-h-0">
-      <Sheet cycle={cycle} shifts={visible} groupBy={flag ? 'none' : 'worker'} onSelect={onSelect} days={cycle.days} />
+    {(visible.length > 0 || (filter === 'all' && cycle.adjustments?.length)) && <div className="sheet-wrap reconcile-sheet scroll flex-1 min-h-0">
+      <Sheet cycle={cycle} shifts={visible} groupBy={flag ? 'none' : 'worker'} onSelect={onSelect} days={cycle.days} includeAdjustments={filter === 'all'} />
     </div>}
   </>
 }

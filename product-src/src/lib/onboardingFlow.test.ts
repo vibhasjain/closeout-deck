@@ -92,6 +92,14 @@ describe('the agent owns the conversation', () => {
     expect(source).not.toMatch(/Let.s run last week together|Use your timesheets|Use sample timesheets/)
     expect(source.slice(source.indexOf('export async function finishOnboarding'))).not.toMatch(/kind: ['"]question/)
   })
+  it('accepts a task-card handoff for an empty new account so its inline missing-set choices can collect intake', async () => {
+    const task = { kind: 'task', cycleId: '2026-09-20' }
+    vi.mocked(stream).mockImplementation(async function* () { yield { done: true, final: 'Choose how to bring in your time entries.\n```card ' + JSON.stringify(task) + '```' } })
+    await finishOnboarding([])
+    expect(getOnboarding()).toMatchObject({ forwarded: true, setupStep: 'ready', kickoffPending: false })
+    expect(getOnboarding().chat.find(message => message.id === 'onboard-first-closeout')?.cards).toEqual([task])
+    expect(vi.mocked(stream).mock.calls[0][1]).toMatchObject({ missingSets: [1, 2, 3] })
+  })
   it('undoes superseded source and rule effects while retaining independent changes', () => {
     updateOnboarding({ setupHistory: [{ question: 'Where do hours come from?', card: { kind: 'question', input: 'text', topics: ['workerHours'] }, answer: 'Email' }] })
     applyOnboardReply({ question: 'Who approves?', card: { kind: 'question', input: 'text', topics: ['clientHours'] }, actions: [

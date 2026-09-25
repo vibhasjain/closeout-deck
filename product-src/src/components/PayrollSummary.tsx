@@ -11,7 +11,9 @@ import { bucketHue, kindLabel, rememberKind, type DeskCycle } from '@/lib/desk'
 import { shiftHref } from '@/lib/navigation'
 import { titleCase } from '@/lib/utils'
 import { groupEmail } from '@/lib/issueEmail'
-import { decide, groupId } from '@/lib/journey'
+import { decide, groupId, useJourneyThreads } from '@/lib/journey'
+import { getDataSnapshot } from '@/lib/data'
+import { journeyShiftMinutes, journeyShiftPay } from '@/lib/journeyPay'
 import { getOnboarding, useOnboarding } from '@/lib/onboarding'
 import { actionFor, proposalFor, resolutionGroups, STATES, type ResolutionGroup, type ResolutionState } from '@/lib/resolution'
 import './sheet.css'
@@ -25,8 +27,9 @@ const hours = (minutes: number) => { const whole = Math.round(minutes), m = whol
 
 const HEADINGS: Record<ResolutionState, { title: string; empty: string }> = {
   proposed: { title: 'Approve', empty: 'Nothing waiting on approval' },
-  waiting: { title: 'Waiting on a Reply', empty: 'Nobody has been asked anything this cycle' },
+  waiting: { title: 'Waiting for evidence', empty: 'No entries are waiting for evidence' },
   judgment: { title: 'Needs Judgment', empty: 'Nothing needs a business decision' },
+  escalated: { title: 'Escalated', empty: 'Nothing has been escalated' },
   fixed: { title: 'Fixed', empty: 'Nothing has been fixed yet' },
 }
 
@@ -48,7 +51,8 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const undone = state.undone[cycle.id] ?? []
-  const groups = resolutionGroups(cycle, state.resolutions, undone)
+  const { threads } = useJourneyThreads(cycle.server ? cycle.id : '')
+  const groups = resolutionGroups(cycle, state.resolutions, undone, threads, state.neverContact ?? [])
   const closed = cycle.statusTag === 'Paid' || new Date() > cycle.deadline
   const key = (group: ResolutionGroup) => `${group.state}:${group.ruleId}:${!!group.approved}`
 
@@ -67,12 +71,21 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
     if (RULES.some((rule) => rule.id === group.ruleId)) setLearning({ cycleId: cycle.id, ruleId: group.ruleId, count: ids.length })
   }
 
-  async function resolve(items: ResolutionGroup[], decision: 'approved' | 'escalated', count: number) {
+  async function resolve(items: ResolutionGroup[], decision: 'approved' | 'escalated') {
     if (saving) return
     setSaving(true)
     setError(null)
     try {
+      let count = 0
       for (const group of items) {
+        if (cycle.server) {
+          // A chat action or another direct click may have decided a later group while we awaited this one.
+          const latest = getDataSnapshot().payloads.find(item => item.cycle.id === cycle.id)
+          const aliases = [...(latest?.groups ?? cycle.groups ?? []), ...(latest?.extraGroups ?? cycle.extraGroups ?? [])]
+          const match = aliases.find(item => item.ruleId === group.ruleId)
+          const decisions = latest?.decisions ?? cycle.decisions ?? []
+          if (decisions.some(item => item.groupId === group.ruleId || item.groupId === String(match?.id))) continue
+        }
         if (decision === 'approved') {
           if (cycle.server) await approve(group)
           else void approve(group)
@@ -81,9 +94,10 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
           const match = [...(cycle.groups ?? []), ...(cycle.extraGroups ?? [])].find((item) => item.ruleId === group.ruleId)
           await decide(cycle.id, { groupId: match ? groupId(match) : group.ruleId, decision, shiftIds: group.cases.map((item) => item.shiftId) })
         }
+        count += group.cases.length
       }
       if (items.length > 1) setLearning(null)
-      toast(`${decision === 'approved' ? 'Approved' : 'Escalated'} ${count.toLocaleString()}`)
+      toast(count ? `${decision === 'approved' ? 'Approved' : 'Escalated'} ${count.toLocaleString()}` : 'Already decided; no changes applied')
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'The decision could not be saved.')
     } finally { setSaving(false) }
@@ -98,20 +112,21 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
   /** A category's one action, shown in its header: it acts on every group in the category. */
   function action(resolution: ResolutionState, items: ResolutionGroup[], count: number) {
     if (!items.length) return null
-    if (resolution === 'proposed') return <Btn className="primary" disabled={saving} onClick={() => void resolve(items, 'approved', count)}>Approve {count.toLocaleString()}</Btn>
+    if (resolution === 'proposed') return <Btn className="primary" disabled={saving} onClick={() => void resolve(items, 'approved')}>Approve {count.toLocaleString()}</Btn>
     if (resolution === 'fixed') {
       const undoable = items.filter((group) => !group.approved)
       return cycle.server || closed || !undoable.length ? null : <Btn onClick={() => undoable.forEach(undo)}>Undo All</Btn>
     }
-    if (resolution === 'judgment') return <Btn disabled={saving} onClick={() => void resolve(items, 'escalated', count)}>Escalate</Btn>
+    if (resolution === 'judgment') return <Btn disabled={saving} onClick={() => void resolve(items, 'escalated')}>Escalate</Btn>
     return null
   }
 
   function line(group: ResolutionGroup) {
     const note = group.cases[0].note
     const detail = group.cases.length === 1 ? note : `${note.replace(/\.$/, '')}, and ${(group.cases.length - 1).toLocaleString()} more like it${note.endsWith('.') ? '.' : ''}`
-    if (group.state === 'waiting') return `Asked ${group.asked} to confirm the hours worked · reply due ${shortDate(cycle.cutoff)}`
+    if (group.state === 'waiting') return group.asked ? `Asked ${group.asked} to confirm the hours worked · reply due ${shortDate(cycle.cutoff)}` : 'Not asked yet'
     if (group.state === 'judgment') return `${note.replace(/\.$/, '')}. Not a Payroll call.`
+    if (group.state === 'escalated') return `Escalated · ${group.owner}`
     if (group.state === 'fixed') return `${actionFor(group.ruleId)} · ${group.approved ? 'approved by you' : 'by the agent'}`
     if (group.state === 'proposed') return `${proposalFor(group.ruleId)} · ${detail.replace(/\.$/, '')}`
     return detail
@@ -122,15 +137,15 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
     const current = clients.get(rs.shift.fac.name) ?? { workers: new Set(), entries: 0, minutes: 0, current: 0, resolved: 0 }
     current.workers.add(rs.shift.worker)
     current.entries += 1
-    current.minutes += rs.payableMin
+    current.minutes += journeyShiftMinutes(rs)
     current.current += rs.naive
-    current.resolved += rs.pay
+    current.resolved += journeyShiftPay(rs)
     clients.set(rs.shift.fac.name, current)
   }
 
   const learned = learning?.cycleId === cycle.id ? learning : null
 
-  return <div id="payroll-review-list" className="payroll-summary scroll" tabIndex={-1} aria-label="Review issues">
+  return <div id="payroll-review-list" className="payroll-summary scroll" role="region" tabIndex={-1} aria-label="Review issues">
     {error && <p role="alert">{error}</p>}
     {/* Email all: the catch-all send of an issue's time entries, in a panel that slides out on the right. Single cases open the shift view's conversation. */}
     <Sheet open={!!emailing} onOpenChange={(next) => { if (!next) setEmailing(null) }}>

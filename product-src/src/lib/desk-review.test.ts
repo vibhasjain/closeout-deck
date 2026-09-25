@@ -83,7 +83,7 @@ describe('reconcile cycle decisions', () => {
     const stats = cycleStats(cycle)
     expect(stats).toEqual({
       payments: new Set(cycle.run.shifts.map((shift) => shift.shift.worker)).size,
-      gross: cycle.run.shifts.reduce((total, shift) => total + shift.pay, 0),
+      gross: cycle.run.shifts.filter(shift => !shift.held).reduce((total, shift) => total + shift.pay, 0),
       total: needs.length + resolved.length,
       agentResolved: resolved.length,
       needsReview: needs.length,

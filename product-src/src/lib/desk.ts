@@ -10,6 +10,7 @@ import type { Onboarding } from '@/lib/onboarding'
 import { serverCycles, useData, getDataSnapshot, type CyclePayload, type DataProvenance, type DataSite } from '@/lib/data'
 import { viewerSession } from '@/lib/viewerSession'
 import type { JourneyDecision, JourneyBatch, NextStep } from '@/lib/journey'
+import { payTotals } from '@/lib/payroll'
 
 export type DeskShift = Shift & { prov?: DataProvenance; entryIds?: string[]; sample?: boolean }
 export interface DeskCycle extends Cycle {
@@ -21,6 +22,7 @@ export interface DeskCycle extends Cycle {
   gaps?: CyclePayload['gaps']
   intake?: CyclePayload['intake']
   decisions?: JourneyDecision[]
+  adjustments?: CyclePayload['adjustments']
   batch?: JourneyBatch | null
   nextStep?: NextStep
   week: DeskShift[]
@@ -40,7 +42,7 @@ export interface Discrepancy {
   status: 'flag' | 'held' | 'applied'
   note: string
   effect: number
-  decided?: 'applied' | 'dismissed'
+  decided?: 'applied' | 'dismissed' | 'escalated'
 }
 
 export interface Kind {
@@ -115,12 +117,14 @@ export function buildCycles(cal: Onboarding, today?: Date): DeskCycle[] {
   return cycles
 }
 
-/** Explicit decisions win; remembered decisions apply only to their own rule. */
+/** Holds stay pending; otherwise explicit decisions win over remembered rules. */
 export function rowResolution(c: DeskCycle, shiftId: string, ruleId: string, res: Onboarding['resolutions']) {
   if (c.server) {
+    if (c.run.shifts.find(item => item.shift.id === shiftId)?.held) return undefined
     const group = [...(c.groups ?? []), ...(c.extraGroups ?? [])].find(item => item.ruleId === ruleId)
-    const decision = c.decisions?.find(item => item.groupId === ruleId || item.groupId === String(group?.id ?? ruleId))
-    return decision?.decision === 'approved' ? 'applied' as const : decision ? 'dismissed' as const : undefined
+    const decision = c.decisions?.filter(item => item.cycleId === c.id && (item.groupId === ruleId || item.groupId === String(group?.id ?? ruleId)))
+      .sort((a, b) => b.at.localeCompare(a.at) || b.id.localeCompare(a.id))[0]
+    return decision?.decision === 'approved' ? 'applied' as const : decision?.decision
   }
   return res[c.id]?.[shiftId] ?? (c.rememberedRuleIds?.includes(ruleId) ? 'applied' as const : undefined)
 }
@@ -130,8 +134,8 @@ export function effectiveResolutions(c: DeskCycle, res: Onboarding['resolutions'
   const decisions = c.server ? {} as Record<string, 'applied' | 'dismissed'> : { ...res[c.id] }
   for (const shift of c.run.shifts) {
     const pending = shift.rows.filter((row) => row.status === 'flag' || row.status === 'held')
-    if (!decisions[shift.shift.id] && pending.length
-      && pending.every((row) => rowResolution(c, shift.shift.id, row.ruleId, res))) {
+    if (!(c.server && shift.held) && !decisions[shift.shift.id] && pending.length
+      && pending.every((row) => ['applied', 'dismissed'].includes(rowResolution(c, shift.shift.id, row.ruleId, res) ?? ''))) {
       decisions[shift.shift.id] = pending.some(row => rowResolution(c, shift.shift.id, row.ruleId, res) === 'applied') ? 'applied' : 'dismissed'
     }
   }
@@ -152,28 +156,32 @@ export function cycleStats(c: DeskCycle, res: Onboarding['resolutions'] = {}, un
   let agentResolved = 0
   let needsReview = 0
   for (const shift of c.run.shifts) {
-    let open = false
+    let open = !!(c.server && shift.held)
     let corrected = false
     for (const row of shift.rows) {
       if (row.status === 'applied') {
         if (!appliedCorrection(c, row)) continue
-        if (!c.server && undone.includes(row.ruleId) && !res[c.id]?.[shift.shift.id]) open = true
+        const decision = rowResolution(c, shift.shift.id, row.ruleId, res)
+        if (decision === 'escalated') open = true
+        else if (decision === 'dismissed') continue
+        else if (!c.server && undone.includes(row.ruleId) && !res[c.id]?.[shift.shift.id]) open = true
         else corrected = true
       }
       else if (row.status === 'flag' || row.status === 'held') {
         const decision = rowResolution(c, shift.shift.id, row.ruleId, res)
         // "Not an issue" leaves the shift as it was: nothing corrected, nothing open.
         if (decision === 'applied') corrected = true
-        else if (!decision) open = true
+        else if (!decision || decision === 'escalated') open = true
       }
     }
     if (open) needsReview++
     else if (corrected) agentResolved++
   }
+  const payout = payTotals(c)
   return {
     // A payment is one worker's paycheck for the cycle, however many time entries it covers.
-    payments: new Set(c.run.shifts.map((shift) => shift.shift.worker)).size,
-    gross: c.run.shifts.reduce((total, shift) => total + shift.pay, 0),
+    payments: payout.workerCount,
+    gross: payout.gross,
     total: agentResolved + needsReview,
     agentResolved,
     needsReview,
@@ -311,7 +319,7 @@ function insightFor(c: DeskCycle, ruleId: string, shifts: RunShift[], cycles: De
 export function kinds(c: DeskCycle, res: Onboarding['resolutions'], cycles: DeskCycle[] = []): Kind[] {
   const groups = new Map<string, Discrepancy[]>()
   for (const item of discrepancies(c, res)) {
-    if (item.decided || (item.status !== 'flag' && item.status !== 'held')) continue
+    if (item.decided && item.decided !== 'escalated' || (item.status !== 'flag' && item.status !== 'held')) continue
     const cases = groups.get(item.ruleId) ?? []
     // A flag and its proposed correction are one case, with the flag explaining the stop.
     if (!cases.some((existing) => existing.shiftId === item.shiftId)) cases.push(item)

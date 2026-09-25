@@ -51,6 +51,8 @@ export interface ChatMessage {
   at: number
   /** What the agent changed, rendered under the message as a quiet Applied line. */
   actions?: unknown[]
+  /** Saved locally before execution; never rendered as applied or replayed after reload. */
+  pendingActions?: unknown[]
   cards?: Card[]
   scope?: string
   contextChip?: string

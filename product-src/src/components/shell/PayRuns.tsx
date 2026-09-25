@@ -48,7 +48,7 @@ export function PayRuns({ onNavigate }: { onNavigate?: () => void } = {}) {
     <ClusterList kind="cycles" selected={cycle.id} onSelect={selectCycle}
       items={cycles.map((item) => {
         const payouts = payTotals(item)
-        const count = payouts.workers.length.toLocaleString()
+        const count = payouts.workerCount.toLocaleString()
         const total = money(payouts.gross)
         return {
           id: item.id, label: item.label, count: item.week.length, status: item.sample ? `${item.statusTag} · Sample` : item.week.some(shift => shift.sample) ? `${item.statusTag} · Includes Sample` : item.statusTag,

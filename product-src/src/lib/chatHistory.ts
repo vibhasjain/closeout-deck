@@ -36,19 +36,24 @@ function union(...lists: ChatMessage[][]): ChatMessage[] {
 }
 
 /** The transcript is append-only rows on the server (GET/POST /chat/history), not part of the state document.
- * New lines queue durably and are sent in order; a reload or another device reads them back. */
+ * Pending actions are durably queued locally first; send the immutable row once their outcomes are known. */
 export function createChatHistory(options: Options) {
   let queue: ChatMessage[] | null = null
   let loaded = false
   let sending: Promise<void> | null = null
-  const pending = () => queue ??= options.loadPending().filter(isChatMessage)
+  const active = new Set<string>()
+  const restored = (message: ChatMessage): ChatMessage => message.pendingActions?.length && !active.has(message.id)
+    ? { ...message, pendingActions: [], skipped: ['Action outcome unconfirmed after reload; review the cycle before trying again', ...(message.skipped ?? [])].slice(0, 10) }
+    : message
+  const pending = () => queue ??= options.loadPending().filter(isChatMessage).map(restored)
   const save = (next: ChatMessage[]) => { queue = next; options.savePending(next) }
 
   async function flush(): Promise<void> {
     if (sending) return sending
     sending = (async () => {
-      while (pending().length) {
-        const batch = batchOf(pending())
+      for (;;) {
+        const batch = batchOf(pending().filter(message => !message.pendingActions?.length))
+        if (!batch.length) break
         const response = await options.request('POST', { messages: batch })
         if (response.status === 400 && batch.length > 1) {
           // Isolate a legacy malformed row so its valid neighbors are still saved.
@@ -70,10 +75,15 @@ export function createChatHistory(options: Options) {
 
   /** Called with the store's transcript before and after every write. */
   function appended(previous: ChatMessage[], next: ChatMessage[]) {
-    const known = new Set(previous.map((message) => message.id))
-    const added = next.filter((message) => !known.has(message.id))
+    const known = new Map(previous.map((message) => [message.id, message]))
+    const added = next.filter((message) => !known.has(message.id) || !!known.get(message.id)?.pendingActions?.length)
     if (!added.length) return
-    save(union(pending(), added))
+    for (const message of added) {
+      if (message.pendingActions?.length) active.add(message.id)
+      else active.delete(message.id)
+    }
+    const changed = new Set(added.map(message => message.id))
+    save(union(pending().filter(message => !changed.has(message.id)), added))
     if (loaded) void flush().catch(() => { /* kept durably; the next line or load retries */ })
   }
 
@@ -84,7 +94,7 @@ export function createChatHistory(options: Options) {
     const body: unknown = await response.json()
     const server = Array.isArray((body as { messages?: unknown })?.messages) ? (body as { messages: unknown[] }).messages.filter(isChatMessage) : []
     const onServer = new Set(server.map((message) => message.id))
-    const known = union(options.read(), legacy.filter(isChatMessage))
+    const known = union(options.read(), legacy.filter(isChatMessage)).map(restored)
     save(union(pending(), known.filter((message) => !onServer.has(message.id))))
     options.apply(union(server, known, pending()))
     loaded = true

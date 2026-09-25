@@ -1,5 +1,5 @@
 import { fmtHM } from '../../src/bench/engine.js'
-import { effectiveJourneyRun, journeyPayroll, type PayrollLine } from '../../src/lib/journeyPay.ts'
+import { effectiveJourneyRun, journeyAdjustments, journeyPayroll, type PayrollLine } from '../../src/lib/journeyPay.ts'
 import type { CyclePayload } from './pipeline.ts'
 import { isPlainObject, ValidationError } from './validation.ts'
 
@@ -33,9 +33,11 @@ export function summarize(p: CyclePayload): CycleSummary {
   p.results.forEach((result, i) => {
     const seen = new Set<string>()
     for (const row of result.rows) {
-      if (seen.has(row.ruleId) || (row.status !== 'flag' && row.status !== 'held')) continue
+      if (seen.has(row.ruleId) || (row.status !== 'flag' && row.status !== 'held'
+        && !(result.held && row.status === 'applied' && (row.effect || [...p.groups, ...(p.extraGroups ?? [])].some(group => group.ruleId === row.ruleId))))) continue
       seen.add(row.ruleId)
-      const state = JUDGMENT.has(row.ruleId) ? 'judgment' : WAITING.has(row.ruleId) || row.status === 'held' ? 'waiting' : 'proposed'
+      const held = result.held || result.rows.some(item => item.ruleId === row.ruleId && item.status === 'held')
+      const state = held ? 'waiting' : JUDGMENT.has(row.ruleId) ? 'judgment' : WAITING.has(row.ruleId) ? 'waiting' : 'proposed'
       const key = `${state}:${row.ruleId}`
       const group = groups.get(key) ?? { id: row.ruleId, num: p.groups.find(g => g.ruleId === row.ruleId)?.id ?? null, state, shiftIds: [] }
       group.shiftIds.push(p.week[i].id)
@@ -87,7 +89,6 @@ export function nextStep(cycle: JourneyCycle, decisions: Decision[], batch: Batc
 
 export type ExportLine = PayrollLine
 export const CSV_COLUMNS = ['worker', 'regular_hours', 'ot_hours', 'premium_hours', 'gross', 'held_entries'] as const
-const cents = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100
 
 /**
  * One line per worker from the engine run. Held time entries are excluded from pay and counted.
@@ -96,12 +97,8 @@ const cents = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100
  */
 export function buildExport(p: CyclePayload, decisions: Decision[], disputes: Dispute[]) {
   const aliases = new Map([...p.groups, ...(p.extraGroups ?? [])].filter(g => g.id != null).map(g => [String(g.id), g.ruleId]))
-  const { lines } = journeyPayroll(p.week.map(s => ({ ...s, fac: p.sites[s.fac] })), p.results, decisions.filter(d => d.cycleId === p.cycle.id), aliases)
-  for (const d of disputes) if (d.status === 'adjusted' && d.adjustment?.next_cycle_id === p.cycle.id) {
-    lines.push({ worker: `${d.worker} · Adjustment for ${d.cycleId}`, regular_hours: cents(d.adjustment.hours), ot_hours: 0, premium_hours: 0, gross: cents(d.adjustment.amount), held_entries: 0 })
-  }
-  const workers = new Set(lines.map(l => l.worker.split(' · Adjustment for ')[0])).size
-  return { lines, workers, gross: cents(lines.reduce((n, l) => n + l.gross, 0)), held: lines.reduce((n, l) => n + l.held_entries, 0) }
+  return journeyPayroll(p.week.map(s => ({ ...s, fac: p.sites[s.fac] })), p.results,
+    decisions.filter(d => d.cycleId === p.cycle.id), aliases, journeyAdjustments(p.cycle.id, disputes))
 }
 
 /** RFC 4180, and text cells that a spreadsheet would read as a formula are neutralized. */

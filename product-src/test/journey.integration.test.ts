@@ -7,8 +7,12 @@ import { createServer } from '../server/src/index.ts'
 import { createMemoryDataStore } from '../server/src/datastore.ts'
 import { createMemoryJourneyStore } from '../server/src/journeyStore.ts'
 import { conditionalState, type StateRow, type StateStore } from '../server/src/state.ts'
+import { payTotals } from '../src/lib/payroll'
+import { cycleStats } from '../src/lib/desk'
+import { journeyAdjustmentLine, journeyShiftPay } from '../src/lib/journeyPay'
+import { applyAction } from '../src/lib/chatActions'
 import { authedFetch } from '../src/lib/api'
-import { connectSource, getCycle, getDataSnapshot, seedSample, uploadFile, type CyclePayload } from '../src/lib/data'
+import { connectSource, getCycle, getDataSnapshot, hydrate, seedSample, uploadFile, type CyclePayload } from '../src/lib/data'
 import { askGaps, createDispute, decide, getDisputes, getThreads, recordMessage, resolveDispute, sendPayroll, simulateDispute } from '../src/lib/journey'
 import { flushOnboarding, getOnboarding, updateOnboarding } from '../src/lib/onboarding'
 import { batchPreview, gapRows } from '../src/components/journey/FormCard'
@@ -36,6 +40,20 @@ function originalGross(cycle: CyclePayload, dismissMeals = false) {
     workers.set(worker, (workers.get(worker) ?? 0) + (row.held ? 0 : row.pay - meals))
   })
   return cents([...workers.values()].reduce((total, amount) => total + cents(amount), 0))
+}
+
+/** The ledger rows, sidebar totals and agent context use the same outgoing amounts. */
+function expectUiGross(cycle: CyclePayload, gross: number) {
+  const desk = hydrate(cycle, getOnboarding())
+  expect(payTotals(desk).gross).toBe(gross)
+  expect(cycleStats(desk).gross).toBe(gross)
+  if (!cycle.batch) {
+    const ledger = new Map<string, number>()
+    for (const result of desk.run.shifts) ledger.set(result.shift.worker, (ledger.get(result.shift.worker) ?? 0) + journeyShiftPay(result))
+    const adjustments = (cycle.adjustments ?? []).reduce((total, adjustment) => total + journeyAdjustmentLine(adjustment).gross, 0)
+    expect(cents([...ledger.values()].reduce((total, amount) => total + cents(amount), adjustments))).toBe(gross)
+    expect(batchPreview(cycle).gross).toBe(gross)
+  }
 }
 
 it('real client journey + server: sample, decisions, unresolved asks, send once, paid dispute and next-export money', async () => {
@@ -72,12 +90,27 @@ it('real client journey + server: sample, decisions, unresolved asks, send once,
     const dismissedGross = originalGross(initial, true)
     expect(initialGross).toBeGreaterThan(dismissedGross)
     expect(batchPreview(initial).gross).toBe(initialGross)
+    expectUiGross(initial, initialGross)
+
+    // A legacy shift-level action must never decide this worker's entire rule group.
+    const mealShifts = initial.week.filter((_shift, index) => initial.results[index].rows.some(row => row.ruleId === 'CA-MB-01' && row.status === 'flag'))
+    expect(mealShifts.length).toBeGreaterThan(1)
+    expect(getOnboarding().dataSource).toBe('server')
+    for (const shiftId of [mealShifts[0].id, 'nonexistent-shift']) {
+      expect(() => applyAction({ type: 'decide', cycleId: id, shiftId, decision: 'dismissed', reason: 'Took her meal' }, vi.fn(), vi.fn(), new URLSearchParams()))
+        .toThrow('use approve/dismiss for a group')
+    }
+    const afterLegacy = await getCycle(id)
+    expect(afterLegacy.decisions).toEqual(initial.decisions)
+    expect(afterLegacy.results).toEqual(initial.results)
+    expect(batchPreview(afterLegacy).gross).toBe(initialGross)
 
     // The UI's numeric alias and rule ID must update the same canonical decision.
     const meal = initial.groups.find(group => group.ruleId === 'CA-MB-01')!
     const dismissed = await decide(id, { groupId: String(meal.id), decision: 'dismissed', reason: 'Signed meal waivers verified' })
     expect(dismissed.decision.groupId).toBe('CA-MB-01')
     expect(batchPreview(dismissed.cycle).gross).toBe(dismissedGross)
+    expectUiGross(dismissed.cycle, dismissedGross)
     const approved = await decide(id, { groupId: 'CA-MB-01', decision: 'approved' })
     expect(approved.decision.id).toBe(dismissed.decision.id)
     expect(approved.cycle.decisions).toHaveLength(1)
@@ -117,10 +150,13 @@ it('real client journey + server: sample, decisions, unresolved asks, send once,
     expect(early.status).toBe(422)
     if (early.status !== 422) throw new Error('Review must block the first send')
     expect(early.open?.gaps).toEqual([])
-    for (const groupId of early.open?.groups ?? []) {
-      ready = (await decide(id, { groupId, decision: 'approved' })).cycle
-      expect(batchPreview(ready).gross).toBe(grossWithGap)
+    const groupsToReview = early.open?.groups ?? []
+    expect(groupsToReview.length).toBeGreaterThan(0)
+    for (const [index, groupId] of groupsToReview.entries()) {
+      ready = (await decide(id, { groupId, decision: index === 0 ? 'escalated' : 'approved' })).cycle
+      expectUiGross(ready, grossWithGap)
     }
+    expect(ready.decisions?.some(decision => decision.decision === 'escalated')).toBe(true)
     expect(ready.nextStep?.kind).toBe('send')
     const sent = await sendPayroll(id)
     expect(sent.status).toBe(201)
@@ -133,7 +169,10 @@ it('real client journey + server: sample, decisions, unresolved asks, send once,
     expect(firstLines.slice(1).every(line => line.split(',')[3] === '0.00')).toBe(true)
     const resend = await sendPayroll(id)
     expect(resend).toMatchObject({ status: 409, batch: { id: sent.batch.id, gross: grossWithGap } })
-    expect((await getCycle(id)).nextStep?.kind).toBe('done')
+    const paid = await getCycle(id)
+    expect(paid.nextStep?.kind).toBe('done')
+    expectUiGross(paid, sent.batch.gross)
+    expect(payTotals(hydrate(paid, getOnboarding())).workerCount).toBe(sent.batch.workers)
 
     const { dispute } = await simulateDispute(id)
     expect(dispute.status).toBe('open')
@@ -153,8 +192,10 @@ it('real client journey + server: sample, decisions, unresolved asks, send once,
     expect(location.files.every(file => file.status === 'normalized')).toBe(true)
     let next = await getCycle(nextId)
     const disputes = (await getDisputes()).disputes
-    expect(batchPreview(next).gross).toBe(160)
+    expect(next.adjustments).toEqual([{ id: dispute.id, cycleId: id, worker: dispute.worker, hours: 1, amount: 20 }])
+    expect(batchPreview(next).gross).toBe(180)
     expect(batchPreview(next, disputes).gross).toBe(180)
+    expectUiGross(next, 180)
     const remaining = await sendPayroll(nextId)
     if (remaining.status === 422) {
       expect(remaining.open?.missingSets).toEqual([])
@@ -170,7 +211,10 @@ it('real client journey + server: sample, decisions, unresolved asks, send once,
     expect(nextCsv).toContain('Integration Worker,8.00,0.00,0.00,160.00,0\r\n')
     expect(nextCsv).toContain(`${dispute.worker} · Adjustment for ${id},1.00,0.00,0.00,20.00,0\r\n`)
     expect(getDataSnapshot().error).toBeNull()
-    expect(getDataSnapshot().payloads.find(cycle => cycle.cycle.id === nextId)?.batch?.gross).toBe(180)
+    const paidNext = getDataSnapshot().payloads.find(cycle => cycle.cycle.id === nextId)!
+    expect(paidNext.batch?.gross).toBe(180)
+    expectUiGross(paidNext, 180)
+    expect(payTotals(hydrate(paidNext, getOnboarding())).workerCount).toBe(nextSent.batch.workers)
   } finally {
     server.closeAllConnections()
     await new Promise<void>(resolve => server.close(() => resolve()))

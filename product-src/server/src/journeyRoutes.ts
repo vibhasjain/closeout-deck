@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto'
 import type { ServerResponse } from 'node:http'
 import { gunzipSync, gzipSync } from 'node:zlib'
 import { recentCycles } from '../../src/lib/cycles.ts'
+import { journeyAdjustments } from '../../src/lib/journeyPay.ts'
 import { accountHash } from './datastore.ts'
 import type { DataStore, RunRecord } from './datastore.ts'
 import { DataError } from './data.ts'
@@ -80,9 +81,9 @@ async function loadCycle(req: JourneyRequest, cycleId: string, parse = false) {
 
 async function journeyState(req: JourneyRequest, summary: CycleSummary) {
   const aliases = Object.fromEntries(summary.groups.flatMap(g => [[g.id, g.id], ...(g.num == null ? [] : [[String(g.num), g.id]])]))
-  const [decisions, batches, threads] = await Promise.all([req.journey.canonicalizeDecisions(req.email, summary.id, aliases), req.journey.listBatches(req.email), req.journey.listThreads(req.email, summary.id)])
+  const [decisions, batches, threads, disputes] = await Promise.all([req.journey.canonicalizeDecisions(req.email, summary.id, aliases), req.journey.listBatches(req.email), req.journey.listThreads(req.email, summary.id), req.journey.listDisputes(req.email)])
   const batch = batches.find(b => b.cycleId === summary.id) ?? null, cycle = journeyCycle(summary, req.doc, threads)
-  return { decisions, batch, cycle, nextStep: nextStep(cycle, decisions, batch) }
+  return { decisions, batch, cycle, adjustments: journeyAdjustments(summary.id, disputes), nextStep: nextStep(cycle, decisions, batch) }
 }
 
 async function withMessages(req: JourneyRequest, threads: Thread[]) {
@@ -140,8 +141,8 @@ async function handleLockedJourney(req: JourneyRequest): Promise<boolean> {
   let match: RegExpExecArray | null
   if ((match = /^\/data\/cycles\/(\d{4}-\d{2}-\d{2})$/.exec(path)) && method === 'GET') {
     const { text, summary } = await loadCycle(req, match[1])
-    const { decisions, batch, nextStep } = await journeyState(req, summary)
-    gzipJson(response, 200, withFields(text, { decisions, batch, nextStep }))
+    const { decisions, batch, nextStep, adjustments } = await journeyState(req, summary)
+    gzipJson(response, 200, withFields(text, { decisions, batch, nextStep, adjustments }))
     return true
   }
   if ((match = /^\/data\/cycles\/(\d{4}-\d{2}-\d{2})\/(decisions|asks|send)$/.exec(path)) && method === 'POST') {
@@ -157,7 +158,7 @@ async function handleLockedJourney(req: JourneyRequest): Promise<boolean> {
         groupId: group.id, shiftIds, decision: input.decision, reason: input.reason, by: 'user', at: now })
       const state = await journeyState(req, summary)
       await req.sync()
-      gzipJson(response, 200, `{"decision":${JSON.stringify(decision)},"cycle":${withFields(text, { decisions: state.decisions, batch: state.batch, nextStep: state.nextStep })}}`)
+      gzipJson(response, 200, `{"decision":${JSON.stringify(decision)},"cycle":${withFields(text, { decisions: state.decisions, batch: state.batch, nextStep: state.nextStep, adjustments: state.adjustments })}}`)
       return true
     }
     if (action === 'asks') {

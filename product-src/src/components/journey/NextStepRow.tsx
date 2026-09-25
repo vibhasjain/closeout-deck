@@ -21,7 +21,7 @@ export function NextStepRow({ nextStep, cycle, onReview }: {
       context: { page: '/payroll', calendar: { frequency: state.frequency, periodEndDay: state.periodEndDay, payDay: state.payDay, payDatesOfMonth: state.payDatesOfMonth, cutoffDays: state.cutoffDays, deadlineDays: state.deadlineDays }, cycle: { id: cycle.id, label: cycle.label, stats: nextStep.detail }, selection: { nextStep } },
     })
   }
-  return <div className="journey-next-step" aria-label="Next step" data-next-step={nextStep.kind}>
+  return <div className="journey-next-step" role="region" aria-label="Next step" data-next-step={nextStep.kind}>
     <div className="journey-next-copy">
       <strong>{nextStep.label}</strong>
       <span className="journey-next-detail">{nextStep.detail}</span>

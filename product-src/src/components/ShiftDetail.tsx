@@ -6,6 +6,7 @@ import { PROV } from '@/bench/prov'
 import { Btn, Kv, Lbl, PayDelta, Tag } from '@/components/ui'
 import { useOverlay } from '@/components/shell/Overlay'
 import { effectiveResolutions, provenance, type DeskCycle } from '@/lib/desk'
+import { journeyShiftPay } from '@/lib/journeyPay'
 import { useOnboarding } from '@/lib/onboarding'
 import { groupId } from '@/lib/journey'
 
@@ -87,7 +88,9 @@ function ShiftEvidence({ cycle, rs, primaryRuleId, showHeading = true, showSourc
   const vendor = cycle.server ? undefined : SOURCES.find((candidate) => candidate.sites.includes(s.fac.name) && !candidate.builtin && candidate.id !== 'upload')
   const vendorName = vendor?.short ?? source.system
   const vendorMark = vendor?.tile ? <img src={vendor.tile} alt="" /> : <FileClock size={13} aria-hidden="true" />
-  const delta = rs.pay - rs.naive
+  const pay = journeyShiftPay(rs)
+  const delta = pay - rs.naive
+  const canApply = !!onApply && !decision && !(cycle.server && rs.held)
   const showRule = (rule: Rule) => openDrawer(<RuleEvidence rule={rule} />, rule.id, PROV[rule.id]?.doc ?? rule.source.doc)
   const primaryRule = RULES.find((rule) => rule.id === (primaryRuleId ?? fired[0]?.ruleId))
   const shown = primaryRuleId ? fired.filter((row) => row.ruleId === primaryRuleId) : fired
@@ -121,12 +124,13 @@ function ShiftEvidence({ cycle, rs, primaryRuleId, showHeading = true, showSourc
     ]} />
     {!timeOnly && rules}
     {decision === 'dismissed' && savedReason && <p className="r-note">Reason: {savedReason}</p>}
+    {cycle.server && rs.held && <p className="r-note"><Tag tone="amber">Held</Tag> Waiting for confirmation · excluded from Payroll</p>}
     </div>
-    {!timeOnly && (Math.abs(delta) >= 0.005 || (!decision && onApply)) && <div className="shift-decide">
+    {!timeOnly && (Math.abs(delta) >= 0.005 || canApply) && <div className="shift-decide">
     <div className="shift-action-bar">
-      <PayDelta current={rs.naive} resolved={rs.pay} size="lg" />
-      {((!decision && onApply) || (showSourceAction && primaryRule)) && <div className="actions">
-        {onApply && !decision && <Btn className="primary" onClick={onApply}>{applyLabel}</Btn>}
+      <PayDelta current={rs.naive} resolved={pay} size="lg" />
+      {(canApply || (showSourceAction && primaryRule)) && <div className="actions">
+        {canApply && <Btn className="primary" onClick={onApply}>{applyLabel}</Btn>}
         {showSourceAction && primaryRule && <Btn onClick={() => showRule(primaryRule)}>Open Source Document ↗</Btn>}
       </div>}
     </div>

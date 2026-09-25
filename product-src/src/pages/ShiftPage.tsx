@@ -13,6 +13,8 @@ import { PageTitle } from '@/components/shell/PageTitle'
 import { Btn, Empty, Lbl, PayDelta, Tag } from '@/components/ui'
 import { discrepancies, effectiveResolutions, provenance, rowResolution, shortShiftId, topstats, useDesk, type DeskCycle } from '@/lib/desk'
 import { decide, groupId } from '@/lib/journey'
+import { getDataSnapshot } from '@/lib/data'
+import { journeyShiftPay } from '@/lib/journeyPay'
 import { getOnboarding, useOnboarding } from '@/lib/onboarding'
 import { shiftListHref } from '@/lib/navigation'
 import { defaultThreadParty, threadFor } from '@/lib/threads'
@@ -39,7 +41,7 @@ function ShiftTrail({ cycle, rs, primaryRuleId }: { cycle: DeskCycle; rs: RunShi
     || [...(cycle.groups ?? []), ...(cycle.extraGroups ?? [])].some((group) => group.ruleId === ruleId && groupId(group) === item.groupId))) : []
   const legacyParty = defaultThreadParty({ ...cycle, rememberedRuleIds: [] }, rs)
   const trail: TraceEntry[] = cycle.server ? serverDecisions.map((item) => ({ at: item.at, action: item.decision === 'escalated' ? 'status' : 'resolved',
-    detail: item.decision === 'approved' ? 'Payroll adjustment approved' : item.decision === 'dismissed' ? `Issue dismissed · ${item.reason}` : 'Issue escalated' })) : (['worker', 'facility'] as const).flatMap((party) => {
+    detail: `${item.decision === 'approved' ? 'Payroll adjustment approved' : item.decision === 'dismissed' ? `Issue dismissed · ${item.reason}` : 'Issue escalated'}${rs.held ? ' · Pay remains held' : ''}` })) : (['worker', 'facility'] as const).flatMap((party) => {
     const saved = state.mediation[`${key}:${party}`] ?? (party === legacyParty ? state.mediation[key] : undefined)
     return threadFor(cycle, rs, saved, party).trail
   }).filter((entry, index, all) => entry.action !== 'ingested'
@@ -65,9 +67,9 @@ function ShiftTrail({ cycle, rs, primaryRuleId }: { cycle: DeskCycle; rs: RunShi
     })}
     {serverDecisions.map((item) => <section key={item.id} className="shift-audit-section" aria-label="Recorded decision">
       <Lbl>Decision</Lbl>
-      <Tag>{item.decision === 'approved' ? 'Approved' : item.decision === 'dismissed' ? 'Dismissed' : 'Escalated'}</Tag>
+      <Tag>{item.decision === 'approved' ? 'Approved' : item.decision === 'dismissed' ? 'Dismissed' : 'Escalated'}{rs.held ? ' · Still held' : ''}</Tag>
       <p className="shift-audit-time"><RecordedTime at={item.at} /></p>
-      {item.decision === 'approved' && <PayDelta current={rs.naive} resolved={rs.pay} size="sm" />}
+      {item.decision === 'approved' && <PayDelta current={rs.naive} resolved={journeyShiftPay(rs)} size="sm" />}
       {item.reason && <p className="r-note">{item.reason}</p>}
     </section>)}
     {decision && !cycle.server && <section className="shift-audit-section" aria-label="Recorded decision">
@@ -124,9 +126,9 @@ export function ShiftPage() {
   const allPayments = shiftListHref(cycle.id, params, '/payroll', true)
   const primaryRuleId = flag ?? items.find((item) => item.shiftId === shiftId)?.ruleId
   const decision = decisions?.[shiftId]
-  const canDecide = !!rs && !decision && items.some((item) => item.shiftId === shiftId)
   const pendingRules = [...new Set((rs?.rows ?? []).filter((row) => (row.status === 'flag' || row.status === 'held')
     && !rowResolution(cycle, shiftId, row.ruleId, state.resolutions)).map((row) => row.ruleId))]
+  const canDecide = !!rs && !(cycle.server && rs.held) && !decision && (!cycle.server || pendingRules.length > 0) && items.some((item) => item.shiftId === shiftId)
   const groupCases = (ruleId: string) => cycle.run.shifts.filter((item) => item.rows.some((row) => row.ruleId === ruleId && (row.status === 'flag' || row.status === 'held'))).map((item) => item.shift.id)
   const approvalCount = pendingRules.reduce((count, ruleId) => count + groupCases(ruleId).length, 0)
 
@@ -136,7 +138,7 @@ export function ShiftPage() {
     cycle: { id: cycle.id, label: cycle.label, stats: topstats(cycle, state.resolutions) },
     selection: rs ? {
       scope: `shift:${rs.shift.id}`, shiftId: rs.shift.id, ruleId: primaryRuleId, worker: rs.shift.worker,
-      site: rs.shift.fac.name, day: cycle.days[rs.shift.day], sheetPay: rs.naive, closeoutPay: rs.pay,
+      site: rs.shift.fac.name, day: cycle.days[rs.shift.day], sheetPay: rs.naive, closeoutPay: journeyShiftPay(rs), held: rs.held,
       scheduled: rs.shift.sched, punches: rs.shift.punches, geofence: rs.shift.geo,
       badgeIn: rs.shift.badgeIn, badgeOut: rs.shift.badgeOut, meal: rs.shift.meal,
       source: provenance(cycle, rs.shift, cycle.week.findIndex(({ id }) => id === rs.shift.id)),
@@ -148,17 +150,21 @@ export function ShiftPage() {
 
   async function approve() {
     const latest = getOnboarding()
-    if (!rs || saving || effectiveResolutions(cycle, latest.resolutions)[cycle.id]?.[shiftId]) return
+    if (!rs || saving || (cycle.server && rs.held) || effectiveResolutions(cycle, latest.resolutions)[cycle.id]?.[shiftId]) return
     if (cycle.server) {
       setSaving(true)
       setError(null)
       try {
+        let approved = 0
         for (const ruleId of pendingRules) {
-          const group = [...(cycle.groups ?? []), ...(cycle.extraGroups ?? [])].find((item) => item.ruleId === ruleId)
+          const current = getDataSnapshot().payloads.find(item => item.cycle.id === cycle.id)
+          const group = [...(current?.groups ?? cycle.groups ?? []), ...(current?.extraGroups ?? cycle.extraGroups ?? [])].find((item) => item.ruleId === ruleId)
           const id = group ? groupId(group) : ruleId
+          if ((current?.decisions ?? cycle.decisions ?? []).some(item => item.groupId === id || item.groupId === String(group?.id))) continue
           await decide(cycle.id, { groupId: id, decision: 'approved', shiftIds: groupCases(ruleId) })
+          approved += groupCases(ruleId).length
         }
-        toast(`Approved ${approvalCount.toLocaleString()} issues`)
+        toast(approved ? `Approved ${approved.toLocaleString()} issues` : 'Already decided; no changes applied')
       } catch (cause) { setError(cause instanceof Error ? cause.message : 'The decision could not be saved.') }
       finally { setSaving(false) }
       return

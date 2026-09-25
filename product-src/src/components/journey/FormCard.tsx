@@ -4,12 +4,12 @@ import type { Source } from '@/bench/vendors'
 import { ConnectMethod } from '@/components/ConnectMethod'
 import { JourneyThreadView } from '@/components/Thread'
 import { Btn, Tag } from '@/components/ui'
-import type { CyclePayload } from '@/lib/data'
+import type { CyclePayload, CycleSummary } from '@/lib/data'
 import { gapId, gapKey } from '@/lib/intake'
-import { journeyPayroll } from '@/lib/journeyPay'
+import { journeyAdjustments, journeyPayroll } from '@/lib/journeyPay'
 import { useOnboarding, type Onboarding } from '@/lib/onboarding'
 import {
-  askGaps, createDispute, downloadBatch, getDisputes, refreshThreads, resolveDispute, sendPayroll, simulateDispute, useJourneyCycle, useJourneyThreads,
+  askGaps, createDispute, downloadBatch, getDisputes, getThreads, refreshThreads, resolveDispute, sendPayroll, simulateDispute, useJourneyCycle, useJourneyThreads,
   type JourneyDispute, type JourneyFormName, type JourneyThread,
 } from '@/lib/journey'
 import './journey-forms.css'
@@ -29,7 +29,10 @@ export function gapRows(cycle: CyclePayload, neverContact: readonly string[], ac
   const norm = (name: string) => name.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
   const blocked = new Set(neverContact.map(norm).filter(Boolean))
   const received = new Set(cycle.intake.received)
-  const asked = new Set(threads.filter(thread => thread.cycleId === cycle.cycle.id).flatMap(thread => thread.counterparty.gapIds ?? []))
+  const asked = new Set(threads.filter(thread => thread.cycleId === cycle.cycle.id
+    && !blocked.has(norm(thread.counterparty.name))
+    && thread.messages.some(message => message.dir === 'out' && message.status !== 'draft' && message.text.trim()))
+    .flatMap(thread => thread.counterparty.gapIds ?? []))
   const rows = new Map<string, GapRow>()
   for (const gap of cycle.intake.expected) {
     const id = gapId(gap)
@@ -39,23 +42,21 @@ export function gapRows(cycle: CyclePayload, neverContact: readonly string[], ac
     const site = cycle.sites.find(site => site.name === gap.client)
     const name = kind === 'site' ? site?.supervisor?.name ?? gap.client : gap.worker
     rows.set(id, { id, worker: gap.worker, site: gap.client, day: gap.day, kind, name,
-      blocked: blocked.has(norm(name)) || (kind === 'site' && blocked.has(norm(gap.client))), ...(asked.has(id) ? { asked: true } : {}) })
+      blocked: blocked.has(norm(name)) || (kind === 'site' && blocked.has(norm(gap.client))),
+      ...(asked.has(id) && !blocked.has(norm(name)) && !(kind === 'site' && blocked.has(norm(gap.client))) ? { asked: true } : {}) })
   }
   return [...rows.values()]
 }
 
 /** The export excludes every held entry, including entries with a partial pay value. */
 export function batchPreview(cycle: CyclePayload, disputes: JourneyDispute[] = []) {
-  const cents = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100
   const aliases = new Map([...cycle.groups, ...cycle.extraGroups].filter(group => group.id != null).map(group => [String(group.id), group.ruleId]))
   const week = cycle.week.map(shift => ({ ...shift, fac: cycle.sites[shift.fac] }))
-  const preview = journeyPayroll(week, cycle.results, (cycle.decisions ?? []).filter(decision => decision.cycleId === cycle.cycle.id), aliases)
-  const workers = new Set(week.map(shift => shift.worker))
-  let gross = preview.gross
-  for (const dispute of disputes) if (dispute.status === 'adjusted' && dispute.adjustment?.next_cycle_id === cycle.cycle.id) {
-    workers.add(dispute.worker); gross += cents(dispute.adjustment.amount)
-  }
-  return { workers: workers.size, gross: cents(gross), held: preview.held }
+  // New detail responses carry the same scoped snapshot used by the ledger and export.
+  // Only older payloads need the separate dispute-history fallback.
+  const adjustments = cycle.adjustments ?? journeyAdjustments(cycle.cycle.id, disputes)
+  const { workers, gross, held } = journeyPayroll(week, cycle.results, (cycle.decisions ?? []).filter(decision => decision.cycleId === cycle.cycle.id), aliases, adjustments)
+  return { workers, gross, held }
 }
 
 export function openItemLabels(cycle: CyclePayload): string[] {
@@ -79,21 +80,22 @@ function FormHeader({ title, sample }: { title: string; sample: boolean }) {
 }
 
 export function FormCard({ form, cycleId, prefill }: { form: JourneyFormName; cycleId: string; prefill?: Prefill }) {
-  const { cycle, loading, error } = useJourneyCycle(cycleId)
+  const { cycle, row, loading, error } = useJourneyCycle(cycleId)
+  if (form === 'connect') return <ConnectForm key={`${cycleId}:connect`} cycle={cycle} row={row} prefill={prefill} />
   if (!cycle) return <section className="journey-form" aria-label={`${form} form`}>
     <p className="r-note" role={error ? 'alert' : 'status'}>{error || (loading ? 'Loading cycle…' : 'Cycle unavailable.')}</p>
   </section>
-  if (form === 'connect') return <ConnectForm key={`${cycleId}:connect`} cycle={cycle} prefill={prefill} />
   if (form === 'gaps') return <GapsForm key={`${cycleId}:gaps`} cycle={cycle} prefill={prefill} />
   if (form === 'send') return <SendForm key={`${cycleId}:send`} cycle={cycle} prefill={prefill} />
   return <DisputeForm key={`${cycleId}:dispute`} cycle={cycle} prefill={prefill} />
 }
 
-export function ConnectForm({ cycle, prefill }: FormProps) {
+export function ConnectForm({ cycle, row, prefill }: { cycle?: CyclePayload; row?: CycleSummary; prefill?: Prefill }) {
   const requestedSet = prefill?.set
+  const counts = cycle?.counts ?? row?.counts
   const set = requestedSet === 1 || requestedSet === 2 || requestedSet === 3 ? requestedSet
-    : cycle.counts.set1 === 0 ? 1 : cycle.counts.set2 === 0 ? 2 : 3
-  const existing = cycle.intake.sources.find(source => source.set === set)
+    : !counts?.set1 ? 1 : !counts.set2 ? 2 : 3
+  const existing = cycle?.intake.sources.find(source => source.set === set)
   const system = text(prefill?.system) || existing?.name || (set === 3 ? 'HyperTrack location' : 'Time entries')
   const site = text(prefill?.site) || existing?.site || ''
   const vendor: Source = { id: existing?.id ?? `journey-set-${set}`, name: system, short: system, set,
@@ -135,7 +137,7 @@ export function GapsForm({ cycle, prefill }: FormProps) {
     <FormHeader title="Chase missing time" sample={cycle.sample} />
     <div className="journey-gap-list">
       {rows.map(row => <label className={`journey-gap-row${row.blocked ? ' is-disabled' : ''}`} key={row.id}>
-        <input type="checkbox" aria-label={`Ask ${row.name}`} disabled={row.blocked || busy || (!selectedIds.has(row.id) && eligible.length >= 200)}
+        <input type="checkbox" aria-label={`Ask ${row.name} about ${row.worker} · ${row.site} · Day ${row.day + 1}`} disabled={row.blocked || busy || (!selectedIds.has(row.id) && eligible.length >= 200)}
           checked={!row.blocked && selectedIds.has(row.id)} onChange={event => setSelection(event.target.checked ? [...eligible.map(item => item.id), row.id] : eligible.filter(item => item.id !== row.id).map(item => item.id))} />
         <span><strong>{row.worker}</strong><span className="r-note">{row.site} · Day {row.day + 1}</span><span className="r-note">Ask {row.name}</span></span>
         {row.blocked && <Tag>Never Contact</Tag>}
@@ -146,7 +148,8 @@ export function GapsForm({ cycle, prefill }: FormProps) {
     {unasked.length > 200 && <p className="r-note" role="status">Ask about up to 200 time entries at a time. {unasked.length - eligible.length} more remain.</p>}
     {result && <div className="journey-form-result" role="status">
       <p>{result.threads.length} {result.threads.length === 1 ? 'conversation' : 'conversations'} created <Tag>Not Sent · Demo</Tag></p>
-      {result.threads.map(thread => <p className="r-note" key={thread.id}>Asked {thread.counterparty.name}</p>)}
+      {result.threads.filter(thread => rows.some(row => row.asked && thread.counterparty.gapIds?.includes(row.id)))
+        .map(thread => <p className="r-note" key={thread.id}>Asked {thread.counterparty.name}</p>)}
       {!!result.skipped?.length && <p className="r-note">Skipped: {result.skipped.join(', ')} <Tag>Never Contact</Tag></p>}
     </div>}
     {(!result || eligible.length > 0) && <Btn className="primary" disabled={busy || !loaded || loading || !!threadError || !eligible.length} onClick={() => void submit()}>{busy ? 'Creating asks…' : `Ask ${people} ${people === 1 ? 'person' : 'people'}`}</Btn>}
@@ -159,11 +162,12 @@ export function SendForm({ cycle, prefill }: FormProps) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<SendResult | null>(null)
-  const [submittedCycle, setSubmittedCycle] = useState<CyclePayload | null>(null)
+  const [submittedCycle, setSubmittedCycle] = useState<string | null>(null)
   const [disputes, setDisputes] = useState<JourneyDispute[] | null>(null)
   const [disputeError, setDisputeError] = useState('')
   const [retry, setRetry] = useState(0)
   useEffect(() => {
+    if (cycle.adjustments !== undefined || cycle.batch) return
     let active = true
     void getDisputes().then(result => { if (active) { setDisputes(result.disputes); setDisputeError('') } })
       .catch(cause => { if (active) setDisputeError(errorText(cause)) })
@@ -171,13 +175,17 @@ export function SendForm({ cycle, prefill }: FormProps) {
   }, [cycle, retry])
   const batch = result && result.status !== 422 ? result.batch : cycle.batch
   const preview = batch ?? batchPreview(cycle, disputes ?? [])
-  const rejection = result?.status === 422 && submittedCycle === cycle ? result : null
+  const previewReady = cycle.adjustments !== undefined || disputes !== null
+  const previewError = cycle.adjustments !== undefined ? '' : disputeError
+  // sendPayroll refreshes the shared store before returning; payload identity is never stable.
+  const rejection = result?.status === 422 && submittedCycle === cycle.cycle.id
+    && (!result.nextStep || result.nextStep.kind === cycle.nextStep?.kind) ? result : null
   const canSend = (rejection?.nextStep?.kind ?? cycle.nextStep?.kind) === 'send'
   const blocked = rejection ? [rejection.reason, ...responseItems(rejection.open)] : openItemLabels(cycle)
   const csvUrl = result?.status === 201 ? result.csvUrl : undefined
   async function submit() {
-    if (busy || batch || !disputes || disputeError) return
-    setBusy(true); setError(''); setSubmittedCycle(cycle)
+    if (busy || batch || !previewReady || previewError) return
+    setBusy(true); setError(''); setSubmittedCycle(cycle.cycle.id)
     try { setResult(await sendPayroll(cycle.cycle.id, destination.trim() ? { destination: destination.trim() } : {})) }
     catch (cause) { setError(errorText(cause)) }
     finally { setBusy(false) }
@@ -193,7 +201,7 @@ export function SendForm({ cycle, prefill }: FormProps) {
     <FormHeader title="Send to Payroll" sample={cycle.sample} />
     <dl className="journey-batch-preview">
       <div><dt>Workers</dt><dd className="mono tabular-nums">{preview.workers}</dd></div>
-      <div><dt>Gross</dt><dd className="mono tabular-nums">{batch || disputes ? money(preview.gross) : 'Loading…'}</dd></div>
+      <div><dt>Gross</dt><dd className="mono tabular-nums">{batch || previewReady ? money(preview.gross) : 'Loading…'}</dd></div>
       <div><dt>Held entries excluded</dt><dd className="mono tabular-nums">{preview.held}</dd></div>
     </dl>
     {batch ? <div className="journey-form-result" role="status">
@@ -204,9 +212,9 @@ export function SendForm({ cycle, prefill }: FormProps) {
       <input className="journey-form-input" aria-label="Payroll destination" placeholder="Payroll destination (from profile)" value={destination} maxLength={80} disabled={busy} onChange={event => setDestination(event.target.value)} />
       {!!blocked.length && <ul className="journey-open-items" aria-label="Open items">{[...new Set(blocked)].map(item => <li key={item}>{item}</li>)}</ul>}
       {!cycle.nextStep && <p className="r-note">Waiting for the cycle's next step.</p>}
-      <Btn className={canSend ? 'primary' : undefined} disabled={busy || !disputes || !!disputeError} onClick={() => void submit()}>{busy ? 'Creating payroll export…' : 'Send to Payroll'}</Btn>
+      <Btn className={canSend ? 'primary' : undefined} disabled={busy || !previewReady || !!previewError} onClick={() => void submit()}>{busy ? 'Creating payroll export…' : 'Send to Payroll'}</Btn>
     </>}
-    {!batch && disputeError && <p className="r-note" role="alert">{disputeError} <button type="button" className="lnk" onClick={() => setRetry(value => value + 1)}>Retry preview</button></p>}
+    {!batch && previewError && <p className="r-note" role="alert">{previewError} <button type="button" className="lnk" onClick={() => setRetry(value => value + 1)}>Retry preview</button></p>}
     {error && <p className="r-note" role="alert">{error}</p>}
   </section>
 }
@@ -216,20 +224,44 @@ export function DisputeForm({ cycle, prefill }: FormProps) {
   const [description, setDescription] = useState(text(prefill?.description))
   const [source, setSource] = useState<'paste' | 'upload'>('paste')
   const [fileName, setFileName] = useState('')
-  const [dispute, setDispute] = useState<JourneyDispute | null>(null)
-  const [thread, setThread] = useState<JourneyThread | null>(null)
+  const [record, setRecord] = useState<{ key: string; dispute: JourneyDispute | null; thread: JourneyThread | null } | null>(null)
   const [hours, setHours] = useState('')
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [loadFailure, setLoadFailure] = useState<{ key: string; message: string } | null>(null)
+  const [retry, setRetry] = useState(0)
+  const cycleId = cycle.cycle.id
+  const batchId = cycle.batch?.id
+  const requestedWorker = text(prefill?.worker).trim()
+  const requestedDescription = text(prefill?.description)
+  const lookupKey = JSON.stringify([cycleId, batchId, requestedWorker, requestedDescription])
+  const loaded = record?.key === lookupKey
+  const dispute = loaded ? record.dispute : null
+  const thread = loaded ? record.thread : null
+  const loadError = loadFailure?.key === lookupKey ? loadFailure.message : ''
+  useEffect(() => {
+    if (!batchId) return
+    let active = true
+    void Promise.all([getDisputes(), getThreads(cycleId)]).then(([history, conversations]) => {
+      if (!active) return
+      const existing = history.disputes.filter(item => item.cycleId === cycleId && (!requestedWorker || item.worker === requestedWorker))
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))[0]
+      setRecord({ key: lookupKey, dispute: existing ?? null, thread: existing ? conversations.threads.find(item => item.disputeId === existing.id) ?? null : null })
+      setWorker(requestedWorker); setDescription(requestedDescription)
+      setHours(''); setAmount(''); setNote('')
+      setLoadFailure(null)
+    }).catch(cause => { if (active) setLoadFailure({ key: lookupKey, message: errorText(cause) }) })
+    return () => { active = false }
+  }, [cycleId, batchId, requestedWorker, requestedDescription, lookupKey, retry])
   async function start(simulated: boolean) {
-    if (!cycle.batch || busy || (!simulated && (!worker.trim() || !description.trim()))) return
+    if (!cycle.batch || !loaded || loadError || dispute || busy || (!simulated && (!worker.trim() || !description.trim()))) return
     setBusy(true); setError('')
     try {
       const result = simulated ? await simulateDispute(cycle.cycle.id)
         : await createDispute({ cycleId: cycle.cycle.id, worker: worker.trim(), description: description.trim(), source })
-      setDispute(result.dispute); setThread(result.thread)
+      setRecord(previous => previous?.key === lookupKey ? { key: lookupKey, dispute: result.dispute, thread: result.thread } : previous)
     } catch (cause) { setError(errorText(cause)) }
     finally { setBusy(false) }
   }
@@ -247,12 +279,11 @@ export function DisputeForm({ cycle, prefill }: FormProps) {
     finally { setBusy(false) }
   }
   async function resolve(decision: 'adjust' | 'reject') {
-    if (!dispute || busy || !note.trim() || (decision === 'adjust' && !validAdjustment)) return
+    if (!loaded || loadError || !dispute || busy || !note.trim() || (decision === 'adjust' && !validAdjustment)) return
     setBusy(true); setError('')
     try {
       const result = await resolveDispute(dispute.id, { decision, ...(decision === 'adjust' ? { ...(hours.trim() ? { hours: Number(hours) } : {}), ...(amount.trim() ? { amount: Number(amount) } : {}) } : {}), note: note.trim() })
-      setDispute(result.dispute)
-      if (result.thread) setThread(result.thread)
+      setRecord(previous => previous?.key === lookupKey ? { ...previous, dispute: result.dispute, thread: result.thread ?? previous.thread } : previous)
     } catch (cause) { setError(errorText(cause)) }
     finally { setBusy(false) }
   }
@@ -260,7 +291,9 @@ export function DisputeForm({ cycle, prefill }: FormProps) {
     && (!amount.trim() || (Number.isFinite(Number(amount)) && Number(amount) >= -10_000 && Number(amount) <= 10_000))
   return <section className="journey-form" aria-label="Payroll dispute">
     <FormHeader title="Payroll dispute" sample={cycle.sample || dispute?.source === 'simulated'} />
-    {!cycle.batch ? <p className="r-note" role="status">Send this cycle to Payroll before opening a dispute.</p> : !dispute ? <>
+    {!cycle.batch ? <p className="r-note" role="status">Send this cycle to Payroll before opening a dispute.</p> : loadError ?
+      <p className="r-note" role="alert">{loadError} <button type="button" className="lnk" onClick={() => setRetry(value => value + 1)}>Retry disputes</button></p>
+      : !loaded ? <p className="r-note" role="status">Loading disputes…</p> : !dispute ? <>
       <input className="journey-form-input" aria-label="Worker" placeholder="Worker" value={worker} maxLength={200} disabled={busy} onChange={event => setWorker(event.target.value)} />
       <textarea className="journey-form-input" aria-label="Dispute description" placeholder="Paste the dispute or describe what happened…" value={description} maxLength={2000} rows={3} disabled={busy}
         onChange={event => { setDescription(event.target.value); setSource('paste'); setFileName('') }} />

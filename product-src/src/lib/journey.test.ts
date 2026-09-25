@@ -7,13 +7,13 @@ import { Message } from '@/components/chat/Message'
 import { DEFAULTS, flushOnboarding, type Onboarding } from '@/lib/onboarding'
 import { createChatHistory } from '@/lib/chatHistory'
 import { askGaps, createDispute, decide, downloadBatch, getDisputes, getThreads, recordMessage, resolveDispute, sendPayroll, simulateDispute, type JourneyBatch, type JourneyDecision, type JourneyDispute } from '@/lib/journey'
-import { getDataSnapshot, hydrate, invalidate, publishCycle, type CyclePayload } from '@/lib/data'
+import { getDataSnapshot, hydrate, invalidate, publishCycle, refreshCycleList, type CyclePayload } from '@/lib/data'
 import { rowResolution } from '@/lib/desk'
 import fixture from '@/lib/fixtures/server-cycle.json'
 
 vi.mock('@/lib/viewerSession', () => ({ viewerSession: () => ({ email: 'contract@example.test', sessionToken: 'test-session', exp: 9999999999 }), signOut: vi.fn() }))
 vi.mock('@/lib/onboarding', async original => ({ ...await original<typeof import('@/lib/onboarding')>(), flushOnboarding: vi.fn().mockResolvedValue(undefined) }))
-vi.mock('@/lib/data', async original => ({ ...await original<typeof import('@/lib/data')>(), invalidate: vi.fn().mockResolvedValue(undefined) }))
+vi.mock('@/lib/data', async original => ({ ...await original<typeof import('@/lib/data')>(), invalidate: vi.fn().mockResolvedValue(undefined), refreshCycleList: vi.fn().mockResolvedValue(undefined) }))
 const payload = fixture.payload as CyclePayload
 const batch: JourneyBatch = { id: 'batch-a', cycleId: payload.cycle.id, workers: 11, gross: 1200, held: 1, destination: 'ADP', createdAt: '2026-09-25T12:00:00Z' }
 const decision: JourneyDecision = { id: 'decision-a', cycleId: payload.cycle.id, groupId: 'CS-01', shiftIds: [], decision: 'approved', reason: null, by: 'user', at: '2026-09-25T12:00:00Z' }
@@ -64,7 +64,8 @@ describe('journey card and action contract', () => {
       { groupId: 'CS-01', decision: 'approved' }, { groupId: 'CS-01', decision: 'dismissed', reason: 'Verified original time' },
     ])
     expect(getDataSnapshot().payloads.find(item => item.cycle.id === payload.cycle.id)?.decisions?.[0].decision).toBe('dismissed')
-    expect(invalidate).toHaveBeenCalledTimes(2)
+    expect(invalidate).not.toHaveBeenCalled()
+    expect(refreshCycleList).toHaveBeenCalledTimes(2)
     expect(flushOnboarding).toHaveBeenCalledTimes(2)
     expect(vi.mocked(flushOnboarding).mock.invocationCallOrder[0]).toBeLessThan(fetchMock.mock.invocationCallOrder[0])
     expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get('Authorization')).toBe('Bearer test-session')
@@ -178,9 +179,9 @@ describe('trace frames and persistence', () => {
     await history.load()
     expect(saved).toEqual([message])
   })
-  it('bounds server traces to three safe paths without inventing a trace', () => {
+  it('caps data traces at three safe paths while retaining later handbook traces', () => {
     let traces: string[] = []
-    for (const trace of ['Read handbooks/a.md', 'Read data/a', 'Read handbooks/a.md', 'Read data/b', 'Read data/c', 'Made up', '<script>']) traces = appendTrace(traces, trace)
-    expect(traces).toEqual(['Read handbooks/a.md', 'Read data/a', 'Read data/b'])
+    for (const trace of ['Read handbooks/a.md', 'Read data/a', 'Read handbooks/a.md', 'Read data/b', 'Read data/c', 'Read data/d', 'Read handbooks/chase-missing-time.md', 'Made up', '<script>']) traces = appendTrace(traces, trace)
+    expect(traces).toEqual(['Read handbooks/a.md', 'Read data/a', 'Read data/b', 'Read data/c', 'Read handbooks/chase-missing-time.md'])
   })
 })

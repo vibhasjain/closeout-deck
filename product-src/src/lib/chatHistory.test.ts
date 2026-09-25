@@ -9,6 +9,33 @@ function harness(local: ChatMessage[] = [], saved: ChatMessage[] = []) {
   return { history, request, chat: () => chat, pending: () => pending }
 }
 describe('separate append-only chat history', () => {
+  it('durably saves pending actions before execution and appends only their settled audit row', async () => {
+    const action = { type: 'approve', cycleId: '2026-09-20', groupId: 'CS-01' }
+    const pending = { ...line('decision'), actions: [], pendingActions: [action] }
+    const h = harness()
+    h.history.appended([], [pending])
+    expect(h.pending()).toEqual([pending])
+    await h.history.flush()
+    expect(h.request).not.toHaveBeenCalled()
+    const reload = harness([], h.pending())
+    await reload.history.load()
+    expect(reload.chat()).toEqual([{ ...pending, pendingActions: [], skipped: ['Action outcome unconfirmed after reload; review the cycle before trying again'] }])
+    expect(reload.request.mock.calls.map(([method]) => method)).toEqual(['GET', 'POST'])
+    expect(reload.pending()).toEqual([])
+    const complete = { ...pending, actions: [action], pendingActions: [] }
+    h.history.appended([pending], [complete])
+    await h.history.flush()
+    expect(h.request).toHaveBeenCalledExactlyOnceWith('POST', { messages: [complete] })
+    expect(h.pending()).toEqual([])
+  })
+  it('focus hydration leaves currently executing actions pending until they settle', async () => {
+    const pending = { ...line('live'), pendingActions: [{ type: 'approve' }], actions: [] }
+    const h = harness()
+    h.history.appended([], [pending])
+    await h.history.load()
+    expect(h.chat()).toEqual([pending])
+    expect(h.request.mock.calls.map(([method]) => method)).toEqual(['GET'])
+  })
   it('keeps received trace metadata when an older server returns the same message without it', async () => {
     const local = { ...line('same'), traces: ['Read handbooks/mediation.md'] }
     const h = harness([local])

@@ -23,6 +23,7 @@ describe('Payroll next step', () => {
     expect(html).toContain(`<strong>${label}</strong>`)
     expect(html).toContain('Cycle detail from the server')
     expect(html).toContain('1 missing sets · 2 gaps · 4 open groups')
+    expect(html).toContain('role="region" aria-label="Next step"')
     expect(html.match(/<button\b/g)).toHaveLength(1)
     expect(html).toContain('class="btn journey-next-button"')
     expect(html).not.toContain('primary')

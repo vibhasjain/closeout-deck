@@ -5,7 +5,7 @@ import { agentHref } from '@/lib/navigation'
 import { cycleNamed, saveCycle, slugId } from '@/lib/cohorts'
 import { FREQUENCIES, WEEKDAYS, ONBOARD_TOPICS, PROFILE_FIELDS, effectiveAuthority, getOnboarding } from '@/lib/onboarding'
 import type { CustomDeskRule, FirmFacts, Onboarding } from '@/lib/onboarding'
-import { getCycle, invalidate } from '@/lib/data'
+import { invalidate } from '@/lib/data'
 import { decide } from '@/lib/journey'
 
 export type ChatUpdate = (patch: Partial<Onboarding> | ((state: Onboarding) => Partial<Onboarding>)) => void
@@ -261,12 +261,7 @@ export function applyAction(action: Action, update: ChatUpdate, navigate: Naviga
       navigate(agentHref(action.to, params, cycleId))
       break
     case 'decide':
-      if (getOnboarding().dataSource === 'server') return (async () => {
-        const cycle = await getCycle(action.cycleId)
-        const index = cycle.week.findIndex(shift => shift.id === action.shiftId)
-        const rules = new Set(cycle.results[index]?.rows.filter(row => row.status === 'flag' || row.status === 'held').map(row => row.ruleId) ?? [])
-        for (const ruleId of rules) await decide(action.cycleId, { groupId: ruleId, decision: action.decision === 'applied' ? 'approved' : 'dismissed', ...(action.reason ? { reason: action.reason } : {}) })
-      })()
+      if (getOnboarding().dataSource === 'server') throw new Error('use approve/dismiss for a group')
       update((state) => ({
         decisionTimes: { ...state.decisionTimes, [`${action.cycleId}:${action.shiftId}`]: new Date().toISOString() },
         resolutions: {

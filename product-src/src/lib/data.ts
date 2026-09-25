@@ -6,7 +6,7 @@ import type { DeskCycle } from '@/lib/desk'
 import { flushOnboarding, getOnboarding, updateOnboarding, type Onboarding } from '@/lib/onboarding'
 import { viewerSession } from '@/lib/viewerSession'
 import type { JourneyBatch, JourneyDecision, NextStep } from '@/lib/journey'
-import { effectiveJourneyRun, journeyPayroll } from '@/lib/journeyPay'
+import { effectiveJourneyRun, journeyPayroll, type JourneyPayAdjustment } from '@/lib/journeyPay'
 
 /** JSON wire types mirror the data service without importing Node modules into the app. */
 export interface DataProvenance { file: string; sheet?: string; row: number; cols: Partial<Record<string, string>>; hoursOnly?: boolean; fileId?: string; sample?: boolean; system?: string }
@@ -34,7 +34,7 @@ export interface FactInput { kind: 'site' | 'rate' | 'differential' | 'alias' | 
 export interface CycleDates { id: string; start: string; end: string; cutoff: string; deadline: string; payDate: string; status: Cycle['status'] }
 export interface CyclePayload {
   cycle: CycleDates; sample: boolean; runId: string | null; runAt: string | null; sites: DataSite[]
-  decisions?: JourneyDecision[]; batch?: JourneyBatch | null; nextStep?: NextStep
+  decisions?: JourneyDecision[]; batch?: JourneyBatch | null; nextStep?: NextStep; adjustments?: JourneyPayAdjustment[]
   week: (Omit<Shift, 'fac'> & { fac: number; sample?: boolean; prov: DataProvenance; entryIds: string[] })[]
   results: Omit<RunShift, 'shift'>[]
   totals: { under: number; over: number; flags: number; held: number; gross: number; naive: number; shifts: number; workers: number }
@@ -116,11 +116,11 @@ export function hydrate(payload: CyclePayload, cal: Onboarding, files: FileRecor
       under: shifts.reduce((total, row) => total + (row.held ? 0 : row.deltaUnder), 0), over: shifts.reduce((total, row) => total + (row.held ? 0 : row.deltaOver), 0),
       held: shifts.filter(row => row.held).length, flags: shifts.filter(row => row.flagged).length,
     } : {}),
-    gross: journeyPayroll(week, payload.results, (payload.decisions ?? []).filter(decision => decision.cycleId === cycle.id), aliases).gross,
+    gross: journeyPayroll(week, payload.results, (payload.decisions ?? []).filter(decision => decision.cycleId === cycle.id), aliases, payload.adjustments).gross,
   }
   return { ...cycle, week, run: { shifts, totals, ctx },
     days: daysOf(cycle), scripted: false, label: cycleLabel(cycle), statusTag: payload.batch ? 'Paid' : cycle.status === 'in-progress' ? 'In Progress' : 'Pending', rememberedRuleIds: remembered(cycle, cal),
-    decisions: payload.decisions, batch: payload.batch, nextStep: payload.nextStep,
+    decisions: payload.decisions, batch: payload.batch, nextStep: payload.nextStep, adjustments: payload.adjustments,
     server: true, sample: payload.sample, sites: payload.sites, groups: payload.groups, extraGroups: payload.extraGroups, gaps: payload.gaps, intake: payload.intake,
   }
 }
@@ -129,8 +129,8 @@ function emptyCycle(cycle: Cycle): DeskCycle {
     server: true, sample: false, sites: [], groups: [], extraGroups: [], gaps: [], intake: { sources: [], expected: [], received: [] } }
 }
 
-export interface DataSnapshot { owner: string; loaded: boolean; loading: boolean; error: string | null; list: CycleSummary[]; sources: SourceRecord[]; files: FileRecord[]; payloads: CyclePayload[] }
-const initial = (owner = ''): DataSnapshot => ({ owner, loaded: false, loading: false, error: null, list: [], sources: [], files: [], payloads: [] })
+export interface DataSnapshot { owner: string; loaded: boolean; loading: boolean; error: string | null; cycleErrors: Record<string, string>; list: CycleSummary[]; sources: SourceRecord[]; files: FileRecord[]; payloads: CyclePayload[] }
+const initial = (owner = ''): DataSnapshot => ({ owner, loaded: false, loading: false, error: null, cycleErrors: {}, list: [], sources: [], files: [], payloads: [] })
 let snapshot = initial()
 const listeners = new Set<() => void>()
 const emit = (next: DataSnapshot) => { snapshot = next; listeners.forEach(listener => listener()) }
@@ -148,27 +148,56 @@ export function publishCycle(payload: CyclePayload, account = owner()) {
   const key = `${account}:${payload.cycle.id}`
   cycleVersions.set(key, (cycleVersions.get(key) ?? 0) + 1)
   const summary: CycleSummary = { ...payload.cycle, sample: payload.sample, runAt: payload.runAt, totals: payload.totals, counts: payload.counts, findings: payload.groups.length + payload.extraGroups.length }
-  emit({ ...snapshot, error: null, payloads: [...snapshot.payloads.filter(item => item.cycle.id !== payload.cycle.id), payload],
+  const cycleErrors = { ...snapshot.cycleErrors }
+  delete cycleErrors[payload.cycle.id]
+  emit({ ...snapshot, cycleErrors, payloads: [...snapshot.payloads.filter(item => item.cycle.id !== payload.cycle.id), payload],
     list: snapshot.list.some(item => item.id === payload.cycle.id) ? snapshot.list.map(item => item.id === payload.cycle.id ? summary : item) : [...snapshot.list, summary] })
 }
-const cycleRequests = new Map<string, Promise<void>>()
-export function refreshCycle(id: string): Promise<void> {
+export type CycleReadResult = { state: 'running' | 'done'; error: null } | { state: 'error'; error: string }
+const cycleRequests = new Map<string, Promise<CycleReadResult>>()
+/** Card reads report their own errors. An absent run is normal while intake is empty. */
+export function refreshCycle(id: string): Promise<CycleReadResult> {
   const account = owner(), key = `${account}:${id}`
   const pending = cycleRequests.get(key)
   if (pending) return pending
   const generation = cycleVersions.get(key) ?? 0
-  const work = getCycle(id).then(payload => {
+  const work = getCycle(id).then<CycleReadResult>(payload => {
     if ((cycleVersions.get(key) ?? 0) === generation) publishCycle(payload, account)
+    const current = snapshot.owner === account ? snapshot.payloads.find(item => item.cycle.id === id) : undefined
+    return { state: current?.runAt || payload.runAt ? 'done' : 'running', error: null }
   }).catch((cause: unknown) => {
-    if (owner() === account && (cycleVersions.get(key) ?? 0) === generation) emit({ ...snapshot, error: cause instanceof Error ? cause.message : 'The cycle could not be loaded.' })
+    if ((cycleVersions.get(key) ?? 0) !== generation) {
+      const current = snapshot.owner === account ? snapshot.payloads.find(item => item.cycle.id === id) : undefined
+      return { state: current?.runAt ? 'done' as const : 'running' as const, error: null }
+    }
+    if (cause instanceof DataError && cause.status === 404) return { state: 'running' as const, error: null }
+    return { state: 'error' as const, error: cause instanceof Error ? cause.message : 'The cycle could not be loaded.' }
   }).finally(() => { cycleRequests.delete(key) })
   cycleRequests.set(key, work)
   return work
 }
+const invalidationListeners = new Set<() => void>()
+export function onDataInvalidated(listener: () => void) {
+  invalidationListeners.add(listener)
+  return () => { invalidationListeners.delete(listener) }
+}
+/** A decision response already contains its cycle; only list metadata needs another read. */
+export async function refreshCycleList(): Promise<void> {
+  const account = owner(), versions = new Map(cycleVersions)
+  try {
+    const list = await getCycles()
+    if (owner() !== account) return
+    if (snapshot.owner !== account) emit(initial(account))
+    const cycles = list.cycles.map(row => (versions.get(`${account}:${row.id}`) ?? 0) === (cycleVersions.get(`${account}:${row.id}`) ?? 0)
+      ? row : snapshot.list.find(current => current.id === row.id) ?? row)
+    emit({ ...snapshot, list: cycles, sources: list.sources })
+  } catch { /* Retain the published decision if this optional metadata read fails. */ }
+}
 /** Refreshes atomically. Failed refreshes retain this account's last successful data and expose a retryable error. */
 export async function invalidate(): Promise<void> {
   revision++
-  return loadData()
+  await loadData()
+  invalidationListeners.forEach(listener => listener())
 }
 export async function loadData(): Promise<void> {
   const account = owner()
@@ -182,14 +211,25 @@ export async function loadData(): Promise<void> {
       emit({ ...snapshot, loading: true, error: null })
       try {
         const [list, { files }] = await Promise.all([getCycles(), getFiles()])
-        const payloads = await Promise.all(list.cycles.filter(cycle => cycle.runAt !== null).map(cycle => getCycle(cycle.id)))
+        const cycleErrors: Record<string, string> = {}, absent = new Set<string>()
+        const reads = await Promise.all(list.cycles.filter(cycle => cycle.runAt !== null).map(async cycle => {
+          try { return await getCycle(cycle.id) } catch (cause) {
+            if (cause instanceof DataError && cause.status === 404) absent.add(cycle.id)
+            else {
+              cycleErrors[cycle.id] = cause instanceof Error ? cause.message : 'The cycle could not be loaded.'
+              return snapshot.payloads.find(payload => payload.cycle.id === cycle.id)
+            }
+          }
+        }))
+        const payloads = reads.filter((payload): payload is CyclePayload => !!payload)
         if (owner() !== account) return
         if (generation !== revision) continue
         for (const payload of payloads) {
           const key = `${account}:${payload.cycle.id}`
           cycleVersions.set(key, (cycleVersions.get(key) ?? 0) + 1)
         }
-        emit({ owner: account, loaded: true, loading: false, error: null, list: list.cycles, sources: list.sources, files, payloads })
+        emit({ owner: account, loaded: true, loading: false, error: null, cycleErrors,
+          list: list.cycles.map(cycle => absent.has(cycle.id) ? { ...cycle, runAt: null } : cycle), sources: list.sources, files, payloads })
         if ((payloads.length || list.sources.length || files.length) && getOnboarding().dataSource !== 'server') updateOnboarding({ dataSource: 'server' })
       } catch (cause) {
         if (owner() !== account) return

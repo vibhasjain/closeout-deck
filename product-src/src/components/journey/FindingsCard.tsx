@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { FindingDetail } from '@/components/SampleResult'
+import { FormCard } from '@/components/journey/FormCard'
 import { useOverlay } from '@/components/shell/Overlay'
 import { Btn, Tag } from '@/components/ui'
 import { hydrate, type CyclePayload, type FindingGroup } from '@/lib/data'
@@ -19,18 +20,10 @@ export interface CarouselFinding { group: FindingGroup; resolution: ResolutionGr
 export function carouselFindings(payload: CyclePayload, state: Onboarding, threads: JourneyThread[] = []): CarouselFinding[] {
   const cycle = hydrate(payload, state)
   const groups = [...payload.groups, ...payload.extraGroups]
-  return resolutionGroups(cycle, state.resolutions, state.undone[cycle.id]).filter(item => item.state !== 'fixed').flatMap(resolution => {
+  return resolutionGroups(cycle, state.resolutions, state.undone[cycle.id], threads, state.neverContact ?? []).filter(item => item.state !== 'fixed').flatMap(resolution => {
     const group = groups.find(group => group.ruleId === resolution.ruleId)
     if (!group) return []
-    const gapIds = new Set(resolution.cases.flatMap(item => {
-      const shift = payload.week.find(shift => shift.id === item.shiftId)
-      return shift ? [`${item.site}|${shift.worker}|${shift.day}`] : []
-    }))
-    const supervisors = payload.sites.filter(site => resolution.cases.some(item => item.site === site.name)).flatMap(site => site.supervisor ? [site.supervisor.name] : [])
-    const thread = threads.find(thread => thread.messages.some(message => message.dir === 'out') &&
-      (resolution.cases.some(item => item.shiftId === thread.shiftId || item.worker === thread.counterparty.name || item.site === thread.counterparty.name)
-        || supervisors.includes(thread.counterparty.name) || thread.counterparty.gapIds?.some(id => gapIds.has(id))))
-    return [{ group, resolution, asked: thread?.counterparty.name ?? supervisors[0] }]
+    return [{ group, resolution, asked: resolution.asked }]
   })
 }
 
@@ -104,11 +97,12 @@ export function FindingsCard({ cycleId }: { cycleId: string }) {
           if (first) setPosition(Math.round(node.scrollLeft / (first.offsetWidth + 12)))
         }}>
           {items.map(item => <article className="journey-finding" key={`${groupId(item.group)}:${item.resolution.state}`} role="listitem" data-state={item.resolution.state}>
-            <Tag>{item.resolution.state === 'proposed' ? 'Proposed' : item.resolution.state === 'waiting' ? 'Waiting' : 'Needs Judgment'}</Tag>
+            <Tag>{item.resolution.state === 'proposed' ? 'Proposed' : item.resolution.state === 'waiting' ? 'Waiting' : item.resolution.state === 'escalated' ? `Escalated · ${item.resolution.owner}` : 'Needs Judgment'}</Tag>
             <h4>{item.group.title}</h4><p>{item.group.summary}</p>
             <div className="journey-finding-data"><span className="tabular-nums">{item.resolution.cases.length.toLocaleString()} time entries</span>{item.group.amountLabel && <span className="tabular-nums">{item.group.amountLabel}</span>}</div>
-            {item.resolution.state === 'waiting' && <p className="journey-asked">{item.asked ? `Asked ${item.asked}` : 'Waiting on a reply'}</p>}
+            {item.resolution.state === 'waiting' && <p className="journey-asked">{item.asked ? `Asked ${item.asked}` : 'Not asked yet'}</p>}
             <div className="journey-finding-actions">
+              {item.resolution.state === 'waiting' && !item.asked && <Btn onClick={() => openDrawer(<FormCard form="gaps" cycleId={cycleId} />, 'Missing time entries')}>Review gaps</Btn>}
               {item.resolution.state === 'proposed' && <Btn className="primary" disabled={pending !== null} onClick={() => void act(item, 'approved')}>{pending === groupId(item.group) ? 'Approving…' : `Approve ${item.resolution.cases.length.toLocaleString()}`}</Btn>}
               {item.resolution.state === 'judgment' && <Btn disabled={pending !== null} onClick={() => void act(item, 'escalated')}>{pending === groupId(item.group) ? 'Escalating…' : 'Escalate'}</Btn>}
               <Btn onClick={() => openDrawer(<FindingDetail finding={findingEvidence(cycle, item)} dayLabel={day => days[day] ?? ''} />, 'Evidence', cycle.sample ? 'Sample' : undefined)}>Evidence</Btn>

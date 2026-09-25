@@ -56,8 +56,8 @@ export function Payroll() {
   }
 
   useSetChatSuggestions(['What needs my review?', 'Why does gross differ from the spreadsheet?', 'Which payments are on hold?'], !shiftOpen)
-  useSetChatContext({ page: '/payroll', step: 'sheet', cycle: { id: cycle.id, label: cycle.label, stats: `${cycle.statusTag} · ${totals.workers.length} workers · ${money(totals.gross)} gross` },
-    selection: { vendorId: destination.id, name: destination.name, workers: totals.workers.length, gross: totals.gross, held: totals.held.length },
+  useSetChatContext({ page: '/payroll', step: 'sheet', cycle: { id: cycle.id, label: cycle.label, stats: `${cycle.statusTag} · ${totals.workerCount} workers · ${money(totals.gross)} gross` },
+    selection: { vendorId: destination.id, name: destination.name, workers: totals.workerCount, gross: totals.gross, held: cycle.batch?.held ?? totals.held.length },
     connections: state.connections }, !shiftOpen)
 
   return <div className="reconcile-layout payroll-layout">

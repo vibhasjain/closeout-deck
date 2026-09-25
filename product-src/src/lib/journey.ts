@@ -1,6 +1,6 @@
-import { useEffect, useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { authedFetch } from '@/lib/api'
-import { getCycle, getDataSnapshot, invalidate, publishCycle, refreshCycle, useData, type CyclePayload, type FindingGroup } from '@/lib/data'
+import { getCycle, getDataSnapshot, invalidate, onDataInvalidated, publishCycle, refreshCycle, refreshCycleList, useData, type CyclePayload, type CycleReadResult, type FindingGroup } from '@/lib/data'
 import { viewerSession } from '@/lib/viewerSession'
 import { flushOnboarding } from '@/lib/onboarding'
 
@@ -56,19 +56,46 @@ async function transport(path: string, body?: unknown) {
 }
 const request = async <T>(path: string, body?: unknown) => read<T>(await transport(path, body))
 
+/** Wait for server progress with bounded backoff; fresh intake wakes a sleeping card. */
+export function watchJourneyCycle(cycleId: string, receive: (result: CycleReadResult) => void) {
+  let stopped = false, pending = false, again = false, attempt = 0
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const poll = async () => {
+    if (stopped) return
+    if (pending) { again = true; return }
+    pending = true
+    const result = await refreshCycle(cycleId)
+    pending = false
+    if (stopped) return
+    receive(result)
+    if (again) { again = false; void poll(); return }
+    if (result.state !== 'done') timer = setTimeout(() => { void poll() }, Math.min(2000 * 2 ** Math.min(attempt++, 4), 30000))
+  }
+  const unsubscribe = onDataInvalidated(() => {
+    clearTimeout(timer)
+    attempt = 0
+    const data = getDataSnapshot()
+    if (data.owner === account() && data.payloads.some(item => item.cycle.id === cycleId && item.runAt)) receive({ state: 'done', error: null })
+    else void poll()
+  })
+  void poll()
+  return () => { stopped = true; clearTimeout(timer); unsubscribe() }
+}
+
 export function useJourneyCycle(cycleId: string) {
   const data = useData()
   const cycle = data.payloads.find(item => item.cycle.id === cycleId)
+  const row = data.list.find(item => item.id === cycleId)
   const running = !cycle?.runAt
   const owner = account()
+  const key = `${owner}:${cycleId}`
+  const [read, setRead] = useState<{ key: string; result: CycleReadResult } | null>(null)
   useEffect(() => {
-    if (!cycle || running) void refreshCycle(cycleId)
     if (!running) return
-    // Poll server progress; time never changes the task's Running/Done state.
-    const poll = window.setInterval(() => { void refreshCycle(cycleId) }, 2000)
-    return () => window.clearInterval(poll)
-  }, [cycleId, owner, running, !!cycle]) // eslint-disable-line react-hooks/exhaustive-deps -- depend on presence, not each server snapshot
-  return { cycle, loading: !cycle && !data.error, error: data.error }
+    return watchJourneyCycle(cycleId, result => setRead({ key, result }))
+  }, [cycleId, key, running])
+  const current = read?.key === key ? read.result : undefined
+  return { cycle, row, running, loading: !cycle && !row && !current, error: running && current ? current.error : data.cycleErrors[cycleId] ?? null }
 }
 
 export async function decide(cycleId: string, input: DecisionInput) {
@@ -80,7 +107,7 @@ export async function decide(cycleId: string, input: DecisionInput) {
   const group = [...(cycle?.groups ?? []), ...(cycle?.extraGroups ?? [])].find(item => item.ruleId === input.groupId || String(item.id) === input.groupId)
   const result = await request<{ decision: JourneyDecision; cycle: CyclePayload }>(`${cyclePath(cycleId)}/decisions`, { ...input, groupId: group?.ruleId ?? input.groupId })
   publishCycle(result.cycle, owner)
-  if (account() === owner) await invalidate()
+  if (account() === owner) await refreshCycleList()
   return result
 }
 

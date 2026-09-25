@@ -14,7 +14,7 @@ export function Message({ message, onAnswer }: { message: ChatMessage; onAnswer?
     <article className={`chat-message${user ? ' user' : ''}`} aria-label={user ? 'You' : 'Closeout Agent'}>
       <div className={user ? 'chat-bubble' : 'chat-agent-text'}>
         {message.contextChip && <span className="chat-context-chip">{message.contextChip}</span>}
-        {!!message.traces?.length && <div className="chat-traces" aria-label="Agent trace">{message.traces.map((trace, index) => <div key={index}>✓ {trace}</div>)}</div>}
+        {!!message.traces?.length && <div className="chat-traces" role="group" aria-label="Agent trace">{message.traces.map((trace, index) => <div key={index}>✓ {trace}</div>)}</div>}
         {message.text && <div className="chat-text">{message.text}</div>}
         {message.cards?.map((card, index) => {
           if (card.kind === 'task') return <TaskCard key={index} cycleId={card.cycleId} onAnswer={onAnswer} />
@@ -25,6 +25,7 @@ export function Message({ message, onAnswer }: { message: ChatMessage; onAnswer?
             ? <FirstCloseoutChoice key={index} card={card} onAnswer={onAnswer} /> : onAnswer ? <FactQuestion key={index} card={card} onAnswer={onAnswer} /> : null
         })}
         {!!message.skipped?.length && <p className="chat-skipped" role="status">Skipped: {message.skipped.join('; ')}.</p>}
+        {!!message.pendingActions?.length && <p role="status">Pending: {message.pendingActions.length} actions</p>}
         {message.actions?.map((action, index) => {
           const summary = actionSummary(action)
           return summary === null ? null : (

@@ -1,15 +1,15 @@
 import { Children, createElement, isValidElement, type DependencyList, type EffectCallback, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { batchPreview, DisputeForm, gapRows, GapsForm, SendForm } from './FormCard'
+import { batchPreview, ConnectForm, DisputeForm, FormCard, gapRows, GapsForm, SendForm } from './FormCard'
 import { DEFAULTS, type Onboarding } from '@/lib/onboarding'
-import type { CyclePayload } from '@/lib/data'
+import type { CyclePayload, CycleSummary } from '@/lib/data'
 import type { JourneyDispute, JourneyThread } from '@/lib/journey'
 import fixture from '@/lib/fixtures/server-cycle.json'
 
 const hooks = vi.hoisted(() => ({ cursor: 0, slots: [] as unknown[], pending: [] as Array<() => void> }))
 const store = vi.hoisted(() => ({ state: undefined as Onboarding | undefined }))
-const api = vi.hoisted(() => ({ askGaps: vi.fn(), sendPayroll: vi.fn(), downloadBatch: vi.fn(), getDisputes: vi.fn(), createDispute: vi.fn(), simulateDispute: vi.fn(), resolveDispute: vi.fn() }))
+const api = vi.hoisted(() => ({ askGaps: vi.fn(), sendPayroll: vi.fn(), downloadBatch: vi.fn(), getDisputes: vi.fn(), getThreads: vi.fn(), createDispute: vi.fn(), simulateDispute: vi.fn(), resolveDispute: vi.fn(), useJourneyCycle: vi.fn() }))
 vi.mock('react', async importOriginal => ({
   ...await importOriginal<typeof import('react')>(),
   useState: <T,>(initial: T | (() => T)) => {
@@ -26,15 +26,16 @@ vi.mock('react', async importOriginal => ({
   },
 }))
 vi.mock('@/lib/onboarding', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/onboarding')>(), useOnboarding: () => [store.state, vi.fn()] }))
-vi.mock('@/lib/journey', () => ({ ...api, refreshThreads: vi.fn(), useJourneyCycle: vi.fn(), useJourneyThreads: () => ({ threads: [], loaded: true, loading: false, error: null }) }))
-vi.mock('@/components/ConnectMethod', () => ({ ConnectMethod: () => createElement('div', null, 'How do you want to connect?') }))
+vi.mock('@/lib/journey', () => ({ ...api, refreshThreads: vi.fn(), useJourneyThreads: () => ({ threads: [], loaded: true, loading: false, error: null }) }))
+vi.mock('@/components/ConnectMethod', () => ({ ConnectMethod: ({ vendor }: { vendor: { set: number } }) => createElement('div', { 'data-set': vendor.set }, 'How do you want to connect?') }))
 vi.mock('@/components/Thread', () => ({ JourneyThreadView: ({ thread }: { thread: JourneyThread }) => createElement('div', { 'aria-label': 'Dispute conversation' }, thread.counterparty.name) }))
 
 const next = (kind: NonNullable<CyclePayload['nextStep']>['kind']): NonNullable<CyclePayload['nextStep']> => ({ kind, label: kind, detail: 'Review open time entries', counts: { missingSets: 0, gaps: 0, openGroups: kind === 'review' ? 2 : 0 } })
 const payload = (): CyclePayload => ({ ...structuredClone(fixture.payload) as CyclePayload, decisions: [], batch: null, nextStep: next('send') })
 const gapsPayload = (): CyclePayload => { const cycle = payload(); cycle.intake.expected = [{ worker: 'Cam Li', client: 'Pacific Cold Storage', day: 0, source: cycle.intake.sources[0].id, onSite: 480 }]; cycle.intake.received = []; return cycle }
 const batch = { id: 'batch-1', cycleId: fixture.payload.cycle.id, destination: 'ADP', workers: 10, gross: 1200, held: 1, createdAt: '2026-09-25T12:00:00Z' }
-const thread: JourneyThread = { id: 'thread-1', cycleId: fixture.payload.cycle.id, counterparty: { kind: 'worker', name: 'Ana Peña' }, status: 'open', createdAt: '2026-09-25T12:00:00Z', messages: [] }
+const thread: JourneyThread = { id: 'thread-1', cycleId: fixture.payload.cycle.id, counterparty: { kind: 'worker', name: 'Ana Peña' }, status: 'open', createdAt: '2026-09-25T12:00:00Z',
+  messages: [{ id: 'message-1', threadId: 'thread-1', dir: 'out', text: 'Please confirm the missing time.', status: 'not_sent_demo', at: '2026-09-25T12:00:00Z' }] }
 const dispute: JourneyDispute = { id: 'dispute-1', cycleId: fixture.payload.cycle.id, worker: 'Ana Peña', description: 'Two missing hours', source: 'simulated', status: 'open', createdAt: '2026-09-25T12:00:00Z' }
 
 interface Props { children?: ReactNode; onClick?: (event?: { preventDefault(): void }) => unknown; onChange?: (event: { target: { value: string; checked?: boolean; files?: File[] } }) => unknown; 'aria-label'?: string; disabled?: boolean; className?: string }
@@ -47,6 +48,7 @@ function mount(render: () => ReactNode) {
   draw()
   return {
     draw,
+    ready: async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); return draw() },
     click: async (label: string) => {
       await Promise.resolve(); await Promise.resolve(); draw()
       const target = elements(tree).find(element => element.props.children === label && element.props.onClick)
@@ -75,7 +77,23 @@ function mount(render: () => ReactNode) {
 }
 const primaryCount = (html: string) => (html.match(/class="btn primary"/g) ?? []).length
 
-beforeEach(() => { vi.clearAllMocks(); hooks.cursor = 0; hooks.slots = []; hooks.pending = []; api.getDisputes.mockResolvedValue({ disputes: [] }); store.state = { ...DEFAULTS, discovery: { ...DEFAULTS.discovery, payroll: 'ADP' } } })
+beforeEach(() => {
+  vi.clearAllMocks(); hooks.cursor = 0; hooks.slots = []; hooks.pending = []
+  api.getDisputes.mockResolvedValue({ disputes: [] }); api.getThreads.mockResolvedValue({ threads: [] })
+  store.state = { ...DEFAULTS, discovery: { ...DEFAULTS.discovery, payroll: 'ADP' } }
+})
+
+describe('journey connect form', () => {
+  it('renders before a cycle has a run and selects the first missing set from the list row', () => {
+    const row: CycleSummary = { ...payload().cycle, sample: false, runAt: null, totals: null, findings: 0, counts: { set1: 4, set2: 0, set3: 0 } }
+    api.useJourneyCycle.mockReturnValue({ row, cycle: undefined, loading: false, error: null })
+    const html = renderToStaticMarkup(FormCard({ form: 'connect', cycleId: row.id }))
+    expect(html).toContain('How do you want to connect?')
+    expect(html).toContain('data-set="2"')
+    expect(html).not.toContain('Cycle unavailable')
+    expect(renderToStaticMarkup(ConnectForm({}))).toContain('data-set="1"')
+  })
+})
 
 describe('journey send form', () => {
   it('previews only payable workers and gross, excluding partially paid held entries', () => {
@@ -95,6 +113,37 @@ describe('journey send form', () => {
     cycle.decisions = [{ id: 'd1', cycleId: cycle.cycle.id, groupId: 'CA-MB-01', shiftIds: [], decision: 'dismissed', reason: 'Confirmed meal', by: 'user', at: '2026-09-25T12:00:00Z' }]
     const adjustment = { ...dispute, worker: 'New worker', status: 'adjusted' as const, adjustment: { hours: 2, amount: 40.005, next_cycle_id: cycle.cycle.id } }
     expect(batchPreview(cycle, [adjustment])).toEqual({ workers: 3, gross: 200.01, held: 1 })
+    cycle.adjustments = [{ id: adjustment.id, cycleId: adjustment.cycleId, worker: adjustment.worker, hours: 2, amount: 40.005 }]
+    expect(batchPreview(cycle)).toEqual({ workers: 3, gross: 200.01, held: 1 })
+    // A separate history fetch must not count the same adjustment twice.
+    expect(batchPreview(cycle, [adjustment])).toEqual({ workers: 3, gross: 200.01, held: 1 })
+    cycle.adjustments = []
+    expect(batchPreview(cycle, [adjustment])).toEqual({ workers: 2, gross: 160, held: 1 })
+  })
+
+  it('renders scoped adjustment totals immediately without requesting unrelated dispute history', () => {
+    const cycle = payload()
+    const base = batchPreview(cycle)
+    cycle.adjustments = [{ id: 'adjustment-only-worker', cycleId: 'paid-cycle', worker: 'Adjustment-only worker', hours: 2, amount: 40.005 }]
+    const form = mount(() => SendForm({ cycle }))
+    const html = form.draw()
+    expect(html).toContain((base.gross + 40.01).toLocaleString('en-US', { style: 'currency', currency: 'USD' }))
+    expect(html).toContain(`<dd class="mono tabular-nums">${base.workers + 1}</dd>`)
+    expect(html).not.toContain('Loading…')
+    expect(form.fields().find(element => element.props.children === 'Send to Payroll' && element.props.onClick)?.props.disabled).toBe(false)
+    expect(api.getDisputes).not.toHaveBeenCalled()
+  })
+
+  it('retains the dispute-history loading and retry path only for legacy payloads', async () => {
+    api.getDisputes.mockRejectedValueOnce(new Error('Preview history unavailable'))
+    const cycle = payload()
+    const form = mount(() => SendForm({ cycle }))
+    expect(form.draw()).toContain('Loading…')
+    expect(await form.ready()).toContain('Preview history unavailable')
+    expect(form.fields().find(element => element.props.children === 'Send to Payroll' && element.props.onClick)?.props.disabled).toBe(true)
+    await form.click('Retry preview')
+    expect(await form.ready()).not.toContain('Preview history unavailable')
+    expect(form.fields().find(element => element.props.children === 'Send to Payroll' && element.props.onClick)?.props.disabled).toBe(false)
   })
 
   it.each(['get_timesheets', 'chase_missing', 'review', 'send', 'done'] as const)('is black only when nextStep is send: %s', kind => {
@@ -156,6 +205,19 @@ describe('journey send form', () => {
     expect(updated).not.toContain('Review is still open')
     expect(updated).not.toContain('Review CA-MB-01')
   })
+
+  it('retains the 422 reason and specific open items when the send refresh replaces the cycle object', async () => {
+    let cycle = { ...payload(), nextStep: next('review') }
+    api.sendPayroll.mockImplementationOnce(async () => {
+      cycle = structuredClone(cycle)
+      return { status: 422, reason: 'Review is still open', nextStep: next('review'), open: { missingSets: [2], gaps: ['Pacific Cold Storage|Cam Li|0'], groups: ['CA-MB-01', 'FED-RR-01'] } }
+    })
+    const form = mount(() => SendForm({ cycle }))
+    const html = await form.click('Send to Payroll')
+    for (const item of ['Review is still open', 'Missing set 2', 'Missing time: Pacific Cold Storage · Cam Li · 0', 'Review CA-MB-01', 'Review FED-RR-01']) expect(html).toContain(item)
+    cycle = structuredClone(cycle)
+    expect(form.draw()).toContain('Review FED-RR-01')
+  })
 })
 
 describe('journey gaps form', () => {
@@ -164,7 +226,7 @@ describe('journey gaps form', () => {
     store.state = { ...store.state!, neverContact: [' maria castillo '] }
     expect(gapRows(cycle, store.state.neverContact!)).toEqual([{ id: 'Pacific Cold Storage|Cam Li|0', worker: 'Cam Li', site: 'Pacific Cold Storage', day: 0, kind: 'site', name: 'Maria Castillo', blocked: true }])
     const form = mount(() => GapsForm({ cycle }))
-    const checkbox = form.fields().find(element => element.props['aria-label'] === 'Ask Maria Castillo')
+    const checkbox = form.fields().find(element => element.props['aria-label'] === 'Ask Maria Castillo about Cam Li · Pacific Cold Storage · Day 1')
     expect(checkbox?.props.disabled).toBe(true)
     expect(form.draw()).toContain('Never Contact')
     expect(primaryCount(form.draw())).toBe(1)
@@ -208,7 +270,7 @@ describe('journey gaps form', () => {
     api.askGaps.mockResolvedValueOnce({ threads: [{ ...asked, counterparty: { ...asked.counterparty, gapIds: ids } }], skipped: [] })
     const form = mount(() => GapsForm({ cycle }))
     expect(form.draw()).toContain('Ask about up to 200 time entries at a time. 1 more remain.')
-    const checkboxes = form.fields().filter(element => element.props['aria-label'] === 'Ask Maria Castillo')
+    const checkboxes = form.fields().filter(element => element.props['aria-label']?.startsWith('Ask Maria Castillo about '))
     expect(checkboxes).toHaveLength(201)
     expect(checkboxes[200].props.disabled).toBe(true)
     await form.click('Ask 1 person')
@@ -218,8 +280,27 @@ describe('journey gaps form', () => {
     expect(api.askGaps.mock.calls[1][1]).toEqual({ gapIds: ids.slice(200) })
     expect(form.draw()).toContain('Asked · Still missing')
     expect(form.draw()).not.toContain('No missing time entries.')
-    expect(form.fields().filter(element => element.props['aria-label'] === 'Ask Maria Castillo')).toHaveLength(201)
+    expect(form.fields().filter(element => element.props['aria-label']?.startsWith('Ask Maria Castillo about '))).toHaveLength(201)
     expect(primaryCount(form.draw())).toBe(0)
+  })
+
+  it('gives gaps for the same worker distinct labels with the site and day', () => {
+    const cycle = gapsPayload()
+    cycle.intake.expected.push({ ...cycle.intake.expected[0], day: 1 })
+    const form = mount(() => GapsForm({ cycle }))
+    const labels = form.fields().map(element => element.props['aria-label']).filter(label => label?.startsWith('Ask '))
+    expect(labels).toEqual(['Ask Maria Castillo about Cam Li · Pacific Cold Storage · Day 1', 'Ask Maria Castillo about Cam Li · Pacific Cold Storage · Day 2'])
+  })
+
+  it('marks a gap asked only from a real outbound message to a permitted recipient', () => {
+    const cycle = gapsPayload()
+    const conversation = { ...thread, counterparty: { kind: 'site' as const, name: 'Maria Castillo', gapIds: ['Pacific Cold Storage|Cam Li|0'] } }
+    for (const messages of [[], [{ ...thread.messages[0], dir: 'in' as const }], [{ ...thread.messages[0], status: 'draft' as const }], [{ ...thread.messages[0], text: ' ' }]]) {
+      expect(gapRows(cycle, [], {}, [{ ...conversation, messages }])[0].asked).toBeUndefined()
+    }
+    expect(gapRows(cycle, [], {}, [conversation])[0].asked).toBe(true)
+    expect(gapRows(cycle, ['Maria Castillo'], {}, [conversation])[0].asked).toBeUndefined()
+    expect(gapRows(cycle, ['Pacific Cold Storage'], {}, [conversation])[0].asked).toBeUndefined()
   })
 })
 
@@ -235,6 +316,7 @@ describe('journey dispute form', () => {
   it('uses uploaded text as the real dispute description and marks the source upload', async () => {
     const cycle = { ...payload(), batch }
     const form = mount(() => DisputeForm({ cycle }))
+    await form.ready()
     form.change('Worker', 'Ana Peña')
     await form.upload(new File(['Two missing hours'], 'worker-note.txt', { type: 'text/plain' }))
     api.createDispute.mockResolvedValueOnce({ dispute: { ...dispute, source: 'upload' }, thread })
@@ -245,6 +327,7 @@ describe('journey dispute form', () => {
   it('keeps one black action while switching between simulation and a pasted dispute', async () => {
     const cycle = { ...payload(), batch }
     const form = mount(() => DisputeForm({ cycle }))
+    await form.ready()
     expect(primaryCount(form.draw())).toBe(1)
     form.change('Worker', 'Ana Peña')
     const ready = form.change('Dispute description', 'Two missing hours')
@@ -287,5 +370,70 @@ describe('journey dispute form', () => {
     const html = await form.click('Reject')
     expect(api.resolveDispute).toHaveBeenCalledWith(dispute.id, { decision: 'reject', note: 'No adjustment warranted' })
     expect(html).toContain('Dispute rejected.')
+  })
+
+  it.each(['open', 'adjusted', 'rejected'] as const)('rehydrates the existing %s dispute and its conversation after remount', async status => {
+    const cycle = { ...payload(), batch }
+    api.getDisputes.mockResolvedValue({ disputes: [{ ...dispute, status }, { ...dispute, id: 'other', cycleId: 'other-cycle', createdAt: '2026-09-26T12:00:00Z' }] })
+    api.getThreads.mockResolvedValue({ threads: [{ ...thread, disputeId: dispute.id }] })
+    const form = mount(() => DisputeForm({ cycle }))
+    expect(form.draw()).toContain('Loading disputes…')
+    const html = await form.ready()
+    expect(api.getThreads).toHaveBeenCalledWith(cycle.cycle.id)
+    expect(html).toContain('Two missing hours')
+    expect(html).toContain('Dispute conversation')
+    expect(html).not.toContain('Simulate a dispute')
+    expect(html).not.toContain('Open dispute</button>')
+    expect(api.simulateDispute).not.toHaveBeenCalled()
+    expect(api.createDispute).not.toHaveBeenCalled()
+    if (status === 'open') expect(html).toContain('Resolution note')
+    else expect(html).toContain(status === 'adjusted' ? 'Adjustment recorded' : 'Dispute rejected')
+  })
+
+  it('does not offer creation until dispute history loads successfully and supports retry', async () => {
+    api.getDisputes.mockRejectedValueOnce(new Error('Dispute history unavailable'))
+    const form = mount(() => DisputeForm({ cycle: { ...payload(), batch } }))
+    const html = await form.ready()
+    expect(html).toContain('Dispute history unavailable')
+    expect(html).not.toContain('Simulate a dispute')
+    await form.click('Retry disputes')
+    expect(await form.ready()).toContain('Simulate a dispute')
+  })
+
+  it('blocks stale creation controls when the cycle or prefilled worker changes during history loading', async () => {
+    let cycle = { ...payload(), batch }
+    let prefill = { worker: 'New worker' }
+    const form = mount(() => DisputeForm({ cycle, prefill }))
+    expect(await form.ready()).toContain('Simulate a dispute')
+    let finish!: (value: { disputes: JourneyDispute[] }) => void
+    api.getDisputes.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    prefill = { worker: dispute.worker }
+    expect(form.draw()).toContain('Loading disputes…')
+    expect(form.draw()).not.toContain('Simulate a dispute')
+    finish({ disputes: [dispute] })
+    expect(await form.ready()).toContain('Two missing hours')
+    cycle = { ...cycle, cycle: { ...cycle.cycle, id: 'next-paid-cycle' }, batch: { ...batch, id: 'next-batch', cycleId: 'next-paid-cycle' } }
+    expect(form.draw()).toContain('Loading disputes…')
+    expect(form.draw()).not.toContain('Resolution note')
+    expect(await form.ready()).toContain('Simulate a dispute')
+    expect(api.simulateDispute).not.toHaveBeenCalled()
+    expect(api.createDispute).not.toHaveBeenCalled()
+  })
+
+  it('does not replace a newly loaded cycle dispute with an old in-flight simulation result', async () => {
+    let cycle = { ...payload(), batch }
+    let finish!: (value: { dispute: JourneyDispute; thread: JourneyThread }) => void
+    api.simulateDispute.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    const form = mount(() => DisputeForm({ cycle }))
+    await form.click('Simulate a dispute')
+    const other = { ...dispute, id: 'next-dispute', cycleId: 'next-paid-cycle', description: 'Another paid-cycle dispute' }
+    api.getDisputes.mockResolvedValue({ disputes: [other] })
+    cycle = { ...cycle, cycle: { ...cycle.cycle, id: other.cycleId }, batch: { ...batch, id: 'next-batch', cycleId: other.cycleId } }
+    form.draw()
+    expect(await form.ready()).toContain(other.description)
+    finish({ dispute, thread })
+    const html = await form.ready()
+    expect(html).toContain(other.description)
+    expect(html).not.toContain(dispute.description)
   })
 })

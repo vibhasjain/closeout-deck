@@ -1,6 +1,8 @@
 import { CLIENTS } from '@/lib/sample'
 import { appliedCorrection, rowResolution, type DeskCycle } from '@/lib/desk'
 import type { Onboarding } from '@/lib/onboarding'
+import type { JourneyThread } from '@/lib/journey'
+import { journeyShiftPay } from '@/lib/journeyPay'
 
 /**
  * Agent-first triage: every discrepancy is in exactly one state.
@@ -9,8 +11,8 @@ import type { Onboarding } from '@/lib/onboarding'
  * waiting   — the agent has asked someone and is holding for the reply
  * judgment  — no right answer in the data; it goes to the person who owns the call
  */
-export type ResolutionState = 'proposed' | 'waiting' | 'judgment' | 'fixed'
-export const STATES: ResolutionState[] = ['proposed', 'waiting', 'judgment', 'fixed']
+export type ResolutionState = 'proposed' | 'waiting' | 'judgment' | 'escalated' | 'fixed'
+export const STATES: ResolutionState[] = ['proposed', 'waiting', 'judgment', 'escalated', 'fixed']
 
 // Flags the agent has already sent out for confirmation, and calls that aren't payroll's to make.
 const WAITING = new Set(['SRC-VMS-01'])
@@ -47,15 +49,38 @@ export interface ResolutionCase { shiftId: string; worker: string; day: string; 
 /** `approved`: fixed because a person approved it, not by the agent on its own. */
 export interface ResolutionGroup { state: ResolutionState; ruleId: string; cases: ResolutionCase[]; current: number; resolved: number; owner?: string; asked?: string; approved?: boolean }
 
-export function resolutionGroups(c: DeskCycle, res: Onboarding['resolutions'], undone: readonly string[] = []): ResolutionGroup[] {
+const norm = (value: string) => value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
+
+/** Only persisted outbound correspondence establishes that somebody was asked. */
+export function askedForGroup(c: DeskCycle, group: ResolutionGroup, threads: JourneyThread[], neverContact: readonly string[] = []): string | undefined {
+  const blocked = new Set(neverContact.map(norm).filter(Boolean))
+  return threads.find(thread => {
+    if (thread.cycleId !== c.id || thread.disputeId || blocked.has(norm(thread.counterparty.name))
+      || !thread.messages.some(message => message.dir === 'out' && message.status !== 'draft' && message.text.trim())) return false
+    return group.cases.some(item => {
+      if (thread.counterparty.kind === 'site' && blocked.has(norm(item.site))) return false
+      const shift = c.week.find(shift => shift.id === item.shiftId)
+      const referenced = !!thread.shiftId || !!thread.counterparty.gapIds?.length
+      if (referenced) return item.shiftId === thread.shiftId || !!(shift && thread.counterparty.gapIds?.includes(`${item.site}|${shift.worker}|${shift.day}`))
+      // Older correspondence lacks entry references; only that legacy shape falls back to a name.
+      return item.worker === thread.counterparty.name || item.site === thread.counterparty.name
+        || c.sites?.find(site => site.name === item.site)?.supervisor?.name === thread.counterparty.name
+    })
+  })?.counterparty.name
+}
+
+export function resolutionGroups(c: DeskCycle, res: Onboarding['resolutions'], undone: readonly string[] = [], threads: JourneyThread[] = [], neverContact: readonly string[] = []): ResolutionGroup[] {
   const groups = new Map<string, ResolutionGroup>()
   for (const rs of c.run.shifts) {
     const seen = new Set<string>()
     for (const row of rs.rows) {
-      if (seen.has(row.ruleId)) continue
+      if (seen.has(row.ruleId) || (row.status !== 'flag' && row.status !== 'held' && !appliedCorrection(c, row))) continue
       const decision = rowResolution(c, rs.shift.id, row.ruleId, res)
       let state: ResolutionState | null = null
-      if (appliedCorrection(c, row)) state = decision === 'dismissed' ? null : !c.server && undone.includes(row.ruleId) && !res[c.id]?.[rs.shift.id] ? 'proposed' : 'fixed'
+      const held = c.server && (rs.held || rs.rows.some(item => item.ruleId === row.ruleId && item.status === 'held'))
+      if (held) state = 'waiting'
+      else if (decision === 'escalated') state = 'escalated'
+      else if (appliedCorrection(c, row)) state = decision === 'dismissed' ? null : !c.server && undone.includes(row.ruleId) && !res[c.id]?.[rs.shift.id] ? 'proposed' : 'fixed'
       else if (row.status === 'flag' || row.status === 'held') {
         if (decision === 'applied') state = 'fixed'
         else if (!decision) state = JUDGMENT[row.ruleId] ? 'judgment' : WAITING.has(row.ruleId) || row.status === 'held' ? 'waiting' : 'proposed'
@@ -65,13 +90,16 @@ export function resolutionGroups(c: DeskCycle, res: Onboarding['resolutions'], u
       const approved = state === 'fixed' && (c.server ? decision === 'applied' : res[c.id]?.[rs.shift.id] === 'applied')
       const key = `${state}:${row.ruleId}:${approved}`
       const group = groups.get(key) ?? { state, ruleId: row.ruleId, cases: [], current: 0, resolved: 0, ...(approved ? { approved } : {}),
-        ...(JUDGMENT[row.ruleId] ? { owner: JUDGMENT[row.ruleId] } : {}),
-        ...(state === 'waiting' ? { asked: askedAt(rs.shift.fac.name, c) } : {}) }
-      group.cases.push({ shiftId: rs.shift.id, worker: rs.shift.worker, day: c.days[rs.shift.day] ?? '', site: rs.shift.fac.name, note: row.note, before: rs.naive, after: rs.pay })
+        ...(JUDGMENT[row.ruleId] || state === 'escalated' ? { owner: JUDGMENT[row.ruleId] ?? 'review owner' } : {}),
+        ...(state === 'waiting' && !c.server ? { asked: askedAt(rs.shift.fac.name, c) } : {}) }
+      const pay = c.server ? journeyShiftPay(rs) : rs.pay
+      group.cases.push({ shiftId: rs.shift.id, worker: rs.shift.worker, day: c.days[rs.shift.day] ?? '', site: rs.shift.fac.name, note: row.note, before: rs.naive, after: pay })
       group.current += rs.naive
-      group.resolved += rs.pay
+      group.resolved += pay
       groups.set(key, group)
     }
   }
-  return [...groups.values()].sort((a, b) => STATES.indexOf(a.state) - STATES.indexOf(b.state) || b.cases.length - a.cases.length)
+  return [...groups.values()].map(group => c.server && group.state === 'waiting'
+    ? { ...group, asked: askedForGroup(c, group, threads, neverContact) } : group)
+    .sort((a, b) => STATES.indexOf(a.state) - STATES.indexOf(b.state) || b.cases.length - a.cases.length)
 }

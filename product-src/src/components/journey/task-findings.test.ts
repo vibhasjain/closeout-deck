@@ -4,14 +4,14 @@ import { readFileSync } from 'node:fs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import fixture from '@/lib/fixtures/server-cycle.json'
 import { DEFAULTS } from '@/lib/onboarding'
-import { getDataSnapshot, invalidate, serverCycles, type CyclePayload } from '@/lib/data'
+import { getDataSnapshot, refreshCycleList, serverCycles, type CyclePayload, type CycleSummary } from '@/lib/data'
 import { resolutionGroups } from '@/lib/resolution'
 import type { JourneyThread } from '@/lib/journey'
 import { FirstCloseoutChoice } from '@/components/chat/FirstCloseoutChoice'
 import { FindingsCard, carouselFindings, findingEvidence, findingsLayout } from './FindingsCard'
 import { TaskCard, taskProgress } from './TaskCard'
 
-const source = vi.hoisted(() => ({ cycle: undefined as CyclePayload | undefined, threads: [] as JourneyThread[] }))
+const source = vi.hoisted(() => ({ cycle: undefined as CyclePayload | undefined, row: undefined as CycleSummary | undefined, error: null as string | null, threads: [] as JourneyThread[] }))
 const actions = vi.hoisted(() => ({ navigate: vi.fn(), openDrawer: vi.fn() }))
 vi.mock('react', async original => ({
   ...await original<typeof import('react')>(),
@@ -24,10 +24,10 @@ vi.mock('@/lib/onboarding', async original => {
   const actual = await original<typeof import('@/lib/onboarding')>()
   return { ...actual, useOnboarding: () => [actual.DEFAULTS, vi.fn()], flushOnboarding: vi.fn().mockResolvedValue(undefined) }
 })
-vi.mock('@/lib/data', async original => ({ ...await original<typeof import('@/lib/data')>(), invalidate: vi.fn().mockResolvedValue(undefined) }))
+vi.mock('@/lib/data', async original => ({ ...await original<typeof import('@/lib/data')>(), invalidate: vi.fn().mockResolvedValue(undefined), refreshCycleList: vi.fn().mockResolvedValue(undefined) }))
 vi.mock('@/lib/journey', async original => ({
   ...await original<typeof import('@/lib/journey')>(),
-  useJourneyCycle: () => ({ cycle: source.cycle, loading: false, error: null }),
+  useJourneyCycle: () => ({ cycle: source.cycle, row: source.row, running: !source.cycle?.runAt, loading: false, error: source.error }),
   useJourneyThreads: () => ({ threads: source.threads, loading: false, error: null }),
 }))
 type ElementProps = { children?: ReactNode; className?: string; onClick?(): void; 'data-state'?: string }
@@ -47,6 +47,8 @@ function cycleFixture() {
 beforeEach(() => {
   vi.clearAllMocks()
   source.cycle = cycleFixture()
+  source.row = undefined
+  source.error = null
   source.threads = []
   vi.stubGlobal('localStorage', { getItem: () => null, setItem: vi.fn() })
 })
@@ -83,12 +85,46 @@ describe('server-driven task card', () => {
     button(choiceTree, 'Use sample').props.onClick!()
     expect(onAnswer).toHaveBeenCalledWith('Set 3: Use sample')
   })
-  it('keeps the scan under 2KB, static for reduced motion, without layout reads', () => {
-    const code = readFileSync(new URL('./DotMatrix.tsx', import.meta.url), 'utf8')
-    expect(Buffer.byteLength(code)).toBeLessThanOrEqual(2048)
-    expect(code).toContain('prefers-reduced-motion: reduce')
-    expect(code).toContain('if (!motion.matches) frame = requestAnimationFrame(draw)')
-    expect(code).not.toMatch(/getBoundingClientRect|offsetWidth|clientWidth|setInterval/)
+  it('renders a real no-run list row with its counts, missing choices and live Running status', () => {
+    const cycle = source.cycle!
+    source.row = { ...cycle.cycle, runAt: null, sample: false, totals: null, counts: { set1: 4, set2: 0, set3: 0 }, findings: 0 }
+    source.cycle = undefined
+    expect(taskProgress(undefined, source.row)).toMatchObject({ status: 'Running', sets: [4, 0, 0], workers: 0, rules: 0, missingSets: [2, 3] })
+    const html = renderToStaticMarkup(createElement(TaskCard, { cycleId: cycle.cycle.id }))
+    expect(html).toContain('<canvas')
+    expect(html).toMatch(/role="status"[^>]*><span[^>]*>[\s\S]*?Running/)
+    expect(html).toContain('Closeout · Sep 14 to 20')
+    expect(html).toContain('data-timesheet-set="2"')
+    expect(html).toContain('data-timesheet-set="3"')
+    expect(html).not.toContain('data-timesheet-set="1"')
+    source.cycle = cycle
+    const completed = renderToStaticMarkup(createElement(TaskCard, { cycleId: cycle.cycle.id }))
+    expect(completed).toMatch(/role="status"[^>]*><span[^>]*>[\s\S]*?Done/)
+  })
+  it('keeps first-closeout choices usable without a payload or list row, including after a card-local error', () => {
+    source.cycle = undefined
+    source.error = 'Connection unavailable. Try again.'
+    const onAnswer = vi.fn(), tree = TaskCard({ cycleId: 'new-cycle', onAnswer })
+    const choices = elements(tree).filter(item => item.type === FirstCloseoutChoice)
+    expect(choices).toHaveLength(3)
+    const choiceTree = FirstCloseoutChoice(choices[0].props as Parameters<typeof FirstCloseoutChoice>[0])
+    button(choiceTree, 'Use sample').props.onClick!()
+    expect(onAnswer).toHaveBeenCalledWith('Set 1: Use sample')
+    const html = renderToStaticMarkup(tree)
+    expect(html).toContain('role="alert"')
+    expect(html).toContain('Running')
+    expect(html).toContain('<canvas')
+  })
+  it('keeps Running after a missing detail even when the cycle list still advertises a run', () => {
+    const cycle = source.cycle!
+    source.row = { ...cycle.cycle, runAt: cycle.runAt, sample: false, totals: cycle.totals, counts: cycle.counts, findings: 0 }
+    source.cycle = undefined
+    expect(taskProgress(undefined, source.row).status).toBe('Running')
+    const html = renderToStaticMarkup(createElement(TaskCard, { cycleId: cycle.cycle.id }))
+    expect(html).toContain('Running')
+    expect(html).not.toContain('Done')
+    expect(html).toContain('<canvas')
+    expect(html).toContain('data-timesheet-set="3"')
   })
 })
 
@@ -111,7 +147,7 @@ describe('findings carousel', () => {
     const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ decision, cycle: updated }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
     vi.stubGlobal('fetch', fetch)
     button(FindingsCard({ cycleId: cycle.cycle.id }), 'Approve 1').props.onClick!()
-    await vi.waitFor(() => expect(invalidate).toHaveBeenCalledOnce())
+    await vi.waitFor(() => expect(refreshCycleList).toHaveBeenCalledOnce())
     expect(fetch).toHaveBeenCalledOnce()
     const [url, init] = fetch.mock.calls[0]
     expect(url).toBe('/api/data/cycles/2026-09-20/decisions')

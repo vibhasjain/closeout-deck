@@ -11,7 +11,7 @@ import { appendTrace, limitCards, parseActions, parseCards, stream } from '@/lib
 import type { ChatContext } from '@/lib/chat'
 import { CHAT_POST_EVENT, reportIngest, type ChatPost } from '@/lib/chatBus'
 import { invalidate } from '@/lib/data'
-import { FREQUENCIES, WEEKDAYS, effectiveAuthority, inboxAddress, flushOnboarding, useOnboarding } from '@/lib/onboarding'
+import { FREQUENCIES, WEEKDAYS, effectiveAuthority, inboxAddress, flushOnboarding, getOnboarding, useOnboarding } from '@/lib/onboarding'
 import type { ChatMessage } from '@/lib/onboarding'
 import { viewerSession } from '@/lib/viewerSession'
 import { applyAction, validatedActions, safeModelCard, safeModelText, type ChatUpdate } from '@/lib/chatActions'
@@ -118,7 +118,7 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
   const scrollRef = useRef<HTMLDivElement>(null)
   const composer = useRef<HTMLTextAreaElement>(null)
   const filePicker = useRef<HTMLInputElement>(null)
-  const activeRequest = useRef<{ controller: AbortController; text: string; scope?: string; fileIds: string[]; traces: string[] } | null>(null)
+  const activeRequest = useRef<{ controller: AbortController; text: string; scope?: string; fileIds: string[]; traces: string[]; agentId?: string } | null>(null)
   const scope = explicitScope ?? selectionScope(context.selection)
   // Keep "Show all" in the URL, but only for the case where it was chosen.
   const showAll = !scope || (params.get('chat') === 'all' && params.get('chatScope') === scope)
@@ -163,8 +163,9 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
 
   // Advance the snapshot on every write so several actions in one reply accumulate.
   const update = useCallback<ChatUpdate>((patch) => {
-    const next = typeof patch === 'function' ? patch(latest.current) : patch
-    latest.current = { ...latest.current, ...next }
+    const current = getOnboarding()
+    const next = typeof patch === 'function' ? patch(current) : patch
+    latest.current = { ...current, ...next }
     write(next)
   }, [write])
 
@@ -181,7 +182,7 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
     const user: ChatMessage = { id: crypto.randomUUID(), role: 'user', text: message, at: Date.now(), scope,
       ...(options?.contextChip ? { contextChip: options.contextChip } : {}), ...(fileIds.length ? { ingestFileIds: [...fileIds] } : {}) }
     busy.current = true
-    const pending = { controller: new AbortController(), text: '', scope, fileIds, traces: [] as string[] }
+    const pending: NonNullable<typeof activeRequest.current> = { controller: new AbortController(), text: '', scope, fileIds, traces: [] as string[] }
     activeRequest.current = pending
     update((current) => ({ chat: [...current.chat, user] }))
     setDraft('')
@@ -230,26 +231,42 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
             if (JSON.stringify(safe) !== JSON.stringify(card)) skipped.push('card URL')
             return safe ? [safe] : []
           })
-          const applied = []
-          for (const action of validated.actions) {
-            try {
-              if (action.type === 'open_form') {
-                if (!safeCards.some(card => card.kind === 'form' && card.form === action.form && card.cycleId === action.cycleId)) safeCards.push({ kind: 'form', form: action.form, cycleId: action.cycleId })
-              } else await applyAction(action, update, navigate, params, context.cycle?.id)
-              applied.push(action)
-            } catch (cause) { skipped.push(`${action.type}: ${cause instanceof Error ? cause.message : 'could not apply'}`) }
+          for (const action of validated.actions) if (action.type === 'open_form'
+            && !safeCards.some(card => card.kind === 'form' && card.form === action.form && card.cycleId === action.cycleId)) {
+            safeCards.push({ kind: 'form', form: action.form, cycleId: action.cycleId })
           }
-          if (request.current !== requestId) return
           const bounded = limitCards(safeCards)
           if (bounded.skipped) skipped.push('extra cards')
-          const agent: ChatMessage = { id: crypto.randomUUID(), role: 'agent', text: safeModelText(parsed.text, latest.current.firm), actions: applied, skipped: [...new Set(skipped)].slice(0, 10).map(item => item.slice(0, 200)), cards: bounded.cards, traces: pending.traces, at: Date.now(), scope,
+          const skippedNotes = () => [...new Set(skipped)].slice(0, 10).map(item => item.slice(0, 200))
+          const agent: ChatMessage = { id: crypto.randomUUID(), role: 'agent', text: safeModelText(parsed.text, latest.current.firm), actions: [], pendingActions: validated.actions, skipped: skippedNotes(), cards: bounded.cards, traces: pending.traces, at: Date.now(), scope,
             ...(fileIds.length ? { ingestFileIds: [...fileIds] } : {}) }
+          // Persist the reply before any mutation. Pending actions have no Applied line.
+          pending.agentId = agent.id
           update((current) => ({
             chat: [...current.chat, agent], chatSessionId: event.sessionId ?? current.chatSessionId,
           }))
           completed = true
           setReply('')
           setTraces([])
+          const applied: typeof validated.actions = []
+          const saveProgress = (remaining: typeof validated.actions) => update(current => ({
+            chat: current.chat.map(message => message.id === agent.id
+              ? { ...message, actions: [...applied], pendingActions: remaining, skipped: skippedNotes() } : message),
+          }))
+          for (let index = 0; index < validated.actions.length; index++) {
+            if (request.current !== requestId || pending.controller.signal.aborted) {
+              skipped.push(...validated.actions.slice(index).map(action => `${action.type}: stopped before applying`))
+              saveProgress([])
+              break
+            }
+            const action = validated.actions[index]
+            try {
+              if (action.type !== 'open_form') await applyAction(action, update, navigate, params, context.cycle?.id)
+              applied.push(action)
+            } catch (cause) { skipped.push(`${action.type}: ${cause instanceof Error ? cause.message : 'could not apply'}`) }
+            // Even when Stop arrives during a request, retain the outcome of that request.
+            saveProgress(validated.actions.slice(index + 1))
+          }
           break
         }
       }
@@ -286,9 +303,9 @@ export function ChatPane({ scope: explicitScope, headerAction }: { scope?: strin
     const pending = activeRequest.current
     request.current += 1
     pending?.controller.abort()
-    // A stopped reply stays in the conversation, but never applies unfinished actions.
+    // Keep the saved reply while an in-flight action settles; the loop skips every later action.
     const text = safeModelText(parseCards(parseActions(pending?.text ?? '').text).text.replace(/```(?:action|card)[\s\S]*$/, '').trim(), latest.current.firm)
-    if (text || pending?.traces.length) update((current) => ({ chat: [...current.chat, {
+    if (!pending?.agentId && (text || pending?.traces.length)) update((current) => ({ chat: [...current.chat, {
       id: crypto.randomUUID(), role: 'agent', text, traces: pending?.traces, at: Date.now(), scope: pending?.scope,
       ...(pending?.fileIds.length ? { ingestFileIds: [...pending.fileIds] } : {}),
     }] }))

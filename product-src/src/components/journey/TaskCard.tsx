@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Check } from 'lucide-react'
 import { FirstCloseoutChoice } from '@/components/chat/FirstCloseoutChoice'
 import { Spinner, Tag } from '@/components/ui'
-import type { CyclePayload } from '@/lib/data'
+import type { CyclePayload, CycleSummary } from '@/lib/data'
 import { cycleLabel } from '@/lib/cycles'
 import { useJourneyCycle } from '@/lib/journey'
 import { DotMatrix } from './DotMatrix'
@@ -31,14 +31,16 @@ export function useTweened(value: number) {
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
-export function taskProgress(cycle: CyclePayload) {
+export function taskProgress(cycle?: CyclePayload, row?: CycleSummary) {
+  const counts = cycle?.counts ?? row?.counts ?? { set1: 0, set2: 0, set3: 0 }
   return {
-    status: cycle.runAt ? 'Done' as const : 'Running' as const,
-    sets: [cycle.counts.set1, cycle.counts.set2, cycle.counts.set3],
-    missingSets: ([1, 2, 3] as const).filter(set => !cycle.counts[`set${set}`]),
-    workers: cycle.totals.workers,
-    rules: new Set(cycle.results.flatMap(result => result.rows.map(row => row.ruleId))).size,
-    differences: [...cycle.groups, ...cycle.extraGroups].reduce((n, group) => n + group.cases, 0),
+    // The list may still advertise an older run while the detail endpoint returns 404.
+    status: cycle?.runAt ? 'Done' as const : 'Running' as const,
+    sets: [counts.set1, counts.set2, counts.set3],
+    missingSets: ([1, 2, 3] as const).filter(set => !counts[`set${set}`]),
+    workers: cycle?.totals.workers ?? row?.totals?.workers ?? 0,
+    rules: new Set(cycle?.results.flatMap(result => result.rows.map(row => row.ruleId)) ?? []).size,
+    differences: cycle ? [...cycle.groups, ...cycle.extraGroups].reduce((n, group) => n + group.cases, 0) : row?.findings ?? 0,
   }
 }
 
@@ -46,14 +48,15 @@ const localDate = (date: string) => new Date(`${date}T00:00:00`)
 function Count({ value }: { value: number }) { return <span className="tabular-nums journey-count">{useTweened(value).toLocaleString()}</span> }
 
 export function TaskCard({ cycleId, onAnswer }: { cycleId: string; onAnswer?(answer: string): void }) {
-  const { cycle, loading, error } = useJourneyCycle(cycleId)
-  if (!cycle) return <div className="journey-task" role={error ? 'alert' : 'status'}>{error ?? (loading ? 'Loading closeout…' : 'Closeout is not available.')}</div>
-  const task = taskProgress(cycle)
-  const label = cycleLabel({ ...cycle.cycle, start: localDate(cycle.cycle.start), end: localDate(cycle.cycle.end),
-    cutoff: localDate(cycle.cycle.cutoff), deadline: localDate(cycle.cycle.deadline), payDate: localDate(cycle.cycle.payDate) })
+  const { cycle, row, error } = useJourneyCycle(cycleId)
+  const task = taskProgress(cycle, row)
+  const dates = cycle?.cycle ?? row
+  const label = dates ? cycleLabel({ ...dates, start: localDate(dates.start), end: localDate(dates.end),
+    cutoff: localDate(dates.cutoff), deadline: localDate(dates.deadline), payDate: localDate(dates.payDate) }) : cycleId
   return <section className="journey-task" aria-label={`Closeout · ${label}`}>
-    <div className="journey-task-title"><h3>Closeout · {label}</h3><Tag className="journey-task-status">{task.status === 'Done' ? <Check size={12} aria-hidden /> : <Spinner />}{task.status}</Tag></div>
-    {cycle.sample && <Tag>Sample</Tag>}
+    <div className="journey-task-title"><h3>Closeout · {label}</h3><span role="status"><Tag className="journey-task-status">{task.status === 'Done' ? <Check size={12} aria-hidden /> : <Spinner />}{task.status}</Tag></span></div>
+    {error && <p role="alert">{error}</p>}
+    {(cycle?.sample ?? row?.sample) && <Tag>Sample</Tag>}
     <table className="journey-task-steps"><thead className="sr-only"><tr><th scope="col">Step</th><th scope="col">Count</th></tr></thead><tbody>
       <tr><th scope="row">Fetching set 1 · set 2 · set 3 (location)</th><td>{task.sets.map((count, index) => <span key={index}>{index > 0 && ' · '}<Count value={count} /></span>)}</td></tr>
       <tr><th scope="row">Matching workers</th><td><Count value={task.workers} /></td></tr>

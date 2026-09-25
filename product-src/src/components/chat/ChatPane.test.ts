@@ -49,6 +49,7 @@ vi.mock('@/lib/journey', async (importOriginal) => ({
 type Props = {
   children?: ReactNode
   'aria-label'?: string
+  onClick?: () => void
   onChange?: (event: { target: { value: string } }) => void
   onSubmit?: (event: { preventDefault(): void }) => void
 }
@@ -124,7 +125,7 @@ describe('chat conversation lifetime', () => {
     expect(getOnboarding()).toMatchObject({ payDay: 'Thursday', chatSessionId: 'saved-session' })
   })
 
-  it('persists real trace frames with the final message, bounded to three distinct reads', async () => {
+  it('persists real trace frames with the final message, with three data reads and separate handbook reads', async () => {
     vi.mocked(stream).mockImplementation(async function* () {
       yield { trace: 'Read handbooks/send-to-payroll.md' }
       yield { text: 'Checking the batch.' }
@@ -138,7 +139,7 @@ describe('chat conversation lifetime', () => {
     send('Review the batch')
     await vi.waitFor(() => expect(getOnboarding().chat).toHaveLength(2))
     expect(getOnboarding().chat[1]).toMatchObject({ text: 'The batch is ready for your review.', traces: [
-      'Read handbooks/send-to-payroll.md', 'Read data/cycles/2026-09-20.json', 'Read data/decisions.jsonl',
+      'Read handbooks/send-to-payroll.md', 'Read data/cycles/2026-09-20.json', 'Read data/decisions.jsonl', 'Read data/extra.json',
     ] })
     expect(getOnboarding().chat[0].traces).toBeUndefined()
   })
@@ -165,10 +166,60 @@ describe('chat conversation lifetime', () => {
     })
     send('Approve the duplicates')
     await vi.waitFor(() => expect(decide).toHaveBeenCalledWith('2026-09-20', { groupId: 'CS-01', decision: 'approved' }))
-    expect(getOnboarding().chat).toHaveLength(1)
+    expect(getOnboarding().chat).toHaveLength(2)
+    expect(getOnboarding().chat[1]).toMatchObject({ actions: [], pendingActions: [{ type: 'approve' }] })
     rejectDecision(new Error('Decision could not be saved'))
-    await vi.waitFor(() => expect(getOnboarding().chat).toHaveLength(2))
+    await vi.waitFor(() => expect(getOnboarding().chat[1].pendingActions).toEqual([]))
     expect(getOnboarding().chat[1]).toMatchObject({ text: 'Applying your choice.', actions: [], skipped: ['approve: Decision could not be saved'] })
+  })
+
+  it('rejects server shift-level decide without a mutation or a false Applied audit line', async () => {
+    updateOnboarding({ dataSource: 'server' })
+    vi.mocked(stream).mockImplementation(async function* () {
+      yield { done: true, final: 'Reviewing Maria.\n```action {"type":"decide","cycleId":"2026-09-20","shiftId":"maria","decision":"dismissed","reason":"Took her meal"}```' }
+    })
+    send('She took her meal')
+    await vi.waitFor(() => expect(getOnboarding().chat[1]?.pendingActions).toEqual([]))
+    expect(decide).not.toHaveBeenCalled()
+    expect(getOnboarding().chat[1]).toMatchObject({ actions: [], skipped: ['decide: use approve/dismiss for a group'] })
+  })
+
+  it('Stop keeps the saved reply and in-flight outcome, but never starts the remaining actions', async () => {
+    let finishDecision!: () => void
+    vi.mocked(decide).mockImplementation(() => new Promise(resolve => { finishDecision = () => resolve({} as Awaited<ReturnType<typeof decide>>) }))
+    vi.mocked(stream).mockImplementation(async function* () {
+      yield { text: 'Checking both groups.' }
+      yield { done: true, final: 'Applying two group choices.\n```action {"type":"approve","cycleId":"2026-09-20","groupId":"CS-01"}```\n```action {"type":"dismiss","cycleId":"2026-09-20","groupId":"CA-MB-01","reason":"Verified waivers"}```' }
+    })
+    send('Apply these choices')
+    await vi.waitFor(() => expect(decide).toHaveBeenCalledTimes(1))
+    expect(getOnboarding().chat[1]).toMatchObject({ text: 'Applying two group choices.', actions: [], pendingActions: [{ type: 'approve' }, { type: 'dismiss' }] })
+    elements(render()).find(({ props }) => props['aria-label'] === 'Stop reply')!.props.onClick!()
+    expect(getOnboarding().chat).toHaveLength(2)
+    finishDecision()
+    await vi.waitFor(() => expect(getOnboarding().chat[1].pendingActions).toEqual([]))
+    expect(decide).toHaveBeenCalledTimes(1)
+    expect(getOnboarding().chat[1]).toMatchObject({ actions: [{ type: 'approve', groupId: 'CS-01' }], skipped: ['dismiss: stopped before applying'] })
+    expect(getOnboarding().chat).toHaveLength(2)
+  })
+
+  it('an unmounted decision completion merges into current history without losing a later message', async () => {
+    let finishDecision!: () => void
+    vi.mocked(decide).mockImplementation(() => new Promise(resolve => { finishDecision = () => resolve({} as Awaited<ReturnType<typeof decide>>) }))
+    vi.mocked(stream).mockImplementation(async function* () {
+      yield { done: true, final: 'Applying the group choice.\n```action {"type":"approve","cycleId":"2026-09-20","groupId":"CS-01"}```' }
+    })
+    render()
+    const cleanup = hooks.effects.map(effect => effect())
+    send('Approve the group')
+    await vi.waitFor(() => expect(decide).toHaveBeenCalledTimes(1))
+    cleanup.forEach(dispose => { if (typeof dispose === 'function') dispose() })
+    updateOnboarding({ chat: [...getOnboarding().chat, { id: 'later-message', role: 'user', text: 'Another question from the new pane', at: Date.now() }] })
+    finishDecision()
+    await vi.waitFor(() => expect(getOnboarding().chat[1].pendingActions).toEqual([]))
+    expect(getOnboarding().chat).toHaveLength(3)
+    expect(getOnboarding().chat[2].id).toBe('later-message')
+    expect(getOnboarding().chat[1].actions).toEqual([{ type: 'approve', cycleId: '2026-09-20', groupId: 'CS-01' }])
   })
 
   it('caps the combined card fences and open_form actions before persisting the message', async () => {

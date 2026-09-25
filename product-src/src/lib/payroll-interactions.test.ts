@@ -21,6 +21,8 @@ import { ShiftPage } from '@/pages/ShiftPage'
 import { decide, groupId } from '@/lib/journey'
 import type { FindingGroup } from '@/lib/data'
 import * as desk from '@/lib/desk'
+import * as data from '@/lib/data'
+import type { JourneyDecision } from '@/lib/journey'
 
 // The suite runs in Node. Keep each directly invoked component's hook state and
 // exercise its real event handlers and store writes; layout is covered by SSR.
@@ -64,7 +66,7 @@ vi.mock('@/lib/desk', async (importOriginal) => {
 })
 vi.mock('@/components/shell/Overlay', () => ({ useOverlay: () => overlay }))
 vi.mock('@/components/chat/ChatPane', () => ({ useSetChatContext: vi.fn(), useSetChatSuggestions: vi.fn(), focusChatComposer: vi.fn() }))
-vi.mock('@/lib/journey', async (original) => ({ ...await original<typeof import('@/lib/journey')>(), decide: vi.fn() }))
+vi.mock('@/lib/journey', async (original) => ({ ...await original<typeof import('@/lib/journey')>(), decide: vi.fn(), useJourneyThreads: () => ({ threads: [] }) }))
 
 type ElementProps = { children?: ReactNode; [key: string]: unknown }
 function elements(node: ReactNode): ReactElement<ElementProps>[] {
@@ -338,6 +340,42 @@ function serverCycle(state: 'proposed' | 'judgment' = 'proposed') {
 }
 
 describe('persisted Payroll decisions', () => {
+  it('an escalated time entry does not offer a no-op Approve zero action', () => {
+    const base = serverCycle('judgment')
+    const saved: JourneyDecision = { id: 'escalated', cycleId: base.id, groupId: 'CON-MARGIN-01', shiftIds: [], decision: 'escalated', reason: null, by: 'user', at: now.toISOString() }
+    const cycle = { ...base, decisions: [saved] }
+    vi.spyOn(desk, 'useDesk').mockReturnValue({ cycles: [cycle], current: cycle, byId: () => cycle })
+    router.pathname = `/payroll/${cycle.run.shifts[0].shift.id}`
+    router.params = new URLSearchParams({ cycle: cycle.id })
+    const detail = component(mount(() => ShiftPage(), undefined)(), ShiftDetail)
+    expect(detail.props.onApply).toBeUndefined()
+  })
+
+  it('bulk approval re-reads each group and preserves a dismissal that arrives during an earlier save', async () => {
+    vi.useRealTimers()
+    const cycle = serverCycle()
+    const otherRule = 'FED-RR-01'
+    cycle.groups.push({ ...cycle.groups[0], id: 76, ruleId: otherRule })
+    cycle.run.shifts.forEach(shift => { shift.rows.push({ ...shift.rows[0], ruleId: otherRule }) })
+    let decisions: JourneyDecision[] = []
+    const snapshot = data.getDataSnapshot()
+    vi.spyOn(data, 'getDataSnapshot').mockImplementation(() => ({ ...snapshot,
+      payloads: [{ cycle: { id: cycle.id }, groups: cycle.groups, decisions } as data.CyclePayload],
+    }))
+    let finish!: () => void
+    vi.mocked(decide).mockImplementationOnce(() => new Promise(resolve => { finish = () => resolve({} as Awaited<ReturnType<typeof decide>>) }))
+    const render = mount(PayrollSummary, { cycle })
+    click(render(), `Approve ${cycle.run.shifts.length * 2}`)
+    await vi.waitFor(() => expect(decide).toHaveBeenCalledTimes(1))
+    const firstRule = vi.mocked(decide).mock.calls[0][1].groupId
+    const secondRule = cycle.groups.find(group => group.ruleId !== firstRule)!.ruleId
+    decisions = [{ id: 'new-dismissal', cycleId: cycle.id, groupId: secondRule, shiftIds: [], decision: 'dismissed', reason: 'Verified by the user', by: 'agent', at: now.toISOString() }]
+    finish()
+    await vi.waitFor(() => expect(overlay.toast).toHaveBeenCalledWith(`Approved ${cycle.run.shifts.length}`))
+    expect(decide).toHaveBeenCalledTimes(1)
+    expect(decisions[0].decision).toBe('dismissed')
+  })
+
   it('follows the server next step after asks even if the intake still contains missing entries', () => {
     const base = serverCycle()
     const cycle = { ...base, nextStep: { kind: 'send' as const, label: 'Send to Payroll', detail: 'Ready', counts: { missingSets: 0, gaps: 0, openGroups: 0 } } }

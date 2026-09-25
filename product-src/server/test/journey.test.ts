@@ -82,6 +82,24 @@ test('asks and replies never resolve intake gaps; only reconciled evidence or ex
   assert.equal(openGaps(summarize({ ...payload, intake: { ...payload.intake, received: [...payload.intake.received, 'Pacific Cold Storage|Ben Ortiz|4'] } }), {}, [asked]).length, 0)
 })
 
+test('flag-before-hold groups remain waiting and full or partial held pay is excluded for every decision', () => {
+  for (const partial of [false, true]) {
+    const cycle = structuredClone(payload)
+    cycle.results[1] = { ...cycle.results[1], pay: partial ? 90 : 0, payableMin: partial ? 300 : 0,
+      rows: [{ ruleId: 'TS-COMPLETE', status: 'flag', note: 'Missing clock-out' },
+        { ruleId: 'TS-COMPLETE', status: 'held', note: 'Waiting for confirmation', effect: partial ? { holdMin: 180 } : { holdAll: true } }] }
+    const held = summarize(cycle).groups.find(group => group.id === 'TS-COMPLETE')!
+    assert.equal(held.state, 'waiting')
+    assert.deepEqual(held.shiftIds, [cycle.week[1].id])
+    for (const kind of ['approved', 'dismissed', 'escalated'] as const) {
+      const out = buildExport(cycle, [decision('TS-COMPLETE', kind), decision('CA-MB-01', 'escalated')], [])
+      assert.equal(out.gross, 369, `${kind} preserves the escalated premium and excludes held pay`)
+      assert.equal(out.held, 1)
+      assert.deepEqual(out.lines[1], { worker: 'Ben Ortiz', regular_hours: 8, ot_hours: 0, premium_hours: 0, gross: 144, held_entries: 1 })
+    }
+  }
+})
+
 test('server-generated bulk ask drafts fit the 4000 character message boundary', () => {
   const summary = summarize(payload)
   const gaps = Array.from({ length: 200 }, (_, day) => ({ id: `g_${day}`, worker: `Worker ${day} ${'x'.repeat(170)}`, client: 'A large client with several sites', day, onSite: 480 }))
