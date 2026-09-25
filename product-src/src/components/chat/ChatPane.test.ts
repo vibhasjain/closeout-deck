@@ -107,6 +107,27 @@ describe('chat conversation lifetime', () => {
     target.dispatchEvent(new CustomEvent(CHAT_POST_EVENT, { detail: { text: 'Unmounted' } }))
     expect(getOnboarding().chat).toHaveLength(4)
   })
+  it('ends ingest mode for a next-step post and for replies that do not answer a mapping question', async () => {
+    const target = new EventTarget()
+    vi.stubGlobal('window', Object.assign(target, { setTimeout, clearTimeout, cancelAnimationFrame: vi.fn() }))
+    vi.mocked(stream).mockImplementation(async function* () {
+      yield { done: true, final: 'Are these actual clock times?\n```card\n{"kind":"question","input":"chips","chips":["Actual","Scheduled"],"topics":["workerHours"]}\n```' }
+    })
+    render()
+    hooks.effects.map((effect) => effect())
+    postToChat({ text: 'Uploaded fresh.csv', mode: 'ingest', context: { fileIds: ['f_csv'] } })
+    await vi.waitFor(() => expect(getOnboarding().chat).toHaveLength(2))
+    vi.mocked(stream).mockImplementation(async function* () { yield { done: true, final: 'I still need to know which column is the client.' } })
+    postToChat({ text: 'Chase missing time for Sep 14 to 20', context: { page: '/payroll', calendar: {} }, contextChip: 'Chase missing time · Sep 14 to 20' })
+    await vi.waitFor(() => expect(getOnboarding().chat).toHaveLength(4))
+    expect(vi.mocked(stream).mock.calls[1][2]).toBe('chat')
+    expect(vi.mocked(stream).mock.calls[1][1]).toEqual({ page: '/payroll', calendar: {} })
+    getOnboarding().chat[3] = { ...getOnboarding().chat[3], ingestFileIds: ['f_csv'] }
+    send('Which payments are on hold?')
+    await vi.waitFor(() => expect(getOnboarding().chat).toHaveLength(6))
+    expect(vi.mocked(stream).mock.calls[2][2]).toBe('chat')
+    expect(getOnboarding().chat[4].ingestFileIds).toBeUndefined()
+  })
   it('has no Clear control even when the conversation has messages', () => {
     updateOnboarding({ chat: [{ id: 'saved', role: 'agent', text: 'Saved conversation', at: 0 }] })
     const controls = elements(render()).filter(({ type }) => type === 'button')

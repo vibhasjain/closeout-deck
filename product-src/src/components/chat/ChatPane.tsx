@@ -182,8 +182,10 @@ export function ChatPane({ scope: explicitScope, headerAction, onCallingChange }
     if (!message || calling) return
     if (busy.current) { if (options) queued.current.push(options); return }
     const previous = latest.current.chat.at(-1)
+    // Only a typed answer to the agent's mapping question continues an ingest turn; any other send is a chat turn.
+    const answersMapping = !options && previous?.role === 'agent' && previous.cards?.some(card => card.kind === 'question')
     const fileIds = options?.mode === 'ingest' && options.context && 'fileIds' in options.context
-      ? [...options.context.fileIds] : options?.mode ? [] : [...(previous?.ingestFileIds ?? [])]
+      ? [...options.context.fileIds] : answersMapping ? [...(previous?.ingestFileIds ?? [])] : []
     const mode = options?.mode ?? (fileIds.length ? 'ingest' : 'chat')
     const turnContext = options?.context ?? (mode === 'ingest' ? { fileIds } : context)
     const requestId = ++request.current
