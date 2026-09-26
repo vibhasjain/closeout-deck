@@ -6,7 +6,7 @@ import { AgentAvatar } from '@/components/chat/AgentAvatar'
 import { Btn } from '@/components/ui'
 import { ActionButton, ActionFeedback } from '@/components/ActionButton'
 import { usePendingAction } from '@/lib/usePendingAction'
-import { QuestionScreen } from '@/components/setup/QuestionScreen'
+import { QuestionScreen, QuestionSkeleton } from '@/components/setup/QuestionScreen'
 import { ProfileCard } from '@/components/profile/ProfileCard'
 import { writingRows } from '@/components/profile/profileSummary'
 import { ProfileModal } from '@/components/profile/ProfileModal'
@@ -24,6 +24,8 @@ import { flushOnboarding, getOnboarding, updateOnboarding, useOnboarding, type O
 import { applyOnboardReply, finishOnboarding, readFirm, requestOnboarding, rollbackOnboardingAnswer } from '@/lib/onboardingFlow'
 import { TRUST } from '@/lib/trust'
 import { viewerSession } from '@/lib/viewerSession'
+import { payrollFirmName } from '@/lib/firmName'
+import type { AgentActivity } from '@/lib/agentMotion'
 import './agent.css'
 
 export function WritingProfile({ state, onDone }: { state: Onboarding; onDone(): void }) {
@@ -35,7 +37,7 @@ export function WritingProfile({ state, onDone }: { state: Onboarding; onDone():
     return () => window.clearTimeout(timer)
   }, [])
   return <section className="setup-writing setup-split">
-    <div className="setup-copy"><AgentAvatar size={32} working /><SkeletonRegion variant="profile" />{state.setupClosing && <p className="setup-closing">{state.setupClosing}</p>}</div>
+    <div className="setup-copy"><AgentAvatar size={32} state="thinking" /><SkeletonRegion variant="profile" />{state.setupClosing && <p className="setup-closing">{state.setupClosing}</p>}</div>
     <div className="setup-writing-lists" role="status" aria-live="polite">
       {writingRows(state).map(({ title, rows }) => <div key={title}><h2>{title}</h2><ul>{rows.map((row) => <li className={row.complete ? 'done' : 'not-yet'} key={row.title}>{row.complete && <Check size={14} aria-hidden />}<span>{row.title}</span>{!row.complete && <small className="tag profile-not-yet">Not Yet</small>}</li>)}</ul></div>)}
     </div>
@@ -48,6 +50,7 @@ export function Agent() {
   const [domain, setDomain] = useState(state.firm?.domain ?? '')
   const [firmChoice, setFirmChoice] = useState<'yours' | 'sample' | null>(null)
   const [busy, setBusy] = useState(false)
+  const [questionActivity, setQuestionActivity] = useState<Extract<AgentActivity, 'processing' | 'thinking'>>('thinking')
   const [error, setError] = useState('')
   const [historyIndex, setHistoryIndex] = useState(() => Math.max(0, state.setupHistory.length - 1))
   const [modal, setModal] = useState<'profile' | 'rulebook' | null>(null)
@@ -74,10 +77,12 @@ export function Agent() {
     if (pending.current) return
     const controller = new AbortController()
     pending.current = controller
-    setBusy(true); setError('')
+    setBusy(true); setQuestionActivity('processing'); setError('')
     updateOnboarding({ setupStep: 'conversation', setupRequest: message })
     try {
-      const reply = await requestOnboarding(message, controller.signal)
+      const reply = await requestOnboarding(message, controller.signal, () => {
+        if (!controller.signal.aborted && pending.current === controller) setQuestionActivity('thinking')
+      })
       if (controller.signal.aborted) return
       applyOnboardReply(reply)
       setHistoryIndex(Math.max(0, getOnboarding().setupHistory.length - 1))
@@ -164,7 +169,7 @@ export function Agent() {
       <div className="setup-review-actions"><Btn onClick={() => openModal('profile')}>Check out your Payroll profile</Btn><Btn onClick={() => openModal('rulebook')}>View your Rulebook</Btn></div>
       <Btn className={!modal && step === 'ready' && !busy && !finishing ? 'primary setup-bottom' : 'setup-bottom'} data-setup-finish onClick={() => { modalOpener.current = document.activeElement as HTMLElement | null; setNames(getOnboarding().neverContact ?? []); go('never-contact') }}>Finish →</Btn>
     </div>
-    <div className="setup-documents-pane"><div className="setup-profile-stack"><button type="button" className="setup-rulebook-cover" onClick={() => openModal('rulebook')} aria-label="Open your Rulebook"><ScrollText size={24} aria-hidden /><span>{state.firm?.name || 'Your firm'}'s Rulebook</span><small>Confidential</small></button><button type="button" className="setup-profile-cover" onClick={() => openModal('profile')} aria-label="Open your Payroll profile"><ProfileCard state={state} compact className="setup-tilted-profile" /></button></div></div>
+    <div className="setup-documents-pane"><div className="setup-profile-stack"><button type="button" className="setup-rulebook-cover" onClick={() => openModal('rulebook')} aria-label="Open your Rulebook"><ScrollText size={24} aria-hidden /><span>{payrollFirmName(state.firm)}'s Rulebook</span><small>Confidential</small></button><button type="button" className="setup-profile-cover" onClick={() => openModal('profile')} aria-label="Open your Payroll profile"><ProfileCard state={state} compact className="setup-tilted-profile" /></button></div></div>
   </section>
 
   return <div className="agent-setup" data-step={step} data-on-call={!!voice.snapshot && voice.snapshot.status !== 'ended' || undefined}>
@@ -187,16 +192,14 @@ export function Agent() {
         </form>
       </section>}
       {step === 'trust' && <section className="setup-centered"><AgentAvatar size={32} /><h1>Your data and permissions</h1><ul className="setup-trust">{TRUST.map((line) => <li key={line}><Lock size={14} aria-hidden />{line}</li>)}</ul><Btn className="primary" onClick={() => go('intro')}>I agree</Btn></section>}
-      {step === 'intro' && !showCallSummary && <section className="setup-split setup-intro"><div className="setup-copy"><AgentAvatar size={32} /><h1>Build your Payroll profile</h1><p>Your Closeout Agent uses this profile before every pay run. The conversation will fill in the gaps about {state.firm?.name || 'your firm'}.</p>
+      {step === 'intro' && !showCallSummary && <section className="setup-split setup-intro"><div className="setup-copy"><AgentAvatar size={32} /><h1>Build your Payroll profile</h1><p>Your Closeout Agent uses this profile before every pay run. The conversation will fill in the gaps about {payrollFirmName(state.firm)}.</p>
         <div className="setup-bottom">{VOICE_ENABLED && <Btn className="primary" onClick={() => { void voice.start() }}><Phone size={15} aria-hidden />Jump on a call with your Closeout Agent</Btn>}<Btn className={VOICE_ENABLED ? '' : 'primary'} onClick={() => void ask('Start onboarding')}>Keep typing</Btn></div>
       </div><div className="setup-profile-preview"><ProfileCard state={state} /></div></section>}
       {step === 'conversation' && !showCallSummary && <div className="setup-conversation"><div>
         {error && <div className="setup-error" role="alert"><p>{error}</p><Btn disabled={busy} onClick={() => void ask(getOnboarding().setupRequest || 'Start onboarding')}>Retry</Btn>{!current && <div className="setup-controls"><Btn onClick={() => go('intro')}>Back</Btn><Btn disabled={busy} onClick={() => void ask('Skip this question and continue onboarding.')}>Skip</Btn></div>}</div>}
         {state.setupNotice && <p className="setup-notice" role="status">{state.setupNotice}</p>}
-        {current ? <QuestionScreen key={`${historyIndex}:${current.question}`} question={current.question} card={current.card} initialAnswer={current.answer} busy={busy} onCall={() => { void voice.start() }} canBack={historyIndex > 0 || !!error} canForward={historyIndex < state.setupHistory.length - 1} onForward={() => { setError(''); setHistoryIndex(state.setupHistory.length - 1) }} onBack={() => { if (historyIndex === 0) go('intro'); else { setError(''); setHistoryIndex((index) => Math.max(0, index - 1)) } }} onAnswer={answer} />
-          : !error && <section className="setup-centered"><AgentAvatar size={32} working /><SkeletonRegion variant="profile" /></section>}
-
-        {busy && current && <SkeletonRegion className="setup-reply-status" />}
+        {current ? <QuestionScreen key={`${historyIndex}:${current.question}`} question={current.question} card={current.card} initialAnswer={current.answer} busy={busy} activity={questionActivity} onCall={() => { void voice.start() }} canBack={historyIndex > 0 || !!error} onBack={() => { if (historyIndex === 0) go('intro'); else { setError(''); setHistoryIndex((index) => Math.max(0, index - 1)) } }} onAnswer={answer} />
+          : !error && <QuestionSkeleton activity={busy ? questionActivity : 'thinking'} />}
       </div><aside className="setup-conversation-profile" aria-label="Your live Payroll profile"><ProfileCard state={state} /></aside></div>}
       {step === 'writing' && <WritingProfile state={state} onDone={() => go('ready')} />}
       {(step === 'ready' || step === 'never-contact') && ready}
@@ -205,7 +208,7 @@ export function Agent() {
     {neverContactOpen && <ProfileDialog title="Anyone I should never contact?" description="Add anyone the Closeout Agent should never contact. All outreach requires your permission; this list can be changed any time." className="setup-contact-dialog" closeDisabled={finishing} onClose={() => {
       finishAction.reset(); go('ready'); window.requestAnimationFrame(() => (modalOpener.current ?? document.querySelector<HTMLElement>('[data-setup-finish]'))?.focus())
     }} footer={<><ActionButton action={finishAction} actionKey="save" pendingLabel="Saving…" successLabel="Saved" className={finishing && finishAction.key === 'skip' ? '' : 'primary'} disabled={finishing} onClick={() => void finish()}>Save and continue</ActionButton><ActionButton action={finishAction} actionKey="skip" pendingLabel="Saving…" successLabel="Saved" disabled={finishing} onClick={() => void finish(getOnboarding().neverContact ?? [], 'skip')}>Skip for now</ActionButton></>}>
-      <div className="profile-modal-body"><NeverContactInput value={names} onChange={setNames} disabled={finishing} /><ActionFeedback action={finishAction} className="setup-error" /></div>
+      <div className="profile-modal-body">{finishAction.pending ? <SkeletonRegion variant="profile" /> : <NeverContactInput value={names} onChange={setNames} disabled={finishing} />}<ActionFeedback action={finishAction} className="setup-error" /></div>
     </ProfileDialog>}
     {modal === 'profile' && <ProfileModal onClose={closeModal} />}
     {modal === 'rulebook' && <RulebookModal onClose={closeModal} />}

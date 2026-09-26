@@ -1,5 +1,6 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { readFileSync } from 'node:fs'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { QuestionScreen } from './QuestionScreen'
 import type { DictationState } from '@/lib/dictate'
@@ -61,4 +62,48 @@ it.each([true, false])('keeps a new question single-primary and respects reduced
   expect(html).toContain('aria-label="How do hours arrive?"')
   // The full line reserves its final height; assistive technology gets only the h1 name.
   expect(html).toContain('class="setup-question-measure" aria-hidden="true"')
+})
+
+it('replaces an answered question with destination-shaped shimmer while the next reply is pending', () => {
+  const html = renderToStaticMarkup(createElement(QuestionScreen, {
+    question: 'Previous question', card: { kind: 'question', input: 'chips', topics: ['workerHours'], chips: ['Email'] },
+    initialAnswer: 'Email', busy: true, canBack: true, onBack() {}, onAnswer() {},
+  }))
+  expect(html).toContain('aria-busy="true"')
+  expect(html).toContain('data-skeleton="question"')
+  expect(html.match(/class="skeleton " aria-hidden/g)).toHaveLength(6)
+  expect(html).toContain('setup-input-placeholder')
+  expect(html).toContain('setup-chip-placeholders')
+  expect(html).not.toContain('Previous question')
+  expect(html).not.toContain('<textarea')
+  expect(html).toContain('class="sr-only skeleton-label">Loading</span>')
+  expect(html.match(/>Next →</g)).toHaveLength(1)
+  expect(html).not.toContain('btn primary')
+})
+
+it('offers Next for the selected calendar without a second apply button or raw saved calendar fields', () => {
+  const html = renderToStaticMarkup(createElement(QuestionScreen, {
+    question: 'When is Payroll?', card: { kind: 'question', input: 'calendar', topics: ['calendar'] },
+    initialAnswer: 'Pay calendar: {"frequency":"Weekly","periodEndDay":"Sunday"}',
+    canBack: true, onBack() {}, onAnswer() {},
+  }))
+  expect(html).not.toContain('Use this calendar')
+  expect(html).not.toContain('Pay calendar:')
+  expect(html).not.toContain('periodEndDay')
+  expect(html.match(/>Next →</g)).toHaveLength(1)
+  expect(html.match(/class="btn primary"/g)).toHaveLength(1)
+})
+
+it('bounds onboarding to the viewport, compacts calendar help, and restores Back padding', () => {
+  const css = readFileSync(new URL('../../pages/setup/agent.css', import.meta.url), 'utf8')
+  expect(css).toMatch(/\.agent-setup \{[^}]*height: 100dvh;[^}]*overflow: hidden/)
+  expect(css).toMatch(/\.setup-question \{[^}]*min-height: 0;[^}]*flex: 1/)
+  expect(css).not.toContain('21vh')
+  expect(css).toMatch(/\.setup-calendar \.calendar-field \.r-note \{ font-size: 12px/)
+  expect(css).toMatch(/\.agent-setup \.setup-controls \.ghost \{[^}]*padding-inline: 16px/)
+  expect(css).not.toContain('padding-left: 0')
+  expect(css).toMatch(/@media \(max-width: 767px\) and \(max-height: 699px\)/)
+  expect(css).toMatch(/\.setup-question \.setup-controls \{ position: fixed;[^}]*bottom: 0/)
+  expect(css).toMatch(/\.setup-caret \{[^}]*width: 2px/)
+  expect(css).toMatch(/\.setup-inputs \{[^}]*transition: opacity 180ms/)
 })

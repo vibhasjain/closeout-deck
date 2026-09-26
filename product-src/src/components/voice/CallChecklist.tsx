@@ -1,6 +1,7 @@
 import { Check, ChevronDown } from 'lucide-react'
 import { ONBOARD_TOPICS, type Onboarding, type OnboardTopic } from '@/lib/onboarding'
 import { goalProgress } from '@/lib/coverage'
+import { payrollFirmName } from '@/lib/firmName'
 
 const labels: Record<OnboardTopic, string> = {
   calendar: 'Your pay calendar',
@@ -23,7 +24,7 @@ function ChecklistItems({ onboarding }: { onboarding: Onboarding }) {
   const facts = [firm?.summary, firm?.states.length ? firm.states.join(' · ') : null].filter((fact): fact is string => !!fact)
   return <>
     <div className="call-topic-group call-firm-preread">
-      <h3>About {firm?.name || 'your firm'}</h3>
+      <h3>About {payrollFirmName(firm)}</h3>
       {facts.length ? <ul>{facts.map((fact) => <li className="call-topic is-covered" key={fact}><Check size={12} aria-hidden /><span className="call-topic-label">{fact}</span><span className="sr-only"> — read before the call</span></li>)}</ul>
         : <p className="call-preread-pending">We’ll fill in the details together.</p>}
     </div>

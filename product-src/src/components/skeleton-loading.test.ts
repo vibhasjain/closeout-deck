@@ -124,7 +124,7 @@ describe('content loading is ghosted, with no visible loading copy', () => {
     state.pendingActionKey = 'upload'
     const html = render(name === 'time entries' ? h(Intake, { cycle, intake: cycleIntake(cycle, DEFAULTS) })
       : name === 'chat files' ? h(FactQuestion, { card: { kind: 'question', input: 'files', topics: [] }, onAnswer() {} })
-        : h(QuestionScreen, { question: 'Add your files', card: { kind: 'question', input: 'files', topics: [] }, busy: false, canBack: false, canForward: false, onBack() {}, onForward() {}, onAnswer() {} }))
+        : h(QuestionScreen, { question: 'Add your files', card: { kind: 'question', input: 'files', topics: [] }, busy: false, canBack: false, onBack() {}, onAnswer() {} }))
     assertSkeleton(html)
     {
       const buttons = [...html.matchAll(/<button\b[^>]*data-action-state="pending"[^>]*>[\s\S]*?<\/button>/g)]

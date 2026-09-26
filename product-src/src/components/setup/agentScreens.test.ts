@@ -41,9 +41,11 @@ describe('one black next step per setup pane', () => {
     state.value.setupStep = 'ready'
     expect(renderToStaticMarkup(createElement(MemoryRouter, null, createElement(Agent)))).toContain(state.value.setupClosing)
   })
-  it('offers Forward while reviewing a previous question', () => {
-    const html = renderToStaticMarkup(createElement(QuestionScreen, { question: 'How do hours arrive?', card: { kind: 'question', input: 'text', topics: ['workerHours'] }, initialAnswer: 'Email', canBack: true, canForward: true, onBack() {}, onForward() {}, onAnswer() {} }))
-    expect(html).toContain('Forward →')
+  it('uses the same single Next action when reviewing a previous question', () => {
+    const html = renderToStaticMarkup(createElement(QuestionScreen, { question: 'How do hours arrive?', card: { kind: 'question', input: 'text', topics: ['workerHours'] }, initialAnswer: 'Email', canBack: true, onBack() {}, onAnswer() {} }))
+    expect(html).not.toContain('Forward →')
+    expect(html.match(/>Next →</g)).toHaveLength(1)
+    expect(primaryCount(html)).toBe(1)
   })
   it.each(['welcome', 'conversation', 'ready'] as const)('%s keeps a quiet account corner with Log out, outside the one black next step', (step) => {
     state.value.setupStep = step
@@ -137,7 +139,7 @@ describe('one black next step per setup pane', () => {
   it.each(['text', 'chips', 'multi', 'calendar', 'files', 'choice'] as const)('%s has no primary before an answer and exactly one afterward', (input) => {
     const card: QuestionCard = { kind: 'question', input, topics: ['workerHours'], ...(input === 'chips' || input === 'multi' ? { chips: ['Email', 'Sheet'] } : {}), ...(input === 'choice' ? { choice: { yours: 'Your files / connection', sample: 'Use sample' } } : {}) }
     const render = (initialAnswer?: string, busy = false) => renderToStaticMarkup(createElement(QuestionScreen, { question: 'Where should I pick those up?', card, initialAnswer, busy, canBack: true, onBack: () => {}, onAnswer: () => {} }))
-    expect(primaryCount(render())).toBe(0)
+    expect(primaryCount(render())).toBe(input === 'calendar' ? 1 : 0)
     expect(primaryCount(render('Forward them to you'))).toBe(1)
     expect(primaryCount(render('Forward them to you', true))).toBe(0)
     expect(render()).toContain('<textarea')

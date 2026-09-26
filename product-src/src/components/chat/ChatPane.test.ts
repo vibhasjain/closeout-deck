@@ -6,6 +6,8 @@ import { DEFAULTS, flushOnboarding, getOnboarding, updateOnboarding } from '@/li
 import { CHAT_POST_EVENT, postToChat } from '@/lib/chatBus'
 import { invalidate } from '@/lib/data'
 import { decide } from '@/lib/journey'
+import { AgentAvatar } from './AgentAvatar'
+import { SkeletonRegion } from '@/components/Skeleton'
 
 // Exercise the real send handler and effect cleanup without requiring a browser.
 const hooks = vi.hoisted(() => ({ cursor: 0, context: 0, slots: [] as unknown[], effects: [] as EffectCallback[] }))
@@ -50,6 +52,7 @@ vi.mock('@/lib/journey', async (importOriginal) => ({
 type Props = {
   children?: ReactNode
   'aria-label'?: string
+  state?: string
   onClick?: () => void
   onChange?: (event: { target: { value: string } }) => void
   onSubmit?: (event: { preventDefault(): void }) => void
@@ -80,6 +83,25 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals() })
 
 describe('chat conversation lifetime', () => {
+  it('shows a skeleton immediately and maps submission, reply wait and completion to real activity', async () => {
+    let saved!: () => void, replied!: () => void
+    vi.mocked(flushOnboarding).mockImplementationOnce(() => new Promise(resolve => { saved = resolve }))
+    vi.mocked(stream).mockImplementation(async function* () {
+      await new Promise<void>(resolve => { replied = resolve })
+      yield { done: true, final: 'Your profile is saved.' }
+    })
+    send('Save my Payroll profile')
+    expect(elements(render()).find(node => node.type === AgentAvatar)?.props.state).toBe('processing')
+    expect(elements(render()).some(node => node.type === SkeletonRegion)).toBe(true)
+    expect(stream).not.toHaveBeenCalled()
+    saved()
+    await vi.waitFor(() => expect(stream).toHaveBeenCalled())
+    expect(elements(render()).find(node => node.type === AgentAvatar)?.props.state).toBe('thinking')
+    replied()
+    await vi.waitFor(() => expect(getOnboarding().chat).toHaveLength(2))
+    expect(elements(render()).find(node => node.type === AgentAvatar)?.props.state).toBe('idle')
+    expect(elements(render()).some(node => node.type === SkeletonRegion)).toBe(false)
+  })
   it('keeps an ingest follow-up attached to its question after an earlier memory was resolved', async () => {
     updateOnboarding({ chat: [
       { id: 'question', role: 'agent', text: 'Are these actual clock times?', at: 1, ingestFileIds: ['f_csv'], cards: [{ kind: 'question', input: 'chips', chips: ['Actual', 'Scheduled'], topics: [] }] },

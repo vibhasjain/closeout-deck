@@ -41,7 +41,7 @@ it('retains the upload control, reserves the result immediately, and retries the
   const saved = render()
   expect(elements(saved).find(node => node.type === ActionButton)!.props.action?.status).toBe('success')
   const html = renderToStaticMarkup(saved)
-  expect(html).toContain('Attached source')
+  expect(html).toContain('1 source attached')
   expect(html).not.toContain(file.name)
   elements(saved).find(node => node.type === 'form')!.props.onSubmit!({ preventDefault() {} })
   expect(answer).toHaveBeenCalledWith('1 source attached\nExisting answer')

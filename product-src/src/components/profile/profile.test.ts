@@ -125,10 +125,24 @@ describe('Rulebook consent and compact preview', () => {
     const card = renderToStaticMarkup(createElement(ProfileCard))
     expect(card).toContain('Summit Staffing')
     expect(card).toContain('>Sample</span>')
+    expect(card.match(/>Sample<\/span>/g)).toHaveLength(1)
+    expect(card.indexOf('profile-sample')).toBeLessThan(card.indexOf('profile-card-firm'))
+    expect(card.indexOf('<h2>Summit Staffing</h2>')).toBeLessThan(card.indexOf('<p>Payroll profile</p>'))
     expect(card).not.toContain('lag:')
     expect(card).not.toContain('access:')
     expect(card).not.toContain(store.state!.profile.workerHours.access)
     expect(renderToStaticMarkup(createElement(ProfileModal, { onClose() {} }))).toContain(store.state!.profile.workerHours.access)
+  })
+  it('shows ask-first permission and the custom fix sentence when the dollar limit is zero', () => {
+    const sentence = 'Fix a gap of up to 15 minutes when location evidence confirms the time'
+    store.state = { ...store.state!, authorityConfigured: true, authority: { ...DEFAULTS.authority, autoFix: true, limit: 0 },
+      customRules: [{ id: 'custom-fix', bucket: 'Custom', kind: 'det', sentence, source: { doc: 'You told the agent' }, draft: false, at: 1 }] }
+    for (const surface of [createElement(ProfileCard), createElement(ProfileModal, { onClose() {} })]) {
+      const html = renderToStaticMarkup(surface)
+      expect(html).toContain('Ask before every fix')
+      expect(html).toContain(sentence)
+      expect(html).not.toContain('Up to $0')
+    }
   })
   it('drops external image URLs even from stored profiles', () => {
     store.state!.firm = { name: 'Example', domain: 'example.com', icon: 'https://evil.tld/payroll.png', summary: '', states: [], verticals: [], clientTypes: [], size: '', staffing: true }

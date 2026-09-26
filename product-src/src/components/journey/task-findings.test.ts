@@ -8,7 +8,7 @@ import { getDataSnapshot, hydrate, refreshCycleList, serverCycles, type CyclePay
 import { resolutionGroups } from '@/lib/resolution'
 import type { JourneyThread } from '@/lib/journey'
 import { FirstCloseoutChoice } from '@/components/chat/FirstCloseoutChoice'
-import { FindingsCard, carouselFindings, findingEvidence, findingsLayout, hasAskableGaps, payChange } from './FindingsCard'
+import { FindingsCard, carouselFindings, findingEvidence, findingsLayout, hasAskableGaps, observeFindingHeight, payChange } from './FindingsCard'
 import { PayDelta } from '@/components/ui'
 import { TaskCard, taskProgress } from './TaskCard'
 import { NextStepRow } from './NextStepRow'
@@ -20,6 +20,7 @@ const actions = vi.hoisted(() => ({ navigate: vi.fn(), openDrawer: vi.fn() }))
 const hooks = vi.hoisted(() => ({ active: false, cursor: 0, slots: [] as unknown[], effects: [] as EffectCallback[], cleanups: new Set<() => void>() }))
 vi.mock('react', async original => ({
   ...await original<typeof import('react')>(),
+  useLayoutEffect: vi.fn(),
   useState: <T>(initial: T | (() => T)) => {
     const value = () => typeof initial === 'function' ? (initial as () => T)() : initial
     if (!hooks.active) return [value(), vi.fn()]
@@ -121,6 +122,41 @@ afterEach(() => {
   hooks.cleanups.clear()
   vi.useRealTimers()
   vi.unstubAllGlobals()
+})
+
+describe('Issues slide height', () => {
+  it('tracks only the active slide, follows resized content, and releases the observer', () => {
+    const callbacks: (() => void)[] = []
+    const observers: { observe: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn> }[] = []
+    vi.stubGlobal('ResizeObserver', class {
+      observe = vi.fn()
+      disconnect = vi.fn()
+      constructor(callback: () => void) { callbacks.push(callback); observers.push(this) }
+    })
+    const heights = [240, 328, 270]
+    const slides = heights.map((_, index) => ({ getBoundingClientRect: () => ({ height: heights[index] }) }))
+    const node = { children: slides, style: { height: '' } } as unknown as HTMLElement
+
+    const stopFirst = observeFindingHeight(node, 0)
+    expect(node.style.height).toBe('240px')
+    expect(observers[0].observe).toHaveBeenCalledWith(slides[0])
+    stopFirst?.()
+    expect(observers[0].disconnect).toHaveBeenCalledOnce()
+
+    const stopNext = observeFindingHeight(node, 1)
+    expect(node.style.height).toBe('328px')
+    heights[1] = 304.25
+    callbacks[1]()
+    expect(node.style.height).toBe('305px')
+    stopNext?.()
+    observeFindingHeight(node, 0)?.()
+    expect(node.style.height).toBe('240px')
+
+    const css = readFileSync(new URL('./task-findings.css', import.meta.url), 'utf8')
+    expect(css).toMatch(/\.journey-carousel-track\s*\{[^}]*align-items:\s*flex-start[^}]*transition:\s*height 180ms/s)
+    expect(css).toMatch(/\.journey-finding \.journey-finding-status\s*\{[^}]*margin:\s*0;/s)
+    expect(css).toMatch(/prefers-reduced-motion:\s*reduce[\s\S]*\.journey-carousel-track\s*\{[^}]*transition:\s*none/s)
+  })
 })
 
 describe('server-driven task card', () => {

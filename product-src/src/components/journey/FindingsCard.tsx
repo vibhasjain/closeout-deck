@@ -1,5 +1,5 @@
 import { SkeletonRegion } from '@/components/Skeleton'
-import { useEffect, useRef, useState, type ButtonHTMLAttributes } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { FindingDetail } from '@/components/SampleResult'
@@ -63,6 +63,22 @@ export function findingsLayout(viewportWidth: number, panePadding = 16, itemCoun
   return { width, cardWidth: width, contentWidth, scrollWidth, pageWidth, pageOverflow: pageWidth > viewportWidth, scrollSnap: 'x mandatory' as const }
 }
 
+/** Follow the active slide's natural height, including wrapping and asynchronously updated content. */
+// eslint-disable-next-line react-refresh/only-export-components
+export function observeFindingHeight(node: HTMLElement, position: number): (() => void) | undefined {
+  const slide = node.children[Math.min(position, node.children.length - 1)] as HTMLElement | undefined
+  if (!slide) return
+  const measure = () => {
+    const height = Math.ceil(slide.getBoundingClientRect().height)
+    if (height > 0) node.style.height = `${height}px`
+  }
+  measure()
+  if (typeof ResizeObserver === 'undefined') return
+  const observer = new ResizeObserver(measure)
+  observer.observe(slide)
+  return () => observer.disconnect()
+}
+
 /** Small replacement seam for the shared pending-action button. Labels reserve the same width. */
 function CardAction({ pending = false, done = false, pendingLabel = 'Approving…', doneLabel = 'Approved ✓', children, className, disabled, ...props }:
   ButtonHTMLAttributes<HTMLButtonElement> & { pending?: boolean; done?: boolean; pendingLabel?: string; doneLabel?: string }) {
@@ -124,6 +140,9 @@ export function FindingsCard({ cycleId, live = true }: { cycleId: string; live?:
   const [pending, setPending] = useState<string | null>(null)
   const [failure, setFailure] = useState<string | null>(null)
   useEffect(() => () => { clearTimeout(advanceTimer.current); requestVersion.current++ }, [cycleId])
+  useLayoutEffect(() => {
+    if (track.current) return observeFindingHeight(track.current, position)
+  }, [cycle, position, state, threads])
   if (!cycle) return loading && !error ? <SkeletonRegion className="journey-findings" /> : <div className="journey-findings" role={error ? 'alert' : 'status'}>{error ?? (empty ? 'No time entries yet' : 'Findings are not available.')}</div>
   const items = carouselFindings(cycle, state, threads)
   const index = Math.min(position, Math.max(0, items.length - 1))
@@ -200,7 +219,7 @@ export function FindingsCard({ cycleId, live = true }: { cycleId: string; live?:
           ? `Asked ${item.asked}${threads.some(thread => thread.counterparty.name === item.asked && thread.messages.some(message => message.dir === 'out' && message.status === 'not_sent_demo')) ? ' · Not Sent · Demo' : ''}`
           : 'Not asked yet'
         return <article className="journey-finding" key={`${groupId(item.group)}:${item.resolution.cases.map(entry => entry.shiftId).join(',')}`} role="listitem" aria-label={`${at + 1} of ${items.length}: ${item.group.title}`} data-issue={groupId(item.group)} data-state={item.resolution.state} data-active={at === index} inert={at !== index}>
-          <Tag tone={item.resolution.state === 'waiting' || item.resolution.state === 'judgment' || escalated ? 'amber' : approved ? undefined : 'blue'}>{approved ? 'Approved' : item.resolution.state === 'proposed' ? 'Proposed' : item.resolution.state === 'waiting' ? 'Waiting' : escalated ? 'Escalated' : 'Needs Judgment'}</Tag>
+          <Tag>{approved ? 'Approved' : item.resolution.state === 'proposed' ? 'Proposed' : item.resolution.state === 'waiting' ? 'Waiting' : escalated ? 'Escalated' : 'Needs Judgment'}</Tag>
           <h4>{item.group.title}</h4>
           <p className="journey-finding-description">{item.group.summary}</p>
           <PayDelta current={item.resolution.current} resolved={item.resolution.resolved} timeEntries={item.resolution.cases.length} size="sm" align="start" />

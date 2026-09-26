@@ -117,41 +117,61 @@ afterEach(() => {
 })
 
 describe('simulated browser connection', () => {
-  it('waits for the real Sample pipeline before showing Connected in the journey', async () => {
+  it('starts the Sample request on click and shows a skeleton in the mounted frame until it resolves', async () => {
     let finish!: (result: { files: { entryCount: number }[]; cycles: string[] }) => void
     sample.connectSource.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
     const modal = mount({ ...ready, set: 2 }, true)
-    expect(modal.render()).toContain('>Sample</span>')
+    expect(modal.render()).toContain('Connect UKG')
     modal.signIn()
-    expect(modal.advance(3200)).toContain('Syncing')
-    expect(store.update).not.toHaveBeenCalled()
     expect(sample.connectSource).toHaveBeenCalledWith({ set: 2, system: ready.name, site: ready.sites[0] })
+    expect(vi.getTimerCount()).toBe(0)
+    const pending = modal.render()
+    expect(pending).toContain('Connect UKG')
+    expect(pending).toContain('data-skeleton="card"')
+    expect(pending).toContain('aria-busy="true"')
+    expect(pending).not.toMatch(/Syncing|Signing in/)
+    // The only spinner is the Sign In button's own Connecting… label.
+    expect(pending).toContain('data-action-state="pending"')
+    expect(pending.match(/class="spinner"/g)).toHaveLength(1)
+    expect(pending).not.toContain('Connected ·')
+    expect(store.update).not.toHaveBeenCalled()
+    // Concurrent connections are retained when this network operation finishes.
+    store.current = { ...store.current!, connections: { ...store.current!.connections, 'dest:other': { status: 'connected' } } }
+    modal.render()
     finish({ files: [{ entryCount: 3000 }, { entryCount: 189 }], cycles: [closing().id] })
     await Promise.resolve()
     const connected = textContent(modal.render())
-    expect(connected).toContain('Connected')
     expect(connected).toContain('3,189 time entries pulled')
-    expect(store.current!.connections[vendorKey(ready)]?.sample).toBe(true)
+    expect(connected).toContain(closing().label)
+    expect(store.current!.connections[vendorKey(ready)]).toMatchObject({ status: 'connected', method: 'browser', sample: true })
+    expect(store.current!.connections['source:existing']).toEqual({ status: 'connected', method: 'api' })
+    expect(store.current!.connections['dest:other']).toEqual({ status: 'connected' })
+    expect(modal.render()).not.toContain('data-skeleton')
     modal.advance(700)
+    expect(overlay.close).toHaveBeenCalledOnce()
     expect(overlay.toast).toHaveBeenCalledWith(`${ready.name} connected · Sample`)
     expect(modal.onDone).toHaveBeenCalledOnce()
   })
 
-  it('keeps a failed Sample connection retryable and does not save Connected', async () => {
+  it('keeps a failed Sample connection retryable without recording Connected', async () => {
     sample.connectSource.mockRejectedValueOnce(new Error('Sample connection unavailable'))
     const modal = mount({ ...ready, set: 2 }, true)
     modal.render()
     modal.signIn()
-    modal.advance(3200)
     await Promise.resolve(); await Promise.resolve(); await Promise.resolve()
     const html = modal.render()
     expect(html).toContain('Sample connection unavailable')
     expect(html).toContain('Sign In')
     expect(store.update).not.toHaveBeenCalled()
     expect(modal.onDone).not.toHaveBeenCalled()
+    sample.connectSource.mockResolvedValueOnce({ files: [], cycles: [] })
+    modal.signIn()
+    await Promise.resolve()
+    expect(store.update).toHaveBeenCalledOnce()
+    expect(modal.render()).toContain('Connected')
   })
 
-  it('shows an explicitly fake, read-only account with a vendor-derived URL', () => {
+  it('shows an explicitly fake account with a vendor-derived URL before sign-in', () => {
     const modal = mount(ready)
     const html = modal.render()
     expect(html).toContain('ukg.com/auth/login')
@@ -162,95 +182,57 @@ describe('simulated browser connection', () => {
     expect(html).toContain('Demo connection · use placeholder credentials')
     expect(html).toContain('primary')
     expect(html).not.toMatch(/<(input|textarea|form)\b|contenteditable/i)
-    expect(html).not.toContain('API key')
     expect(store.update).not.toHaveBeenCalled()
   })
 
   it.each([
     { ...ready, status: 'available' },
     { ...ready, status: 'available', sites: [ready.sites[0], 'Mercy General'] },
-  ])('reveals real counts for $sites and saves the namespaced browser connection', (vendor) => {
+    available,
+  ])('shows cached cycle counts immediately without simulated progress for $sites', vendor => {
     const cycle = closing()
-    const count = cycle.run.shifts.filter(({ shift }) => vendor.sites.includes(shift.fac.name)).length
-    expect(count).toBeGreaterThan(0)
+    const count = cycle.run.shifts.filter(({ shift }) => !vendor.sites.length || vendor.sites.includes(shift.fac.name)).length
+    const sites = vendor.sites.length || new Set(cycle.week.map(shift => shift.fac.name)).size
     const modal = mount(vendor)
     modal.render()
     modal.signIn()
-    let html = modal.render()
-    expect(textContent(html)).toContain('Signing in as payroll.ops@demo.hypertrack.com')
-    expect(html).toContain('class="tag blue">Syncing')
-    expect(html).not.toContain('Granting read-only access')
-    html = modal.advance(800)
-    expect(html).toContain('Granting read-only access to time entries')
-    expect(html).not.toContain('Discovering worksites')
-    html = modal.advance(800)
-    expect(textContent(html)).toContain('Discovering worksites')
-    expect(textContent(html)).not.toMatch(/Discovering worksites ·/)
-    expect(html).not.toContain('Pulling time entries')
-    html = modal.advance(800)
-    expect(textContent(html)).toContain(`Pulling time entries for ${cycle.label}`)
-    expect(textContent(html)).not.toMatch(/records|punches/)
-    expect(html.match(/class="spinner"/g)).toHaveLength(2)
-    expect(html.match(/class="lucide lucide-check"/g)).toHaveLength(3)
-    expect(store.update).not.toHaveBeenCalled()
-    // Another connection can finish while this dialog is syncing.
-    store.current = { ...store.current!, connections: { ...store.current!.connections, 'dest:other': { status: 'connected' } } }
-    modal.render()
-    html = modal.advance(800)
-    expect(textContent(html)).toContain(`Connected · ${vendor.sites.length} ${vendor.sites.length === 1 ? 'site' : 'sites'} · ${count.toLocaleString()} time entries pulled`)
-    expect(store.update).toHaveBeenCalledTimes(1)
-    expect(store.current!.connections[vendorKey(vendor)]).toEqual({
-      status: 'connected', method: 'browser', lastSync: new Date(now.valueOf() + 3200).toISOString(),
-    })
-    expect(store.current!.connections['source:existing']).toEqual({ status: 'connected', method: 'api' })
-    expect(store.current!.connections['dest:other']).toEqual({ status: 'connected' })
+    const html = modal.render()
+    expect(textContent(html)).toContain(`Connected · ${sites} ${sites === 1 ? 'site' : 'sites'} · ${count.toLocaleString()} time entries pulled`)
+    expect(html).not.toContain('data-skeleton')
+    expect(sample.connectSource).not.toHaveBeenCalled()
+    expect(store.current!.connections[vendorKey(vendor)]).toEqual({ status: 'connected', method: 'browser', lastSync: now.toISOString() })
     expect(store.current!.connections[vendor.id]).toBeUndefined()
-    expect(overlay.close).not.toHaveBeenCalled()
     expect(modal.onDone).not.toHaveBeenCalled()
-    modal.advance(699)
-    expect(modal.onDone).not.toHaveBeenCalled()
-    modal.advance(1)
-    expect(overlay.close).toHaveBeenCalledTimes(1)
+    modal.advance(700)
     expect(overlay.toast).toHaveBeenCalledWith(`${vendor.name} connected`)
-    expect(modal.onDone).toHaveBeenCalledTimes(1)
+    expect(modal.onDone).toHaveBeenCalledOnce()
   })
 
-  it('counts every worksite and record when a vendor has no assigned sites (the sample brings its own clients)', () => {
-    const modal = mount(available)
-    const sites = new Set(closing().week.map(shift => shift.fac.name)).size
-    const records = closing().run.shifts.length
-    modal.render()
-    modal.signIn()
-    expect(textContent(modal.advance(1600))).toContain('Discovering worksites')
-    expect(textContent(modal.advance(800))).toContain(`Pulling time entries for ${closing().label}`)
-    expect(textContent(modal.advance(800))).toContain(`Connected · ${sites} sites · ${records.toLocaleString()} time entries pulled`)
-    expect(store.current!.connections[vendorKey(available)]?.method).toBe('browser')
-  })
-
-  it('names the week the connection loads (D11): the closing cycle by default, or the card\'s own cycle', () => {
+  it('names the closing cycle by default and the explicitly selected cycle when given', () => {
     const [inProgress, needsReview] = desk.cycles
-    expect(inProgress.status).toBe('in-progress')
     let modal = mount(ready)
     modal.render()
     modal.signIn()
-    let text = textContent(modal.advance(2400))
-    expect(text).toContain(`Pulling time entries for ${needsReview.label}`)
-    expect(text).not.toContain(inProgress.label)
+    expect(textContent(modal.render())).toContain(needsReview.label)
+    expect(textContent(modal.render())).not.toContain(inProgress.label)
     unmount()
     hooks.slots = []
     modal = mount(ready, false, inProgress.id)
     modal.render()
     modal.signIn()
-    text = textContent(modal.advance(2400))
-    expect(text).toContain(`Pulling time entries for ${inProgress.label}`)
+    expect(textContent(modal.render())).toContain(inProgress.label)
   })
 
-  it('cancels connection writes and completion callbacks when unmounted during sync', () => {
-    const modal = mount(ready)
+  it('does not write connection state or completion callbacks after unmount during the request', async () => {
+    let finish!: (result: { files: []; cycles: [] }) => void
+    sample.connectSource.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    const modal = mount(ready, true)
     modal.render()
     modal.signIn()
-    modal.advance(1600)
+    expect(modal.render()).toContain('data-skeleton')
     unmount()
+    finish({ files: [], cycles: [] })
+    await Promise.resolve()
     vi.runAllTimers()
     expect(store.update).not.toHaveBeenCalled()
     expect(overlay.close).not.toHaveBeenCalled()
@@ -259,12 +241,11 @@ describe('simulated browser connection', () => {
     expect(vi.getTimerCount()).toBe(0)
   })
 
-  it('cancels the pending close and toast when unmounted after connecting', () => {
+  it('cancels the pending completion callback when unmounted after connecting', () => {
     const modal = mount(ready)
     modal.render()
     modal.signIn()
-    modal.advance(3200)
-    expect(store.update).toHaveBeenCalledTimes(1)
+    expect(store.update).toHaveBeenCalledOnce()
     unmount()
     vi.runAllTimers()
     expect(overlay.close).not.toHaveBeenCalled()

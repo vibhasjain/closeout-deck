@@ -4,6 +4,7 @@ import type { DataService } from './data.ts'
 import { validateFact } from './datastore.ts'
 import { isPlainObject } from './validation.ts'
 import { GOALS, SCRIBE_ACTIONS } from './prompts.ts'
+import { knownFirmClients, validFirmName } from './firmName.ts'
 
 export type DataEvent = ClaudeEvent | { ingest: { fileId: string; status: 'normalized' | 'needs_mapping'; entries?: number; rows?: number; unparsed?: number; cycles?: string[]; gaps?: unknown[]; errors?: string[] } } | { facts: { applied: number; cycles: string[] } }
 function blocks(text: string, kind: 'mapping' | 'action'): unknown[] {
@@ -40,7 +41,7 @@ export async function runDataTurn(input: {
   const traces = new Set<string>()
   let dataTraces = 0
   let held: Extract<ClaudeEvent, { done: true }> = { done: true, sessionId: '', error: AGENT_ERROR }
-  let allText = '', message = options.message, changed = false, applied = 0, turns = 0, sanitized = false
+  let allText = '', message = options.message, changed = false, applied = 0, turns = 0, sanitized = false, firmSanitized = false
   const factCycles = new Set<string>(), deadline = Date.now() + (options.timeoutMs ?? 180_000)
   const failures = new Map<string, string[]>()
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -61,9 +62,20 @@ export async function runDataTurn(input: {
     held = terminal ?? { done: true, sessionId: held.sessionId, error: AGENT_ERROR }
     const reply = held.final ?? streamed
     if (!streamed && reply) emit({ text: reply })
+    const firmClients = knownFirmClients(doc.firm)
+    if (blocks(reply, 'action').some(raw => isPlainObject(raw) && raw.type === 'set_firm')) {
+      const [facts, sources] = await Promise.all([service.store.listFacts(email), service.store.listSources(email)])
+      firmClients.push(...facts.filter(fact => fact.kind === 'site').map(fact => fact.key), ...sources.flatMap(source => source.site ? [source.site] : []))
+    }
     const safeReply = reply.replace(/```action\s*\n?([\s\S]*?)```/g, (block: string, json: string) => {
       try {
         const raw: unknown = JSON.parse(json)
+        if (isPlainObject(raw) && raw.type === 'set_firm' && isPlainObject(raw.patch) && 'name' in raw.patch && !validFirmName(raw.patch.name, firmClients)) {
+          const patch = { ...raw.patch }
+          delete patch.name
+          firmSanitized = true
+          return Object.keys(patch).length ? '```action\n' + JSON.stringify({ ...raw, patch }) + '\n```' : ''
+        }
         if (isPlainObject(raw) && raw.type === 'set_fact') {
           const fact = Object.fromEntries(Object.entries(raw).filter(([key]) => key !== 'type'))
           if (!validateFact(fact).ok) { sanitized = true; return '' }
@@ -119,5 +131,5 @@ export async function runDataTurn(input: {
   // another turn with the same bad output; this bare action fails client validation, so the app shows its
   // human skipped note with a retry instead of an Applied line.
   if (sanitized) allText += '\n\n```action\n' + JSON.stringify({ type: 'set_fact' }) + '\n```'
-  emit({ ...held, ...(sanitized || (allText && (held.final !== undefined || turns > 1)) ? { final: allText } : {}) })
+  emit({ ...held, ...(sanitized || firmSanitized || (allText && (held.final !== undefined || turns > 1)) ? { final: allText } : {}) })
 }

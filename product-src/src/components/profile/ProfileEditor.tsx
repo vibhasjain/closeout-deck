@@ -1,5 +1,7 @@
 import { PayrollCalendar, CycleFields } from '@/components/PayrollCalendar'
 import { getOnboarding, useOnboarding, type FirmFacts, type ProfileField, type ProfileValue } from '@/lib/onboarding'
+import { payrollFirmName } from '@/lib/firmName'
+import { profileAuthoritySummary } from './profileSummary'
 import './profile.css'
 
 const profileSections: { field: ProfileField; title: string; placeholder: string }[] = [
@@ -30,7 +32,7 @@ export function ProfileEditor({ onEditRulebook }: { onEditRulebook(): void }) {
   return <div className="payroll-profile-editor">
     <section className="profile-edit-section" id="profile-firm"><h3>The firm</h3>
       <div className="profile-field-stack">
-        <input className="q-input" aria-label="Firm name" placeholder="Firm name" value={firm?.name ?? ''} maxLength={200} onChange={(event) => changeFirm({ name: event.target.value })} />
+        <input className="q-input" aria-label="Firm name" placeholder="Firm name" defaultValue={firm ? payrollFirmName(firm) : ''} maxLength={200} onChange={(event) => changeFirm({ name: event.target.value })} />
         <textarea className="q-input profile-textarea" aria-label="Firm summary" placeholder="What your firm does" value={firm?.summary ?? ''} maxLength={200} onChange={(event) => changeFirm({ summary: event.target.value })} />
         <input className="q-input" aria-label="States" placeholder="States, separated by commas" defaultValue={firm?.states.join(', ') ?? ''} maxLength={200} onChange={(event) => changeFirm({ states: event.target.value.split(',').map((item) => item.trim()).filter(Boolean) })} />
         <input className="q-input" aria-label="Verticals" placeholder="Verticals, separated by commas" defaultValue={firm?.verticals.join(', ') ?? ''} maxLength={200} onChange={(event) => changeFirm({ verticals: event.target.value.split(',').map((item) => item.trim()).filter(Boolean) })} />
@@ -49,9 +51,7 @@ export function ProfileEditor({ onEditRulebook }: { onEditRulebook(): void }) {
       <h3>{title}</h3><ValueEditor value={state.profile[field]} placeholder={placeholder} onChange={(value) => changeProfile(field, value)} />
     </section>)}
     <section className="profile-edit-section" id="profile-authority"><h3>What I fix on my own</h3>
-      <p>{state.authorityConfigured ? state.authority.autoFix
-        ? `Fix up to $${state.authority.limit.toLocaleString()} per entry${state.authority.weeklyCap ? `, within $${state.authority.weeklyCap.toLocaleString()} each week` : ''}.`
-        : 'Approval required before every change.' : 'Configure permission to make changes in your Rulebook.'}</p>
+      <p>{profileAuthoritySummary(state) || 'Configure permission to make changes in your Rulebook.'}</p>
       <button className="btn" type="button" onClick={onEditRulebook}>Edit in Rulebook</button>
     </section>
     <section className="profile-edit-section" id="profile-notes"><h3>Notes</h3><ValueEditor value={state.profile.notes} placeholder="Additional Payroll details" onChange={(value) => changeProfile('notes', value)} /></section>

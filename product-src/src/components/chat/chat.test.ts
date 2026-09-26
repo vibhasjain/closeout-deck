@@ -272,6 +272,15 @@ describe('permanent Closeout Agent conversation', () => {
     expect(elements(agent).some(({ props }) => props.className === 'chat-action')).toBe(true)
     expect(elements(user).some(({ props }) => props.className === 'chat-bubble')).toBe(true)
   })
+  it('does not render coverage bookkeeping or internal profile field names as Applied lines', () => {
+    const message = Message({ message: { id: 'profile-copy', role: 'agent', text: 'Saved', at: 1,
+      actions: [{ type: 'cover_topic', topic: 'authority' }, { type: 'set_profile', field: 'notes', value: 'Ask first' }] } })
+    const lines = elements(message).filter(({ props }) => props.className === 'chat-action')
+    const text = (tree: ReactNode) => elements(tree).flatMap(({ props }) => Children.toArray(props.children).filter(child => typeof child === 'string')).join(' ')
+    expect(lines).toHaveLength(1)
+    expect(text(message)).toContain('Updated your Payroll profile')
+    expect(text(message)).not.toMatch(/Covered|authority|notes/)
+  })
 })
 
 describe('conversation day dividers', () => {

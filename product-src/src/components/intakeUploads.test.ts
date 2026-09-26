@@ -1,4 +1,5 @@
 import { Children, isValidElement, type EffectCallback, type ReactElement, type ReactNode } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Intake } from './Intake'
 import { ConnectMethod } from './ConnectMethod'
@@ -175,6 +176,25 @@ describe('real intake actions', () => {
     await vi.waitFor(() => expect(getOnboarding().connections['source:ukg-ready']).toMatchObject({ status: 'connected', method: 'sheet', sample: true }))
     expect(connectSource).toHaveBeenCalledWith({ set: 2, system: 'UKG', site: 'Pacific Cold Storage' })
     expect(overlay.toast).toHaveBeenCalledWith('UKG connected · Sample')
+  })
+  it('keeps the connection frame mounted with result placeholders while the request is pending', async () => {
+    let finish!: (result: Awaited<ReturnType<typeof connectSource>>) => void
+    vi.mocked(connectSource).mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    const render = () => { hooks.cursor = 0; return ConnectMethod({ vendor: source }) }
+    const option = elements(render()).find(({ props }) => Array.isArray(props.children) && props.children.some(child => isValidElement<Props>(child) && child.props.children === 'Shared sheet'))!
+    option.props.onClick!()
+    const pending = renderToStaticMarkup(render())
+    expect(pending).toContain('drawer-head')
+    expect(pending).toContain('data-skeleton="card"')
+    // The clicked option itself carries Connecting…; nothing claims Connected yet.
+    expect(pending.match(/data-action-state="pending"/g)).toHaveLength(1)
+    expect(pending).not.toContain('are ready in Payroll')
+    expect(getOnboarding().connections['source:ukg-ready']).toBeUndefined()
+    finish({ files: [], cycles: ['2026-09-20'] })
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve()
+    const done = renderToStaticMarkup(render())
+    expect(done).toContain('Connected')
+    expect(done).not.toContain('data-skeleton')
   })
 })
 

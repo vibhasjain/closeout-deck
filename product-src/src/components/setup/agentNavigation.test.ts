@@ -8,6 +8,8 @@ import { CallScreen } from '@/components/voice/CallScreen'
 import { Message } from '@/components/chat/Message'
 import { ActionFeedback } from '@/components/ActionButton'
 import type { PendingAction } from '@/lib/usePendingAction'
+import { SkeletonRegion } from '@/components/Skeleton'
+import { NeverContactInput } from '@/components/profile/NeverContactInput'
 
 const hooks = vi.hoisted(() => ({ cursor: 0, slots: [] as unknown[] }))
 const store = vi.hoisted(() => ({ state: null as Onboarding | null }))
@@ -37,7 +39,7 @@ vi.mock('@/lib/onboarding', async (original) => ({
 vi.mock('@/lib/onboardingFlow', () => flow)
 vi.mock('@/lib/viewerSession', () => ({ viewerSession: () => ({ name: 'Morgan Lee' }) }))
 
-type Props = { children?: ReactNode; footer?: ReactNode; className?: string; 'aria-label'?: string; action?: PendingAction; actionKey?: string; onClick?(): void; onChange?(event: { target: { value: string } }): void; onSubmit?(event: { preventDefault(): void }): void; question?: string; onBack?(): void; onForward?(): void; onAnswer?(answer: string): void; onKeepTyping?(): void; onRetry?(): void; message?: Onboarding['chat'][number] }
+type Props = { children?: ReactNode; footer?: ReactNode; className?: string; 'aria-label'?: string; busy?: boolean; activity?: 'processing' | 'thinking'; action?: PendingAction; actionKey?: string; onClick?(): void; onChange?(event: { target: { value: string } }): void; onSubmit?(event: { preventDefault(): void }): void; question?: string; onBack?(): void; onAnswer?(answer: string): void; onKeepTyping?(): void; onRetry?(): void; message?: Onboarding['chat'][number] }
 const elements = (tree: ReactNode): ReactElement<Props>[] => Children.toArray(tree).flatMap((node) => isValidElement<Props>(node) ? node.type === ActionFeedback ? elements(ActionFeedback({ action: node.props.action! })) : [node, ...elements(node.props.children), ...elements(node.props.footer)] : [])
 const render = () => { hooks.cursor = 0; return Agent() }
 const text = (tree: ReactNode, label: string) => elements(tree).find(({ props }) => props.children === label)!
@@ -74,7 +76,7 @@ describe('onboarding navigation', () => {
     expect(elements(render()).some(element => element.type === CallScreen)).toBe(false)
     expect(elements(render()).find(element => element.type === Message)?.props.message?.callSaveError).toBe('Saving failed. Please try again.')
     expect(question().props.question).toBe('How do worker hours arrive?')
-    expect(flow.requestOnboarding).toHaveBeenCalledWith(expect.stringContaining('Continue our conversation by typing'), expect.any(AbortSignal))
+    expect(flow.requestOnboarding).toHaveBeenCalledWith(expect.stringContaining('Continue our conversation by typing'), expect.any(AbortSignal), expect.any(Function))
   })
   it('routes Retry saving to saving and Retry the call to a new call', () => {
     voice.snapshot = { status: 'error', errorKind: 'save', orb: 'listening', stream: null, remoteStream: null, muted: false, seconds: 8, caption: '', transcript: [], level: 0 }
@@ -108,7 +110,7 @@ describe('onboarding navigation', () => {
     await Promise.resolve()
     expect(store.state!.firm).toMatchObject({ states: ['PR'], summary: 'Homepage summary' })
   })
-  it('can go Back then Forward or Next unchanged without re-asking or truncating history', () => {
+  it('can go Back then Next unchanged without re-asking or truncating history', () => {
     store.state!.setupStep = 'conversation'
     store.state!.setupHistory = [
       { question: 'How do worker hours arrive?', card: { kind: 'question', input: 'text', topics: ['workerHours'] }, answer: 'Email' },
@@ -116,9 +118,6 @@ describe('onboarding navigation', () => {
     ]
     question().props.onBack!()
     expect(question().props.question).toBe('How do worker hours arrive?')
-    question().props.onForward!()
-    expect(question().props.question).toBe('Who approves the hours?')
-    question().props.onBack!()
     question().props.onAnswer!('Email')
     expect(question().props.question).toBe('Who approves the hours?')
     expect(store.state!.setupHistory).toHaveLength(2)
@@ -133,7 +132,7 @@ describe('onboarding navigation', () => {
     question().props.onBack!()
     question().props.onAnswer!('Our app')
     expect(flow.rollbackOnboardingAnswer).toHaveBeenCalledWith(0)
-    expect(flow.requestOnboarding).toHaveBeenCalledWith(expect.stringContaining('Our app'), expect.any(AbortSignal))
+    expect(flow.requestOnboarding).toHaveBeenCalledWith(expect.stringContaining('Our app'), expect.any(AbortSignal), expect.any(Function))
     await Promise.resolve()
   })
   it('keeps the question and Back/Skip controls available after a request error', async () => {
@@ -147,6 +146,19 @@ describe('onboarding navigation', () => {
     expect(question().props.onBack).toBeTypeOf('function')
     expect(question().props.onAnswer).toBeTypeOf('function')
   })
+  it('shows processing immediately after Next, then thinking only when the next-question request starts', async () => {
+    store.state!.setupStep = 'conversation'
+    store.state!.setupHistory = [{ question: 'How do hours arrive?', card: { kind: 'question', input: 'text', topics: ['workerHours'] } }]
+    let resolve: (reply: object) => void = () => {}
+    flow.requestOnboarding.mockImplementation(() => new Promise(yes => { resolve = yes }))
+    question().props.onAnswer!('Email')
+    expect(question().props).toMatchObject({ busy: true, activity: 'processing' })
+    flow.requestOnboarding.mock.calls[0][2]()
+    expect(question().props).toMatchObject({ busy: true, activity: 'thinking' })
+    resolve({})
+    await Promise.resolve(); await Promise.resolve()
+    expect(question().props.busy).toBe(false)
+  })
   it('waits for the real finish turn and opens the agent sheet after Finish', async () => {
     vi.useFakeTimers()
     store.state!.setupStep = 'never-contact'
@@ -155,6 +167,10 @@ describe('onboarding navigation', () => {
     text(render(), 'Save and continue').props.onClick!()
     expect(text(render(), 'Save and continue').props.action).toMatchObject({ status: 'pending', key: 'save', pending: true })
     expect(navigate).not.toHaveBeenCalled()
+    expect(elements(render()).some(element => element.type === SkeletonRegion)).toBe(true)
+    expect(elements(render()).some(element => element.type === NeverContactInput)).toBe(false)
+    expect(text(render(), 'Save and continue')).toBeDefined()
+    expect(text(render(), 'Saving…')).toBeUndefined()
     // Persistence can move the store to ready before the request resolves; the dialog still owns the next step.
     store.state!.setupStep = 'ready'
     expect(text(render(), 'Save and continue').props.action?.pending).toBe(true)

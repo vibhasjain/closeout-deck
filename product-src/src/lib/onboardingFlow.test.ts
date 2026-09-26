@@ -30,6 +30,34 @@ afterEach(() => vi.unstubAllGlobals())
 const valid = 'Could you share that inbox?\n```card\n{"kind":"question","input":"text","topics":["workerHours"],"placeholder":"An email address"}\n```\n```action\n{"type":"cover_topic","topic":"calendar"}\n```'
 
 describe('the agent owns the conversation', () => {
+  it('announces the question request only after the answer flush settles', async () => {
+    let finishFlush = () => {}
+    vi.mocked(flushOnboarding).mockReturnValueOnce(new Promise<void>(resolve => { finishFlush = resolve }))
+    const onRequest = vi.fn()
+    vi.mocked(stream).mockImplementation(async function* () {
+      expect(onRequest).toHaveBeenCalledOnce()
+      yield { done: true, final: valid }
+    })
+    const reply = requestOnboarding('Email', undefined, onRequest)
+    await Promise.resolve()
+    expect(onRequest).not.toHaveBeenCalled()
+    expect(stream).not.toHaveBeenCalled()
+    finishFlush()
+    await reply
+    expect(onRequest).toHaveBeenCalledOnce()
+    expect(stream).toHaveBeenCalledOnce()
+  })
+  it('does not enter thinking or request a reply when cancelled during the answer flush', async () => {
+    let finishFlush = () => {}
+    vi.mocked(flushOnboarding).mockReturnValueOnce(new Promise<void>(resolve => { finishFlush = resolve }))
+    const controller = new AbortController(), onRequest = vi.fn()
+    const reply = requestOnboarding('Email', controller.signal, onRequest)
+    controller.abort()
+    finishFlush()
+    await expect(reply).rejects.toMatchObject({ name: 'AbortError' })
+    expect(onRequest).not.toHaveBeenCalled()
+    expect(stream).not.toHaveBeenCalled()
+  })
   it('sends current context, uses the authoritative final, and applies validated actions', async () => {
     vi.mocked(stream).mockImplementation(async function* () { yield { text: 'Intermediate text' }; yield { done: true, final: valid, sessionId: 'same-session' } })
     const reply = await requestOnboarding('We get hours by email')

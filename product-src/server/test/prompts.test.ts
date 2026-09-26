@@ -2,6 +2,13 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { delegatePrompt, onboardPrompt, systemPrompt } from '../src/prompts.ts'
 
+test('the Payroll profile always belongs to the staffing agency, not its client list', () => {
+  for (const prompt of [systemPrompt({}), onboardPrompt({}), delegatePrompt({})]) {
+    assert.match(prompt, /staffing agency’s single name, never its clients or sites/)
+    assert.match(prompt, /sample agency is Summit Staffing/)
+  }
+})
+
 test('server chat advertises only group decisions and explains their scope', () => {
   const prompt = systemPrompt({})
   assert.doesNotMatch(prompt, /decide\s*\{/)

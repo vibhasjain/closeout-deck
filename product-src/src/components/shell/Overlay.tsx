@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 type Surface = { kind: 'drawer' | 'modal'; node: ReactNode; title?: string; sub?: string }
-type Phase = 'entering' | 'open' | 'closing'
+type Phase = 'open' | 'closing'
 interface OverlayActions {
   openDrawer(node: ReactNode, title: string, sub?: string): void
   openModal(node: ReactNode): void
@@ -17,33 +17,27 @@ interface OverlayState {
 }
 
 const ActionsContext = createContext<OverlayActions | null>(null)
-const StateContext = createContext<OverlayState>({ surface: null, phase: 'entering', message: null })
+const StateContext = createContext<OverlayState>({ surface: null, phase: 'open', message: null })
 
 export function OverlayProvider({ children }: { children: ReactNode }) {
   const [surface, setSurface] = useState<Surface | null>(null)
-  const [phase, setPhase] = useState<Phase>('entering')
+  const [phase, setPhase] = useState<Phase>('open')
   const [message, setMessage] = useState<string | null>(null)
   const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const frame = useRef(0)
   const trigger = useRef<HTMLElement | null>(null)
 
   const open = useCallback((next: Surface) => {
     clearTimeout(closeTimer.current)
-    cancelAnimationFrame(frame.current)
     if (document.activeElement instanceof HTMLElement && !document.activeElement.closest('[aria-modal="true"]')) {
       trigger.current = document.activeElement
     }
     setSurface(next)
-    setPhase('entering')
-    // Give the base state a paint before transitioning to the open state.
-    frame.current = requestAnimationFrame(() => {
-      frame.current = requestAnimationFrame(() => setPhase('open'))
-    })
+    // Mount the visible frame in this click; its content owns any pending skeleton.
+    setPhase('open')
   }, [])
   const close = useCallback(() => {
     clearTimeout(closeTimer.current)
-    cancelAnimationFrame(frame.current)
     setPhase('closing')
     closeTimer.current = setTimeout(() => {
       setSurface(null)
@@ -65,7 +59,6 @@ export function OverlayProvider({ children }: { children: ReactNode }) {
   useEffect(() => () => {
     clearTimeout(closeTimer.current)
     clearTimeout(toastTimer.current)
-    cancelAnimationFrame(frame.current)
   }, [])
 
   return (
@@ -117,7 +110,7 @@ export function Overlay() {
     return () => document.removeEventListener('keydown', onKey)
   }, [surface, close])
 
-  const stateClass = phase === 'entering' ? '' : phase === 'open' ? ' open' : ' closing'
+  const stateClass = phase === 'open' ? ' open' : ' closing'
   return createPortal(
     <>
       {surface && <>

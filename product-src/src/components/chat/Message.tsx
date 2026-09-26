@@ -41,7 +41,7 @@ export function Message({ message, onAnswer, liveCard = -1 }: { message: ChatMes
           const summary = actionSummary(action)
           return summary === null ? null : (
             <div key={index} className="chat-action">
-              <Tag tone="blue">Applied</Tag>
+              <Tag>Applied</Tag>
               <span>{summary}</span>
             </div>
           )

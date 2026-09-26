@@ -7,6 +7,17 @@ export function profileSummary(value: ProfileValue | undefined): string {
   return line.length > 150 ? `${line.slice(0, 149).trimEnd()}…` : line
 }
 
+/** A zero dollar allowance does not grant permission to change a time entry. */
+export function profileAuthoritySummary(state: Onboarding): string {
+  if (!state.authorityConfigured) return ''
+  const { authority } = state
+  const permission = authority.autoFix && authority.limit > 0
+    ? `Up to $${authority.limit.toLocaleString()} per entry${authority.weeklyCap ? ` · $${authority.weeklyCap.toLocaleString()} per week` : ''}`
+    : 'Ask before every fix'
+  const rules = [...new Set(state.customRules.filter(rule => !rule.draft).map(rule => rule.sentence.trim()).filter(Boolean))]
+  return [permission, ...rules].join(' · ')
+}
+
 export function writingRows(state: Onboarding) {
   const learned = (topic: Onboarding['covered'][number], value?: ProfileValue) => state.covered.includes(topic) && !!profileSummary(value)
   return [

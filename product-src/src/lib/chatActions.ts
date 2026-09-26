@@ -8,6 +8,7 @@ import type { CustomDeskRule, FirmFacts, Onboarding } from '@/lib/onboarding'
 import { invalidate } from '@/lib/data'
 import { decide } from '@/lib/journey'
 import { memoryHistory, rememberAction, validRememberAction } from '@/components/memory/chatMemory'
+import { firmClientNames, singleFirmName } from '@/lib/firmName'
 
 export type ChatUpdate = (patch: Partial<Onboarding> | ((state: Onboarding) => Partial<Onboarding>)) => void
 
@@ -58,6 +59,9 @@ export function safeModelCard(card: Card, firm: FirmFacts | null): Card | null {
 
 function safeFirmPatch(patch: Partial<FirmFacts>, firm: FirmFacts | null) {
   const safe = { ...patch }, skipped: string[] = []
+  if (typeof safe.name === 'string' && singleFirmName(safe.name, firmClientNames(firm)) === null) {
+    delete safe.name; skipped.push('set_firm.name')
+  }
   if (safe.domain !== undefined && (!firm?.domain || firmHost(safe.domain) !== firmHost(firm.domain))) {
     delete safe.domain; skipped.push('set_firm.domain')
   }
@@ -293,7 +297,7 @@ export function applyAction(action: Action, update: ChatUpdate, navigate: Naviga
 /** What a set_authority patch says, in the Rulebook's words. */
 export function authorityLine(patch: Partial<Onboarding['authority']>): string {
   const parts = [
-    patch.autoFix === false ? 'ask before every fix' : patch.autoFix ? (patch.limit !== undefined ? `fix up to $${patch.limit.toLocaleString()} per entry without asking` : 'fix without asking')
+    patch.autoFix === false || patch.limit === 0 ? 'ask before every fix' : patch.autoFix ? (patch.limit !== undefined ? `fix up to $${patch.limit.toLocaleString()} per entry without asking` : 'fix without asking')
       : patch.limit !== undefined ? `$${patch.limit.toLocaleString()} per-entry limit` : '',
     patch.weeklyCap ? `$${patch.weeklyCap.toLocaleString()} weekly cap` : '',
     patch.textSupervisors === undefined ? '' : patch.textSupervisors ? 'text site supervisors' : 'ask before texting supervisors',
@@ -319,9 +323,9 @@ export function actionSummary(value: unknown): string | null {
     case 'approve': return `Approved ${String(action.groupId)}`
     case 'dismiss': return `Dismissed ${String(action.groupId)} · ${String(action.reason)}`
     case 'open_form': return null
-    case 'set_fact': return `Saved ${String(action.kind)} details: ${String(action.key)}`
-    case 'set_profile': return `Payroll profile: ${String(action.field)}`
-    case 'set_firm': return 'Updated firm details'
+    case 'set_fact': return 'Updated your Payroll details'
+    case 'set_profile': return 'Updated your Payroll profile'
+    case 'set_firm': return 'Updated your Payroll profile'
     // A source is a plan from setup; loading its time entries happens only through a connection or upload.
     case 'add_source': return `Planned: ${String(action.label)}${typeof action.how === 'string' && action.how ? ` · ${action.how}` : ''}`
     case 'set_authority': {
@@ -332,8 +336,8 @@ export function actionSummary(value: unknown): string | null {
     case 'remove_source': return `Removed plan: ${String(action.label)}`
     case 'remove_rule': return `Removed rule: ${String(action.sentence)}`
     case 'never_contact': return `Never contact: ${String(action.name)}`
-    case 'cover_topic': return `Covered: ${String(action.topic)}`
-    case 'set_calendar': return `Calendar: ${JSON.stringify(action.patch)}`
+    case 'cover_topic': return null
+    case 'set_calendar': return 'Updated your pay calendar'
     case 'add_cohort': {
       const cohort = action.cohort as { name?: string } | undefined
       return `Added pay cycle: ${cohort?.name ?? ''}`

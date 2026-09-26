@@ -32,15 +32,15 @@
 .journey-carousel-controls .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; min-height: 28px; min-width: 28px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #100f0f; }
 .journey-carousel-controls .icon-btn:hover:not(:disabled) { background: rgba(0,0,0,.04); }
 .journey-carousel-controls .icon-btn:disabled { opacity: .4; cursor: default; }
-/* Flex stretch makes every slide as tall as the tallest; navigating never moves the footer. */
-.journey-carousel-track { display: flex; width: 100%; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; }
+/* Each slide keeps its natural height; the track smoothly follows the active one. */
+.journey-carousel-track { display: flex; align-items: flex-start; width: 100%; min-width: 0; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; transition: height 180ms cubic-bezier(.22,1,.36,1); }
 .journey-carousel-track::-webkit-scrollbar { display: none; }
 .journey-carousel-track:focus-visible { outline: 2px solid #716f6f; outline-offset: -2px; }
 .journey-finding { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; flex: 0 0 100%; min-width: 0; box-sizing: border-box; padding: 16px; scroll-snap-align: start; scroll-snap-stop: always; overflow-wrap: anywhere; }
 .journey-finding > .tag { min-height: 20px; }
 .journey-finding h4 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin: 0; font-size: 15px; line-height: 20px; font-weight: 500; letter-spacing: -.01em; }
 .journey-finding-description { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin: 0; color: #716f6f; font-size: 13px; line-height: 19px; }
-.journey-finding .journey-finding-status { display: flex; align-items: baseline; gap: 6px; margin: auto 0 0; color: #716f6f; font-size: 12px; line-height: 18px; }
+.journey-finding .journey-finding-status { display: flex; align-items: baseline; gap: 6px; margin: 0; color: #716f6f; font-size: 12px; line-height: 18px; }
 .journey-status-dot { width: 5px; height: 5px; border-radius: 50%; background: #989696; flex: 0 0 5px; align-self: center; }
 .journey-finding[data-state='waiting'] .journey-status-dot, .journey-finding[data-state='judgment'] .journey-status-dot, .journey-finding[data-state='escalated'] .journey-status-dot { background: hsl(var(--verify)); }
 .journey-finding[data-state='fixed'] .journey-status-dot { background: hsl(var(--owed)); }
@@ -65,4 +65,4 @@
   .journey-findings-header { padding-block: 10px; }
   .journey-findings-footer { padding-block: 4px; }
 }
-@media (prefers-reduced-motion: reduce) { .journey-task-status .spinner, .journey-findings, .journey-finding .spinner { animation: none; } .journey-task-collapse, .journey-task-toggle > svg, .journey-scan-chip { transition: none; } .journey-carousel-track { scroll-behavior: auto; } .journey-running-beam { display: none; } }
+@media (prefers-reduced-motion: reduce) { .journey-task-status .spinner, .journey-findings, .journey-finding .spinner { animation: none; } .journey-task-collapse, .journey-task-toggle > svg, .journey-scan-chip { transition: none; } .journey-carousel-track { scroll-behavior: auto; transition: none; } .journey-running-beam { display: none; } }

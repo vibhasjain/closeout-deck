@@ -90,7 +90,7 @@ describe('onboarding action writes', () => {
       expect(getOnboarding().sources[0].how).toBe('Forward Friday emails')
     } finally { vi.unstubAllGlobals() }
   })
-  it.each(valid)('summarizes $type as an applied change', (action) => {
+  it.each(valid.filter(action => action.type !== 'cover_topic'))('summarizes $type as an applied change', (action) => {
     expect(actionSummary(action)).toEqual(expect.any(String))
     expect(actionSummary(action)).not.toBe('')
   })
@@ -137,6 +137,13 @@ describe('model output boundaries', () => {
 })
 
 describe('E2E D8 and skipped notes: the Applied line says what really happened', () => {
+  it('hides coverage bookkeeping and gives profile updates a human label', () => {
+    expect(actionSummary({ type: 'cover_topic', topic: 'authority' })).toBeNull()
+    for (const field of ['notes', 'workerHours', 'ratesWhere']) expect(actionSummary({ type: 'set_profile', field, value: 'Saved answer' })).toBe('Updated your Payroll profile')
+    expect(actionSummary({ type: 'set_calendar', patch: { deadlineDays: 2 } })).toBe('Updated your pay calendar')
+    expect(actionSummary({ type: 'set_fact', kind: 'rate', key: 'internal-site-id', value: { pay: 20 } })).toBe('Updated your Payroll details')
+    expect(actionSummary({ type: 'set_authority', patch: { autoFix: true, limit: 0 }, consent: true })).toBe('Saved: Ask before every fix')
+  })
   it('D8: a source plan reads as a plan, never as a load', () => {
     expect(actionSummary({ type: 'add_source', set: 3, kind: 'sample', label: 'Sample location data' })).toBe('Planned: Sample location data')
     expect(actionSummary({ type: 'add_source', set: 1, kind: 'email', label: 'Worker texts', how: 'forward to closeout@example.com' })).toBe('Planned: Worker texts · forward to closeout@example.com')

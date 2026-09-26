@@ -6,7 +6,7 @@ import { CATALOG } from '@/bench/catalog.js'
 import { RULES, type Row } from '@/bench/engine.js'
 import { PROV, SCOPE_TEXT } from '@/bench/prov'
 import { RuleDetail } from '@/components/RuleDetail'
-import { AuxProvider } from '@/components/shell/Aux'
+import { AuxProvider, useAux } from '@/components/shell/Aux'
 import { OverlayProvider } from '@/components/shell/Overlay'
 import { bucketHue, buildCycles, kindLabel, type DeskCycle } from '@/lib/desk'
 import { titleCase } from '@/lib/utils'
@@ -18,6 +18,10 @@ import { Rules } from '@/pages/Rules'
 vi.mock('@/lib/onboarding', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/onboarding')>()
   return { ...actual, useOnboarding: vi.fn() }
+})
+vi.mock('@/components/shell/Aux', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/shell/Aux')>()
+  return { ...actual, useAux: vi.fn() }
 })
 
 const today = new Date(2026, 8, 22, 12)
@@ -36,6 +40,7 @@ const visibleText = (html: string) => html.replace(/<[^>]*>/g, ' ')
 const textMarkup = (value: string) => renderToStaticMarkup(h('span', null, value)).slice(6, -7)
 
 beforeEach(() => {
+  vi.mocked(useAux).mockClear()
   vi.useFakeTimers().setSystemTime(today)
   state = { ...DEFAULTS, customRules: [], rules: [], proposals: [] }
   vi.mocked(useOnboarding).mockImplementation(() => [state, vi.fn()] as const)
@@ -50,7 +55,7 @@ describe('rules table', () => {
     expect(RULES).toHaveLength(30)
     expect(rowIds(table).sort()).toEqual(RULES.map((rule) => rule.id).sort())
     expect([...table.matchAll(/<th scope="col"[^>]*>(.*?)<\/th>/g)].map((match) => match[1]))
-      .toEqual(['Bucket', 'Rule', 'Created', 'Last Used', 'Uses'])
+      .toEqual(['Bucket', 'Rule', 'Source', 'Created', 'Last Used', 'Uses'])
     // The bucket is the rule's only classification, and rows sit together by bucket.
     const buckets = [...table.matchAll(/<span class="bucket-tag"[^>]*>(.*?)<\/span>/g)].map((match) => match[1])
     expect(buckets).toEqual(RULES.map((rule) => titleCase(kindLabel(rule.id))).sort((a, b) => a.localeCompare(b)))
@@ -97,7 +102,7 @@ describe('rules table', () => {
     expect(visibleText(table)).not.toMatch(/\b(?:Live|Pack|Draft|Expiring)\b/i)
   })
 
-  it('lists document proposals by bucket and clickable sentence, not by id', () => {
+  it('lists document proposals inline without a detail-pane trigger', () => {
     state.proposals = [{
       id: 'DOC-PENDING', text: 'Pay a $3 weekend differential.', source: 'Handbook',
       scope: null, cite: null, effective: null, conflict: null,
@@ -105,9 +110,46 @@ describe('rules table', () => {
     const html = render(h(Rules))
     const section = html.match(/<section\b[^>]*aria-label="Rules to review"[\s\S]*?<\/section>/)![0]
     expect(section).toContain(`<span class="bucket-tag" style="--hue:${bucketHue('DOC-PENDING')}">${titleCase(kindLabel('DOC-PENDING'))}</span>`)
-    expect(section).toMatch(/<button type="button" class="[^"]*rule-proposal-text[^"]*" aria-pressed="false">Pay a \$3 weekend differential<\/button>/)
+    expect(section).toMatch(/<p class="[^"]*rule-proposal-text[^"]*">Pay a \$3 weekend differential<\/p>/)
     expect(visibleText(section)).not.toContain('DOC-PENDING')
     expect(html).not.toContain('bucket-chip')
+  })
+
+  it('shows citations in the table and never registers a side pane, even from an old rule link', () => {
+    const html = render(h(Rules), '/rules?rule=CA-OT-8')
+    const table = html.match(/<table\b[^>]*aria-label="Rulebook"[\s\S]*?<\/table>/)![0]
+    const overtime = table.match(/<tr[^>]*data-rule="CA-OT-8"[\s\S]*?<\/tr>/)![0]
+    expect(overtime).toContain('California Labor Code §510(a)</a>')
+    expect(links(overtime)).toEqual([PROV['CA-OT-8'].url])
+    expect(table).toContain('29 CFR 785.48(b)</a>')
+    const heuristic = table.match(/<tr[^>]*data-rule="CS-01"[\s\S]*?<\/tr>/)![0]
+    expect(heuristic).toContain('<span>Ops heuristic</span>')
+    expect(links(heuristic)).toEqual([])
+    expect(table).not.toContain('tabindex=')
+    expect(table).not.toContain('aria-selected=')
+    expect(vi.mocked(useAux)).not.toHaveBeenCalled()
+    expect(html).toContain('What the Closeout Agent knows')
+    expect(html.indexOf('What the Closeout Agent knows')).toBeLessThan(html.indexOf('aria-label="Rulebook"'))
+  })
+
+  it('keeps an accepted document citation in its Source cell', () => {
+    const proposal = { id: 'DOC-NIGHT', text: 'Pay a $2 hourly night differential.', source: 'Staff handbook', scope: null, cite: '§4.2', effective: null, conflict: null }
+    state = { ...state, ...acceptProposal(state, proposal) }
+    const html = render(h(Rules))
+    const row = html.match(/<tr[^>]*data-rule="DOC-NIGHT"[\s\S]*?<\/tr>/)![0]
+    expect(row).toContain('<td class="rule-source"><span>Staff handbook · §4.2</span></td>')
+  })
+
+  it('labels uploaded citations without showing file names', () => {
+    const proposal = { id: 'DOC-NIGHT', text: 'Pay a $2 hourly night differential.', source: 'summit-handbook.pdf', scope: null, cite: 'Clause 2', effective: null, conflict: null }
+    state.proposals = [proposal]
+    const pending = render(h(Rules))
+    expect(pending).toContain('Uploaded document · Clause 2')
+    expect(pending).not.toContain(proposal.source)
+    state = { ...state, ...acceptProposal(state, proposal) }
+    const accepted = render(h(Rules))
+    expect(accepted).toContain('<td class="rule-source"><span>Uploaded document · Clause 2</span></td>')
+    expect(accepted).not.toContain(proposal.source)
   })
 
   it('places both add actions in the toolbar and keeps the multiple-file picker without a drop box', () => {

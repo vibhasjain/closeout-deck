@@ -4,6 +4,7 @@ import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowUp, Loader2, Mic, Phone, Plus, Square } from 'lucide-react'
 import { AgentAvatar } from '@/components/chat/AgentAvatar'
+import { SkeletonRegion } from '@/components/Skeleton'
 import { Chip } from '@/components/ui'
 import { Message } from '@/components/chat/Message'
 import { memoryHistory } from '@/components/memory/chatMemory'
@@ -218,14 +219,12 @@ export function ChatPane({ scope: explicitScope, headerAction, onCallingChange }
     setThinking(false)
     setRequestScope(scope)
     setSending(true)
-    const timer = window.setTimeout(() => {
-      if (request.current === requestId) setThinking(true)
-    }, 300)
     let textSoFar = ''
     let completed = false
     try {
       await flushOnboarding().catch(() => { /* durable sync retries separately; the current profile is in turnContext */ })
       if (request.current !== requestId || pending.controller.signal.aborted) return
+      setThinking(true)
       for await (const event of stream(message, turnContext, mode, pending.controller.signal)) {
         if (request.current !== requestId) return
         if (event.ingest) {
@@ -300,7 +299,6 @@ export function ChatPane({ scope: explicitScope, headerAction, onCallingChange }
     } catch (cause) {
       if (request.current === requestId) setError(cause instanceof Error ? cause.message : 'Could not reach the agent. Please try again.')
     } finally {
-      window.clearTimeout(timer)
       if (request.current === requestId) {
         activeRequest.current = null
         busy.current = false
@@ -380,7 +378,7 @@ export function ChatPane({ scope: explicitScope, headerAction, onCallingChange }
     <section className="queue chat" data-composer-action={sending ? 'stop' : draft.trim() ? 'send' : 'phone'} aria-label="Closeout Agent conversation">
       <header className="chat-header">
         <div className="chat-heading">
-          <AgentAvatar size={20} working={sending} />
+          <AgentAvatar size={20} state={sending ? thinking || reply ? 'thinking' : 'processing' : dictation.finishing ? 'processing' : dictation.active ? 'listening' : 'idle'} />
           <h2>Closeout Agent</h2>
         </div>
         {headerAction && <div className="chat-header-actions">{headerAction}</div>}
@@ -409,11 +407,8 @@ export function ChatPane({ scope: explicitScope, headerAction, onCallingChange }
           )
         })}
         {showRequest && (reply || traces.length > 0) && <Message message={{ id: 'streaming', role: 'agent', traces, text: safeModelText(parseCards(parseActions(reply).text).text.replace(/```(?:action|card)[\s\S]*$/, '').trim(), state.firm), at: 0, scope: requestScope }} />}
-        {showRequest && sending && thinking && (
-          <div className="chat-busy">
-            <Loader2 size={12} aria-hidden="true" />
-            <span>Working</span>
-          </div>
+        {showRequest && sending && !reply && (
+          <SkeletonRegion variant="conversation" rows={1} className="chat-busy" />
         )}
         {showRequest && error && <p className="chat-error" role="alert">{error}</p>}
       </div>

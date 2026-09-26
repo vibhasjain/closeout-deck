@@ -27,9 +27,11 @@ export function onboardContext(): OnboardContext {
     inbox: inboxAddress(viewerSession()?.email ?? null), authorityConfigured: state.authorityConfigured, authority: effectiveAuthority(state) }
 }
 
-async function agentTurn(message: string, context: OnboardContext, signal?: AbortSignal) {
+async function agentTurn(message: string, context: OnboardContext, signal?: AbortSignal, onRequest?: () => void) {
   // The in-turn context still carries current edits when an unrelated state save fails.
   await flushOnboarding().catch(() => {})
+  signal?.throwIfAborted()
+  onRequest?.()
   let text = '', finished = false, sessionId: string | undefined
   let traces: string[] = []
   for await (const event of stream(message, context, 'onboard', signal)) {
@@ -54,10 +56,10 @@ async function agentTurn(message: string, context: OnboardContext, signal?: Abor
 }
 
 /** Keep valid parts of model output and ask a corrective follow-up only if no usable card remains. */
-export async function requestOnboarding(message: string, signal?: AbortSignal): Promise<OnboardReply> {
+export async function requestOnboarding(message: string, signal?: AbortSignal, onRequest?: () => void): Promise<OnboardReply> {
   if (getOnboarding().forwarded) updateOnboarding({ forwarded: false })
   // ponytail: the retry note lives in memory; a reload drops it and the notice alone remains.
-  const reply = await agentTurn(retry ? `${message}\n\n${retry}` : message, onboardContext(), signal)
+  const reply = await agentTurn(retry ? `${message}\n\n${retry}` : message, onboardContext(), signal, onRequest)
   retry = ''
   const card = reply.cards.find((item): item is QuestionCard | { kind: 'onboard_complete' } => item.kind === 'question' || item.kind === 'onboard_complete')
   if (!card || (card.kind === 'question' && !reply.question.trim())) {

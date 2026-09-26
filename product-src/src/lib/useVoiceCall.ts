@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { ChatContext } from '@/lib/chat'
 import { startCall, type CallHandle, type CallSnapshot, type LiveContext } from '@/lib/live'
 import { effectiveAuthority, getOnboarding, ONBOARD_TOPICS } from '@/lib/onboarding'
+import { payrollFirmName } from '@/lib/firmName'
 import { callOwner, clearStoredCall, persistLiveCall, readStoredCall, registerCallRetry } from '@/lib/callRecovery'
 import { applyVoiceActions, createVoiceAudit, recordVoiceCall, recoverVoiceCall, restoreVoiceAudit } from '@/lib/voiceActions'
 
@@ -15,7 +16,7 @@ export function voiceContext(cycleId?: string): LiveContext {
     sources: state.sources.map(({ set, label }) => ({ set, label })), authority: effectiveAuthority(state), profile: state.profile,
   }
   return {
-    ...(state.firm ? { firm: { name: state.firm.name.slice(0, 200), summary: state.firm.summary.slice(0, 500), states: state.firm.states } } : {}),
+    ...(state.firm ? { firm: { name: payrollFirmName(state.firm), summary: state.firm.summary.slice(0, 500), states: state.firm.states } } : {}),
     known: JSON.stringify(known).slice(0, 2400), uncovered: ONBOARD_TOPICS.filter(topic => !state.covered.includes(topic)), ...(cycleId ? { cycleId } : {}),
   }
 }

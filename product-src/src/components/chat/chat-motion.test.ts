@@ -79,22 +79,20 @@ describe('live chat text', () => {
   })
 })
 
-describe('agent avatar idle life', () => {
-  it('uses distinct native orb modes after the initial pause and stops idle changes while working', () => {
-    vi.spyOn(Math, 'random').mockReturnValue(0)
-    expect(render(() => AgentAvatar({})).props.state).toBe('breathing')
-    vi.advanceTimersByTime(1200)
-    expect(render(() => AgentAvatar({})).props.state).toBe('shaping')
-    vi.advanceTimersByTime(800)
-    expect(render(() => AgentAvatar({})).props.state).toBe('breathing')
-    expect(render(() => AgentAvatar({ working: true })).props.state).toBe('working')
+describe('agent avatar intelligence states', () => {
+  it('keeps idle static indefinitely without timers or random modes', () => {
+    const random = vi.spyOn(Math, 'random')
+    expect(render(() => AgentAvatar({})).props).toMatchObject({ state: 'breathing', paused: true })
+    vi.advanceTimersByTime(60_000)
+    expect(render(() => AgentAvatar({})).props).toMatchObject({ state: 'breathing', paused: true })
     expect(vi.getTimerCount()).toBe(0)
+    expect(random).not.toHaveBeenCalled()
   })
 
-  it('rests the orb and schedules no micro-motion under reduced motion', () => {
+  it.each([['thinking', 'composing'], ['listening', 'listening'], ['processing', 'working']] as const)('maps %s consistently', (activity, mode) => {
+    expect(render(() => AgentAvatar({ state: activity })).props).toMatchObject({ state: mode, paused: false })
     hooks.reduced = true
-    const tree = render(() => AgentAvatar({ working: true }))
-    expect(tree.props).toMatchObject({ state: 'breathing', paused: true, theme: 'light' })
+    expect(render(() => AgentAvatar({ state: activity })).props).toMatchObject({ state: 'breathing', paused: true, theme: 'light' })
     expect(vi.getTimerCount()).toBe(0)
   })
 })

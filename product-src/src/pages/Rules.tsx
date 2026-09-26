@@ -1,12 +1,11 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useRef, useState } from 'react'
 import { Search } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { RULES } from '@/bench/engine.js'
+import { PROV } from '@/bench/prov'
 import { BucketTag } from '@/components/BucketTag'
-import { RuleDetail } from '@/components/RuleDetail'
 import { MemoryPanel } from '@/components/memory/MemoryPanel'
 import { useSetChatContext, useSetChatSuggestions } from '@/components/chat/ChatPane'
-import { useAux } from '@/components/shell/Aux'
 import { useOverlay } from '@/components/shell/Overlay'
 import { PageTitle } from '@/components/shell/PageTitle'
 import { PaintBoundary } from '@/components/shell/PaintBoundary'
@@ -22,34 +21,28 @@ import { formatRuleDate, formatRuleSource, formatRuleText, getRuleActivity, type
 import { acceptProposal, clarify, compileRule, propose, withThreshold } from '@/lib/ruleIntake'
 import './rules.css'
 
-function activateRow(event: KeyboardEvent<HTMLTableRowElement>, select: () => void) {
-  if (event.target !== event.currentTarget || (event.key !== 'Enter' && event.key !== ' ')) return
-  event.preventDefault()
-  select()
-}
-
 interface TableRule extends RuleActivity {
   id: string
   sentence: string
   search: string
+  citation: string
+  sourceUrl?: string
 }
 
-function RuleComposer({ onSave, onCancel }: { onSave(rule: CustomDeskRule): void; onCancel(): void }) {
+function citationText(source: string, cite?: string | null): string {
+  const label = /\.(?:pdf|docx?|xlsx?|csv|txt|md|rtf|png|jpe?g)$/i.test(source.trim()) ? 'Uploaded document' : source
+  return [formatRuleSource(label), cite].filter(Boolean).join(' · ')
+}
+
+export function RuleComposer({ onSave, onCancel }: { onSave(rule: CustomDeskRule): void; onCancel(): void }) {
   const [sentence, setSentence] = useState('')
-  const [compiling, setCompiling] = useState(false)
   const [compiled, setCompiled] = useState<CustomDeskRule | null>(null)
   const [answer, setAnswer] = useState('')
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  useEffect(() => () => clearTimeout(timer.current), [])
   const ask = compiled && clarify(compiled.sentence)
 
   function compile() {
-    if (compiling || !sentence.trim()) return
-    setCompiling(true)
-    timer.current = setTimeout(() => {
-      setCompiled(compileRule(sentence))
-      setCompiling(false)
-    }, 900)
+    if (!sentence.trim()) return
+    setCompiled(compileRule(sentence))
   }
 
   return <DialogContent className="sm:max-w-lg">
@@ -67,10 +60,10 @@ function RuleComposer({ onSave, onCancel }: { onSave(rule: CustomDeskRule): void
         <Button disabled={!!ask && !answer} onClick={() => onSave(withThreshold(compiled, answer))}>Add Rule</Button>
       </DialogFooter>
     </> : <>
-      <Textarea autoFocus className="min-h-32" aria-label="Write the rule" placeholder="Flag a meal break shorter than 30 minutes" value={sentence} disabled={compiling} onChange={(event) => setSentence(event.target.value)} />
+      <Textarea autoFocus className="min-h-32" aria-label="Write the rule" placeholder="Flag a meal break shorter than 30 minutes" value={sentence} onChange={(event) => setSentence(event.target.value)} />
       <DialogFooter>
         <Button variant="outline" onClick={onCancel}>Cancel</Button>
-        <Button disabled={!sentence.trim() || compiling} onClick={compile}>{compiling ? 'Compiling…' : 'Compile'}</Button>
+        <Button disabled={!sentence.trim()} onClick={compile}>Compile</Button>
       </DialogFooter>
     </>}
   </DialogContent>
@@ -94,32 +87,26 @@ function RulesContents() {
   const dragDepth = useRef(0)
   const fileInput = useRef<HTMLInputElement>(null)
   const query = params.get('q') ?? ''
-  const requested = params.get('rule') ?? ''
   const allRules: TableRule[] = [
-    ...RULES.map((rule): TableRule => ({ ...rule, ...getRuleActivity(rule.id, cycles, state), sentence: formatRuleText(rule.sentence), search: `${rule.source.doc} ${rule.source.cite ?? ''}` })),
-    ...state.customRules.map((rule): TableRule => ({ ...rule, ...getRuleActivity(rule.id, cycles, state), sentence: formatRuleText(rule.sentence), search: rule.source.doc })),
+    ...RULES.map((rule): TableRule => ({
+      ...rule, ...getRuleActivity(rule.id, cycles, state), sentence: formatRuleText(rule.sentence),
+      search: `${rule.source.doc} ${rule.source.cite ?? ''} ${PROV[rule.id]?.doc ?? ''}`,
+      citation: citationText(rule.source.doc === 'Ops heuristic' ? rule.source.doc : PROV[rule.id]?.doc ?? rule.source.doc),
+      sourceUrl: PROV[rule.id]?.url,
+    })),
+    ...state.customRules.map((rule): TableRule => {
+      const cite = state.rules.find((item) => item.id === rule.id)?.cite
+      return {
+        ...rule, ...getRuleActivity(rule.id, cycles, state), sentence: formatRuleText(rule.sentence),
+        search: `${rule.source.doc} ${cite ?? ''}`, citation: citationText(rule.source.doc, cite),
+      }
+    }),
   ]
   const matches = (rule: TableRule) => `${rule.sentence} ${kindLabel(rule.id)} ${rule.search}`.toLowerCase().includes(query.trim().toLowerCase())
   // Rules sit together by bucket, the one classification a rule has.
   const rows = allRules.filter(matches).sort((a, b) => kindLabel(a.id).localeCompare(kindLabel(b.id)))
   const proposals = state.proposals.filter((proposal) => !state.customRules.some((rule) => rule.id === proposal.id)
     && `${proposal.id} ${proposal.text} ${proposal.source} ${proposal.cite ?? ''} ${proposal.scope ?? ''}`.toLowerCase().includes(query.trim().toLowerCase()))
-  const defaultId = rows.find((rule) => rule.id === 'CA-MB-01')?.id ?? rows[0]?.id
-  const selected = rows.some((rule) => rule.id === requested) || proposals.some((rule) => rule.id === requested)
-    ? requested : defaultId ?? proposals[0]?.id ?? ''
-
-  // The initial selection is shareable too; filters and row selection have one URL source of truth.
-  useEffect(() => {
-    if (requested !== selected) setParams((previous) => {
-      const next = new URLSearchParams(previous)
-      if (selected) next.set('rule', selected); else next.delete('rule')
-      return next
-    }, { replace: true })
-  }, [requested, selected, setParams])
-
-  function selectRule(id: string) {
-    setParams((previous) => { const next = new URLSearchParams(previous); next.set('rule', id); return next })
-  }
   function filter(key: 'q', value: string) {
     setParams((previous) => {
       const next = new URLSearchParams(previous)
@@ -137,7 +124,7 @@ function RulesContents() {
   function accept(proposal: Proposal) {
     update(acceptProposal(state, proposal))
     setParams((previous) => {
-      const next = new URLSearchParams({ rule: proposal.id })
+      const next = new URLSearchParams()
       if (previous.get('agent') === '1') next.set('agent', '1')
       return next
     })
@@ -146,7 +133,7 @@ function RulesContents() {
   function saveRule(rule: CustomDeskRule) {
     update({ customRules: [...state.customRules, rule] })
     setParams((previous) => {
-      const next = new URLSearchParams({ rule: rule.id })
+      const next = new URLSearchParams()
       if (previous.get('agent') === '1') next.set('agent', '1')
       return next
     })
@@ -155,8 +142,7 @@ function RulesContents() {
   }
 
   useSetChatSuggestions(['Which rules fired this cycle?', 'Where did this rule come from?', 'Add a rule for my contract'])
-  useSetChatContext({ page: 'Rules', cycle: { id: current.id, label: current.label, stats: topstats(current, state.resolutions) }, selection: selected ? { ruleId: selected, sentence: allRules.find((rule) => rule.id === selected)?.sentence ?? proposals.find((rule) => rule.id === selected)?.text } : undefined, rules: allRules.map(({ id, sentence }) => ({ id, sentence })) })
-  useAux(selected ? <RuleDetail ruleId={selected} /> : null)
+  useSetChatContext({ page: 'Rules', cycle: { id: current.id, label: current.label, stats: topstats(current, state.resolutions) }, rules: allRules.map(({ id, sentence }) => ({ id, sentence })) })
 
   return <div className={`rules-page${dragging ? ' dragging' : ''}`}
     onDragEnter={(event) => {
@@ -197,8 +183,8 @@ function RulesContents() {
         <Lbl>Rules to review</Lbl>
         <ul>{proposals.map((proposal) => <li key={proposal.id} data-proposal={proposal.id}>
           <BucketTag ruleId={proposal.id} />
-          <button type="button" className="r-sent rule-proposal-text" aria-pressed={selected === proposal.id} onClick={() => selectRule(proposal.id)}>{formatRuleText(proposal.text)}</button>
-          <span className="rule-document">{formatRuleSource(proposal.source)}{proposal.cite ? ` · ${proposal.cite}` : ''}</span>
+          <p className="r-sent rule-proposal-text">{formatRuleText(proposal.text)}</p>
+          <span className="rule-document">{citationText(proposal.source, proposal.cite)}</span>
           {proposal.conflict && <p className="r-note">{formatRuleText(proposal.conflict)}</p>}
           <div className="rule-proposal-actions">
             <Btn onClick={() => accept(proposal)}>Accept</Btn>
@@ -207,12 +193,13 @@ function RulesContents() {
         </li>)}</ul>
       </section>}
       {rows.length > 0 && <table className="sheet rules-sheet" aria-label="Rulebook">
-        <colgroup><col className="rule-bucket-col" /><col /><col className="rule-date-col" /><col className="rule-last-used-col" /><col className="rule-uses-col" /></colgroup>
-        <thead><tr><th scope="col">Bucket</th><th scope="col">Rule</th><th scope="col">Created</th><th scope="col">Last Used</th><th scope="col" className="num">Uses</th></tr></thead>
+        <colgroup><col className="rule-bucket-col" /><col /><col className="rule-source-col" /><col className="rule-date-col" /><col className="rule-last-used-col" /><col className="rule-uses-col" /></colgroup>
+        <thead><tr><th scope="col">Bucket</th><th scope="col">Rule</th><th scope="col">Source</th><th scope="col">Created</th><th scope="col">Last Used</th><th scope="col" className="num">Uses</th></tr></thead>
         <tbody>
-          {rows.map((rule) => <tr key={rule.id} data-rule={rule.id} className={selected === rule.id ? 'sel' : undefined} tabIndex={0} aria-selected={selected === rule.id} onKeyDown={(event) => activateRow(event, () => selectRule(rule.id))} onClick={() => selectRule(rule.id)}>
+          {rows.map((rule) => <tr key={rule.id} data-rule={rule.id}>
             <td><BucketTag ruleId={rule.id} /></td>
             <td><span className="rule-sentence">{rule.sentence}</span></td>
+            <td className="rule-source">{rule.sourceUrl ? <a href={rule.sourceUrl} target="_blank" rel="noopener noreferrer">{rule.citation}</a> : <span>{rule.citation}</span>}</td>
             <td><time dateTime={rule.created}>{formatRuleDate(rule.created)}</time></td>
             <td>{rule.lastUsed ? <time dateTime={rule.lastUsed}>{formatRuleDate(rule.lastUsed)}</time> : null}</td>
             <td className="num rule-uses">{rule.uses.toLocaleString('en-US')}</td>
