@@ -50,7 +50,7 @@ const FIXED: Record<string, string> = { 'data/decisions.jsonl': 'the decisions',
 /** A data read as a person says it, never with an id. Names come from the account records this turn's workspace was built from. */
 export function dataTrace(cwd: string, rel: string): string | null {
   const read = (path: string) => { try { return readFileSync(join(cwd, path), 'utf8') } catch { return '' } }
-  const name = (pattern: RegExp) => pattern.exec(read(rel))?.[1].replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 80)
+  const name = (pattern: RegExp) => pattern.exec(read(rel))?.[1].replace(/\p{Cc}/gu, ' ').trim().slice(0, 80)
   if (FIXED[rel]) return `Read ${FIXED[rel]}`
   const [, folder, id] = /^data\/(cycles|findings|entries|batches|threads|disputes)\/([\w-]+)\.(?:json|jsonl|csv|md)$/.exec(rel) ?? []
   if (folder === 'threads') { const who = name(/^Counterparty: [^·\n]*· (.+?)(?: \([^()\n]*\))?$/m); return who ? `Read the thread with ${who}` : 'Read a thread' }
