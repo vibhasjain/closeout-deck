@@ -263,3 +263,13 @@ describe('connect option rows', () => {
     expect(css).toMatch(/\.btn\.connect-method-option \.action-button-label:first-child > svg \{ width: 1\.125rem; height: 1\.125rem; \}/)
   })
 })
+
+describe('connected connector tiles', () => {
+  it('pin the Sample tag and method icon to the top-right corner, out of the logo flow (they pushed the logo off the tile)', () => {
+    const css = readFileSync(new URL('./connector-grid.css', import.meta.url), 'utf8')
+    const grid = readFileSync(new URL('./ConnectorGrid.tsx', import.meta.url), 'utf8')
+    expect(css).toMatch(/\.source-grid-wrap \.source-tile-badges \{[^}]*position: absolute;[^}]*right: \.3rem;/)
+    expect(grid).toMatch(/<span className="source-tile-badges">\s*\{sample && <span className="tag">Sample<\/span>\}/)
+    expect(grid).not.toMatch(/<\/span>\}\s*\{state\.connections\[vendorKey\(item\)\]\?\.sample && <span className="tag">/)
+  })
+})

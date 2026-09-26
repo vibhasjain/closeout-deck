@@ -29,3 +29,17 @@
   width: 28px;
   height: 28px;
 }
+
+/* A connected tile's Sample tag and method icon sit in its top-right corner, never beside the logo. */
+.source-grid-wrap .source-tile-badges {
+  position: absolute;
+  top: .3rem;
+  right: .3rem;
+  display: flex;
+  align-items: center;
+  gap: .25rem;
+}
+
+.source-grid-wrap .source-tile-badges .source-tile-method {
+  position: static;
+}
