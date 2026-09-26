@@ -47,3 +47,29 @@ describe('shared mutation feedback', () => {
     expect(renderAction()).toMatchObject({ status: 'success', error: null })
   })
 })
+
+
+describe('optimistic mutation feedback', () => {
+  it('shows Approved in the same turn, rolls back a 500, and Retry repeats the preserved operation', async () => {
+    let reject!: (error: Error) => void
+    let approved = false
+    const rollback = vi.fn(() => { approved = false })
+    const operation = vi.fn().mockImplementationOnce(() => {
+      approved = true
+      return new Promise((_resolve, fail) => { reject = fail })
+    }).mockImplementationOnce(() => { approved = true })
+    const first = renderAction().run(operation, 'approve', { optimistic: true, rollback })
+    expect(approved).toBe(true)
+    expect(renderAction()).toMatchObject({ status: 'success', pending: false, inFlight: true, key: 'approve' })
+    expect(await renderAction().run(operation, 'approve', { optimistic: true })).toBe(false)
+    reject(new Error('The decision could not be saved (500).'))
+    expect(await first).toBe(false)
+    expect(approved).toBe(false)
+    expect(rollback).toHaveBeenCalledOnce()
+    expect(renderAction()).toMatchObject({ status: 'error', inFlight: false, error: 'The decision could not be saved (500).' })
+    expect(await renderAction().retry()).toBe(true)
+    expect(approved).toBe(true)
+    expect(operation).toHaveBeenCalledTimes(2)
+    expect(renderAction()).toMatchObject({ status: 'success', pending: false, inFlight: false })
+  })
+})

@@ -86,8 +86,8 @@ export function Sheet({ cycle, shifts, groupBy, selected, onSelect, days, includ
               const flagged = rs.held || (!decision && rs.flagged)
               const pay = journeyShiftPay(rs)
               const delta = pay - rs.naive
-              return <tr key={s.id} data-shift={s.id} className={selected === s.id ? 'sel' : undefined}
-                tabIndex={0} aria-selected={selected === s.id} aria-label={`${s.worker}, ${days[s.day]}, time entry ${s.id}`}
+              return <tr key={s.id} data-shift={s.id} data-prefetch-cycle={cycle.id} className={selected === s.id ? 'sel' : undefined}
+                tabIndex={0} aria-selected={selected === s.id} aria-label={`${s.worker}, ${days[s.day]}, time entry`}
                 onClick={() => onSelect(s.id)} onKeyDown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelect(s.id) }
                 }}>

@@ -18,9 +18,9 @@ const render = () => renderToStaticMarkup(createElement(QuestionScreen, {
 }))
 
 it.each([
-  ['connecting', 'Connecting…', 'spinner'],
+  ['connecting', 'Connecting…', '<span aria-hidden="true">…</span>'],
   ['listening', 'Listening…', 'lucide-square'],
-  ['finishing', 'Finishing…', 'spinner'],
+  ['finishing', 'Finishing…', '<span aria-hidden="true">…</span>'],
 ] as const)('shows a visible %s dictation state and an active control', (state, status, icon) => {
   Object.assign(dictation, { active: true, finishing: state === 'finishing', state, status })
   const html = render()

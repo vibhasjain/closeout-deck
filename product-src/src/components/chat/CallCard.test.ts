@@ -25,7 +25,7 @@ vi.mock('react', async importOriginal => {
     },
   }
 })
-vi.mock('@/lib/api', () => ({ authedFetch: vi.fn() }))
+vi.mock('@/lib/api', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/api')>(), authedFetch: vi.fn() }))
 
 function renderCard(props: Parameters<typeof CallCard>[0]) {
   hooks.active = true; hooks.index = 0

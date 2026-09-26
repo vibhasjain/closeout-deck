@@ -6,7 +6,6 @@
 .beautiful-task-row[data-state='running'] > button { color: #100f0f; }
 .beautiful-task-ring { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; flex: 0 0 24px; }
 .beautiful-task-ring > svg { position: absolute; inset: 0; }
-.beautiful-task-ring > svg[data-active='true'] { animation: beautiful-task-spin .85s linear infinite; }
 .beautiful-task-ring > span { position: relative; display: flex; align-items: center; font-size: 11px; font-variant-numeric: tabular-nums; }
 .beautiful-task-label { min-width: 0; flex: 1; line-height: 1.4; }
 .beautiful-task-amount { flex-shrink: 0; font-size: 11px; }
@@ -17,5 +16,4 @@
 .beautiful-task-guide { width: .5px; margin-inline: auto; background: rgba(0,0,0,.1); }
 .beautiful-task-detail { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; color: #716f6f; font-size: 11px; line-height: 1.5; margin-bottom: 4px; }
 .beautiful-task-detail .tabular-nums { flex-shrink: 0; }
-@keyframes beautiful-task-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .beautiful-task-ring > svg[data-active='true'] { animation: none; } .beautiful-task-details, .beautiful-task-chevron { transition: none; } }

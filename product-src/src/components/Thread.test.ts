@@ -33,7 +33,10 @@ describe('Closeout Agent draft presentation', () => {
     // No origin header: Pending sits on the subject line.
     expect(draft).not.toContain('thread-draft-origin')
     expect(draft).toMatch(/<div class="thread-draft-subject"><p class="thread-subject">[^<]+<\/p><span class="tag[^"]*">Pending<\/span><\/div>/)
-    expect(draft).toMatch(/<div class="thread-draft-primary-actions"><button[^>]*>Send<\/button><button[^>]*>Edit<\/button><\/div><button type="button" class="btn thread-draft-skip">Skip<\/button>/)
+    expect(draft).toContain('Save message · Demo')
+    expect(draft).toContain('>Edit</button>')
+    expect(draft).toContain('action-button thread-draft-skip')
+    expect(draft.indexOf('thread-draft-skip')).toBeGreaterThan(draft.indexOf('>Edit</button>'))
     expect(draft).not.toContain('Not needed')
   })
 

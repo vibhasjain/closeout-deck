@@ -127,7 +127,7 @@ button { font-family: var(--sans); font-size: inherit; line-height: inherit; bor
 .chat-action > span { min-width: 0; }
 .chat-busy { display: flex; flex-shrink: 0; min-width: 0; align-items: center; gap: .5rem;
   font: 11px/1.5 var(--sans); color: hsl(var(--muted-foreground)); }
-.chat-busy svg { width: .75rem; height: .75rem; flex-shrink: 0; animation: spin 1s linear infinite; }
+.chat-busy svg { width: .75rem; height: .75rem; flex-shrink: 0; }
 .chat-error { margin: 0; font-size: 12px; color: hsl(var(--muted-foreground)); }
 .chat-suggestions { flex-shrink: 0; padding: .25rem .75rem .625rem; gap: .375rem; }
 .chat-suggestions .chip { min-height: 32px; }

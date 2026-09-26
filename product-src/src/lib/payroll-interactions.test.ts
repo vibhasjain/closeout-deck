@@ -362,13 +362,13 @@ describe('persisted Payroll decisions', () => {
     expect(detail.props.onApply).toBeUndefined()
   })
 
-  it('bulk approval re-reads each group and preserves a dismissal that arrives during an earlier save', async () => {
+  it('bulk approval starts undecided groups together and preserves a dismissal already published by another pane', async () => {
     vi.useRealTimers()
     const cycle = serverCycle()
     const otherRule = 'FED-RR-01'
     cycle.groups.push({ ...cycle.groups[0], id: 76, ruleId: otherRule })
     cycle.run.shifts.forEach(shift => { shift.rows.push({ ...shift.rows[0], ruleId: otherRule }) })
-    let decisions: JourneyDecision[] = []
+    const decisions: JourneyDecision[] = [{ id: 'new-dismissal', cycleId: cycle.id, groupId: otherRule, shiftIds: [], decision: 'dismissed', reason: 'Verified by the user', by: 'agent', at: now.toISOString() }]
     const snapshot = data.getDataSnapshot()
     vi.spyOn(data, 'getDataSnapshot').mockImplementation(() => ({ ...snapshot,
       payloads: [{ cycle: { id: cycle.id }, groups: cycle.groups, decisions } as data.CyclePayload],
@@ -378,9 +378,6 @@ describe('persisted Payroll decisions', () => {
     const render = mount(PayrollSummary, { cycle })
     click(render(), `Approve ${cycle.run.shifts.length * 2}`)
     await vi.waitFor(() => expect(decide).toHaveBeenCalledTimes(1))
-    const firstRule = vi.mocked(decide).mock.calls[0][1].groupId
-    const secondRule = cycle.groups.find(group => group.ruleId !== firstRule)!.ruleId
-    decisions = [{ id: 'new-dismissal', cycleId: cycle.id, groupId: secondRule, shiftIds: [], decision: 'dismissed', reason: 'Verified by the user', by: 'agent', at: now.toISOString() }]
     finish()
     await vi.waitFor(() => expect(overlay.toast).toHaveBeenCalledWith(`Approved ${cycle.run.shifts.length}`))
     expect(decide).toHaveBeenCalledTimes(1)
@@ -446,7 +443,7 @@ describe('persisted Payroll decisions', () => {
     await vi.waitFor(() => expect(decide).toHaveBeenCalledWith(cycle.id, { groupId: cycle.groups[0].ruleId, decision: 'approved', shiftIds: cycle.run.shifts.map((item) => item.shift.id) }))
     expect(getOnboarding().resolutions).toEqual({})
   })
-  it('keeps the sheet control in place and reserves Decision and Trail immediately during approval', async () => {
+  it('keeps the sheet control in place with immediate done feedback and no temporary Decision or Trail skeleton', async () => {
     vi.useRealTimers()
     const cycle = serverCycle()
     let finish!: () => void
@@ -460,13 +457,14 @@ describe('persisted Payroll decisions', () => {
     const pending = render(), detail = component(pending, ShiftDetail)
     expect(detail.props.onApply).toBeTypeOf('function')
     expect(detail.props.applyLabel).toBe(initial.props.applyLabel)
-    expect(detail.props.applyAction?.status).toBe('pending')
-    const trail = elements(pending).find(element => element.props.pending === true)!
+    expect(detail.props.applyAction?.status).toBe('success')
+    expect(detail.props.applyAction?.inFlight).toBe(true)
+    const trail = elements(pending).find(element => element.props.pending === false)!
     const Trail = trail.type as (props: typeof trail.props) => ReactNode
     const html = renderToStaticMarkup(Trail(trail.props))
-    expect(html).toContain('aria-label="Pending decision"')
-    expect(html).toContain('shift-pending-trail')
-    expect(html.match(/data-skeleton=/g)).toHaveLength(2)
+    expect(html).not.toContain('aria-label="Pending decision"')
+    expect(html).not.toContain('shift-pending-trail')
+    expect(html).not.toContain('data-skeleton=')
     expect(content(pending)).not.toContain('Saving decisions')
     finish()
     await vi.waitFor(() => expect(component(render(), ShiftDetail).props.applyAction?.status).toBe('success'))

@@ -1,10 +1,11 @@
 import { useEffect, useSyncExternalStore } from 'react'
 import { createEngineContext, dayLabels, money, runEngine, type Effect, type Facility, type RunShift, type Shift } from '@/bench/engine.js'
-import { authedFetch } from '@/lib/api'
+import { authedFetch, cachedJson, cacheResponse, supersedeCachedReads, CachedRequestError, peekCached, subscribeAllCached, type CacheMode } from '@/lib/api'
 import { cycleLabel, cycleWeeks, recentCycles, type Cycle } from '@/lib/cycles'
 import type { DeskCycle } from '@/lib/desk'
 import { flushOnboarding, getOnboarding, updateOnboarding, type Onboarding } from '@/lib/onboarding'
 import { viewerSession } from '@/lib/viewerSession'
+import { applyDecisionProgress } from '@/lib/journeyStep'
 import type { JourneyBatch, JourneyDecision, NextStep } from '@/lib/journey'
 import { effectiveJourneyRun, journeyPayroll, type JourneyPayAdjustment } from '@/lib/journeyPay'
 import { startPipeline } from '@/lib/pipeline'
@@ -60,7 +61,14 @@ export class DataError extends Error {
     this.status = status; this.code = code
   }
 }
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function request<T>(path: string, init?: RequestInit, mode: CacheMode = 'cache-first'): Promise<T> {
+  if (!init || !init.method || init.method === 'GET') {
+    try { return await cachedJson<T>(path, { mode }) } catch (cause) {
+      if (!(cause instanceof CachedRequestError)) throw cause
+      const body = await cause.response.clone().json().catch(() => ({})) as { error?: string }
+      throw new DataError(cause.response.status, body.error ?? String(cause.response.status))
+    }
+  }
   const response = await authedFetch(path, init)
   if (!response.ok) {
     const body = await response.json().catch(() => ({})) as { error?: string }
@@ -69,9 +77,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>
 }
 const json = (body: unknown): RequestInit => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-export const getCycles = () => request<CycleList>('/data/cycles')
-export const getCycle = (id: string) => request<CyclePayload>(`/data/cycles/${encodeURIComponent(id)}`)
-export const getFiles = () => request<{ files: FileRecord[] }>('/files')
+export const getCycles = (mode: CacheMode = 'cache-first') => request<CycleList>('/data/cycles', undefined, mode)
+export const getCycle = (id: string, mode: CacheMode = 'cache-first') => request<CyclePayload>(`/data/cycles/${encodeURIComponent(id)}`, undefined, mode)
+export const getFiles = (mode: CacheMode = 'cache-first') => request<{ files: FileRecord[] }>('/files', undefined, mode)
 export const getFile = (id: string) => request<{ file: FileRecord; profile: string; mappingId: string | null }>(`/files/${encodeURIComponent(id)}`)
 export function getEntries(cycle: string, options: { shift?: string; offset?: number } = {}) {
   const params = new URLSearchParams({ cycle })
@@ -121,10 +129,12 @@ const restoreDates = (c: CycleDates): Cycle => ({ ...c, start: date(c.start), en
 const remembered = (cycle: Cycle, cal: Onboarding) => cal.customRules.filter(rule => rule.autoApply && !rule.draft && rule.sourceRuleId
   && (rule.effectiveCycleStart ? cycle.start >= date(rule.effectiveCycleStart) : cycle.status === 'in-progress')).map(rule => rule.sourceRuleId!)
 const daysOf = (cycle: Cycle) => cycleWeeks(cycle).flatMap(dayLabels).slice(0, Math.round((Date.UTC(cycle.end.getFullYear(), cycle.end.getMonth(), cycle.end.getDate()) - Date.UTC(cycle.start.getFullYear(), cycle.start.getMonth(), cycle.start.getDate())) / 86_400_000) + 1)
-/** Keep the source payload immutable; the shared engine recomputes effective pay from persisted decisions. */
-export function hydrate(payload: CyclePayload, cal: Onboarding, files: FileRecord[] = []): DeskCycle {
-  if (payload.results.length !== payload.week.length) throw new Error('The time-entry results are incomplete.')
-  const cycle = restoreDates(payload.cycle)
+// Approvals preserve the immutable time-entry arrays. Reuse their expanded facilities
+// and engine indexes instead of rebuilding thousands of shifts for a single decision.
+const cores = new WeakMap<CyclePayload['week'], { sites: DataSite[]; sources: CyclePayload['intake']['sources']; files: FileRecord[]; week: Shift[]; ctx: ReturnType<typeof createEngineContext> }>()
+function hydratedCore(payload: CyclePayload, files: FileRecord[]) {
+  const cached = cores.get(payload.week)
+  if (cached?.sites === payload.sites && cached.sources === payload.intake.sources && cached.files === files) return cached
   const fileById = new Map(files.map(file => [file.id, file]))
   const sourceById = new Map(payload.intake.sources.map(source => [source.id, source]))
   const week = payload.week.map(shift => {
@@ -135,17 +145,42 @@ export function hydrate(payload: CyclePayload, cal: Onboarding, files: FileRecor
     return { ...shift, fac, prov: { ...shift.prov, ...(file ? { fileId: file.id, file: file.name, sample: file.sample, system: source?.short ?? source?.name } : {}) } }
   })
   const ctx = createEngineContext(week)
+  const core = { sites: payload.sites, sources: payload.intake.sources, files, week, ctx }
+  cores.set(payload.week, core)
+  return core
+}
+const hydratedRuns = new WeakMap<Shift[], { results: CyclePayload['results']; totals: CyclePayload['totals']; adjustments: CyclePayload['adjustments']; payKey: string; run: DeskCycle['run'] }>()
+function hydratedRun(payload: CyclePayload, week: Shift[], ctx: ReturnType<typeof createEngineContext>) {
   const aliases = new Map([...payload.groups, ...payload.extraGroups].filter(group => group.id != null).map(group => [String(group.id), group.ruleId]))
-  const shifts = effectiveJourneyRun(week, payload.results, (payload.decisions ?? []).filter(decision => decision.cycleId === cycle.id), aliases)
+  const decisions = (payload.decisions ?? []).filter(decision => decision.cycleId === payload.cycle.id)
+  const latest = new Map<string, JourneyDecision>()
+  for (const decision of [...decisions].sort((a, b) => a.at.localeCompare(b.at) || a.id.localeCompare(b.id))) latest.set(aliases.get(decision.groupId) ?? decision.groupId, decision)
+  const hasDismissal = decisions.some(decision => decision.decision === 'dismissed')
+  // Approvals/escalations change review state, not engine pay. A canonical latest
+  // dismissal, changed run, or adjustment must still rebuild the effective amounts.
+  const payKey = JSON.stringify([hasDismissal, [...latest].filter(([, decision]) => decision.decision === 'dismissed').map(([rule]) => rule).sort()])
+  const cached = hydratedRuns.get(week)
+  if (cached?.results === payload.results && cached.totals === payload.totals && cached.adjustments === payload.adjustments && cached.payKey === payKey) return cached.run
+  const shifts = effectiveJourneyRun(week, payload.results, decisions, aliases)
   const totals = {
     ...payload.totals,
-    ...(payload.decisions?.some(decision => decision.cycleId === cycle.id && decision.decision === 'dismissed') ? {
+    ...(hasDismissal ? {
       under: shifts.reduce((total, row) => total + (row.held ? 0 : row.deltaUnder), 0), over: shifts.reduce((total, row) => total + (row.held ? 0 : row.deltaOver), 0),
       held: shifts.filter(row => row.held).length, flags: shifts.filter(row => row.flagged).length,
     } : {}),
     gross: journeyPayroll(week, shifts, [], new Map(), payload.adjustments).gross,
   }
-  return { ...cycle, week, run: { shifts, totals, ctx },
+  const run = { shifts, totals, ctx }
+  hydratedRuns.set(week, { results: payload.results, totals: payload.totals, adjustments: payload.adjustments, payKey, run })
+  return run
+}
+/** Keep the source payload immutable; the shared engine recomputes effective pay from persisted decisions. */
+export function hydrate(payload: CyclePayload, cal: Onboarding, files: FileRecord[] = []): DeskCycle {
+  if (payload.results.length !== payload.week.length) throw new Error('The time-entry results are incomplete.')
+  const cycle = restoreDates(payload.cycle)
+  const { week, ctx } = hydratedCore(payload, files)
+  const run = hydratedRun(payload, week, ctx)
+  return { ...cycle, week, run,
     days: daysOf(cycle), scripted: false, label: cycleLabel(cycle), statusTag: payload.batch ? 'Paid' : cycle.status === 'in-progress' ? 'In Progress' : 'Pending', rememberedRuleIds: remembered(cycle, cal),
     decisions: payload.decisions, batch: payload.batch, nextStep: payload.nextStep, adjustments: payload.adjustments,
     server: true, sample: payload.sample, sites: payload.sites, rulesChecked: payload.rulesChecked, groups: payload.groups, extraGroups: payload.extraGroups, gaps: payload.gaps, intake: payload.intake,
@@ -177,11 +212,48 @@ let pendingOwner = ''
 let revision = 0
 const cycleVersions = new Map<string, number>()
 export const getDataSnapshot = () => snapshot
+/** Network refreshes retain pending local decisions; only their mutation settles or rolls them back. */
+export function mergePendingCycle(payload: CyclePayload): CyclePayload {
+  const current = snapshot.owner === owner() ? snapshot.payloads.find(item => item.cycle.id === payload.cycle.id) : undefined
+  const local = (current?.decisions ?? []).filter(decision => decision.id.startsWith('local:') && !payload.decisions?.some(row => row.id === decision.id))
+  return local.length ? applyDecisionProgress({ ...payload, decisions: [...(payload.decisions ?? []), ...local] }) : payload
+}
+/** Restored/fresh bodies feed the existing store directly, without reparsing large cycle JSON. */
+function applyCached(path: string, body: unknown) {
+  if (path !== '/data/cycles' && path !== '/files' && !/^\/data\/cycles\/[^/?]+$/.test(path)) return
+  const account = owner()
+  if (snapshot.owner !== account) snapshot = initial(account)
+  if (path === '/data/cycles') {
+    const list = body as CycleList
+    emit({ ...snapshot, loaded: snapshot.loaded, list: list.cycles, sources: list.sources, error: null })
+  } else if (path === '/files') {
+    const files = (body as { files: FileRecord[] }).files
+    if (JSON.stringify(files) !== JSON.stringify(snapshot.files)) emit({ ...snapshot, files })
+  }
+  else {
+    const incoming = body as CyclePayload
+    if (!incoming.cycle) return
+    const payload = mergePendingCycle(incoming)
+    const errors = { ...snapshot.cycleErrors }; delete errors[payload.cycle.id]
+    emit({ ...snapshot, cycleErrors: errors, payloads: [...snapshot.payloads.filter(item => item.cycle.id !== payload.cycle.id), payload] })
+  }
+}
+subscribeAllCached(applyCached)
+export async function prefetchCycle(id: string): Promise<void> {
+  const account = owner()
+  const payload = await getCycle(id)
+  if (account !== owner()) return
+  if (snapshot.owner !== owner() || !snapshot.payloads.includes(payload)) applyCached(`/data/cycles/${encodeURIComponent(id)}`, payload)
+}
+export function hasCachedCycle(id: string): boolean {
+  return !!peekCached<CyclePayload>(`/data/cycles/${encodeURIComponent(id)}`) || (snapshot.owner === owner() && snapshot.payloads.some(payload => payload.cycle.id === id))
+}
 /** Mutation responses and chat cards publish into the same snapshot as Payroll. */
 export function publishCycle(payload: CyclePayload, account = owner()) {
   if (owner() !== account) return
   if (snapshot.owner !== account) emit(initial(account))
   revision++
+  if (!(payload.decisions ?? []).some(decision => decision.id.startsWith('local:'))) cacheResponse(`/data/cycles/${encodeURIComponent(payload.cycle.id)}`, payload, account)
   const key = `${account}:${payload.cycle.id}`
   cycleVersions.set(key, (cycleVersions.get(key) ?? 0) + 1)
   const summary: CycleSummary = { ...payload.cycle, sample: payload.sample, runAt: payload.runAt, totals: payload.totals, counts: payload.counts, findings: payload.groups.length + payload.extraGroups.length,
@@ -200,8 +272,8 @@ export function refreshCycle(id: string): Promise<CycleReadResult> {
   const pending = cycleRequests.get(key)
   if (pending) return pending
   const generation = cycleVersions.get(key) ?? 0
-  const work = getCycle(id).then<CycleReadResult>(payload => {
-    if ((cycleVersions.get(key) ?? 0) === generation) publishCycle(payload, account)
+  const work = getCycle(id, 'network-first').then<CycleReadResult>(payload => {
+    if ((cycleVersions.get(key) ?? 0) === generation) publishCycle(mergePendingCycle(payload), account)
     const current = snapshot.owner === account ? snapshot.payloads.find(item => item.cycle.id === id) : undefined
     // A cycle with journey state but no time entries (a pending adjustment) is read once and is not running.
     return { state: current?.runAt || payload.runAt ? 'done' : 'empty', error: null }
@@ -225,7 +297,7 @@ export function onDataInvalidated(listener: () => void) {
 export async function refreshCycleList(): Promise<void> {
   const account = owner(), versions = new Map(cycleVersions)
   try {
-    const list = await getCycles()
+    const list = await getCycles('network-first')
     if (owner() !== account) return
     if (snapshot.owner !== account) emit(initial(account))
     const cycles = list.cycles.map(row => (versions.get(`${account}:${row.id}`) ?? 0) === (cycleVersions.get(`${account}:${row.id}`) ?? 0)
@@ -236,10 +308,11 @@ export async function refreshCycleList(): Promise<void> {
 /** Refreshes atomically. Failed refreshes retain this account's last successful data and expose a retryable error. */
 export async function invalidate(): Promise<void> {
   revision++
-  await loadData()
+  supersedeCachedReads(['/data/cycles', '/files'])
+  await loadData(true)
   invalidationListeners.forEach(listener => listener())
 }
-export async function loadData(): Promise<void> {
+export async function loadData(force = false): Promise<void> {
   const account = owner()
   if (pending && pendingOwner === account) return pending
   if (snapshot.owner !== account) emit(initial(account))
@@ -250,10 +323,11 @@ export async function loadData(): Promise<void> {
       generation = revision
       emit({ ...snapshot, loading: true, error: null })
       try {
-        const [list, { files }] = await Promise.all([getCycles(), getFiles()])
+        const mode = force ? 'network-first' : 'cache-first'
+        const [list, { files }] = await Promise.all([getCycles(mode), getFiles(mode)])
         const cycleErrors: Record<string, string> = {}, absent = new Set<string>()
         const reads = await Promise.all(list.cycles.filter(cycle => cycle.runAt !== null || cycle.adjustments).map(async cycle => {
-          try { return await getCycle(cycle.id) } catch (cause) {
+          try { return await getCycle(cycle.id, mode) } catch (cause) {
             if (cause instanceof DataError && cause.status === 404) absent.add(cycle.id)
             else {
               cycleErrors[cycle.id] = cause instanceof Error ? cause.message : 'The cycle could not be loaded.'
@@ -261,15 +335,15 @@ export async function loadData(): Promise<void> {
             }
           }
         }))
-        const payloads = reads.filter((payload): payload is CyclePayload => !!payload)
+        const payloads = reads.filter((payload): payload is CyclePayload => !!payload).map(mergePendingCycle)
         if (owner() !== account) return
-        if (generation !== revision) continue
+        if (generation !== revision) { force = true; continue }
         for (const payload of payloads) {
           const key = `${account}:${payload.cycle.id}`
           cycleVersions.set(key, (cycleVersions.get(key) ?? 0) + 1)
         }
         emit({ owner: account, loaded: true, loading: false, error: null, cycleErrors,
-          list: list.cycles.map(cycle => absent.has(cycle.id) ? { ...cycle, runAt: null } : cycle), sources: list.sources, files, payloads })
+          list: list.cycles.map(cycle => absent.has(cycle.id) ? { ...cycle, runAt: null } : cycle), sources: list.sources, files: JSON.stringify(files) === JSON.stringify(snapshot.files) ? snapshot.files : files, payloads })
         if ((payloads.length || list.sources.length || files.length) && getOnboarding().dataSource !== 'server') updateOnboarding({ dataSource: 'server' })
       } catch (cause) {
         if (owner() !== account) return
@@ -284,10 +358,13 @@ export async function loadData(): Promise<void> {
   if (pending === work) pending = null
 }
 
+let mountedAccount = ''
 export function useData(enabled = true): DataSnapshot {
   const value = useSyncExternalStore(listener => { listeners.add(listener); return () => listeners.delete(listener) }, getDataSnapshot, getDataSnapshot)
   const account = owner()
-  useEffect(() => { if (enabled && (snapshot.owner !== account || (!snapshot.loaded && !snapshot.error))) void loadData() }, [enabled, account])
+  useEffect(() => {
+    if (enabled && (mountedAccount !== account || snapshot.owner !== account || (!snapshot.loaded && !snapshot.error))) { mountedAccount = account; void loadData() }
+  }, [enabled, account])
   return value.owner && value.owner !== account ? initial(account) : value
 }
 // Payloads are immutable snapshots. Chat, sidebar, route, and loading-state updates must

@@ -11,7 +11,7 @@ export function RememberLine({ receipt, messageId, at }: { receipt: RememberRece
   const [, update] = useOnboarding()
   const { snapshot, loaded, readAt, error: readError } = useMemory()
   const action = usePendingAction()
-  const busy = action.pending
+  const busy = action.inFlight ?? action.pending
   const [confirming, setConfirming] = useState(false)
   const id = receipt.memory.id
   const current = snapshot.instincts.find(row => row.id === id)
@@ -22,10 +22,10 @@ export function RememberLine({ receipt, messageId, at }: { receipt: RememberRece
     : loaded && !readError && readAt > at ? 'changed' : receipt.memory.state
   const text = current?.text ?? receipt.text
   useEffect(() => {
-    if (id && (state === 'active' || state === 'forgotten') && state !== receipt.memory.state) {
+    if (!action.inFlight && id && (state === 'active' || state === 'forgotten') && state !== receipt.memory.state) {
       update({ chat: recordMemoryResolution(getOnboarding().chat, messageId, id, state) })
     }
-  }, [id, state, receipt.memory.state, messageId, update])
+  }, [id, state, receipt.memory.state, messageId, update, action.inFlight])
 
   async function resolve(next: 'active' | 'forgotten' | 'again') {
     if (busy || (!id && next !== 'again')) return
@@ -36,7 +36,7 @@ export function RememberLine({ receipt, messageId, at }: { receipt: RememberRece
       const resolved = instinct.status === 'active' ? 'active' : 'forgotten'
       update({ chat: recordMemoryResolution(getOnboarding().chat, messageId, id ?? instinct.id, resolved, id ? undefined : receipt.text) })
       if (next !== 'forgotten') setConfirming(false)
-    }, next)
+    }, next, { optimistic: next !== 'again' })
   }
 
   const keeping = action.key === 'active' && (action.pending || action.status === 'success')

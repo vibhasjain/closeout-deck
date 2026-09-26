@@ -1,5 +1,5 @@
 // Source: https://www.beautifului.dev/r/task-rows.json (Beautiful UI, MIT).
-// Ported SpinnerRing, expandable rows and detail grammar; server state replaces the demo timeline.
+// Ported StepRing, expandable rows and detail grammar; server state replaces the demo timeline.
 import { useState, type ReactNode } from 'react'
 import { Check, ChevronDown } from 'lucide-react'
 import './task-rows.css'
@@ -13,12 +13,12 @@ export interface TaskRow {
   details: { label: string; meta: ReactNode }[]
 }
 
-function SpinnerRing({ active, done, children }: { active: boolean; done: boolean; children: ReactNode }) {
-  const size = 24, stroke = 0.5, radius = (size - stroke) / 2, circumference = 2 * Math.PI * radius
+function StepRing({ active, done, children }: { active: boolean; done: boolean; children: ReactNode }) {
+  const size = 24, stroke = 0.5, radius = (size - stroke) / 2
   return <span className="beautiful-task-ring">
     <svg width={size} height={size} aria-hidden="true" data-active={active}>
       <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(0,0,0,.1)" strokeWidth={stroke} />
-      {active && <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeDasharray={`${circumference * .28} ${circumference * .72}`} />}
+      {active && <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round"  />}
     </svg>
     <span>{done ? <Check size={12} aria-hidden="true" /> : children}</span>
   </span>
@@ -31,7 +31,7 @@ export function TaskRows({ rows }: { rows: TaskRow[] }) {
       const open = manualOpen[row.key] ?? false
       return <div className="beautiful-task-row" key={row.key} role="listitem" data-state={row.status}>
         <button type="button" aria-expanded={open} onClick={() => setManualOpen(current => ({ ...current, [row.key]: !open }))}>
-          <SpinnerRing active={row.status === 'running'} done={row.status === 'done'}>{row.step}</SpinnerRing>
+          <StepRing active={row.status === 'running'} done={row.status === 'done'}>{row.step}</StepRing>
           <span className="beautiful-task-label">{row.label}</span>
           <span className="beautiful-task-amount tabular-nums">{row.amount}</span>
           <ChevronDown size={12} aria-hidden="true" className="beautiful-task-chevron" style={{ transform: open ? 'rotate(180deg)' : undefined }} />

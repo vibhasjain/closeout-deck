@@ -11,7 +11,7 @@ import { OverlayProvider } from '@/components/shell/Overlay'
 import { bucketHue, buildCycles, kindLabel, type DeskCycle } from '@/lib/desk'
 import { titleCase } from '@/lib/utils'
 import { DEFAULTS, useOnboarding, type CustomDeskRule, type Onboarding } from '@/lib/onboarding'
-import { formatRuleDate, formatRuleSource, formatRuleText, getRuleActivity } from '@/lib/rules'
+import { formatRuleDate, formatRuleSource, formatRuleText, getRuleActivity, warmRuleActivity } from '@/lib/rules'
 import { acceptProposal, compileRule, propose } from '@/lib/ruleIntake'
 import { Rules } from '@/pages/Rules'
 
@@ -288,4 +288,16 @@ describe('rule activity and display', () => {
     const sentence = 'Pay the documented night differential to every eligible worker at every site covered by the current contract.'
     expect(formatRuleText(sentence)).toBe(sentence.slice(0, -1))
   })
+})
+
+
+it('precomputes Rules history once on intent so table reads do not scan the time entries again', () => {
+  const cycle = buildCycles(state, today)[0]
+  const readShifts = vi.fn(() => cycle.run.shifts)
+  const cycles = [{ ...cycle, run: { ...cycle.run, get shifts() { return readShifts() } } }]
+  warmRuleActivity(cycles, state)
+  expect(readShifts).toHaveBeenCalledOnce()
+  warmRuleActivity(cycles, state)
+  for (const rule of RULES) getRuleActivity(rule.id, cycles, state)
+  expect(readShifts).toHaveBeenCalledOnce()
 })

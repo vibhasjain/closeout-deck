@@ -9,6 +9,7 @@ import { useSetChatContext, useSetChatSuggestions } from '@/components/chat/Chat
 import { useOverlay } from '@/components/shell/Overlay'
 import { PageTitle } from '@/components/shell/PageTitle'
 import { PaintBoundary } from '@/components/shell/PaintBoundary'
+import { getDataSnapshot } from '@/lib/data'
 import { SkeletonRegion } from '@/components/Skeleton'
 import { Btn, Lbl, Toolbar } from '@/components/ui'
 import { Button } from '@/components/ui/button'
@@ -71,7 +72,7 @@ export function RuleComposer({ onSave, onCancel }: { onSave(rule: CustomDeskRule
 }
 
 export function Rules() {
-  return <PaintBoundary routeKey="rules" fallback={<div className="rules-page">
+  return <PaintBoundary ready={getDataSnapshot().loaded} routeKey="rules" fallback={<div className="rules-page">
     <PageTitle title="Rules" description="Manage the rules used to check time entries and calculate Payroll." />
     <SkeletonRegion variant="review" />
   </div>}><RulesContents /></PaintBoundary>

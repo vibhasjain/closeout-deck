@@ -1,4 +1,4 @@
-.onboarding-sync-load { display: flex; min-height: 100dvh; padding: 32px; gap: 20px; align-items: center; justify-content: center; flex-direction: column; font: 13px/1.6 Inter, sans-serif; }
+.onboarding-sync-load { display: flex; min-height: 0; height: 100%; flex-direction: column; font: 13px/1.6 Inter, sans-serif; }
 .onboarding-sync-load .btn, .onboarding-sync-error .btn { min-height: 44px; }
 .onboarding-sync-load [role='alert'] { max-width: 420px; }
 .onboarding-sync-error { position: fixed; z-index: 100; bottom: 18px; left: 50%; transform: translateX(-50%); width: min(480px, calc(100% - 32px)); padding: 14px 16px; border: 1px solid #d9d9d9; background: white; border-radius: 7px; display: flex; align-items: center; gap: 14px; box-shadow: 0 4px 20px #0000000a; font-size: 13px; }

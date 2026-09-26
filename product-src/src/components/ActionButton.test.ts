@@ -30,3 +30,12 @@ describe('stable action control', () => {
     expect(html).toContain('Retry')
   })
 })
+
+
+it('renders immediate done feedback without a spinner while an optimistic save is in flight', () => {
+  const html = renderToStaticMarkup(createElement(ActionButton, { action: { ...action('success'), optimistic: true, inFlight: true }, pendingLabel: 'Approving…', successLabel: 'Approved', children: 'Approve 8' }))
+  expect(html).toContain('data-action-state="success"')
+  expect(html).toContain('disabled=""')
+  expect(html).not.toContain('class="spinner"')
+  expect(html).not.toContain('aria-busy="true"')
+})

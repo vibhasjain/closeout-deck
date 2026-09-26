@@ -2,8 +2,8 @@ import { useCallback, useSyncExternalStore } from 'react'
 import type { CustomRule, Proposal } from '@/lib/rules'
 import type { CallTranscriptTurn, Card, QuestionCard } from '@/lib/chat'
 import { withPeriodEnd, type Cohort } from '@/lib/cohorts'
-import { API_BASE } from '@/lib/api'
-import { viewerSession, expireSession } from '@/lib/viewerSession'
+import { authedFetch, cachedFetch, cacheResponse, subscribeCached } from '@/lib/api'
+import { viewerSession } from '@/lib/viewerSession'
 import { createOnboardingSync, type SyncPatch, type SyncStatus } from '@/lib/onboardingSync'
 import { createChatHistory, isChatMessage } from '@/lib/chatHistory'
 
@@ -284,11 +284,12 @@ const canonical = createOnboardingSync({
     } catch { return {} }
   },
   savePending(patch) { localStorage.setItem(pendingKey(), JSON.stringify(patch)) },
-  async request(method, body) {
-    const token = viewerSession()?.sessionToken
-    const response = await fetch(`${API_BASE}/state`, { method, headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      ...(body ? { body: JSON.stringify(body) } : {}) })
-    if (response.status === 401) expireSession()
+  async request(method, body, fresh) {
+    if (method === 'GET') return cachedFetch('/state', { mode: fresh ? 'network-first' : 'cache-first' })
+    const owner = syncOwner()
+    const response = await authedFetch('/state', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    if (response.ok) cacheResponse('/state', await response.clone().json(), owner)
+    if (owner !== syncOwner()) throw new Error('The account changed. Reopen Payroll and try again.')
     return response
   },
   status(next) { syncStatus = next; syncListeners.forEach((listener) => listener()) },
@@ -299,13 +300,17 @@ const history = createChatHistory({
   loadPending: () => { const saved = stored<unknown>(chatPendingKey(), []); return Array.isArray(saved) ? saved : [] },
   savePending(messages) { localStorage.setItem(chatPendingKey(), JSON.stringify(messages)) },
   async request(method, body) {
-    const token = viewerSession()?.sessionToken
-    const response = await fetch(`${API_BASE}/chat/history`, { method, headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      ...(body ? { body: JSON.stringify(body) } : {}) })
-    if (response.status === 401) expireSession()
+    if (method === 'GET') return cachedFetch('/chat/history')
+    const owner = syncOwner()
+    const response = await authedFetch('/chat/history', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    if (owner !== syncOwner()) throw new Error('The account changed. Reopen the conversation and try again.')
+    if (response.ok) cacheResponse('/chat/history', { messages: read().chat.filter(message => !message.pendingActions?.length && !message.callSaving) })
     return response
   },
 })
+
+subscribeCached('/state', value => canonical.acceptRemote(value))
+subscribeCached('/chat/history', value => history.acceptRemote(value))
 
 /** Load the canonical profile before enabling setup edits. The transcript follows in the background. */
 export async function hydrateOnboarding() {

@@ -116,7 +116,7 @@ describe('D20: pay-law corrections read as required by law, never as the agent a
     vi.spyOn(desk, 'useDesk').mockReturnValue({ cycles: [cycle], current: cycle, byId: () => cycle })
     const html = renderToStaticMarkup(h(MemoryRouter, { initialEntries: [`/payroll?cycle=${cycle.id}&step=review`] }, h(OverlayProvider, null, h(AuxProvider, null,
       h(Routes, null, h(Route, { path: '/payroll', element: h(Payroll) }))))))
-    const lines = [...html.matchAll(/<span class="decision-line">([^<]*)<\/span>/g)].map((match) => match[1])
+    const lines = [...html.matchAll(/<span class="decision-line"[^>]*>([^<]*)<\/span>/g)].map((match) => match[1])
     expect(lines).toContain('California daily overtime · Required by law · applied')
     expect(lines).toContain('Weekly overtime · Required by law · applied')
     expect(lines.filter((line) => /Required by law/.test(line) && /by the agent/.test(line))).toEqual([])

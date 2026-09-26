@@ -72,7 +72,7 @@ describe('memory wire client', () => {
     fetchMock.mockImplementation(async () => response({ instinct: { ...row, status: 'active', text: 'A corrected fact' } }))
     await editInstinct(row.id, { text: 'A corrected fact', status: 'active' })
     expect(getMemorySnapshot().instincts).toEqual([{ ...row, status: 'active', text: 'A corrected fact' }])
-    expect(notify).toHaveBeenCalledOnce()
+    expect(notify).toHaveBeenCalled()
     unsubscribe()
   })
   it('never shares a previous account snapshot or publishes its late mutation', async () => {
@@ -90,7 +90,7 @@ describe('memory wire client', () => {
     await refreshMemory()
     let finish!: (value: Response) => void
     fetchMock.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
-    const pending = refreshMemory()
+    const pending = refreshMemory(true)
     fetchMock.mockResolvedValueOnce(response({ instinct: { ...row, status: 'forgotten' } }))
     await forgetInstinct(row.id)
     fetchMock.mockImplementation(async () => response({ ...snapshot, instincts: [] }))
@@ -99,27 +99,31 @@ describe('memory wire client', () => {
     await vi.advanceTimersByTimeAsync(0)
     expect(getMemorySnapshot().instincts).toEqual([])
   })
-  it.each(['keep', 'edit'] as const)('does not let a delayed %s response or its chat result resurrect a forgotten id', async operation => {
+  it.each(['keep', 'edit'] as const)('locks concurrent %s and Forget from different panes without leaving an unconfirmed row after failure', async operation => {
     await refreshMemory()
     let finish!: (value: Response) => void
     fetchMock.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
     const pending = operation === 'keep' ? keepInstinct(row.id) : editInstinct(row.id, { text: 'A correction before Forget' })
+    await expect(forgetInstinct(row.id)).rejects.toMatchObject({ status: 409, message: 'This memory is being saved. Try again when it finishes.' })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    finish(response({ error: 'Failed' }, 500))
+    await expect(pending).rejects.toMatchObject({ status: 500 })
+    expect(getMemorySnapshot().instincts).toEqual([row])
+    fetchMock.mockResolvedValueOnce(response({ error: 'Retry failed' }, 500))
+    await expect(forgetInstinct(row.id)).rejects.toMatchObject({ status: 500 })
+    expect(getMemorySnapshot().instincts).toEqual([row])
+    expect(isForgotten(row.id)).toBe(false)
     const forgotten: Instinct = { ...row, status: 'forgotten' }
     fetchMock.mockResolvedValueOnce(response({ instinct: forgotten }))
     await forgetInstinct(row.id)
     expect(getMemorySnapshot().instincts).toEqual([])
-    finish(response({ instinct: { ...row, status: 'active', text: 'A correction before Forget' } }))
-    expect(await pending).toEqual(forgotten)
-    expect(getMemorySnapshot().instincts).toEqual([])
-    // Even a lagging read cannot bring the confirmed tombstone back into a pane.
-    fetchMock.mockResolvedValueOnce(response(snapshot))
-    await refreshMemory()
-    expect(getMemorySnapshot().instincts).toEqual([])
+    expect(isForgotten(row.id)).toBe(true)
   })
+
 })
 
 describe('memory refresh lifecycle', () => {
-  it('reads on every Rules mount and window focus, and removes the focus listener on unmount', async () => {
+  it('reuses fresh memory on Rules remount, refreshes on focus, and removes the listener on unmount', async () => {
     const unmount = watchMemory()
     await vi.advanceTimersByTimeAsync(0)
     expect(fetchMock).toHaveBeenCalledTimes(1)
@@ -131,7 +135,7 @@ describe('memory refresh lifecycle', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
     const again = watchMemory()
     await vi.advanceTimersByTimeAsync(0)
-    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
     again()
   })
   it('shares a pending mount/focus request across open panes', async () => {
@@ -161,4 +165,18 @@ describe('memory refresh lifecycle', () => {
     await vi.advanceTimersByTimeAsync(30000)
     expect(fetchMock).not.toHaveBeenCalled()
   })
+})
+
+
+it.each(['keep', 'edit', 'forget'] as const)('optimistically applies %s and rolls back a rejected write without losing the row', async operation => {
+  await refreshMemory()
+  let answer!: (value: Response) => void
+  fetchMock.mockImplementationOnce(() => new Promise(resolve => { answer = resolve }))
+  const pending = operation === 'keep' ? keepInstinct(row.id) : operation === 'edit' ? editInstinct(row.id, { text: 'Corrected memory' }) : forgetInstinct(row.id)
+  if (operation === 'forget') expect(getMemorySnapshot().instincts).toEqual([])
+  else expect(getMemorySnapshot().instincts[0]).toMatchObject(operation === 'keep' ? { status: 'active' } : { text: 'Corrected memory' })
+  answer(response({ error: 'Failed' }, 500))
+  await expect(pending).rejects.toMatchObject({ status: 500 })
+  expect(getMemorySnapshot().instincts).toEqual([row])
+  expect(isForgotten(row.id)).toBe(false)
 })

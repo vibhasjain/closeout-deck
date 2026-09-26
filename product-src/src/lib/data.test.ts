@@ -147,6 +147,33 @@ describe('recorded server cycle', () => {
     expect(cycle.run.shifts[0].rows.map(row => row.ruleId)).toEqual(['CA-RT-01', 'CON-MIN-4H'])
     expect(JSON.stringify(wire)).toBe(original)
   })
+  it('reuses the effective run for approvals and escalations but reprices dismissals and changed inputs', () => {
+    const wire = structuredClone(payload)
+    wire.week = [{ ...wire.week[0], rate: 23, punches: [{ in: 480, out: 577 }], meal: null, vms: undefined }]
+    wire.results = [{ ...wire.results[0], rate: 23, payableMin: 240, pay: 92, naive: 97 / 60 * 23, rows: [
+      { ruleId: 'CON-MIN-4H', status: 'flag', note: 'Contract minimum', effect: { topUpMin: 143 } },
+    ] }]
+    wire.groups = [{ ...wire.groups[0], id: 73, ruleId: 'CON-MIN-4H' }]
+    wire.decisions = []
+    const first = hydrate(wire, state, files)
+    const decision = { id: 'first', cycleId: wire.cycle.id, groupId: '73', shiftIds: [wire.week[0].id], decision: 'approved' as const, reason: null, by: 'user' as const, at: '2026-09-25T12:00:00Z' }
+    const approved = hydrate({ ...wire, decisions: [decision] }, state, files)
+    const escalated = hydrate({ ...wire, decisions: [{ ...decision, decision: 'escalated' }] }, state, files)
+    expect(approved.run).toBe(first.run)
+    expect(escalated.run).toBe(first.run)
+    expect(approved.decisions).toEqual([decision])
+    const dismissed = hydrate({ ...wire, decisions: [{ ...decision, decision: 'dismissed' }] }, state, files)
+    expect(dismissed.run).not.toBe(first.run)
+    expect(dismissed.run.shifts[0].payableMin).toBe(97)
+    expect(dismissed.run.totals).toMatchObject({ gross: 37.18 })
+    const latestApproval = hydrate({ ...wire, decisions: [{ ...decision, decision: 'dismissed' }, { ...decision, id: 'later', at: '2026-09-25T13:00:00Z' }] }, state, files)
+    expect(latestApproval.run.shifts[0].payableMin).toBe(240)
+    expect(latestApproval.run.totals).toMatchObject({ gross: 92 })
+    const adjusted = hydrate({ ...wire, adjustments: [{ id: 'adjustment', cycleId: wire.cycle.id, worker: wire.week[0].worker, hours: 0, amount: 4 }] }, state, files)
+    expect(adjusted.run.totals).toMatchObject({ gross: 96 })
+    const changed = hydrate({ ...wire, results: [{ ...wire.results[0], pay: 80 }] }, state, files)
+    expect(changed.run.totals).toMatchObject({ gross: 80 })
+  })
   it('always excludes partial held pay and rounds gross per worker before any decisions', () => {
     const wire = structuredClone(payload)
     wire.week = wire.week.slice(0, 2)
@@ -287,9 +314,20 @@ describe('typed data requests', () => {
     await pending
     expect(getDataSnapshot().payloads.find(cycle => cycle.cycle.id === payload.cycle.id)?.runAt).toBe(payload.runAt)
   })
+  it('keeps another pending decision through confirmed cache publication and background revalidation without persisting it', async () => {
+    const local = { id: 'local:still-pending', cycleId: payload.cycle.id, groupId: 'CS-01', shiftIds: [], decision: 'approved' as const, reason: null, by: 'user' as const, at: '2026-09-26T12:00:00Z' }
+    publishCycle({ ...payload, decisions: [local] })
+    api.cacheResponse(`/data/cycles/${payload.cycle.id}`, { ...payload, decisions: [] })
+    expect(getDataSnapshot().payloads.find(item => item.cycle.id === payload.cycle.id)?.decisions).toContainEqual(local)
+    await refreshCycle(payload.cycle.id)
+    expect(getDataSnapshot().payloads.find(item => item.cycle.id === payload.cycle.id)?.decisions).toContainEqual(local)
+    expect((await getCycle(payload.cycle.id)).decisions ?? []).not.toContainEqual(local)
+    // Settle the local overlay so subsequent fixtures model a confirmed account.
+    publishCycle({ ...payload, decisions: [] })
+  })
   it('uses the cycle, entries and findings routes with encoded query fields', async () => {
     vi.mocked(api.authedFetch).mockImplementation(async () => response({ entries: [], groups: [], cases: [] }))
-    await getCycle('2026-09-20')
+    await getCycle('2026-09-20', 'network-first')
     await getEntries('2026-09-20', { shift: 's/a b', offset: 2000 })
     await getFindings('2026-09-20')
     expect(api.authedFetch).toHaveBeenCalledWith('/data/cycles/2026-09-20', undefined)

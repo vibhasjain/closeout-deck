@@ -4,7 +4,7 @@ import { stream } from '@/lib/chat'
 import { viewerSession } from '@/lib/viewerSession'
 import * as memory from '@/lib/memory'
 import { clearStoredCall, liveCallKey, persistLiveCall, readStoredCall, recoverStoredCall, retryCallSave, setCallRetryFallback, type StoredCall } from './callRecovery'
-vi.mock('@/lib/api', () => ({ authedFetch: vi.fn() }))
+vi.mock('@/lib/api', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/api')>(), authedFetch: vi.fn() }))
 vi.mock('@/lib/viewerSession', () => ({ viewerSession: vi.fn() }))
 vi.mock('@/lib/chat', async original => ({ ...await original<typeof import('@/lib/chat')>(), stream: vi.fn() }))
 const email = 'recovery@example.test'

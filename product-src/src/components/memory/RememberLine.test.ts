@@ -31,7 +31,7 @@ vi.mock('react', async importOriginal => ({
   },
   useEffect: (effect: EffectCallback) => { hooks.effects.push(effect) },
 }))
-vi.mock('@/lib/api', () => ({ authedFetch: vi.fn() }))
+vi.mock('@/lib/api', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/api')>(), authedFetch: vi.fn() }))
 vi.mock('@/lib/viewerSession', () => ({ viewerSession: () => ({ email: 'memory-line-test@example.com' }) }))
 vi.mock('@/lib/memory', async importOriginal => ({
   ...await importOriginal<typeof import('@/lib/memory')>(), useMemory: () => store,

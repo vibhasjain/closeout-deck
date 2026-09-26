@@ -5,7 +5,7 @@ import { BorderBeam } from 'border-beam'
 import { Check, ChevronDown } from 'lucide-react'
 import { FirstCloseoutChoice } from '@/components/chat/FirstCloseoutChoice'
 import { TaskRows, type TaskRow } from '@/components/beautiful/task-rows'
-import { Spinner, Tag } from '@/components/ui'
+import { Tag } from '@/components/ui'
 import type { CyclePayload, CycleSummary } from '@/lib/data'
 import { cycleLabel } from '@/lib/cycles'
 import { kindLabel } from '@/lib/desk'
@@ -65,7 +65,7 @@ export function TaskCard({ cycleId, messageId, onAnswer }: { cycleId: string; me
     {running && !reduced && <div className="journey-running-beam" aria-hidden="true" data-testid="running-beam"><BorderBeam size="line" colorVariant="mono" theme="light" strength={.35}><span /></BorderBeam></div>}
     <div className="journey-task-title">
       <h3>Closeout · {label}</h3>
-      <span role="status"><Tag className="journey-task-status">{done ? <Check size={12} aria-hidden /> : running && <Spinner />}{task.status}</Tag></span>
+      <span role="status"><Tag className="journey-task-status">{done ? <Check size={12} aria-hidden /> : null}{task.status}</Tag></span>
       <button className="journey-task-toggle" type="button" aria-label={showSteps ? 'Hide closeout steps' : 'Show closeout steps'} aria-expanded={showSteps} disabled={running || settling} onClick={() => setExpanded(value => !value)}><ChevronDown size={12} aria-hidden="true" style={{ transform: showSteps ? 'rotate(180deg)' : undefined }} /></button>
     </div>
     {error && <p role="alert" className="journey-task-error">{error}</p>}

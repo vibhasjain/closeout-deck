@@ -42,7 +42,13 @@ async function setup(journey: JourneyStore = createMemoryJourneyStore(), store: 
   const doc: Record<string, unknown> = {}
   async function call(path: string, body?: unknown, ownEmail = email) {
     let status = 0, raw = '', headers: Record<string, string> = {}
-    const response = { writeHead(code: number, h: Record<string, string>) { status = code; headers = h }, end(value: string | Buffer) { raw = headers['Content-Encoding'] === 'gzip' ? gunzipSync(value as Buffer).toString() : String(value) } } as unknown as ServerResponse
+    const response = {
+      setHeader(name: string, value: string) { headers[name] = value },
+      getHeader(name: string) { return headers[name] },
+      hasHeader(name: string) { return name in headers },
+      writeHead(code: number, h: Record<string, string> = {}) { status = code; headers = { ...headers, ...h } },
+      end(value: string | Buffer) { raw = headers['Content-Encoding'] === 'gzip' ? gunzipSync(value as Buffer).toString() : String(value) },
+    } as unknown as ServerResponse
     try {
       assert.equal(await handleJourney({ method: body === undefined ? 'GET' : 'POST', path, url: new URL(`http://test${path}`), email: ownEmail, doc,
         currentDoc: async () => doc, store, service: { recompute: async () => [] } as unknown as DataService, journey, response, readBody: async () => body, sync: async () => {} }), true)

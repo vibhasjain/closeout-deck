@@ -65,10 +65,8 @@
 .chat .call-error { margin: 0 .75rem; width: auto; }
 .chat .chat-dictate[aria-pressed="true"] { border-radius: 50%; background: #242423; color: #fff; }
 .chat-dictate-status { margin: 6px .75rem 0; color: #777774; font-size: 12px; }
-.chat-dictate-spinner { animation: call-spin 900ms linear infinite; }
 .setup-dictate[aria-pressed="true"] { border-color: #242423; background: #242423; color: #fff; }
 .setup-dictate-status { margin: 6px 0; color: #777774; font-size: 12px; }
-@keyframes call-spin { to { transform: rotate(360deg); } }
 @keyframes call-cover { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @media (max-width: 760px) {
   .call-stage { grid-template-columns: minmax(0, 1fr) 204px; gap: 26px; }

@@ -13,7 +13,7 @@ import { useSetChatContext, useSetChatSuggestions } from '@/components/chat/Chat
 import { useOverlay } from '@/components/shell/Overlay'
 import { PageTitle } from '@/components/shell/PageTitle'
 import { Btn, Empty, Lbl, PayDelta, Tag } from '@/components/ui'
-import { discrepancies, effectiveResolutions, kindLabel, provenance, rowResolution, topstats, useDesk, type DeskCycle } from '@/lib/desk'
+import { discrepancies, effectiveResolutions, groupCaseIds, kindLabel, provenance, rowResolution, topstats, useDesk, type DeskCycle } from '@/lib/desk'
 import { decide, groupId } from '@/lib/journey'
 import { getDataSnapshot, invalidate } from '@/lib/data'
 import { journeyShiftPay, shiftRules } from '@/lib/journeyPay'
@@ -119,7 +119,7 @@ export function ShiftPage() {
   const [state, update] = useOnboarding()
   const action = usePendingAction()
   const [submitted, setSubmitted] = useState<{ label: string; escalating: boolean } | null>(null)
-  const saving = action.pending
+  const saving = action.inFlight ?? action.pending
   const { toast } = useOverlay()
   const requestedCycleId = params.get('cycle') ?? ''
   const requestedCycle = byId(requestedCycleId)
@@ -145,7 +145,8 @@ export function ShiftPage() {
     : [...new Set((rs?.rows ?? []).filter((row) => (row.status === 'flag' || row.status === 'held')
       && !rowResolution(cycle, shiftId, row.ruleId, state.resolutions)).map((row) => row.ruleId))]
   const canDecide = !!rs && !(cycle.server && rs.held) && !decision && (!cycle.server || pendingRules.length > 0) && items.some((item) => item.shiftId === shiftId)
-  const groupCases = (ruleId: string) => cycle.run.shifts.filter((item) => item.rows.some((row) => row.ruleId === ruleId && (row.status === 'flag' || row.status === 'held'))).map((item) => item.shift.id)
+  const casesByRule = groupCaseIds(cycle.run.shifts)
+  const groupCases = (ruleId: string) => casesByRule.get(ruleId) ?? []
   const approvalCount = pendingRules.reduce((count, ruleId) => count + groupCases(ruleId).length, 0)
 
   const agentView = shiftRules(rs ?? { rows: [] }, cycle.rulesChecked)
@@ -173,16 +174,16 @@ export function ShiftPage() {
       setSubmitted({ label: `${escalating ? 'Escalate' : 'Approve'} ${approvalCount.toLocaleString()} issues`, escalating })
       await action.run(async () => {
         let approved = 0
-        for (const ruleId of pendingRules) {
+        await Promise.all(pendingRules.map(async ruleId => {
           const current = getDataSnapshot().payloads.find(item => item.cycle.id === cycle.id)
           const group = [...(current?.groups ?? cycle.groups ?? []), ...(current?.extraGroups ?? cycle.extraGroups ?? [])].find((item) => item.ruleId === ruleId)
           const id = group ? groupId(group) : ruleId
-          if ((current?.decisions ?? cycle.decisions ?? []).some(item => item.groupId === id || item.groupId === String(group?.id))) continue
+          if ((current?.decisions ?? cycle.decisions ?? []).some(item => item.groupId === id || item.groupId === String(group?.id))) return
           await decide(cycle.id, { groupId: id, decision: escalating ? 'escalated' : 'approved', shiftIds: groupCases(ruleId) })
           approved += groupCases(ruleId).length
-        }
+        }))
         toast(approved ? `${escalating ? 'Escalated' : 'Approved'} ${approved.toLocaleString()} issues` : 'Already decided; no changes applied')
-      })
+      }, '', { optimistic: true })
       return
     }
     const key = `${cycle.id}:${shiftId}`
@@ -236,6 +237,6 @@ export function ShiftPage() {
     <section className="shift-page-column shift-conversation" aria-label="Time entry conversation">
       <Thread cycle={cycle} rs={rs} />
     </section>
-    <ShiftTrail cycle={cycle} rs={rs} primaryRuleId={primaryRuleId} pending={saving} />
+    <ShiftTrail cycle={cycle} rs={rs} primaryRuleId={primaryRuleId} pending={action.pending} />
   </div></ShiftShell>
 }

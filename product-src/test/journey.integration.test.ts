@@ -71,7 +71,8 @@ it('real client journey + server: sample, decisions, unresolved asks, send once,
     },
   }
   const server = createServer({ dataStore: createMemoryDataStore(), journeyStore: createMemoryJourneyStore(), stateStore,
-    env: { NODE_ENV: 'development', CLOSEOUT_DEV_EMAIL: 'dev@hypertrack.io', ALLOWED_DOMAINS: 'hypertrack.io', CLOSEOUT_DATA_DIR: root, SESSION_SECRET: 'integration-test-secret-at-least-32-bytes' }, claudeVersion: async () => 'test' })
+    env: { NODE_ENV: 'development', CLOSEOUT_DEV_EMAIL: 'dev@hypertrack.io', ALLOWED_DOMAINS: 'hypertrack.io', CLOSEOUT_DATA_DIR: root, SESSION_SECRET: 'integration-test-secret-at-least-32-bytes' }, claudeVersion: async () => 'test',
+    runAgent: async options => { options.onEvent({ done: true, sessionId: 'offline-fixture', final: '```memory\n{"ops":[]}\n```' }) } })
   const networkFetch = globalThis.fetch.bind(globalThis)
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
   const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`

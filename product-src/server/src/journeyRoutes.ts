@@ -16,10 +16,12 @@ import {
 } from './journey.ts'
 import type { Batch, CycleSummary, Decision, Dispute, IntakeGap, Message, Thread } from './journey.ts'
 import type { JourneyStore } from './journeyStore.ts'
+import { entityTag, freshJson, notModified } from './freshness.ts'
 
 export interface JourneyRequest {
   method: string; path: string; url: URL; email: string; doc: Record<string, unknown>
   store: DataStore; service: DataService; journey: JourneyStore; response: ServerResponse
+  ifNoneMatch?: string
   readBody: (maxBytes: number) => Promise<unknown>; sync: () => Promise<unknown>
   currentDoc?: () => Promise<Record<string, unknown>>
   /** Fire-and-forget after a Send to Payroll returns 201 (P9 memory consolidation). */
@@ -48,7 +50,7 @@ function json(response: ServerResponse, status: number, body: unknown): void {
   response.end(JSON.stringify(body))
 }
 function gzipJson(response: ServerResponse, status: number, gzipped: Buffer): void {
-  response.writeHead(status, { 'Content-Type': 'application/json', 'Content-Encoding': 'gzip', 'Cache-Control': 'no-store' })
+  response.writeHead(status, { 'Content-Type': 'application/json', 'Content-Encoding': 'gzip', 'Cache-Control': response.hasHeader('ETag') ? 'private, no-cache' : 'no-store' })
   response.end(gzipped)
 }
 /** Appends fields (a JSON object) to the app's payload JSON without re-serializing its time entries. */
@@ -104,7 +106,7 @@ async function journeyOnlyCycle(req: JourneyRequest, cycleId: string): Promise<v
   const dates = cycleDates(cycle), counts = { set1: 0, set2: 0, set3: 0 }
   const state = await journeyState(req, { id: cycleId, start: dates.start, cutoff: dates.cutoff, deadline: dates.deadline, counts, gaps: [], groups: [], supervisors: {} })
   if (!state.adjustments.length && !state.decisions.length && !state.batch && !state.threads.length) throw new DataError(404, 'not_found')
-  json(req.response, 200, { cycle: dates, sample: false, runId: null, runAt: null, sites: [], week: [], results: [], rulesChecked: [],
+  freshJson(req.response, req.email, req.path, req.ifNoneMatch, { cycle: dates, sample: false, runId: null, runAt: null, sites: [], week: [], results: [], rulesChecked: [],
     totals: { under: 0, over: 0, flags: 0, held: 0, gross: 0, naive: 0, shifts: 0, workers: 0 }, counts, groups: [], extraGroups: [], gaps: [],
     intake: { sources: [], expected: [], received: [] }, decisions: state.decisions, batch: state.batch, nextStep: state.nextStep, adjustments: state.adjustments })
 }
@@ -169,6 +171,8 @@ async function handleLockedJourney(req: JourneyRequest): Promise<boolean> {
     const { decisions, batch, nextStep, adjustments } = await journeyState(req, loaded.summary)
     // Cached per run and journey state: repeat reads (polling, reloads) skip the storage read, trim and gzip.
     const fields = JSON.stringify({ decisions, batch, nextStep, adjustments }), key = `${loaded.key}|${hash(fields)}`
+    // A warm unchanged read never re-reads, serializes, compresses or transfers the large time-entry payload.
+    if (notModified(response, req.ifNoneMatch, entityTag(email, path, key))) return true
     gzipJson(response, 200, gzips.get(key) ?? remember(gzips, key, gzipSync(withFields(await loaded.wire(), fields)), 16))
     return true
   }
@@ -242,7 +246,7 @@ async function handleLockedJourney(req: JourneyRequest): Promise<boolean> {
   if (path === '/data/threads' && method === 'GET') {
     const cycleId = req.url.searchParams.get('cycleId') ?? undefined
     if (cycleId !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(cycleId)) throw new DataError(400, 'invalid_cycle')
-    json(response, 200, { threads: await withMessages(req, await req.journey.listThreads(email, cycleId)) })
+    freshJson(response, email, req.url.pathname + req.url.search, req.ifNoneMatch, { threads: await withMessages(req, await req.journey.listThreads(email, cycleId)) })
     return true
   }
   if ((match = /^\/data\/threads\/(t_[0-9a-f]{16})\/messages$/.exec(path)) && method === 'POST') {

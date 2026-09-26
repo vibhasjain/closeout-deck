@@ -1,3 +1,4 @@
+import { clearResponseCache } from '@/lib/responseCache'
 import type {} from '@/lib/googleIdentity'
 // One sign-in across /product, /answers and /job: the shared script owns both localStorage keys.
 import '../../../shared/session.js'
@@ -32,8 +33,10 @@ export async function currentUserEmail(): Promise<string | null> {
 }
 
 /** The user signed out: clear every page's session and stop Google auto sign-in. */
-export function signOut() {
-  try { shared().signOut() } finally { window.location.reload() }
+export async function signOut() {
+  // Drop credentials immediately; wait for IndexedDB erasure before navigating away.
+  const clearing = clearResponseCache()
+  try { shared().signOut() } finally { await clearing; window.location.reload() }
 }
 
 /** The Closeout agent rejected our token (401): drop only ours; the reload re-mints it if another page is signed in. */

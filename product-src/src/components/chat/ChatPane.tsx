@@ -2,7 +2,7 @@
 import { createContext, Fragment, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowUp, Loader2, Mic, Phone, Plus, Square } from 'lucide-react'
+import { ArrowUp, Mic, Phone, Plus, Square } from 'lucide-react'
 import { AgentAvatar } from '@/components/chat/AgentAvatar'
 import { SkeletonRegion } from '@/components/Skeleton'
 import { Chip } from '@/components/ui'
@@ -439,7 +439,7 @@ export function ChatPane({ scope: explicitScope, headerAction, onCallingChange }
           }}
         />
         {VOICE_ENABLED && <button type="button" className="icon-btn chat-dictate" aria-label={dictation.active ? 'Stop dictation' : 'Dictate message'} aria-pressed={dictation.active}
-          disabled={sending || calling || dictation.finishing} onClick={() => { if (dictation.active) void dictation.stop().catch(() => {}); else dictation.start() }}>{dictation.finishing || dictation.state === 'connecting' ? <Loader2 className="chat-dictate-spinner" size={16} aria-hidden /> : dictation.active ? <Square size={14} fill="currentColor" aria-hidden /> : <Mic size={16} aria-hidden />}</button>}
+          disabled={sending || calling || dictation.finishing} onClick={() => { if (dictation.active) void dictation.stop().catch(() => {}); else dictation.start() }}>{dictation.finishing || dictation.state === 'connecting' ? <span aria-hidden>…</span> : dictation.active ? <Square size={14} fill="currentColor" aria-hidden /> : <Mic size={16} aria-hidden />}</button>}
         <button type={sending || !draft.trim() ? 'button' : 'submit'} className="icon-btn chat-send" data-action={sending ? 'stop' : draft.trim() ? 'send' : 'phone'} aria-label={sending ? 'Stop reply' : draft.trim() || !VOICE_ENABLED ? 'Send message' : 'Call your Closeout Agent'}
           disabled={!sending && (dictation.finishing || calling || (!VOICE_ENABLED && !draft.trim()))} onClick={sending ? stop : !draft.trim() && VOICE_ENABLED ? startDeskCall : undefined}>
           {sending ? <Square size={14} fill="currentColor" aria-hidden="true" /> : draft.trim() || !VOICE_ENABLED ? <ArrowUp size={16} aria-hidden="true" /> : <Phone size={16} aria-hidden="true" />}

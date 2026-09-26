@@ -1,5 +1,4 @@
 import { ActionButton, ActionFeedback } from '@/components/ActionButton'
-import { SkeletonRegion } from '@/components/Skeleton'
 import { usePendingAction } from '@/lib/usePendingAction'
 import { useEffect, useState, type CSSProperties } from 'react'
 import { RULES } from '@/bench/engine.js'
@@ -55,9 +54,9 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
   const [learning, setLearning] = useState<{ cycleId: string; ruleId: string; count: number } | null>(null)
   const pendingAction = usePendingAction()
   const [submittedCount, setSubmittedCount] = useState(0)
-  const saving = pendingAction.pending
+  const saving = pendingAction.inFlight ?? pendingAction.pending
   useEffect(() => {
-    if (pendingAction.status !== 'success') return
+    if (pendingAction.status !== 'success' || pendingAction.inFlight) return
     const timer = setTimeout(pendingAction.reset, 900)
     return () => clearTimeout(timer)
   }, [pendingAction])
@@ -87,14 +86,14 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
     setSubmittedCount(items.reduce((total, group) => total + group.cases.length, 0))
     await pendingAction.run(async () => {
       let count = 0
-      for (const group of items) {
+      await Promise.all(items.map(async group => {
         if (cycle.server) {
           // A chat action or another direct click may have decided a later group while we awaited this one.
           const latest = getDataSnapshot().payloads.find(item => item.cycle.id === cycle.id)
           const aliases = [...(latest?.groups ?? cycle.groups ?? []), ...(latest?.extraGroups ?? cycle.extraGroups ?? [])]
           const match = aliases.find(item => item.ruleId === group.ruleId)
           const decisions = latest?.decisions ?? cycle.decisions ?? []
-          if (decisions.some(item => item.groupId === group.ruleId || item.groupId === String(match?.id))) continue
+          if (decisions.some(item => item.groupId === group.ruleId || item.groupId === String(match?.id))) return
         }
         if (decision === 'approved') {
           if (cycle.server) await approve(group)
@@ -105,10 +104,10 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
           await decide(cycle.id, { groupId: match ? groupId(match) : group.ruleId, decision, shiftIds: group.cases.map((item) => item.shiftId) })
         }
         count += group.cases.length
-      }
+      }))
       if (items.length > 1) setLearning(null)
       toast(count ? `${decision === 'approved' ? 'Approved' : 'Escalated'} ${count.toLocaleString()}` : 'Already decided; no changes applied')
-    }, decision === 'approved' ? 'proposed' : 'judgment')
+    }, decision === 'approved' ? 'proposed' : 'judgment', { optimistic: true })
   }
 
   function undo(group: ResolutionGroup) {
@@ -157,7 +156,6 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
   const learned = learning?.cycleId === cycle.id ? learning : null
 
   return <div id="payroll-review-list" className="payroll-summary scroll" role="region" tabIndex={-1} aria-label="Review issues">
-    <ActionFeedback action={pendingAction} />
     {/* Email all: the catch-all send of an issue's time entries, in a panel that slides out on the right. Single cases open the shift view's conversation. */}
     <Sheet open={!!emailing} onOpenChange={(next) => { if (!next) setEmailing(null) }}>
       <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
@@ -176,9 +174,9 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
           <span className="payroll-summary-head-end">
             {resolution === 'fixed' && count > 0 && !cycle.server && !closed && <span className="r-note">Undo the agent's fixes until Payroll closes {shortDate(cycle.deadline)}</span>}
             {action(resolution, items, count)}
+            {pendingAction.key === resolution && <ActionFeedback action={pendingAction} />}
           </span>
         </div>
-        {saving && pendingAction.key === resolution && <SkeletonRegion rows={2} />}
         {resolution === 'proposed' && learned && <AutoApproveOffer ruleId={learned.ruleId} count={learned.count}
           onAccept={() => { rememberKind(learned.ruleId); setLearning(null); toast(`Decision remembered for ${kindLabel(learned.ruleId)}`) }}
           onDismiss={() => setLearning(null)} />}
@@ -187,7 +185,7 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
           const toggle = () => setOpen(expanded ? open.filter((item) => item !== key(group)) : [...open, key(group)])
           return <div key={key(group)} className="decision" data-rule={group.ruleId}>
             {/* The whole row expands; its own buttons and links keep their clicks. The chevron stays the keyboard control. */}
-            <div className="payroll-summary-row" onClick={(event) => { if (!(event.target as Element).closest('button, a')) toggle() }}>
+            <div className="payroll-summary-row" data-prefetch-cycle={cycle.id} data-prefetch-shift={group.cases[0]?.shiftId} onClick={(event) => { if (!(event.target as Element).closest('button, a')) toggle() }}>
               <button type="button" className="decision-toggle" aria-expanded={expanded} aria-label={`${expanded ? 'Hide' : 'Show'} cases`}
                 onClick={toggle}>
                 {expanded ? <ChevronDown size={14} aria-hidden /> : <ChevronRight size={14} aria-hidden />}
@@ -202,7 +200,7 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
             </div>
             {expanded && <ul className="decision-cases">
               {group.cases.map((item) => <li key={item.shiftId} className="decision-case"
-                onClick={(event) => { if (!(event.target as Element).closest('a, button')) navigate(shiftHref(cycle.id, item.shiftId, params, '/payroll')) }}>
+                data-prefetch-cycle={cycle.id} data-prefetch-shift={item.shiftId} onClick={(event) => { if (!(event.target as Element).closest('a, button')) navigate(shiftHref(cycle.id, item.shiftId, params, '/payroll')) }}>
                 <span className="decision-who"><Link to={shiftHref(cycle.id, item.shiftId, params, '/payroll')}>{item.worker}</Link><span className="r-note">{item.day} · {item.site}</span></span>
                 <span className="decision-note">{item.note}{(resolution === 'fixed' || resolution === 'proposed') && <b>{resolution === 'fixed' ? actionFor(group.ruleId) : `Resolved: ${proposalFor(group.ruleId)}`}</b>}</span>
                 <PayDelta className="num decision-diff" current={item.before} resolved={item.after} size="sm" />

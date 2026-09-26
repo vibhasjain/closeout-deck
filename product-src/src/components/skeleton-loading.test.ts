@@ -98,11 +98,11 @@ describe('content loading is ghosted, with no visible loading copy', () => {
     ['dispute history', () => h(DisputeForm, { cycle: { ...payload, batch: { id: 'pending-batch' } as NonNullable<CyclePayload['batch']> } })],
   ]
   it.each(surfaces)('%s', (_name, surface) => assertSkeleton(render(surface())))
-  it('retains existing memories with a skeleton while refreshing', () => {
+  it('retains existing memories without a skeleton while refreshing', () => {
     const html = render(h(MemoryPanelContent, { snapshot: { instincts: [{
       id: 'i_saved', kind: 'context', text: 'Travis signs off time entries', source: 'chat', status: 'active', until: null, ruleId: null, at: '2026-09-25T16:00:00.000Z',
     }], proposals: [], lastRun: null }, loading: true, error: null, refresh: async () => {}, onMakeRule: async () => {} }))
-    assertSkeleton(html)
+    expect(html).not.toContain('data-skeleton')
     expect(html).toContain('>Travis signs off time entries</textarea>')
   })
   it.each(['transcript', 'contracts'])('%s fetch', name => {

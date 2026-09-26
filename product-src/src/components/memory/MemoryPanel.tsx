@@ -25,7 +25,7 @@ export function MemoryRow({ instinct, retain }: { instinct: Instinct; retain?: (
   const setText = (value: string) => setDraft({ original, text: value })
   const [confirming, setConfirming] = useState(false)
   const action = usePendingAction(failure)
-  const busy = action.pending || action.status === 'success' && action.key === 'forget'
+  const busy = (action.inFlight ?? action.pending) || action.status === 'success' && action.key === 'forget'
   const canceled = useRef(false)
 
 
@@ -33,7 +33,7 @@ export function MemoryRow({ instinct, retain }: { instinct: Instinct; retain?: (
     if (canceled.current) { canceled.current = false; return }
     const next = text.trim()
     if (!next) { setText(original); return }
-    if (next !== original) return action.run(() => editInstinct(instinct.id, { text: next }), 'edit')
+    if (next !== original) return action.run(() => editInstinct(instinct.id, { text: next }), 'edit', { optimistic: true })
   }
 
   return <li className="memory-row">
@@ -49,12 +49,12 @@ export function MemoryRow({ instinct, retain }: { instinct: Instinct; retain?: (
       {instinct.until && <span>Until {memoryDate(`${instinct.until}T12:00:00`)}</span>}
     </div>
     <div className="memory-actions">
-      {(instinct.status === 'pending' || action.key === 'keep') && <ActionButton action={action} actionKey="keep" disabled={busy} pendingLabel="Keeping…" successLabel="Kept" className="memory-button" onClick={() => action.run(() => keepInstinct(instinct.id), 'keep')}>Keep</ActionButton>}
+      {(instinct.status === 'pending' || action.key === 'keep') && <ActionButton action={action} actionKey="keep" disabled={busy} pendingLabel="Keeping…" successLabel="Kept" className="memory-button" onClick={() => action.run(() => keepInstinct(instinct.id), 'keep', { optimistic: true })}>Keep</ActionButton>}
       <Btn className="memory-button memory-icon" aria-label={`Forget ${original}`} title="Forget this memory" disabled={busy} onClick={() => setConfirming(true)}><Trash2 size={14} /></Btn>
     </div>
     {confirming && <div className="memory-forget-confirm">
       <span>Forget this? The Closeout Agent won’t learn it again.</span>
-      <ActionButton action={action} actionKey="forget" pendingLabel="Forgetting…" successLabel="Forgotten" className="memory-button" onClick={() => action.run(async () => { const release = retain?.(); try { await forgetInstinct(instinct.id); release?.() } catch (cause) { release?.(0); throw cause } }, 'forget')}>Forget</ActionButton>
+      <ActionButton action={action} actionKey="forget" pendingLabel="Forgetting…" successLabel="Forgotten" className="memory-button" onClick={() => action.run(async () => { const release = retain?.(); try { await forgetInstinct(instinct.id); release?.() } catch (cause) { release?.(0); throw cause } }, 'forget', { optimistic: true })}>Forget</ActionButton>
       <Btn className="memory-button" disabled={busy} onClick={() => setConfirming(false)}>Cancel</Btn>
     </div>}
     <ActionFeedback action={action} className="memory-note memory-row-note" />
@@ -66,7 +66,7 @@ export function AddMemory() {
   const [kind, setKind] = useState<MemoryKind>('context')
   const [text, setText] = useState('')
   const action = usePendingAction(failure)
-  const busy = action.pending
+  const busy = action.inFlight ?? action.pending
 
   async function add(event: FormEvent) {
     event.preventDefault()
@@ -101,15 +101,15 @@ export function MemorySuggestion({ proposal, onMakeRule, retain }: { proposal: M
   return <li className="memory-suggestion">
     <p>You dismissed {label} {proposal.count} times across {proposal.cycles} pay runs · most often: {memoryText(proposal.topReason) || 'No reason recorded'}</p>
     <div className="memory-actions">
-      <ActionButton action={action} actionKey="rule" disabled={action.status === 'success'} pendingLabel="Saving…" successLabel="Saved" className="memory-button" onClick={() => action.run(() => onMakeRule(proposal.ruleId), 'rule')}>Make it a rule</ActionButton>
-      <ActionButton action={action} actionKey="forget" pendingLabel="Forgetting…" successLabel="Forgotten" className="memory-button" onClick={() => action.run(async () => { const release = retain?.(); try { await dismissProposal(proposal.ruleId); release?.() } catch (cause) { release?.(0); throw cause } }, 'forget')}>Forget</ActionButton>
+      <ActionButton action={action} actionKey="rule" disabled={action.status === 'success'} pendingLabel="Saving…" successLabel="Saved" className="memory-button" onClick={() => action.run(() => onMakeRule(proposal.ruleId), 'rule', { optimistic: true })}>Make it a rule</ActionButton>
+      <ActionButton action={action} actionKey="forget" pendingLabel="Forgetting…" successLabel="Forgotten" className="memory-button" onClick={() => action.run(async () => { const release = retain?.(); try { await dismissProposal(proposal.ruleId); release?.() } catch (cause) { release?.(0); throw cause } }, 'forget', { optimistic: true })}>Forget</ActionButton>
     </div>
     <ActionFeedback action={action} className="memory-note" />
   </li>
 }
 
-export function MemoryPanelContent({ snapshot, loading, error, refresh, onMakeRule }: {
-  snapshot: MemorySnapshot; loading: boolean; error: string | null; refresh(): Promise<void>; onMakeRule(ruleId: string): Promise<void>
+export function MemoryPanelContent({ snapshot, loading, loaded = false, error, refresh, onMakeRule }: {
+  snapshot: MemorySnapshot; loading: boolean; loaded?: boolean; error: string | null; refresh(): Promise<void>; onMakeRule(ruleId: string): Promise<void>
 }) {
   const memories = useActionRetention(snapshot.instincts.filter(row => row.status === 'active' || row.status === 'pending'), row => row.id)
   const suggestions = useActionRetention(snapshot.proposals.filter(proposal => memoryRuleLabel(proposal.ruleId)), proposal => proposal.ruleId)
@@ -117,9 +117,8 @@ export function MemoryPanelContent({ snapshot, loading, error, refresh, onMakeRu
   return <section className="memory-panel" aria-labelledby="memory-heading" aria-busy={loading}>
     <h2 id="memory-heading">What the Closeout Agent knows</h2>
     {error && <div className="memory-load-error"><p className="memory-note" role="alert">{error}</p><Btn className="memory-button" onClick={() => void refresh()}>Try again</Btn></div>}
-    {!instincts.length && !loading && !error && <p className="memory-note memory-empty">The Closeout Agent learns from the call, from your corrections and at each Send to Payroll. You can edit what it knows or make it forget. Forget stays forgotten.</p>}
-    {loading && !instincts.length && !error && <SkeletonRegion rows={4} />}
-    {loading && instincts.length > 0 && <SkeletonRegion rows={1} />}
+    {!instincts.length && (!loading || loaded) && !error && <p className="memory-note memory-empty">The Closeout Agent learns from the call, from your corrections and at each Send to Payroll. You can edit what it knows or make it forget. Forget stays forgotten.</p>}
+    {loading && !loaded && !instincts.length && !error && <SkeletonRegion rows={4} />}
     {memoryKinds.map(({ kind, label }) => {
       const rows = instincts.filter(row => row.kind === kind)
       return rows.length ? <section className="memory-group" key={kind} aria-label={label}>
@@ -127,7 +126,7 @@ export function MemoryPanelContent({ snapshot, loading, error, refresh, onMakeRu
         <ul>{rows.map(instinct => <MemoryRow key={instinct.id} instinct={instinct} retain={() => memories.retain(instinct)} />)}</ul>
       </section> : null
     })}
-    {(!loading || instincts.length > 0) && <AddMemory />}
+    {(!loading || loaded || instincts.length > 0) && <AddMemory />}
     {proposals.length > 0 && <section className="memory-group memory-suggestions" aria-label="Suggested rules">
       <h3>Suggested rules</h3>
       <ul>{proposals.map(proposal => <MemorySuggestion key={proposal.ruleId} proposal={proposal} onMakeRule={onMakeRule} retain={() => suggestions.retain(proposal)} />)}</ul>

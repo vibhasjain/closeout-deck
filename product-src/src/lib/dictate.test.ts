@@ -4,7 +4,7 @@ import { MIC_BLOCKED, MICROPHONE_CONSTRAINTS } from '@/lib/live'
 import { startDictation } from './dictate'
 import type { DictationHandle } from './dictate'
 
-vi.mock('@/lib/api', () => ({ authedFetch: vi.fn() }))
+vi.mock('@/lib/api', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/api')>(), authedFetch: vi.fn() }))
 class Channel {
   readyState = 'open'
   onmessage: ((event: { data: string }) => void) | null = null

@@ -29,6 +29,7 @@ import { parseFile, IngestError } from './ingest.ts'
 import { recentCycles } from '../../src/lib/cycles.ts'
 import { inboxAddress } from '../../src/lib/inbox.ts'
 import { journeyAdjustments } from '../../src/lib/journeyPay.ts'
+import { freshJson } from './freshness.ts'
 
 const ALLOWED_ORIGINS = new Set(['https://closeoutcopilot.com', 'http://localhost:9000'])
 
@@ -74,6 +75,9 @@ function json(response: ServerResponse, status: number, body: unknown): void {
 }
 
 async function readJson(request: IncomingMessage, maxBytes: number): Promise<unknown> {
+  // A queued mutation may disconnect before it acquires the account lock. Its
+  // aborted/end events have already fired; waiting for them again would strand the lock.
+  if (request.destroyed || request.aborted || request.readableEnded) throw new ValidationError()
   return new Promise((resolveBody, reject) => {
     const chunks: Buffer[] = []
     let bytes = 0
@@ -103,6 +107,7 @@ async function readJson(request: IncomingMessage, maxBytes: number): Promise<unk
 }
 
 async function readBytes(request: IncomingMessage, maxBytes: number): Promise<Buffer> {
+  if (request.destroyed || request.aborted || request.readableEnded) throw new DataError(400, 'upload_aborted')
   const declared = Number(request.headers['content-length'])
   if (Number.isFinite(declared) && declared > maxBytes) { request.resume(); throw new DataError(413, 'file_too_large') }
   return new Promise((resolveBody, reject) => {
@@ -183,7 +188,8 @@ export function createServer(options: ServerOptions = {}) {
         return
       }
       response.setHeader('Access-Control-Allow-Origin', origin)
-      response.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-File-Name, X-Set, X-System, X-Site')
+      response.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, If-None-Match, X-File-Name, X-Set, X-System, X-Site')
+      response.setHeader('Access-Control-Expose-Headers', 'ETag')
       response.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
     }
     if (request.method === 'OPTIONS') {
@@ -278,7 +284,7 @@ export function createServer(options: ServerOptions = {}) {
       return
     }
     if (path === '/memory' || path.startsWith('/memory/')) {
-      if (!await handleMemory({ method: request.method!, path, email: user.email, response, readBody: max => readJson(request, max),
+      if (!await handleMemory({ method: request.method!, path, email: user.email, response, ifNoneMatch: request.headers['if-none-match'], readBody: max => readJson(request, max),
         memory: getMemoryStore(), journey: getJourneyStore(), consolidate: memory.consolidateMemory, today: () => accountToday(user.email) })) json(response, 404, { error: 'not_found' })
       return
     }
@@ -327,7 +333,7 @@ export function createServer(options: ServerOptions = {}) {
     // The transcript lives in closeout_chat, never in the state document.
     if (path === '/chat/history' && (request.method === 'GET' || request.method === 'POST')) {
       const store = getDataStore()
-      if (request.method === 'GET') json(response, 200, { messages: (await store.listChat(user.email)).map(chatMessage) })
+      if (request.method === 'GET') freshJson(response, user.email, path, request.headers['if-none-match'], { messages: (await store.listChat(user.email)).map(chatMessage) })
       else {
         await store.appendChat(user.email, validateChatHistory(await readJson(request, 512 * 1024)))
         json(response, 200, { ok: true })
@@ -420,11 +426,11 @@ export function createServer(options: ServerOptions = {}) {
               // N8: adjustments can land on a cycle before it has any time entries; the client reads that cycle's detail.
               ...(pending.length ? { adjustments: { count: pending.length, amount: pending.reduce((n, a) => n + a.amount, 0) } } : {}) }
           })
-          json(response, 200, { cycles, sources }); return
+          freshJson(response, user.email, path, request.headers['if-none-match'], { cycles, sources }); return
         }
         // GET /data/cycles/:id (+ decisions, batch, nextStep) and the P7 journey routes.
         if (await handleJourney({ method: request.method!, path, url, email: user.email, doc, currentDoc: () => stateDoc(user.email), store, service, journey: getJourneyStore(),
-          response, readBody: max => readJson(request, max), sync, onSent: cycleId => void memory.consolidateMemory(user.email, 'send', cycleId) })) return
+          response, ifNoneMatch: request.headers['if-none-match'], readBody: max => readJson(request, max), sync, onSent: cycleId => void memory.consolidateMemory(user.email, 'send', cycleId) })) return
         if (request.method === 'GET' && (path === '/data/entries' || path === '/data/findings')) {
           const cycleId = url.searchParams.get('cycle')
           if (!cycleId || !/^\d{4}-\d{2}-\d{2}$/.test(cycleId)) throw new DataError(400, 'invalid_cycle')

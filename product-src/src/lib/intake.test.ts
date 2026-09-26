@@ -79,3 +79,15 @@ describe('intake', () => {
     expect(cycles.filter((item) => item !== pending).every((item) => cycleIntake(item, state, at).open === 0)).toBe(true)
   })
 })
+
+it('reuses server intake across route renders and refreshes after an accepted gap changes', () => {
+  const cycle = { id: '2026-09-20', start: new Date(2026, 8, 14), end: new Date(2026, 8, 20), cutoff: new Date(2026, 8, 21), status: 'needs-review' as const, server: true, week: [],
+    intake: { sources: [{ id: 'source', name: 'ADP', short: 'ADP', set: 1 as const, method: 'upload', lastReceived: '2026-09-21T12:00:00Z' }], expected: [{ worker: 'Alex', client: 'Site', day: 1, source: 'source' }], received: [] } }
+  const state = { acceptedGaps: {}, uploads: {} }, now = new Date(2026, 8, 22)
+  const first = cycleIntake(cycle, state, now)
+  expect(cycleIntake(cycle, state, now)).toBe(first)
+  expect(first.open).toBe(1)
+  const accepted = cycleIntake(cycle, { ...state, acceptedGaps: { '2026-09-20:Site|Alex|1': { reason: 'Confirmed absent', at: now.toISOString() } } }, now)
+  expect(accepted).not.toBe(first)
+  expect(accepted.open).toBe(0)
+})

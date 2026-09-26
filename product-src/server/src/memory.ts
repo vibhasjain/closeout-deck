@@ -14,6 +14,7 @@ import { KeyedMutex } from './queue.ts'
 import type { GlobalSemaphore } from './queue.ts'
 import { isPlainObject, ValidationError } from './validation.ts'
 import { callMarkdown } from './workspace.ts'
+import { freshJson } from './freshness.ts'
 
 export const CHAT_THROTTLE_MS = 600_000
 export const MAX_BATCH = 10
@@ -211,6 +212,7 @@ export type Consolidate = ReturnType<typeof createMemory>['consolidateMemory']
 
 export interface MemoryRequest {
   method: string; path: string; email: string; response: ServerResponse
+  ifNoneMatch?: string
   readBody: (maxBytes: number) => Promise<unknown>
   memory: MemoryStore; journey: JourneyStore; consolidate: Consolidate
   /** The account's own calendar today (YYYY-MM-DD), read only when a request carries until. */
@@ -247,7 +249,7 @@ export async function handleMemory(req: MemoryRequest): Promise<boolean> {
     const [rows, decisions, runs] = await Promise.all([req.memory.listInstincts(email), req.journey.listDecisions(email), req.memory.listRuns(email, 5)])
     const last = runs.find(run => run.finishedAt)
     // A proposal whose text is already known or was forgotten has nothing to offer.
-    json(response, 200, { instincts: rows.filter(live).sort(newest).map(publicInstinct), proposals: proposals(decisions, rows).filter(p => !textConflict(proposalText(p), rows)),
+    freshJson(response, email, path, req.ifNoneMatch, { instincts: rows.filter(live).sort(newest).map(publicInstinct), proposals: proposals(decisions, rows).filter(p => !textConflict(proposalText(p), rows)),
       lastRun: last ? { trigger: last.trigger, finishedAt: last.finishedAt, applied: last.ops.length, dropped: last.dropped.length } : null })
     return true
   }

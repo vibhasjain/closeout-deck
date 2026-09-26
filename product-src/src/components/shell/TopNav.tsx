@@ -151,7 +151,7 @@ export function TopNav({ wide = true }: { wide?: boolean } = {}) {
             {index === 0 && <NavLink to={`${pendingHref}${agentOpen ? '&agent=1' : ''}`} className={() => `sidebar-nav-item${intakeActive ? ' active' : ''}`} aria-label="Timesheets" title="Timesheets" aria-current={intakeActive ? 'page' : false} aria-disabled={setupLocked || undefined} tabIndex={setupLocked ? -1 : undefined} onClick={(event) => { if (setupLocked) event.preventDefault(); else closeDrawer() }}><NavigationLabel icon={ClipboardList} label="Timesheets" /></NavLink>}
           </span>
         })}
-        <button type="button" className={`sidebar-nav-item${pathname === '/settings' ? ' active' : ''}`} aria-label="Settings" title="Settings" aria-current={pathname === '/settings' ? 'page' : undefined} disabled={setupLocked} onClick={() => navigateTo(`/settings${agentOpen ? '?agent=1' : ''}`)}><NavigationLabel icon={Settings} label="Settings" /></button>
+        <button type="button" className={`sidebar-nav-item${pathname === '/settings' ? ' active' : ''}`} data-prefetch-href="/settings" aria-label="Settings" title="Settings" aria-current={pathname === '/settings' ? 'page' : undefined} disabled={setupLocked} onClick={() => navigateTo(`/settings${agentOpen ? '?agent=1' : ''}`)}><NavigationLabel icon={Settings} label="Settings" /></button>
       </nav>
       <PayRuns onNavigate={closeDrawer} />
       <GettingStarted onNavigate={closeDrawer} />

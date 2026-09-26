@@ -6,7 +6,7 @@ import * as memory from '@/lib/memory'
 import { CALL_OPENER, MICROPHONE_CONSTRAINTS, callEndBody, callEndTranscript, startCall, stitchTranscript } from './live'
 import type { CallHandle, LiveEvent } from './live'
 
-vi.mock('@/lib/api', () => ({ authedFetch: vi.fn() }))
+vi.mock('@/lib/api', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/api')>(), authedFetch: vi.fn() }))
 vi.mock('@/lib/viewerSession', () => ({ viewerSession: vi.fn(() => null) }))
 vi.mock('@/lib/chat', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/chat')>(), stream: vi.fn() }))
 

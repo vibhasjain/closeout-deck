@@ -20,7 +20,7 @@ vi.mock('react', async original => ({
   useEffect: () => {},
 }))
 vi.mock('react-router-dom', () => ({ useNavigate: () => navigation, useSearchParams: () => [new URLSearchParams()] }))
-vi.mock('./api', () => ({ authedFetch: vi.fn() }))
+vi.mock('./api', async original => ({ ...await original<typeof import('./api')>(), authedFetch: vi.fn() }))
 vi.mock('./viewerSession', () => ({ viewerSession: () => ({ email: 'hook@example.test', sessionToken: 'token' }) }))
 vi.mock('./live', async original => ({ ...await original<typeof import('./live')>(), startCall: vi.fn() }))
 vi.mock('./chat', async original => ({ ...await original<typeof import('./chat')>(), stream: vi.fn() }))

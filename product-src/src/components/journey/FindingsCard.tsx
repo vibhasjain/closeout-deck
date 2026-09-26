@@ -1,3 +1,5 @@
+import { ActionButton, ActionFeedback } from '@/components/ActionButton'
+import { usePendingAction } from '@/lib/usePendingAction'
 import { SkeletonRegion } from '@/components/Skeleton'
 import { useEffect, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -5,7 +7,7 @@ import { useNavigate } from 'react-router-dom'
 import { FindingDetail } from '@/components/SampleResult'
 import { gapRows } from '@/components/journey/FormCard'
 import { useOverlay } from '@/components/shell/Overlay'
-import { Btn, PayDelta, Spinner, Tag } from '@/components/ui'
+import { Btn, PayDelta, Tag } from '@/components/ui'
 import { money } from '@/bench/engine.js'
 import { getDataSnapshot, hydrate, type CyclePayload, type FileRecord, type FindingGroup } from '@/lib/data'
 import { kindLabel } from '@/lib/desk'
@@ -79,18 +81,9 @@ export function observeFindingHeight(node: HTMLElement, position: number): (() =
   return () => observer.disconnect()
 }
 
-/** Small replacement seam for the shared pending-action button. Labels reserve the same width. */
-function CardAction({ pending = false, done = false, pendingLabel = 'Approving…', doneLabel = 'Approved ✓', children, className, disabled, ...props }:
-  ButtonHTMLAttributes<HTMLButtonElement> & { pending?: boolean; done?: boolean; pendingLabel?: string; doneLabel?: string }) {
-  const label = pending ? <><Spinner />{pendingLabel}</> : done ? doneLabel : children
-  return <Btn {...props} className={className} disabled={disabled || pending || done} aria-busy={pending || undefined}>
-    <span className="journey-action-label">
-      <span>{label}</span>
-      {props.onClick && pendingLabel && <span className="journey-action-measure" aria-hidden><Spinner />{pendingLabel}</span>}
-      {props.onClick && doneLabel && <span className="journey-action-measure" aria-hidden>{doneLabel}</span>}
-      <span className="journey-action-measure" aria-hidden>{children}</span>
-    </span>
-  </Btn>
+/** Passive carousel controls never carry a data-fetch spinner. */
+function CardAction({ children, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
+  return <Btn {...props}>{children}</Btn>
 }
 
 /** Keep the visible position in sync with the selected slide and its disabled arrows. */
@@ -137,8 +130,7 @@ export function FindingsCard({ cycleId, live = true }: { cycleId: string; live?:
   const requestVersion = useRef(0)
   const navigationVersion = useRef(0)
   const [position, setPosition] = useState(0)
-  const [pending, setPending] = useState<string | null>(null)
-  const [failure, setFailure] = useState<string | null>(null)
+  const action = usePendingAction()
   useEffect(() => () => { clearTimeout(advanceTimer.current); requestVersion.current++ }, [cycleId])
   useLayoutEffect(() => {
     if (track.current) return observeFindingHeight(track.current, position)
@@ -169,8 +161,7 @@ export function FindingsCard({ cycleId, live = true }: { cycleId: string; live?:
     const id = groupId(item.group), version = ++requestVersion.current
     const navigation = navigationVersion.current
     clearTimeout(advanceTimer.current)
-    setPending(id); setFailure(null)
-    try {
+    await action.run(async () => {
       const result = await decide(cycleId, { groupId: id, decision, shiftIds: item.resolution.cases.map(entry => entry.shiftId) })
       if (version !== requestVersion.current) return
       if (decision === 'approved' && navigation === navigationVersion.current) {
@@ -186,9 +177,7 @@ export function FindingsCard({ cycleId, live = true }: { cycleId: string; live?:
           if (next !== undefined) move(next)
         }, 800)
       }
-    } catch (error) {
-      if (version === requestVersion.current) setFailure(error instanceof Error ? error.message : 'The decision could not be saved.')
-    } finally { if (version === requestVersion.current) setPending(null) }
+    }, id, { optimistic: true })
   }
 
   return <section className="journey-findings" aria-label="Closeout findings" aria-roledescription="carousel" onKeyDown={event => {
@@ -214,26 +203,25 @@ export function FindingsCard({ cycleId, live = true }: { cycleId: string; live?:
       {items.map((item, at) => {
         const approved = item.resolution.state === 'fixed' && item.resolution.approved
         const escalated = item.resolution.state === 'escalated'
-        const deciding = pending === groupId(item.group)
         const status = approved ? 'Approved by you' : escalated ? `Escalated to ${item.resolution.owner ?? 'review owner'}` : item.asked
           ? `Asked ${item.asked}${threads.some(thread => thread.counterparty.name === item.asked && thread.messages.some(message => message.dir === 'out' && message.status === 'not_sent_demo')) ? ' · Not Sent · Demo' : ''}`
           : 'Not asked yet'
-        return <article className="journey-finding" key={`${groupId(item.group)}:${item.resolution.cases.map(entry => entry.shiftId).join(',')}`} role="listitem" aria-label={`${at + 1} of ${items.length}: ${item.group.title}`} data-issue={groupId(item.group)} data-state={item.resolution.state} data-active={at === index} inert={at !== index}>
+        return <article className="journey-finding" key={`${groupId(item.group)}:${item.resolution.cases.map(entry => entry.shiftId).join(',')}`} role="listitem" aria-label={`${at + 1} of ${items.length}: ${item.group.title}`} data-prefetch-cycle={cycleId} data-prefetch-shift={item.resolution.cases[0]?.shiftId} data-issue={groupId(item.group)} data-state={item.resolution.state} data-active={at === index} inert={at !== index}>
           <Tag>{approved ? 'Approved' : item.resolution.state === 'proposed' ? 'Proposed' : item.resolution.state === 'waiting' ? 'Waiting' : escalated ? 'Escalated' : 'Needs Judgment'}</Tag>
           <h4>{item.group.title}</h4>
           <p className="journey-finding-description">{item.group.summary}</p>
           <PayDelta current={item.resolution.current} resolved={item.resolution.resolved} timeEntries={item.resolution.cases.length} size="sm" align="start" />
           <p className="journey-finding-status" role={at === index ? 'status' : undefined}><span className="journey-status-dot" aria-hidden />{status}</p>
           <div className="journey-finding-actions">
-            {item.resolution.state === 'waiting' && <CardAction pendingLabel="" doneLabel="" onClick={() => navigate(shiftHref(cycleId, item.resolution.cases[0].shiftId))}>View time entry</CardAction>}
-            {(item.resolution.state === 'proposed' || approved) && <CardAction className={primary && at === index && !approved ? 'primary' : undefined} pending={deciding} done={approved} disabled={pending !== null} onClick={() => void act(item, 'approved')}>Approve {item.resolution.cases.length.toLocaleString()}</CardAction>}
-            {(item.resolution.state === 'judgment' || escalated) && <CardAction className={primary && at === index && !escalated ? 'primary' : undefined} pending={deciding} done={escalated} pendingLabel="Escalating…" doneLabel="Escalated ✓" disabled={pending !== null} onClick={() => void act(item, 'escalated')}>Escalate</CardAction>}
-            <CardAction pendingLabel="" doneLabel="" onClick={() => openDrawer(<FindingDetail finding={findingEvidence(cycle, item, getDataSnapshot().files)} dayLabel={day => days[day] ?? ''} />, 'Evidence', cycle.sample ? 'Sample' : undefined)}>Evidence</CardAction>
+            {item.resolution.state === 'waiting' && <CardAction onClick={() => navigate(shiftHref(cycleId, item.resolution.cases[0].shiftId))}>View time entry</CardAction>}
+            {(item.resolution.state === 'proposed' || approved) && <ActionButton action={approved && action.key !== groupId(item.group) ? { ...action, key: groupId(item.group), status: 'success' } : action} actionKey={groupId(item.group)} pendingLabel="Approving…" successLabel="Approved" className={primary && at === index && !approved ? 'primary' : undefined} onClick={() => void act(item, 'approved')}>Approve {item.resolution.cases.length.toLocaleString()}</ActionButton>}
+            {(item.resolution.state === 'judgment' || escalated) && <ActionButton action={escalated && action.key !== groupId(item.group) ? { ...action, key: groupId(item.group), status: 'success' } : action} actionKey={groupId(item.group)} pendingLabel="Escalating…" successLabel="Escalated" className={primary && at === index && !escalated ? 'primary' : undefined} onClick={() => void act(item, 'escalated')}>Escalate</ActionButton>}
+            {action.key === groupId(item.group) && <ActionFeedback action={action} />}
+            <CardAction onClick={() => openDrawer(<FindingDetail finding={findingEvidence(cycle, item, getDataSnapshot().files)} dayLabel={day => days[day] ?? ''} />, 'Evidence', cycle.sample ? 'Sample' : undefined)}>Evidence</CardAction>
           </div>
         </article>
       })}
     </div> : <p className="r-note">No issues waiting for review.</p>}
-    {failure && <p role="alert">{failure}</p>}
-    <footer className="journey-findings-footer"><CardAction className="journey-view-issues" pendingLabel="" doneLabel="" onClick={() => navigate(`/payroll?${new URLSearchParams({ cycle: cycleId, step: 'review', filter: 'needs-review' })}`)}>View all {items.length} issues →</CardAction></footer>
+    <footer className="journey-findings-footer"><CardAction data-prefetch-href={`/payroll?${new URLSearchParams({ cycle: cycleId, step: 'review', filter: 'needs-review' })}`} className="journey-view-issues" onClick={() => navigate(`/payroll?${new URLSearchParams({ cycle: cycleId, step: 'review', filter: 'needs-review' })}`)}>View all {items.length} issues →</CardAction></footer>
   </section>
 }

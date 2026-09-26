@@ -149,6 +149,46 @@ function decisionIndex(c: DeskCycle): DecisionIndex {
   return value
 }
 
+interface ReviewDerivations {
+  index: DecisionIndex
+  local: Onboarding['resolutions'][string] | undefined
+  remembered: DeskCycle['rememberedRuleIds']
+  effective?: Onboarding['resolutions'][string]
+  envelope?: { source: Onboarding['resolutions']; value: Onboarding['resolutions'] }
+  discrepancies?: Discrepancy[]
+  stats?: { label: string; under: number; over: number; value: string }
+}
+const reviewCache = new WeakMap<DeskCycle, ReviewDerivations>()
+/** A control state change does not change cycle evidence. Keep full-cycle scans out
+ * of its render; new immutable decisions, time entries, or local resolutions invalidate. */
+function reviewDerivations(c: DeskCycle, res: Onboarding['resolutions']): ReviewDerivations {
+  const index = decisionIndex(c), local = c.server ? undefined : res[c.id]
+  const cached = reviewCache.get(c)
+  if (cached?.index === index && cached.local === local && cached.remembered === c.rememberedRuleIds) return cached
+  const value = { index, local, remembered: c.rememberedRuleIds }
+  reviewCache.set(c, value)
+  return value
+}
+
+const caseIndexes = new WeakMap<RunShift[], Map<string, string[]>>()
+/** Group scope is source evidence, independent of the currently open sheet/control. */
+export function groupCaseIds(shifts: RunShift[]): Map<string, string[]> {
+  const cached = caseIndexes.get(shifts)
+  if (cached) return cached
+  const groups = new Map<string, string[]>()
+  for (const item of shifts) {
+    const seen = new Set<string>()
+    for (const row of item.rows) if ((row.status === 'flag' || row.status === 'held') && !seen.has(row.ruleId)) {
+      seen.add(row.ruleId)
+      const ids = groups.get(row.ruleId) ?? []
+      ids.push(item.shift.id)
+      groups.set(row.ruleId, ids)
+    }
+  }
+  caseIndexes.set(shifts, groups)
+  return groups
+}
+
 /** Holds stay pending; otherwise explicit decisions win over remembered rules. */
 export function rowResolution(c: DeskCycle, shiftId: string, ruleId: string, res: Onboarding['resolutions']) {
   if (c.server) {
@@ -162,15 +202,22 @@ export function rowResolution(c: DeskCycle, shiftId: string, ruleId: string, res
 
 /** Whole-shift status for existing ledger/modal consumers, without clearing unrelated flags. */
 export function effectiveResolutions(c: DeskCycle, res: Onboarding['resolutions']): Onboarding['resolutions'] {
-  const decisions = c.server ? {} as Record<string, 'applied' | 'dismissed'> : { ...res[c.id] }
-  for (const shift of c.run.shifts) {
-    const pending = shift.rows.filter((row) => row.status === 'flag' || row.status === 'held')
-    if (!(c.server && shift.held) && !decisions[shift.shift.id] && pending.length
-      && pending.every((row) => ['applied', 'dismissed'].includes(rowResolution(c, shift.shift.id, row.ruleId, res) ?? ''))) {
-      decisions[shift.shift.id] = pending.some(row => rowResolution(c, shift.shift.id, row.ruleId, res) === 'applied') ? 'applied' : 'dismissed'
+  const cached = reviewDerivations(c, res)
+  if (!cached.effective) {
+    const decisions = c.server ? {} as Record<string, 'applied' | 'dismissed'> : { ...res[c.id] }
+    for (const shift of c.run.shifts) {
+      const pending = shift.rows.filter((row) => row.status === 'flag' || row.status === 'held')
+      if (!(c.server && shift.held) && !decisions[shift.shift.id] && pending.length
+        && pending.every((row) => ['applied', 'dismissed'].includes(rowResolution(c, shift.shift.id, row.ruleId, res) ?? ''))) {
+        decisions[shift.shift.id] = pending.some(row => rowResolution(c, shift.shift.id, row.ruleId, res) === 'applied') ? 'applied' : 'dismissed'
+      }
     }
+    cached.effective = decisions
   }
-  return { ...res, [c.id]: decisions }
+  if (cached.envelope?.source === res) return cached.envelope.value
+  const value = { ...res, [c.id]: cached.effective }
+  cached.envelope = { source: res, value }
+  return value
 }
 
 /** Cross-source corrections can move an entry without emitting an engine pay effect. */
@@ -220,7 +267,9 @@ export function cycleStats(c: DeskCycle, res: Onboarding['resolutions'] = {}, un
 }
 
 export function discrepancies(c: DeskCycle, res: Onboarding['resolutions']): Discrepancy[] {
-  return c.run.shifts.flatMap((r) => r.rows.flatMap((row): Discrepancy[] => {
+  const cached = reviewDerivations(c, res)
+  if (cached.discrepancies) return cached.discrepancies
+  cached.discrepancies = c.run.shifts.flatMap((r) => r.rows.flatMap((row): Discrepancy[] => {
     if (row.status !== 'flag' && row.status !== 'held' && !(row.status === 'applied' && appliedCorrection(c, row))) return []
     return [{
       cycleId: c.id,
@@ -234,6 +283,7 @@ export function discrepancies(c: DeskCycle, res: Onboarding['resolutions']): Dis
       decided: rowResolution(c, r.shift.id, row.ruleId, res),
     }]
   })).sort((a, b) => Math.abs(b.effect) - Math.abs(a.effect) || a.shiftId.localeCompare(b.shiftId))
+  return cached.discrepancies
 }
 
 /** A rule's one classification: its bucket. Rules the user writes or uploads are "custom". */
@@ -457,7 +507,9 @@ export function provenance(c: DeskCycle, s: Shift, index: number): Provenance {
 }
 
 export function topstats(c: DeskCycle, res: Onboarding['resolutions'] = {}): string {
+  const cached = reviewDerivations(c, res)
   const { under, over } = c.run.totals
+  if (cached.stats?.label === c.label && cached.stats.under === under && cached.stats.over === over) return cached.stats.value
   let flags = 0
   let held = 0
   for (const shift of c.run.shifts) {
@@ -467,7 +519,9 @@ export function topstats(c: DeskCycle, res: Onboarding['resolutions'] = {}): str
       if (row.status === 'held') held++
     }
   }
-  return `${c.label} · ${flags} flagged · ${held} held · +${money(under)} / −${money(over)}`
+  const value = `${c.label} · ${flags} flagged · ${held} held · +${money(under)} / −${money(over)}`
+  cached.stats = { label: c.label, under, over, value }
+  return value
 }
 
 /** The synthetic generator is an explicit, signed-out demo mode; an account with a session or data always reads the server. */

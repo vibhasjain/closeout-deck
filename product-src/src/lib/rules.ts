@@ -80,6 +80,12 @@ function historyActivities(cycles: readonly DeskCycle[], state: RuleHistory, thr
   return activities
 }
 
+/** Navigation intent pays the history scan before the Rules table mounts. Repeated
+ * hover/focus/touch signals share the same immutable-cycle cache as table reads. */
+export function warmRuleActivity(cycles: readonly DeskCycle[], state: RuleHistory): void {
+  historyActivities(cycles, state, dateKey(new Date()))
+}
+
 /** One use per time entry actually applied across all available cycles, never just a flagged check. */
 export function getRuleActivity(id: string, cycles: readonly DeskCycle[], state: RuleHistory): RuleActivity {
   const today = new Date()

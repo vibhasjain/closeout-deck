@@ -1,6 +1,6 @@
 .skeleton-region { min-width: 0; }
 .skeleton { display: block; position: relative; overflow: hidden; flex-shrink: 0; border-radius: 4px; background: #ececec; }
-.skeleton::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, #ffffffa6, transparent); transform: translateX(-100%); animation: skeleton-shimmer 2.4s ease-in-out infinite; }
+.skeleton::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 25%, #fff 50%, transparent 75%); transform: translateX(-100%); animation: skeleton-shimmer .9s linear infinite; }
 @keyframes skeleton-shimmer { to { transform: translateX(100%); } }
 .skeleton-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .skeleton-title { width: 48%; height: 16px; }
@@ -52,3 +52,7 @@
 @media (max-width: 1023.98px) {
   .payroll-layout .skeleton-review { padding-bottom: var(--mobile-orb-clearance, calc(64px + env(safe-area-inset-bottom))); }
 }
+
+@keyframes content-arrive { from { opacity: .8; } to { opacity: 1; } }
+.result-summary, .payroll-profile-page-content, .settings-columns, .rules-table { animation: content-arrive 100ms ease-out; }
+@media (prefers-reduced-motion: reduce) { .result-summary, .payroll-profile-page-content, .settings-columns, .rules-table { animation: none; } }

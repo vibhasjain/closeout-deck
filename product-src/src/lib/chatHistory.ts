@@ -131,5 +131,10 @@ export function createChatHistory(options: Options) {
     loaded = true
     await flush()
   }
-  return { appended, load, flush }
+  function acceptRemote(body: unknown) {
+    const messages = (body as { messages?: unknown })?.messages
+    if (!Array.isArray(messages)) return
+    options.apply(union(messages.filter(isChatMessage), options.read(), pending()))
+  }
+  return { appended, load, flush, acceptRemote }
 }

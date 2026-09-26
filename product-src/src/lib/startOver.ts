@@ -1,4 +1,4 @@
-import { authedFetch } from '@/lib/api'
+import { authedFetch, clearResponseCache } from '@/lib/api'
 import { callOwner, liveCallKey } from '@/lib/callRecovery'
 import { clearLocalAccount, flushOnboarding } from '@/lib/onboarding'
 import { viewerSession } from '@/lib/viewerSession'
@@ -32,6 +32,7 @@ export async function startOver(typed: string): Promise<'ok' | 'busy' | 'not_int
   if (response?.status === 409) return 'busy'
   if (response?.status === 403) { refused = true; return 'not_internal' }
   if (!response?.ok) return 'failed'
+  await clearResponseCache(viewerSession()?.email ?? 'development')
   clearLocalAccount()
   const owner = callOwner()
   if (owner) try { localStorage.removeItem(liveCallKey(owner)) } catch { /* Storage may be disabled. */ }

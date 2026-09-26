@@ -35,6 +35,11 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals() })
 
 describe('page frame before dense content', () => {
+  it('renders prefetched content in the first render without scheduling a skeleton frame', () => {
+    hooks.cursor = 0
+    expect(PaintBoundary({ routeKey: 'warm', fallback: 'ghost', children: 'real data', ready: true })).toBe('real data')
+    expect(frames.size).toBe(0)
+  })
   it('paints the header and skeleton before starting dense work in a later task', () => {
     expect(render('payroll:review')).toBe('ghost frame')
     paint()

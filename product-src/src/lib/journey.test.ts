@@ -6,13 +6,15 @@ import { applyAction, isAction } from '@/components/chat/ChatPane'
 import { Message } from '@/components/chat/Message'
 import { DEFAULTS, flushOnboarding, type Onboarding } from '@/lib/onboarding'
 import { createChatHistory } from '@/lib/chatHistory'
-import { askGaps, createDispute, decide, downloadBatch, getDisputes, getThreads, recordMessage, resolveDispute, sendPayroll, simulateDispute, type JourneyBatch, type JourneyDecision, type JourneyDispute } from '@/lib/journey'
+import { peekCached } from '@/lib/api'
+import { askGaps, createDispute, decide, downloadBatch, getDisputes, getThreads, getThreadsSnapshot, refreshThreads, recordMessage, resolveDispute, sendPayroll, simulateDispute, type JourneyBatch, type JourneyDecision, type JourneyDispute } from '@/lib/journey'
 import { getDataSnapshot, hydrate, invalidate, publishCycle, refreshCycleList, type CyclePayload } from '@/lib/data'
 import { rowResolution } from '@/lib/desk'
 import * as memory from '@/lib/memory'
 import fixture from '@/lib/fixtures/server-cycle.json'
 
-vi.mock('@/lib/viewerSession', () => ({ viewerSession: () => ({ email: 'contract@example.test', sessionToken: 'test-session', exp: 9999999999 }), signOut: vi.fn() }))
+const sessionOwner = vi.hoisted(() => ({ email: 'contract@example.test' }))
+vi.mock('@/lib/viewerSession', () => ({ viewerSession: () => ({ email: sessionOwner.email, sessionToken: 'test-session', exp: 9999999999 }), signOut: vi.fn() }))
 vi.mock('@/lib/onboarding', async original => ({ ...await original<typeof import('@/lib/onboarding')>(), flushOnboarding: vi.fn().mockResolvedValue(undefined) }))
 vi.mock('@/lib/data', async original => ({ ...await original<typeof import('@/lib/data')>(), invalidate: vi.fn().mockResolvedValue(undefined), refreshCycleList: vi.fn().mockResolvedValue(undefined) }))
 const payload = fixture.payload as CyclePayload
@@ -21,8 +23,22 @@ const decision: JourneyDecision = { id: 'decision-a', cycleId: payload.cycle.id,
 const dispute: JourneyDispute = { id: 'dispute-a', cycleId: payload.cycle.id, worker: 'Ana Peña', description: 'Missing interval', source: 'paste', status: 'open', createdAt: '2026-09-25T12:00:00Z', adjustment: null }
 const response = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } })
 const fetchMock = vi.fn<typeof fetch>()
-beforeEach(() => { vi.clearAllMocks(); vi.stubGlobal('fetch', fetchMock) })
+beforeEach(() => { sessionOwner.email = 'contract@example.test'; vi.clearAllMocks(); vi.stubGlobal('fetch', fetchMock) })
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals() })
+
+it('keeps a known empty conversation visible while revalidating its sheet', async () => {
+  const cycleId = 'empty-conversation-revisit'
+  fetchMock.mockResolvedValueOnce(response({ threads: [] }))
+  await refreshThreads(cycleId)
+  let release!: (value: Response) => void
+  fetchMock.mockImplementationOnce(() => new Promise(resolve => { release = resolve }))
+  const refreshing = refreshThreads(cycleId)
+  expect(getThreadsSnapshot(cycleId)).toMatchObject({ threads: [], loaded: true, loading: false })
+  await vi.waitFor(() => expect(release).toBeTypeOf('function'))
+  release(response({ threads: [] }))
+  await refreshing
+  expect(getThreadsSnapshot(cycleId)).toMatchObject({ loaded: true, loading: false, error: null })
+})
 
 describe('journey card and action contract', () => {
   const cards = [
@@ -188,4 +204,88 @@ describe('trace frames and persistence', () => {
     for (const trace of ['Read handbooks/a.md', 'Read data/a', 'Read handbooks/a.md', 'Read data/b', 'Read data/c', 'Read data/d', 'Read handbooks/chase-missing-time.md', 'Made up', '<script>']) traces = appendTrace(traces, trace)
     expect(traces).toEqual(['Read handbooks/a.md', 'Read data/a', 'Read data/b', 'Read data/c', 'Read handbooks/chase-missing-time.md'])
   })
+})
+
+
+describe('optimistic journey records', () => {
+  it.each(['approved', 'escalated', 'dismissed'] as const)('publishes a real %s decision before the network and removes it after a 500', async kind => {
+    const cycle = { ...payload, decisions: [] }
+    publishCycle(cycle)
+    let answer!: (value: Response) => void
+    fetchMock.mockImplementationOnce(() => new Promise(resolve => { answer = resolve }))
+    const operation = decide(cycle.cycle.id, { groupId: cycle.groups[0].ruleId, decision: kind, reason: 'Reviewed evidence', shiftIds: [cycle.week[0].id] })
+    const local = getDataSnapshot().payloads.find(item => item.cycle.id === cycle.cycle.id)!.decisions!
+    expect(local).toHaveLength(1)
+    expect(local[0]).toMatchObject({ decision: kind, reason: 'Reviewed evidence', by: 'user', shiftIds: [cycle.week[0].id] })
+    expect(Number.isFinite(Date.parse(local[0].at))).toBe(true)
+    await vi.waitFor(() => expect(answer).toBeTypeOf('function'))
+    answer(response({ error: 'Could not save' }, 500))
+    await expect(operation).rejects.toMatchObject({ status: 500 })
+    expect(getDataSnapshot().payloads.find(item => item.cycle.id === cycle.cycle.id)!.decisions).toEqual([])
+  })
+
+  it('rolls back only the failed operation when another decision completes concurrently', async () => {
+    publishCycle({ ...payload, decisions: [] })
+    const responses = new Map<string, (value: Response) => void>()
+    fetchMock.mockImplementation((_url, init) => new Promise(resolve => { responses.set(JSON.parse(String(init?.body)).groupId, resolve) }))
+    const first = decide(payload.cycle.id, { groupId: 'CS-01', decision: 'approved' })
+    const second = decide(payload.cycle.id, { groupId: 'OTHER', decision: 'escalated' })
+    expect(getDataSnapshot().payloads.find(item => item.cycle.id === payload.cycle.id)!.decisions).toHaveLength(2)
+    await vi.waitFor(() => expect(responses.size).toBe(2))
+    const saved = { ...decision, groupId: 'OTHER', decision: 'escalated' as const }
+    responses.get('OTHER')!(response({ decision: saved, cycle: { ...payload, decisions: [saved] } }))
+    await second
+    responses.get('CS-01')!(response({ error: 'No connection' }, 500))
+    await expect(first).rejects.toMatchObject({ status: 500 })
+    expect(getDataSnapshot().payloads.find(item => item.cycle.id === payload.cycle.id)!.decisions).toEqual([saved])
+  })
+})
+
+
+it.each(['in', 'out'] as const)('publishes the %s message immediately and restores the conversation on a 500', async dir => {
+  const thread = { id: `optimistic-${dir}`, cycleId: `optimistic-cycle-${dir}`, counterparty: { kind: 'worker', name: 'Sam' }, status: 'waiting', createdAt: '2026-09-25T12:00:00Z', messages: [] }
+  fetchMock.mockResolvedValueOnce(response({ threads: [thread] }))
+  await refreshThreads(thread.cycleId)
+  let answer!: (value: Response) => void
+  fetchMock.mockImplementationOnce(() => new Promise(resolve => { answer = resolve }))
+  const saving = recordMessage(thread.id, { dir, text: 'Please keep the whole draft.' })
+  expect(getThreadsSnapshot(thread.cycleId).threads[0].messages[0]).toMatchObject({ dir, text: 'Please keep the whole draft.', status: dir === 'out' ? 'not_sent_demo' : 'recorded' })
+  expect(getThreadsSnapshot(thread.cycleId).threads[0].status).toBe(dir === 'out' ? 'waiting' : 'open')
+  await vi.waitFor(() => expect(answer).toBeTypeOf('function'))
+  answer(response({ error: 'Failed' }, 500))
+  await expect(saving).rejects.toMatchObject({ status: 500 })
+  expect(getThreadsSnapshot(thread.cycleId).threads[0]).toEqual(thread)
+})
+
+
+it('locks one canonical group across surfaces, then permits an exact retry after the first save fails', async () => {
+  const cycle = { ...payload, groups: [{ ...payload.groups[0], id: 77, ruleId: 'CS-01' }], extraGroups: [], decisions: [] }
+  publishCycle(cycle)
+  let answer!: (value: Response) => void
+  fetchMock.mockImplementationOnce(() => new Promise(resolve => { answer = resolve }))
+  const first = decide(cycle.cycle.id, { groupId: '77', decision: 'approved' })
+  await expect(decide(cycle.cycle.id, { groupId: 'CS-01', decision: 'dismissed', reason: 'Verified time' })).rejects.toMatchObject({ code: 'decision_in_progress' })
+  expect(getDataSnapshot().payloads.find(item => item.cycle.id === cycle.cycle.id)!.decisions).toHaveLength(1)
+  await vi.waitFor(() => expect(answer).toBeTypeOf('function'))
+  answer(response({ error: 'Failed' }, 500))
+  await expect(first).rejects.toMatchObject({ status: 500 })
+  expect(getDataSnapshot().payloads.find(item => item.cycle.id === cycle.cycle.id)!.decisions).toEqual([])
+  const saved = { ...decision, decision: 'dismissed' as const, reason: 'Verified time' }
+  fetchMock.mockResolvedValueOnce(response({ decision: saved, cycle: { ...cycle, decisions: [saved] } }))
+  await decide(cycle.cycle.id, { groupId: 'CS-01', decision: 'dismissed', reason: 'Verified time' })
+  expect(getDataSnapshot().payloads.find(item => item.cycle.id === cycle.cycle.id)!.decisions).toEqual([saved])
+})
+
+it('never caches a decision body under the account selected while that body was decoding', async () => {
+  publishCycle({ ...payload, decisions: [] })
+  let decode!: (value: unknown) => void
+  const reply = response({})
+  reply.json = () => new Promise(resolve => { decode = resolve })
+  fetchMock.mockResolvedValueOnce(reply)
+  const saving = decide(payload.cycle.id, { groupId: 'CS-01', decision: 'approved' })
+  await vi.waitFor(() => expect(decode).toBeTypeOf('function'))
+  sessionOwner.email = 'switched-during-body@example.test'
+  decode({ decision, cycle: { ...payload, decisions: [decision] } })
+  await expect(saving).rejects.toMatchObject({ status: 409, message: 'The account changed. Reopen this cycle and try again.' })
+  expect(peekCached(`/data/cycles/${payload.cycle.id}`)).toBeUndefined()
 })

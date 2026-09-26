@@ -88,13 +88,20 @@ const WALL_CLOCK_CREW = ['Luis Ortega', 'Keisha Grant', 'Tom Becker', 'Rina Das'
 export const WALL_CLOCK: Expected[] = WALL_CLOCK_CREW.flatMap((worker, i) =>
   [0, 1, 2, 3, 4, 5, 6].filter((day) => (day + i) % 7 < 5).map((day) => ({ worker, client: FACILITIES.bayview.name, day, source: 'wallclock' })))
 
+const serverIntakes = new WeakMap<object, { cycle: string; accepted: AcceptedGaps; minute: number; value: Intake }>()
+
 /** Intake for one cycle. Only the week awaiting review is still collecting; earlier weeks arrived in full. */
 export function cycleIntake(cycle: IntakeCycle, state: Pick<Onboarding, 'acceptedGaps' | 'uploads'>, now = new Date()): Intake {
   if (cycle.server || cycle.intake) {
     const payload = cycle.intake ?? { sources: [], expected: [], received: [] }
+    const cached = serverIntakes.get(payload)
+    const minute = Math.floor(now.getTime() / 60_000)
+    if (cached?.cycle === cycle.id && cached.accepted === state.acceptedGaps && cached.minute === minute) return cached.value
     const sourceLookup: Source[] = payload.sources.map(source => ({ ...source, sample: source.sample ?? cycle.sample, group: 'Time & attendance', status: 'connected', sites: [...new Set(payload.expected.filter(entry => entry.source === source.id).map(entry => entry.client))], pulls: [], lastSync: source.lastReceived }))
-    return buildIntake({ cycleId: cycle.id, start: cycle.start, now, expected: payload.expected, received: new Set(payload.received),
+    const value = buildIntake({ cycleId: cycle.id, start: cycle.start, now, expected: payload.expected, received: new Set(payload.received),
       lastReceived: Object.fromEntries(payload.sources.map(source => [source.id, source.lastReceived ? new Date(source.lastReceived) : new Date(0)])), accepted: state.acceptedGaps, sourceLookup })
+    serverIntakes.set(payload, { cycle: cycle.id, accepted: state.acceptedGaps, minute, value })
+    return value
   }
   const sourceAt = new Map<string, string>()
   const week = cycle.week.map((shift) => {

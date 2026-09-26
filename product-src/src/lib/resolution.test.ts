@@ -59,7 +59,7 @@ describe('SRC-WEEK-01 is FLSA workweek law', () => {
     expect(DEFAULTS.authorityConfigured).toBe(false) // autonomy off: nothing discretionary is authorized
     const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(OverlayProvider, null, createElement(PayrollSummary, { cycle }))))
     const row = html.slice(html.indexOf('data-rule="SRC-WEEK-01"'))
-    const line = /<span class="decision-line">([^<]*)<\/span>/.exec(row)![1]
+    const line = /<span class="decision-line"[^>]*>([^<]*)<\/span>/.exec(row)![1]
     expect(line).toBe(`${lawLabel('SRC-WEEK-01')} · Required by law · applied`)
     expect(line).not.toContain('by the agent')
   })

@@ -1,5 +1,5 @@
 import { ActionButton, ActionFeedback } from '@/components/ActionButton'
-import { usePendingAction } from '@/lib/usePendingAction'
+import { usePendingAction, type PendingAction } from '@/lib/usePendingAction'
 import { SkeletonRegion } from '@/components/Skeleton'
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { MessageSquare, Send } from 'lucide-react'
@@ -12,7 +12,7 @@ import type { DeskCycle } from '@/lib/desk'
 import { useData } from '@/lib/data'
 import { blockedCounterparty, threadErrorText } from '@/lib/contactPolicy'
 import { recordMessage, useJourneyThreads, type JourneyThread } from '@/lib/journey'
-import { getOnboarding, useOnboarding } from '@/lib/onboarding'
+import { flushOnboarding, getOnboarding, useOnboarding } from '@/lib/onboarding'
 import { defaultThreadParty, readThreadInput, recordThreadAction, recordThreadInput, threadFor, type Draft, type ThreadAction, type ThreadEntry, type ThreadParty } from '@/lib/threads'
 import './thread.css'
 import './thread-draft.css'
@@ -33,20 +33,23 @@ function MessageBubble({ entry, name }: { entry: ThreadEntry; name: string }) {
   </article>
 }
 
-function DraftCard({ draft, onAction }: { draft: Draft; onAction(action: ThreadAction): void }) {
+export function DraftCard({ draft, action, onAction }: { draft: Draft; action: PendingAction; onAction(action: ThreadAction): void }) {
   const [editing, setEditing] = useState(false)
   const [text, setText] = useState(draft.text)
   const editor = useRef<HTMLTextAreaElement>(null)
+  const editOpen = editing || action.key === 'edit' && action.status === 'error'
 
   useLayoutEffect(() => {
     const input = editor.current
     if (!input) return
     input.style.height = 'auto'
     input.style.height = `${input.scrollHeight}px`
-  }, [text, editing])
+  }, [text, editOpen])
+
+  function cancel() { action.reset(); setEditing(false); setText(draft.text) }
 
   function save() {
-    if (!text.trim()) return
+    if (action.inFlight || !text.trim()) return
     onAction({ type: 'edit', text: text.trim(), at: new Date().toISOString() })
     setEditing(false)
   }
@@ -54,24 +57,24 @@ function DraftCard({ draft, onAction }: { draft: Draft; onAction(action: ThreadA
   return <section className="thread-draft" aria-label="Pending outbound draft">
     <div className="thread-draft-body">
       <div className="thread-draft-subject"><p className="thread-subject">{draft.subject}</p><Tag tone="blue">Pending</Tag></div>
-      {editing ? <textarea ref={editor} className="thread-editor" aria-label="Edit draft message" value={text} rows={3} autoFocus
+      {editOpen ? <textarea ref={editor} className="thread-editor" aria-label="Edit draft message" value={text} rows={3} autoFocus disabled={action.inFlight}
         onChange={(event) => setText(event.target.value)}
         onKeyDown={(event) => {
-          if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); setEditing(false); setText(draft.text) }
+          if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); cancel() }
         }} />
         : <p className="thread-text">{draft.text}</p>}
     </div>
     <div className="thread-draft-actions">
       <div className="thread-draft-primary-actions">
-      {editing ? <>
-        <Btn className="primary" disabled={!text.trim()} onClick={save}>Save</Btn>
-        <Btn onClick={() => { setEditing(false); setText(draft.text) }}>Cancel</Btn>
+      {editOpen ? <>
+        <ActionButton action={action} actionKey="edit" pendingLabel="Saving…" successLabel="Saved" className="primary" disabled={!text.trim()} onClick={save}>Save</ActionButton>
+        <Btn disabled={action.inFlight} onClick={cancel}>Cancel</Btn>
       </> : <>
-        <Btn className="primary" onClick={() => onAction({ type: 'send', text: draft.text, draft: true, at: new Date().toISOString() })}>Send</Btn>
-        <Btn onClick={() => { setText(draft.text); setEditing(true) }}>Edit</Btn>
+        <ActionButton action={action} actionKey="send" pendingLabel="Saving…" successLabel="Saved" className="primary" onClick={() => onAction({ type: 'send', text: draft.text, draft: true, at: new Date().toISOString() })}>Save message · Demo</ActionButton>
+        <Btn disabled={action.inFlight} onClick={() => { if (!action.inFlight) { action.reset(); setText(draft.text); setEditing(true) } }}>Edit</Btn>
       </>}
       </div>
-      {!editing && <Btn className="thread-draft-skip" onClick={() => onAction({ type: 'dismiss', at: new Date().toISOString() })}>Skip</Btn>}
+      {!editOpen && <ActionButton action={action} actionKey="dismiss" pendingLabel="Skipping…" successLabel="Skipped" className="thread-draft-skip" onClick={() => onAction({ type: 'dismiss', at: new Date().toISOString() })}>Skip</ActionButton>}
     </div>
   </section>
 }
@@ -114,15 +117,16 @@ export function JourneyThreadView({ thread: initial, primary = false }: { thread
   const [text, setText] = useState('')
   const [dir, setDir] = useState<'in' | 'out'>('in')
   const action = usePendingAction(cause => threadErrorText(cause, thread.counterparty.name))
-  const saving = action.pending
+  const saving = action.inFlight ?? action.pending
   const log = useRef<HTMLDivElement>(null)
   async function save() {
     if (!text.trim() || saving || (dir === 'out' && blocked)) return
+    const submitted = text
     await action.run(async () => {
-      await recordMessage(thread.id, { dir, text: text.trim() })
       setText('')
+      await recordMessage(thread.id, { dir, text: submitted.trim() })
       requestAnimationFrame(() => { if (log.current) log.current.scrollTop = log.current.scrollHeight })
-    })
+    }, '', { optimistic: true, rollback: () => setText(submitted) })
   }
   return <section className="thread journey-thread" aria-label={`Conversation with ${thread.counterparty.name}`}>
     <header className="thread-head"><div className="thread-heading"><span className="thread-name">{thread.counterparty.name}</span><Tag>{titleCase(thread.status)}</Tag></div></header>
@@ -132,12 +136,10 @@ export function JourneyThreadView({ thread: initial, primary = false }: { thread
         <p className="thread-text">{message.text}</p>
         {message.dir === 'out' && <Tag>Not Sent · Demo</Tag>}
       </article>)}
-      {saving && <SkeletonRegion variant="conversation" rows={1} />}
       {!thread.messages.length && <p className="r-note">No messages yet</p>}
     </div>
     {blocked && <p className="journey-thread-error" role="status">{thread.counterparty.name} is on your never-contact list. You can still record a reply.</p>}
     {loadError && <p className="journey-thread-error" role="alert">{threadErrorText(new Error(loadError), thread.counterparty.name)}</p>}
-    <ActionFeedback action={action} className="journey-thread-error" />
     <form className="journey-thread-composer" onSubmit={(event) => { event.preventDefault(); void save() }}>
       <div className="thread-party-switch" role="group" aria-label="Message direction">
         <button type="button" aria-pressed={dir === 'in'} onClick={() => setDir('in')}>Record reply</button>
@@ -145,6 +147,7 @@ export function JourneyThreadView({ thread: initial, primary = false }: { thread
       </div>
       <textarea className="chat-input" rows={2} aria-label={dir === 'in' ? 'Reply text' : 'Outgoing message text'} placeholder={dir === 'in' ? `Record ${thread.counterparty.name}'s reply…` : blocked ? 'Outgoing messages are disabled' : `Message ${thread.counterparty.name}…`} value={text} disabled={saving || (dir === 'out' && blocked)} onChange={(event) => { action.reset(); setText(event.target.value) }} />
       <ActionButton action={action} pendingLabel="Recording…" successLabel="Recorded" type="submit" className={primary && !blocked ? 'primary' : undefined} disabled={saving || !text.trim() || (dir === 'out' && blocked)}>{dir === 'in' ? 'Record reply' : 'Save message · Demo'}</ActionButton>
+      <ActionFeedback action={action} className="journey-thread-error" />
     </form>
   </section>
 }
@@ -185,7 +188,7 @@ function PaymentThread({ cycle, rs }: { cycle: DeskCycle; rs: RunShift }) {
   return <PartyThread key={party} cycle={cycle} rs={payment} party={party} legacyParty={legacyParty} switcher={switcher} />
 }
 
-function PartyThread({ cycle, rs, party, legacyParty, switcher }: { cycle: DeskCycle; rs: RunShift; party: ThreadParty; legacyParty: ThreadParty; switcher: ReactNode }) {
+export function PartyThread({ cycle, rs, party, legacyParty, switcher }: { cycle: DeskCycle; rs: RunShift; party: ThreadParty; legacyParty: ThreadParty; switcher: ReactNode }) {
   const [state, update] = useOnboarding()
   const { toast } = useOverlay()
   const composer = useRef<HTMLTextAreaElement>(null)
@@ -196,6 +199,13 @@ function PartyThread({ cycle, rs, party, legacyParty, switcher }: { cycle: DeskC
   const saved = state.mediation[key] ?? (party === legacyParty ? state.mediation[legacyKey] : undefined)
   const message = readThreadInput(saved)
   const thread = threadFor(cycle, rs, saved, party)
+  const draftAction = usePendingAction()
+  const [heldDraft, setHeldDraft] = useState<Draft | null>(null)
+  useEffect(() => {
+    if (draftAction.status !== 'success' || draftAction.inFlight) return
+    const timer = setTimeout(() => { setHeldDraft(null); draftAction.reset() }, 900)
+    return () => clearTimeout(timer)
+  }, [draftAction])
 
   useLayoutEffect(() => {
     const input = composer.current
@@ -211,20 +221,32 @@ function PartyThread({ cycle, rs, party, legacyParty, switcher }: { cycle: DeskC
   }
 
   function act(action: ThreadAction) {
-    // Other panes share this store; read at the action boundary so their latest changes are retained.
+    if (draftAction.inFlight) return
     const mediation = getOnboarding().mediation
     const latest = mediation[key] ?? (party === legacyParty ? mediation[legacyKey] : undefined)
-    update({ mediation: { ...mediation, [key]: recordThreadAction(latest, action) } })
-    if (action.type === 'send') {
-      toast(`Message recorded for ${thread.counterparty.name} · Not Sent · Demo`)
-      requestAnimationFrame(() => { if (log.current) log.current.scrollTop = log.current.scrollHeight })
-    }
+    if (thread.draft) setHeldDraft(thread.draft)
+    void draftAction.run(async () => {
+      // Publish the actual edited draft/trail before waiting for durable profile storage.
+      const current = getOnboarding().mediation
+      const next = recordThreadAction(latest, action)
+      update({ mediation: { ...current, [key]: action.type === 'send' && !action.draft ? recordThreadInput(next, '') : next } })
+      await flushOnboarding()
+      if (action.type === 'send') {
+        toast(`Message recorded for ${thread.counterparty.name} · Not Sent · Demo`)
+        requestAnimationFrame(() => { if (log.current) log.current.scrollTop = log.current.scrollHeight })
+      }
+    }, action.type, { optimistic: true, rollback: () => {
+      const current = { ...getOnboarding().mediation }
+      if (latest) current[key] = latest
+      else delete current[key]
+      update({ mediation: current })
+      setHeldDraft(null)
+    } })
   }
 
   function send() {
     if (!message.trim()) return
     act({ type: 'send', text: message.trim(), at: new Date().toISOString() })
-    setMessage('')
     composer.current?.focus()
   }
 
@@ -236,12 +258,13 @@ function PartyThread({ cycle, rs, party, legacyParty, switcher }: { cycle: DeskC
     <div className="thread">
     <div ref={log} className="thread-log scroll" role="log" aria-live="polite" aria-label={`Conversation with ${thread.counterparty.name}`}>
       {thread.entries.map((entry) => <MessageBubble key={entry.id} entry={entry} name={thread.counterparty.name} />)}
-      {thread.draft && <DraftCard key={thread.draft.id} draft={thread.draft} onAction={act} />}
+      {(thread.draft ?? heldDraft) && <DraftCard key={(thread.draft ?? heldDraft)!.id} draft={(thread.draft ?? heldDraft)!} action={draftAction} onAction={act} />}
       {!thread.entries.length && !thread.draft && <div className="thread-empty" aria-label="No messages"><MessageSquare size={20} aria-hidden="true" /></div>}
     </div>
+    <ActionFeedback action={draftAction} className="journey-thread-error" />
     <form className="chat-composer thread-composer" onSubmit={(event) => { event.preventDefault(); send() }}>
       <textarea ref={composer} className="chat-input" rows={1} aria-label={`Message ${thread.counterparty.name}`} placeholder={`Message ${thread.counterparty.name}…`}
-        value={message} onChange={(event) => setMessage(event.target.value)} onKeyDown={(event) => {
+        value={message} disabled={draftAction.inFlight} onChange={(event) => setMessage(event.target.value)} onKeyDown={(event) => {
           if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); send() }
         }} />
       <button type="submit" className="icon-btn chat-send" aria-label="Send message" disabled={!message.trim()}><Send size={16} aria-hidden="true" /></button>

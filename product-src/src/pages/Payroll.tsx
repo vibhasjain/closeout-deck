@@ -1,3 +1,4 @@
+import { hasWarmResponseCache } from '@/lib/responseCache'
 import { SkeletonRegion } from '@/components/Skeleton'
 import { useEffect } from 'react'
 import { Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -12,7 +13,7 @@ import { ShiftTable } from '@/components/ShiftTable'
 import { useSetChatContext, useSetChatSuggestions } from '@/components/chat/ChatPane'
 import { PageTitle } from '@/components/shell/PageTitle'
 import { PaintBoundary } from '@/components/shell/PaintBoundary'
-import { invalidate, pendingAdjustments } from '@/lib/data'
+import { invalidate, pendingAdjustments, hasCachedCycle, getDataSnapshot } from '@/lib/data'
 import { Btn, Tag } from '@/components/ui'
 import { shortDate } from '@/lib/cycles'
 import { cycleStats, useDesk } from '@/lib/desk'
@@ -32,10 +33,10 @@ export function PayrollRoute() {
   const [params] = useSearchParams()
   // Opening a time entry and selecting a destination keep the parent pane on screen.
   const routeKey = ['cycle', 'step', 'filter', 'view'].map(key => params.get(key) ?? '').join('|')
-  return <PaintBoundary routeKey={routeKey} fallback={<div className="reconcile-layout payroll-layout">
+  return <PaintBoundary ready={hasCachedCycle(params.get('cycle') ?? getDataSnapshot().list.find(row => row.status === 'needs-review')?.id ?? '')} routeKey={routeKey} fallback={<div className="reconcile-layout payroll-layout">
     <section className="detail reconcile-payments" aria-label="Payroll">
       <PageTitle title="Payroll" description="Collect time entries, resolve discrepancies, and prepare each pay run." />
-      <SkeletonRegion variant="next-step" className="journey-next-step" /><SkeletonRegion variant="kpis" /><SkeletonRegion variant="review" />
+      {!hasWarmResponseCache() && <><SkeletonRegion variant="next-step" className="journey-next-step" /><SkeletonRegion variant="kpis" /><SkeletonRegion variant="review" /></>}
     </section>
   </div>}><Payroll /></PaintBoundary>
 }
@@ -52,10 +53,10 @@ export function Payroll() {
   const payDate = shortDate(cycle.payDate)
   const totals = payTotals(cycle)
   const stats = cycleStats(cycle, state.resolutions, state.undone[cycle.id])
-  const intake = cycleIntake(cycle, state)
   // Server steps preserve unresolved gaps even after outreach; a saved view in the URL still wins.
-  const collecting = cycle.nextStep ? cycle.nextStep.kind === 'get_timesheets' || cycle.nextStep.kind === 'chase_missing' : intake.open > 0
+  const collecting = cycle.nextStep ? cycle.nextStep.kind === 'get_timesheets' || cycle.nextStep.kind === 'chase_missing' : cycleIntake(cycle, state).open > 0
   const step = stepOf(params, collecting ? 'intake' : 'review')
+  const intake = step === 'intake' ? cycleIntake(cycle, state) : undefined
   const { threads } = useJourneyThreads(cycle.server && cycle.week.length ? cycle.id : '')
   const destination = destinations.find((item) => item.name === cycle.batch?.destination)
     ?? destinations.find((item) => item.id === params.get('destination'))
@@ -86,7 +87,7 @@ export function Payroll() {
       {awaitingData || loadError ? <>
         {loadError ? <><div className="journey-next-step" role="region" aria-label="Next step"><span className="r-note">Pay runs could not be loaded.</span></div>
           <div className="payroll-load-state" role="alert"><p>Pay runs could not be loaded. Please try again.</p><Btn onClick={() => void invalidate()}>Retry</Btn></div></>
-          : <><SkeletonRegion variant="next-step" className="journey-next-step" /><SkeletonRegion variant="kpis" /><SkeletonRegion variant="review" /></>}
+          : <>{!hasWarmResponseCache() && <><SkeletonRegion variant="next-step" className="journey-next-step" /><SkeletonRegion variant="kpis" /><SkeletonRegion variant="review" /></>}</>}
       </> : <>
       {/* One black button per pane: the next step's, unless the visible Review list carries its own Approve. */}
       {cycle.nextStep && <NextStepRow nextStep={cycle.nextStep} cycle={cycle} findingCounts={findingCounts(resolutionGroups(cycle, state.resolutions, state.undone[cycle.id], threads, state.neverContact ?? []))} primary={cycle.nextStep.kind !== 'done' && !(cycle.nextStep.kind === 'review' && step === 'review')} onReview={() => {
@@ -97,9 +98,9 @@ export function Payroll() {
         <div className="payroll-head-title">
           <h2>{cycle.label}</h2>{(cycle.sample || cycle.week.some(shift => shift.sample)) && <Tag>{cycle.sample ? 'Sample' : 'Includes Sample'}</Tag>}<Tag tone={cycle.statusTag === 'Pending' ? 'amber' : undefined}>{cycle.statusTag}</Tag>
         </div>
-        <nav className="cycle-steps" aria-label="Pay cycle steps">
-          <button type="button" className="cycle-step" aria-current={step === 'intake' ? 'step' : undefined} onClick={() => showStep('intake')}>Collect</button>
-          <button type="button" className="cycle-step" aria-current={step === 'review' ? 'step' : undefined} onClick={() => showStep('review')}>Review</button>
+        <nav data-prefetch-cycle={cycle.id} className="cycle-steps" aria-label="Pay cycle steps">
+          <button type="button" className="cycle-step" data-prefetch-href={`/payroll?cycle=${cycle.id}`} aria-current={step === 'intake' ? 'step' : undefined} onClick={() => showStep('intake')}>Collect</button>
+          <button type="button" className="cycle-step" data-prefetch-href={`/payroll?cycle=${cycle.id}`} aria-current={step === 'review' ? 'step' : undefined} onClick={() => showStep('review')}>Review</button>
         </nav>
         <span className="r-note payroll-dates">{cycle.statusTag === 'Paid'
           ? <span className="payroll-date" role="img" title={`Paid ${payDate}`} aria-label={`Paid ${payDate}`}><CircleCheck size={14} aria-hidden="true" />{payDate}</span>
@@ -109,7 +110,7 @@ export function Payroll() {
           </>}</span>
       </div>
       {!cycle.batch && pendingAdjustments(cycle.adjustments) && <p role="status" className="r-note payroll-adjustments">{pendingAdjustments(cycle.adjustments)} · lands on this Payroll export</p>}
-      {step === 'intake' ? <Intake cycle={cycle} intake={intake} threads={threads} /> : <>
+      {step === 'intake' ? <Intake cycle={cycle} intake={intake!} threads={threads} /> : <>
         <CycleKpis cycle={cycle} stats={stats} />
         {isTableView(view)
           ? <ShiftTable key={view} cycle={cycle} filterMode="discrepancies" defaultFilter={view} onSelect={(id) => navigate(shiftHref(cycle.id, id, params, '/payroll'))} />

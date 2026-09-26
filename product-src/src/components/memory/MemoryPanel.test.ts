@@ -97,3 +97,11 @@ describe('Make it a rule', () => {
     expect(applyAction).not.toHaveBeenCalled()
   })
 })
+
+
+it.each([{ instincts: [] }, { instincts: [instinct()] }])('keeps restored memory content free of skeletons during background revalidation', ({ instincts }) => {
+  const html = renderToStaticMarkup(h(MemoryPanelContent, { snapshot: { instincts, proposals: [], lastRun: null }, loaded: true, loading: true, error: null, refresh: async () => {}, onMakeRule: async () => {} }))
+  expect(html).not.toContain('data-skeleton=')
+  expect(html).toContain(instincts.length ? 'Travis Reed signs off Lonestar time entries' : 'Forget stays forgotten')
+  expect(html).toContain('>Add</button>')
+})

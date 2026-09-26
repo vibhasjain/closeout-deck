@@ -2,7 +2,6 @@ import { useSearchParams } from 'react-router-dom'
 import { StatRow } from '@/components/StatRow'
 import { payrollView, type PayrollView } from '@/lib/navigation'
 import type { cycleStats, DeskCycle } from '@/lib/desk'
-import { useTweened } from '@/lib/useTweened'
 
 type Stats = ReturnType<typeof cycleStats>
 
@@ -10,10 +9,10 @@ type Stats = ReturnType<typeof cycleStats>
 export function CycleKpis({ stats }: { cycle: DeskCycle; stats: Stats }) {
   const [params, setParams] = useSearchParams()
   const view = payrollView(params)
-  const payments = useTweened(stats.payments)
-  const discrepancies = useTweened(stats.total)
-  const resolved = useTweened(stats.agentResolved)
-  const review = useTweened(stats.needsReview)
+  const payments = stats.payments
+  const discrepancies = stats.total
+  const resolved = stats.agentResolved
+  const review = stats.needsReview
   const pick = (value: PayrollView) => ({
     pressed: view === value,
     onSelect: () => setParams((previous) => {

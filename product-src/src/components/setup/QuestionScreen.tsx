@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronLeft, Mic, Phone, Square, Upload } from 'lucide-react'
 import { AgentAvatar } from '@/components/chat/AgentAvatar'
 import { PayrollCalendar } from '@/components/PayrollCalendar'
-import { Btn, Spinner } from '@/components/ui'
+import { Btn } from '@/components/ui'
 import { VOICE_ENABLED } from '@/lib/flags'
 import type { QuestionCard } from '@/lib/chat'
 import { getOnboarding } from '@/lib/onboarding'
@@ -140,7 +140,7 @@ export function QuestionScreen({ question, card, initialAnswer = '', busy = fals
           <textarea aria-label="Your answer" placeholder={card.placeholder || 'Answer in your own words…'} value={draft} rows={3} readOnly={dictation.active || dictation.finishing} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); submitAnswer() }
           }} />
-          {VOICE_ENABLED && <div className="setup-voice">{onCall && <Btn aria-label="Call your Closeout Agent" onClick={() => { dictation.dismiss(); onCall() }}><Phone size={16} /></Btn>}<Btn className="setup-dictate" aria-label={dictation.finishing ? 'Finishing dictation' : dictation.active ? 'Stop dictation' : 'Dictate your answer'} aria-pressed={dictation.active} disabled={dictation.finishing} onClick={() => { if (dictation.active) void dictation.stop().catch(() => {}); else dictation.start() }}>{dictation.finishing || dictation.state === 'connecting' ? <Spinner /> : dictation.active ? <Square size={14} fill="currentColor" aria-hidden /> : <Mic size={16} aria-hidden />}</Btn></div>}
+          {VOICE_ENABLED && <div className="setup-voice">{onCall && <Btn aria-label="Call your Closeout Agent" onClick={() => { dictation.dismiss(); onCall() }}><Phone size={16} /></Btn>}<Btn className="setup-dictate" aria-label={dictation.finishing ? 'Finishing dictation' : dictation.active ? 'Stop dictation' : 'Dictate your answer'} aria-pressed={dictation.active} disabled={dictation.finishing} onClick={() => { if (dictation.active) void dictation.stop().catch(() => {}); else dictation.start() }}>{dictation.finishing || dictation.state === 'connecting' ? <span aria-hidden>…</span> : dictation.active ? <Square size={14} fill="currentColor" aria-hidden /> : <Mic size={16} aria-hidden />}</Btn></div>}
         </div>
         {(card.input === 'chips' || card.input === 'multi') && <div className="setup-chips">{card.chips?.map((chip, index) =>
           <button type="button" key={chip} className={`setup-chip${selected.includes(chip) ? ' selected' : ''}`} aria-pressed={selected.includes(chip)} onClick={() => pick(chip)}>

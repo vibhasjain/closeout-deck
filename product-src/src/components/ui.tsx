@@ -15,7 +15,6 @@ export const Kv = ({ rows }: { rows: [string, ReactNode][] }) => <table classNam
   <tbody>{rows.map(([k, v]) => <tr key={k}><th className="k" scope="row">{k}</th><td>{v}</td></tr>)}</tbody>
 </table>
 export const Empty = ({ children }: { children: ReactNode }) => <div className="empty">{children}</div>
-export const Spinner = () => <span className="spinner" aria-hidden />
 
 export const InfoBar = ({ title, sub, right }: { title?: ReactNode; sub?: ReactNode; right?: ReactNode }) => (
   <div className="info-bar">

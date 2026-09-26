@@ -343,10 +343,11 @@ describe('findings carousel', () => {
     button(tree, 'Approve 1').props.onClick!()
     tree = interactiveCard()
     const pending = renderToStaticMarkup(tree)
-    expect(pending).toContain('aria-busy="true"')
+    expect(pending).not.toContain('aria-busy="true"')
+    expect(pending).toContain('data-action-state="success"')
     expect(pending).toContain('Approving…')
     expect(pending).toMatch(/<button[^>]*disabled[^>]*>[\s\S]*?Approving…/)
-    expect(pending).toContain('spinner')
+    expect(pending).not.toContain('spinner')
     expect(track.scrollTo).not.toHaveBeenCalled()
     const cancel = () => {
       const trackElement = elements(tree).find(entry => entry.props.className === 'journey-carousel-track')!
@@ -363,12 +364,12 @@ describe('findings carousel', () => {
     const approved = renderToStaticMarkup(tree)
     const slides = elements(tree).filter(entry => entry.type === 'article')
     track.children.forEach((child, index) => { child.dataset = { issue: slides[index].props['data-issue'], state: slides[index].props['data-state'] } })
-    expect(approved).toContain('Approved ✓')
+    expect(approved).toContain('Approved<span aria-hidden="true">✓</span>')
     expect(approved).toContain('Approved by you')
     expect(approved).toContain('2 to decide · 0 waiting on evidence')
     expect(approved).toContain('1 of 3')
     const first = approved.split('<article')[1]
-    expect(first).toMatch(/<button[^>]*disabled[^>]*>[\s\S]*?Approved ✓/)
+    expect(first).toMatch(/<button[^>]*disabled[^>]*>[\s\S]*?Approved<span aria-hidden="true">✓<\/span>/)
     expect(first).not.toMatch(/class="[^"]*\bprimary\b[^"]*"/)
     if (interaction.endsWith('-pending')) expect(track.scrollTo).not.toHaveBeenCalled()
     else expect(track.scrollTo).toHaveBeenLastCalledWith({ left: 0, behavior: 'instant' })

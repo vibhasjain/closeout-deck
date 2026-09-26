@@ -127,12 +127,12 @@ describe('Closeout sessions', () => {
     expect(id.prompt).not.toHaveBeenCalled()
   })
 
-  it('signs out of every page: clears both keys, disables Google auto select and reloads', () => {
+  it('signs out of every page: clears both keys, disables Google auto select and reloads', async () => {
     values.set(KEY, JSON.stringify(session))
     values.set(JOBS_KEY, JSON.stringify(jobs))
     values.set('closeout-onboarding-v2', 'kept')
     const id = google('credential')
-    signOut()
+    await signOut()
     expect(values.has(KEY)).toBe(false)
     expect(values.has(JOBS_KEY)).toBe(false)
     expect(values.get('closeout-onboarding-v2')).toBe('kept')
@@ -140,10 +140,10 @@ describe('Closeout sessions', () => {
     expect(window.location.reload).toHaveBeenCalledOnce()
   })
 
-  it('reloads on sign-out when Google is not loaded', () => {
+  it('reloads on sign-out when Google is not loaded', async () => {
     const reload = vi.fn()
     vi.stubGlobal('window', { location: { reload } })
-    signOut()
+    await signOut()
     expect(reload).toHaveBeenCalledOnce()
   })
 

@@ -1,4 +1,4 @@
-import { ActionFeedback } from '@/components/ActionButton'
+import { ActionButton, ActionFeedback } from '@/components/ActionButton'
 import { Children, isValidElement, type ReactElement, type ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { JourneyThreadView } from '@/components/Thread'
@@ -64,4 +64,21 @@ describe('persisted mediation conversation', () => {
     await vi.waitFor(() => expect(text(render())).toContain('Reply could not be recorded'))
     expect(elements(render()).find(({ props }) => props['aria-label'] === 'Reply text')!.props).toHaveProperty('value', 'Confirmed')
   })
+})
+
+
+it.each(['Record reply', 'Outgoing message'])('%s shows done feedback immediately; a rejected write restores text and Retry', async direction => {
+  if (direction === 'Outgoing message') elements(render()).find(({ props }) => props.children === direction)!.props.onClick!()
+  const label = direction === 'Record reply' ? 'Reply text' : 'Outgoing message text'
+  let reject!: (cause: Error) => void
+  vi.mocked(recordMessage).mockImplementationOnce(() => new Promise((_resolve, fail) => { reject = fail }))
+  elements(render()).find(({ props }) => props['aria-label'] === label)!.props.onChange!({ target: { value: 'Exact draft including spaces  ' } })
+  elements(render()).find(({ type }) => type === 'form')!.props.onSubmit!({ preventDefault() {} })
+  const control = elements(render()).find(({ type }) => type === ActionButton)!
+  expect(control.props).toHaveProperty('action.status', 'success')
+  expect(control.props).toHaveProperty('action.inFlight', true)
+  expect(elements(render()).find(({ props }) => props['aria-label'] === label)!.props).toHaveProperty('value', '')
+  reject(new Error('Message could not be recorded'))
+  await vi.waitFor(() => expect(text(render())).toContain('Retry'))
+  expect(elements(render()).find(({ props }) => props['aria-label'] === label)!.props).toHaveProperty('value', 'Exact draft including spaces  ')
 })

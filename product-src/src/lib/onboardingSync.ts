@@ -17,7 +17,7 @@ interface Options {
   /** The canonical fields as of the last successful sync on this device; null before its first sync. */
   loadBase(): SyncPatch | null
   saveBase(base: SyncPatch): void
-  request(method: 'GET' | 'PUT', body?: { doc: Record<string, unknown>; base_updated_at: string | null }): Promise<Response>
+  request(method: 'GET' | 'PUT', body?: { doc: Record<string, unknown>; base_updated_at: string | null }, fresh?: boolean): Promise<Response>
   status(status: SyncStatus): void
   /** Sees the first canonical document once, e.g. to move a legacy transcript out of it. */
   adopt?(doc: Record<string, unknown>): void
@@ -99,8 +99,8 @@ export function createOnboardingSync(options: Options) {
     persist()
     applyRemote()
   }
-  async function pullRow(): Promise<StateRow> {
-    const response = await options.request('GET')
+  async function pullRow(fresh = true): Promise<StateRow> {
+    const response = await options.request('GET', undefined, fresh)
     if (!response.ok) throw new Error('Your profile could not be loaded. Retry to continue.')
     return row(await response.json())
   }
@@ -132,7 +132,7 @@ export function createOnboardingSync(options: Options) {
     }
     report({ loading: true, error: null })
     hydration = (async () => {
-      const next = await pullRow()
+      const next = await pullRow(false)
       options.adopt?.(next.doc)
       if (!base) {
         // First sync on this device: offer only what the user actually changed locally, never untouched defaults,
@@ -206,5 +206,14 @@ export function createOnboardingSync(options: Options) {
     }).finally(() => { writing = null })
     return writing
   }
-  return { hydrate, flush, changed, pull }
+  /** Background GET revalidation adopts a new canonical version without resetting the pane. */
+  function acceptRemote(value: unknown) {
+    if (!initialized || writing) return
+    const next = row(value)
+    if (next.updated_at === remote.updated_at && equal(next.doc, remote.doc)) return
+    rebase(next)
+    report({ error: null })
+    if (needsWrite()) schedule()
+  }
+  return { hydrate, flush, changed, pull, acceptRemote }
 }

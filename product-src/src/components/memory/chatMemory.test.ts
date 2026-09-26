@@ -6,7 +6,7 @@ import type { Action } from '@/lib/chat'
 import type { ChatMessage } from '@/lib/onboarding'
 import { isRememberReceipt, memoryHistory, recordMemoryResolution, type RememberReceipt } from './chatMemory'
 
-vi.mock('@/lib/api', () => ({ authedFetch: vi.fn() }))
+vi.mock('@/lib/api', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/api')>(), authedFetch: vi.fn() }))
 vi.mock('@/lib/viewerSession', () => ({ viewerSession: () => ({ email: 'memory-chat-test@example.com' }) }))
 
 const action: Extract<Action, { type: 'remember' }> = { type: 'remember', kind: 'context', text: 'Travis Reed signs off Lonestar, not the site manager.' }

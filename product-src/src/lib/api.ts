@@ -10,3 +10,5 @@ export async function authedFetch(path: string, init: RequestInit = {}): Promise
   if (response.status === 401) expireSession()
   return response
 }
+
+export { cachedFetch, cachedJson, cacheResponse, clearResponseCache, hasWarmResponseCache, peekCached, prefetchGet, restoreResponseCache, savesData, startBootCache, subscribeCached, subscribeAllCached, supersedeCachedReads, CachedRequestError, type CacheMode } from '@/lib/responseCache'

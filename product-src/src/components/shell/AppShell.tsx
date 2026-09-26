@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
+import { listenForNavigationIntent } from '@/lib/intent'
 import { useLocation } from 'react-router-dom'
 import { AuxProvider } from './Aux'
 import { Overlay, OverlayProvider } from './Overlay'
@@ -9,6 +10,8 @@ import { useOnboarding } from '@/lib/onboarding'
 import { useWide } from '@/lib/useWide'
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const intentRoot = useRef<HTMLDivElement>(null)
+  useEffect(() => intentRoot.current ? listenForNavigationIntent(intentRoot.current) : undefined, [])
   const { pathname } = useLocation()
   const setup = pathname.startsWith('/setup')
   const wide = useWide()
@@ -17,7 +20,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <OverlayProvider>
       <AuxProvider>
         <ChatProvider>
-          <div className={`app${setup ? ' app-setup' : ''}`} data-sidebar={sidebar}>
+          <div ref={intentRoot} className={`app${setup ? ' app-setup' : ''}`} data-sidebar={sidebar}>
             {!setup && <TopNav wide={wide} />}
             <main className="main">{children}</main>
             <AgentPanel docked={wide} suppressed={setup} />

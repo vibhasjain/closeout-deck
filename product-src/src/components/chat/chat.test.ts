@@ -144,7 +144,7 @@ describe('permanent Closeout Agent conversation', () => {
     expect(button(render(), 'Stop dictation').props['aria-pressed']).toBe(true)
     options.onState?.('connecting')
     expect(elements(render()).some(element => element.props.children === 'Connecting…')).toBe(true)
-    expect(elements(button(render(), 'Stop dictation')).some(element => element.type === Loader2)).toBe(true)
+    expect(elements(button(render(), 'Stop dictation')).some(element => element.type === Loader2)).toBe(false)
     options.onState?.('listening')
     expect(elements(render()).some(element => element.props.children === 'Listening…')).toBe(true)
     expect(elements(button(render(), 'Stop dictation')).some(element => element.type === Square)).toBe(true)
