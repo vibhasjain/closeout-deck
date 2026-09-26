@@ -9,7 +9,7 @@ const BUSY = 'The Closeout Agent is mid-reply. Try again in a moment.'
 const FAILED = 'Start over did not finish. Try again in a moment.'
 
 /**
- * HyperTrack accounts only: wipe this account and run onboarding again. Customers edit their Payroll profile and Rulebook instead.
+ * HyperTrack accounts only: wipe this account and run onboarding again. Customers edit their profile and Rulebook instead.
  * Settings shows it as a section behind an outline button. The account menus pass onClose: they open straight into the typed confirm,
  * and Cancel (or a server refusal) hands control back to the menu.
  */

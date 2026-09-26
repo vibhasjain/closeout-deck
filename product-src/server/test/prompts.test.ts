@@ -22,7 +22,7 @@ test('E2E D4/D5/D8/D12/D13: prompts separate plans, offers and suggestions from 
   // D12: a step request reads its handbook on that turn, so the trace frame is emitted.
   assert.match(chat, /use the Read tool on the matching handbook in that same turn, even if you read it earlier/)
   // D8: a source plan is never a load.
-  assert.match(chat, /add_source records a plan in the Payroll profile and never loads time entries/)
+  assert.match(chat, /add_source records a plan in the profile and never loads time entries/)
   // D4: chat widening is a suggestion; the setup answer is consent; a retry re-sends what failed.
   assert.match(chat, /explicit answer to the authority goal is consent/)
   assert.match(chat, /Try saving that again/)

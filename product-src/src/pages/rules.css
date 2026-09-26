@@ -14,23 +14,14 @@
 
 .rules-page .rules-toolbar { padding-inline: 1.25rem; }
 .rules-page .rules-toolbar > .btn { margin-left: 0; }
-.rules-sheet .rule-date-col { width: 5rem; }
-.rules-sheet .rule-uses-col { width: 4rem; }
-.rules-sheet .rule-last-used-col { width: 6rem; }
 .rules-sheet .rule-source-col { width: 24%; }
 .rules-sheet tr[data-rule] { cursor: default; }
 .rules-sheet .bucket-tag { color: hsl(var(--foreground)); background: hsl(var(--muted)); border-color: hsl(var(--border)); }
 
-.rules-sheet .rule-source {
-  color: hsl(var(--muted-foreground));
-  font-size: 12px;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
+.rules-sheet .rule-source { white-space: normal; }
 
-.rules-sheet .rule-source a { color: inherit; text-decoration: underline; text-decoration-color: hsl(var(--border)); text-underline-offset: 3px; }
-.rules-sheet .rule-source a:hover { color: hsl(var(--foreground)); text-decoration-color: currentColor; }
-.rules-sheet .rule-source a:focus-visible { outline: 2px solid hsl(var(--foreground)); outline-offset: 3px; border-radius: 2px; }
+/* The citation tag (same as the rule sheet's): the source's name with ↗, never a bare underline. */
+.rules-sheet .rule-source .rule-applied-source { max-width: 100%; }
 
 .rules-sheet .rule-sentence {
   display: block;

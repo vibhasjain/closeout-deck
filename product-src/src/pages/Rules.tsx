@@ -17,7 +17,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { titleCase } from '@/lib/utils'
 import { kindLabel, topstats, useDesk } from '@/lib/desk'
 import { useOnboarding, type CustomDeskRule } from '@/lib/onboarding'
-import { formatRuleDate, formatRuleSource, formatRuleText, getRuleActivity, type Proposal, type RuleActivity } from '@/lib/rules'
+import { SourceDocumentLink } from '@/components/RuleDetail'
+import { formatRuleSource, formatRuleText, getRuleActivity, type Proposal, type RuleActivity } from '@/lib/rules'
 import { acceptProposal, clarify, compileRule, propose, withThreshold } from '@/lib/ruleIntake'
 import './rules.css'
 
@@ -193,16 +194,13 @@ function RulesContents() {
         </li>)}</ul>
       </section>}
       {rows.length > 0 && <table className="sheet rules-sheet" aria-label="Rulebook">
-        <colgroup><col className="rule-bucket-col" /><col /><col className="rule-source-col" /><col className="rule-date-col" /><col className="rule-last-used-col" /><col className="rule-uses-col" /></colgroup>
-        <thead><tr><th scope="col">Bucket</th><th scope="col">Rule</th><th scope="col">Source</th><th scope="col">Created</th><th scope="col">Last Used</th><th scope="col" className="num">Uses</th></tr></thead>
+        <colgroup><col className="rule-bucket-col" /><col /><col className="rule-source-col" /></colgroup>
+        <thead><tr><th scope="col">Bucket</th><th scope="col">Rule</th><th scope="col">Source</th></tr></thead>
         <tbody>
           {rows.map((rule) => <tr key={rule.id} data-rule={rule.id}>
             <td><BucketTag ruleId={rule.id} /></td>
             <td><span className="rule-sentence">{rule.sentence}</span></td>
-            <td className="rule-source">{rule.sourceUrl ? <a href={rule.sourceUrl} target="_blank" rel="noopener noreferrer">{rule.citation}</a> : <span>{rule.citation}</span>}</td>
-            <td><time dateTime={rule.created}>{formatRuleDate(rule.created)}</time></td>
-            <td>{rule.lastUsed ? <time dateTime={rule.lastUsed}>{formatRuleDate(rule.lastUsed)}</time> : null}</td>
-            <td className="num rule-uses">{rule.uses.toLocaleString('en-US')}</td>
+            <td className="rule-source">{rule.citation && <SourceDocumentLink url={rule.sourceUrl} excerpt={`${rule.citation}\n\n${rule.sentence}`} label={rule.citation} />}</td>
           </tr>)}
         </tbody>
       </table>}

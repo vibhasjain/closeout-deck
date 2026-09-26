@@ -139,7 +139,7 @@ describe('model output boundaries', () => {
 describe('E2E D8 and skipped notes: the Applied line says what really happened', () => {
   it('hides coverage bookkeeping and gives profile updates a human label', () => {
     expect(actionSummary({ type: 'cover_topic', topic: 'authority' })).toBeNull()
-    for (const field of ['notes', 'workerHours', 'ratesWhere']) expect(actionSummary({ type: 'set_profile', field, value: 'Saved answer' })).toBe('Updated your Payroll profile')
+    for (const field of ['notes', 'workerHours', 'ratesWhere']) expect(actionSummary({ type: 'set_profile', field, value: 'Saved answer' })).toBe('Updated your profile')
     expect(actionSummary({ type: 'set_calendar', patch: { deadlineDays: 2 } })).toBe('Updated your pay calendar')
     expect(actionSummary({ type: 'set_fact', kind: 'rate', key: 'internal-site-id', value: { pay: 20 } })).toBe('Updated your Payroll details')
     expect(actionSummary({ type: 'set_authority', patch: { autoFix: true, limit: 0 }, consent: true })).toBe('Saved: Ask before every fix')

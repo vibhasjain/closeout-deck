@@ -49,27 +49,25 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers())
 
 describe('rules table', () => {
-  it('shows the 30 engine rules by bucket with creation and lifetime activity columns', () => {
+  it('shows the 30 engine rules by bucket with only Bucket, Rule and Source (owner: no Created, Last Used or Uses)', () => {
     const html = render(h(Rules))
     const table = html.match(/<table\b[^>]*aria-label="Rulebook"[\s\S]*?<\/table>/)![0]
     expect(RULES).toHaveLength(30)
     expect(rowIds(table).sort()).toEqual(RULES.map((rule) => rule.id).sort())
     expect([...table.matchAll(/<th scope="col"[^>]*>(.*?)<\/th>/g)].map((match) => match[1]))
-      .toEqual(['Bucket', 'Rule', 'Source', 'Created', 'Last Used', 'Uses'])
+      .toEqual(['Bucket', 'Rule', 'Source'])
     // The bucket is the rule's only classification, and rows sit together by bucket.
     const buckets = [...table.matchAll(/<span class="bucket-tag"[^>]*>(.*?)<\/span>/g)].map((match) => match[1])
     expect(buckets).toEqual(RULES.map((rule) => titleCase(kindLabel(rule.id))).sort((a, b) => a.localeCompare(b)))
     expect(visibleText(table)).not.toMatch(/\b(?:Deterministic|LLM|Kind)\b/)
     for (const rule of RULES) expect(visibleText(table), rule.id).not.toContain(rule.id)
     expect(table).not.toContain('<th scope="colgroup"')
-    const counts = [...table.matchAll(/<td[^>]*class="[^"]*rule-uses[^"]*"[^>]*>(.*?)<\/td>/g)].map((match) => match[1])
-    expect(counts).toHaveLength(30)
-    expect(counts.every((count) => /^[\d,]+$/.test(count))).toBe(true)
+    expect(table).not.toContain('rule-uses')
     expect(table).not.toContain('This cycle')
     expect(table).not.toContain('clamp-2')
-    const dates = [...table.matchAll(/<time dateTime="\d{4}-\d{2}-\d{2}">(.*?)<\/time>/g)].map((match) => match[1])
-    expect(dates.length).toBeGreaterThanOrEqual(30)
-    expect(dates.every((date) => /^[A-Z][a-z]{2} \d{1,2}$/.test(date))).toBe(true)
+    expect(table).not.toContain('<time')
+    // Every source is the citation tag: its name with ↗.
+    expect([...table.matchAll(/class="btn rule-applied-source"/g)]).toHaveLength(30)
     expect(visibleText(html)).not.toMatch(/\b(?:Live|Pack|Draft|Expiring)\b/i)
     expect(html).not.toContain('engine rules')
     expect(html).not.toContain('class="info-bar"')
@@ -95,9 +93,8 @@ describe('rules table', () => {
     expect(table).toContain(formatRuleText(custom.sentence))
     expect(table).not.toContain(custom.sentence)
     const customRow = table.match(/<tr[^>]*data-rule="CUST-NIGHT"[\s\S]*?<\/tr>/)![0]
-    expect(customRow).toContain('<time dateTime="2026-09-22">Sep 22</time>')
-    expect(customRow).toContain('<td class="num rule-uses">0</td>')
-    expect(customRow).toContain('<td></td>')
+    expect(customRow).not.toContain('<time')
+    expect(customRow).not.toContain('rule-uses')
     expect(table).not.toContain('DOC-PENDING')
     expect(visibleText(table)).not.toMatch(/\b(?:Live|Pack|Draft|Expiring)\b/i)
   })
@@ -119,11 +116,11 @@ describe('rules table', () => {
     const html = render(h(Rules), '/rules?rule=CA-OT-8')
     const table = html.match(/<table\b[^>]*aria-label="Rulebook"[\s\S]*?<\/table>/)![0]
     const overtime = table.match(/<tr[^>]*data-rule="CA-OT-8"[\s\S]*?<\/tr>/)![0]
-    expect(overtime).toContain('California Labor Code §510(a)</a>')
+    expect(overtime).toContain('<span class="btn-label">California Labor Code §510(a)</span>')
     expect(links(overtime)).toEqual([PROV['CA-OT-8'].url])
-    expect(table).toContain('29 CFR 785.48(b)</a>')
+    expect(table).toContain('<span class="btn-label">29 CFR 785.48(b)</span>')
     const heuristic = table.match(/<tr[^>]*data-rule="CS-01"[\s\S]*?<\/tr>/)![0]
-    expect(heuristic).toContain('<span>Ops heuristic</span>')
+    expect(heuristic).toContain('<span class="btn-label">Ops heuristic</span>')
     expect(links(heuristic)).toEqual([])
     expect(table).not.toContain('tabindex=')
     expect(table).not.toContain('aria-selected=')
@@ -137,7 +134,7 @@ describe('rules table', () => {
     state = { ...state, ...acceptProposal(state, proposal) }
     const html = render(h(Rules))
     const row = html.match(/<tr[^>]*data-rule="DOC-NIGHT"[\s\S]*?<\/tr>/)![0]
-    expect(row).toContain('<td class="rule-source"><span>Staff handbook · §4.2</span></td>')
+    expect(row).toContain('<span class="btn-label">Staff handbook · §4.2</span>')
   })
 
   it('labels uploaded citations without showing file names', () => {
@@ -148,7 +145,7 @@ describe('rules table', () => {
     expect(pending).not.toContain(proposal.source)
     state = { ...state, ...acceptProposal(state, proposal) }
     const accepted = render(h(Rules))
-    expect(accepted).toContain('<td class="rule-source"><span>Uploaded document · Clause 2</span></td>')
+    expect(accepted).toContain('<span class="btn-label">Uploaded document · Clause 2</span>')
     expect(accepted).not.toContain(proposal.source)
   })
 

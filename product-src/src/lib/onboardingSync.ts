@@ -62,7 +62,7 @@ export function merge3(base: unknown, local: unknown, remote: unknown): unknown 
 
 function row(value: unknown): StateRow {
   if (!object(value) || !(value.doc === null || object(value.doc)) || (value.updated_at !== undefined && value.updated_at !== null && typeof value.updated_at !== 'string')) {
-    throw new Error('Your saved Payroll profile could not be read. Retry to continue.')
+    throw new Error('Your saved profile could not be read. Retry to continue.')
   }
   return { doc: value.doc ?? {}, updated_at: typeof value.updated_at === 'string' ? value.updated_at : null }
 }
@@ -101,7 +101,7 @@ export function createOnboardingSync(options: Options) {
   }
   async function pullRow(): Promise<StateRow> {
     const response = await options.request('GET')
-    if (!response.ok) throw new Error('Your Payroll profile could not be loaded. Retry to continue.')
+    if (!response.ok) throw new Error('Your profile could not be loaded. Retry to continue.')
     return row(await response.json())
   }
 
@@ -147,7 +147,7 @@ export function createOnboardingSync(options: Options) {
       report({ ready: true, loading: false, error: null })
       if (needsWrite()) schedule()
     })().catch((cause: unknown) => {
-      report({ loading: false, error: cause instanceof Error ? cause.message : 'Your Payroll profile could not be loaded. Retry to continue.' })
+      report({ loading: false, error: cause instanceof Error ? cause.message : 'Your profile could not be loaded. Retry to continue.' })
       throw cause
     }).finally(() => { hydration = null })
     return hydration
@@ -165,7 +165,7 @@ export function createOnboardingSync(options: Options) {
       if (needsWrite()) schedule()
     } catch (cause) {
       if (generation !== pullGeneration) return
-      report({ error: cause instanceof Error ? cause.message : 'Your Payroll profile could not be loaded.' })
+      report({ error: cause instanceof Error ? cause.message : 'Your profile could not be loaded.' })
       throw cause
     }
   }
@@ -185,10 +185,10 @@ export function createOnboardingSync(options: Options) {
         const submitted = { ...pending }
         const response = await options.request('PUT', { doc: { ...withoutChat(remote.doc), ...submitted }, base_updated_at: remote.updated_at })
         if (response.status === 409) {
-          if (++conflicts > 3) throw new Error('Your Payroll profile changed elsewhere. Retry to save your changes.')
+          if (++conflicts > 3) throw new Error('Your profile changed elsewhere. Retry to save your changes.')
           continue
         }
-        if (!response.ok) throw new Error('Your Payroll profile could not be saved. Your changes are kept here; retry to save them.')
+        if (!response.ok) throw new Error('Your profile could not be saved. Your changes are kept here; retry to save them.')
         const saved = row(await response.json())
         // Edits made while this write was in flight stay pending for the next pass.
         pending = Object.fromEntries(Object.entries(pending).filter(([key, value]) => !equal(value, submitted[key as keyof SyncPatch]))) as SyncPatch
@@ -201,7 +201,7 @@ export function createOnboardingSync(options: Options) {
       }
       report({ saving: false, error: null })
     })().catch((cause: unknown) => {
-      report({ saving: false, error: cause instanceof Error ? cause.message : 'Your Payroll profile could not be saved. Retry to save your changes.' })
+      report({ saving: false, error: cause instanceof Error ? cause.message : 'Your profile could not be saved. Retry to save your changes.' })
       throw cause
     }).finally(() => { writing = null })
     return writing

@@ -1,4 +1,5 @@
-import { PayrollCalendar, CycleFields } from '@/components/PayrollCalendar'
+import { PayCycles } from '@/components/PayCycles'
+import { PayrollCalendar } from '@/components/PayrollCalendar'
 import { getOnboarding, useOnboarding, type FirmFacts, type ProfileField, type ProfileValue } from '@/lib/onboarding'
 import { payrollFirmName } from '@/lib/firmName'
 import { profileAuthoritySummary } from './profileSummary'
@@ -42,9 +43,8 @@ export function ProfileEditor({ onEditRulebook }: { onEditRulebook(): void }) {
       const current = getOnboarding()
       if (!current.covered.includes('calendar')) update({ covered: [...current.covered, 'calendar'] })
     }}><PayrollCalendar />
-      {state.cohorts.map((cohort) => <div className="profile-cohort" key={cohort.id}>
-        <h4>{cohort.name}</h4><div className="calendar-fields payroll-calendar"><CycleFields idPrefix={`profile-${cohort.id}-`} value={cohort} onChange={(patch) => update({ cohorts: state.cohorts.map((item) => item.id === cohort.id ? { ...item, ...patch } : item) })} /></div>
-      </div>)}</div>
+      <h4 className="profile-cycle-head">Other pay cycles</h4>
+      <PayCycles /></div>
       <ValueEditor value={state.profile.payrollRunBy} placeholder="Who runs Payroll" onChange={(value) => changeProfile('payrollRunBy', value)} />
     </section>
     {profileSections.map(({ field, title, placeholder }) => <section className="profile-edit-section" key={field} id={`profile-${field}`}>

@@ -16,7 +16,7 @@ import { useOverlay } from './Overlay'
 const tabs = [
   { to: '/payroll', label: 'Payroll', icon: Banknote },
   { to: '/rules', label: 'Rules', icon: ListChecks },
-  { to: '/profile', label: 'Payroll profile', icon: UserRound },
+  { to: '/profile', label: 'Profile', icon: UserRound },
 ]
 const focusableSelector = 'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]'
 // NavLink updates its current-page state on every route; its static SVG and label do not.

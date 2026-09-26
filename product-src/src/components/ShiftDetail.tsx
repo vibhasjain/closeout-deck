@@ -11,6 +11,7 @@ import { effectiveResolutions, kindLabel, provenance, type DeskCycle } from '@/l
 import { journeyShiftPay } from '@/lib/journeyPay'
 import { useOnboarding } from '@/lib/onboarding'
 import { groupId } from '@/lib/journey'
+import './rule-source.css'
 
 function openDocument(rule: Rule) {
   const source = PROV[rule.id]

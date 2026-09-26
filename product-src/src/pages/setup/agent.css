@@ -60,7 +60,7 @@ button.setup-option { display: flex; align-items: center; justify-content: cente
 .setup-rulebook-cover small { margin-top: auto; color: #716f6f; font-size: 11px; }
 .setup-profile-cover { margin-top: 48px; margin-left: -20px; transform: rotate(-3deg); }
 .setup-conversation { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); width: 100%; min-height: 0; height: 100%; align-self: stretch; }
-/* The question column keeps J&J's 480px measure; the live Payroll profile fills the right pane as answers land. */
+/* The question column keeps J&J's 480px measure; the live profile fills the right pane as answers land. */
 .setup-conversation > div:first-child { display: flex; flex-direction: column; min-height: 0; width: min(100%, 576px); margin-inline: auto; padding-inline: 24px; }
 .setup-question { width: 100%; min-height: 0; flex: 1; padding: clamp(20px, 5vh, 52px) 0 24px; display: flex; flex-direction: column; }
 .setup-question h1 { flex: none; margin: 12px 0 16px; }

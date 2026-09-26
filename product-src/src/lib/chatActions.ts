@@ -324,8 +324,8 @@ export function actionSummary(value: unknown): string | null {
     case 'dismiss': return `Dismissed ${String(action.groupId)} · ${String(action.reason)}`
     case 'open_form': return null
     case 'set_fact': return 'Updated your Payroll details'
-    case 'set_profile': return 'Updated your Payroll profile'
-    case 'set_firm': return 'Updated your Payroll profile'
+    case 'set_profile': return 'Updated your profile'
+    case 'set_firm': return 'Updated your profile'
     // A source is a plan from setup; loading its time entries happens only through a connection or upload.
     case 'add_source': return `Planned: ${String(action.label)}${typeof action.how === 'string' && action.how ? ` · ${action.how}` : ''}`
     case 'set_authority': {

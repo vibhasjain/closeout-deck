@@ -83,18 +83,15 @@
 .rule-applied + .rule-applied { border-top: 1px solid hsl(var(--border)); }
 .rule-applied:first-child { padding-top: 0; }
 .rule-applied-text { margin: 0; font-size: 13px; line-height: 1.5; color: hsl(var(--foreground)); }
-.rule-applied-source { margin-top: .625rem; max-width: 100%; min-width: 0; }
+.rule-applied .rule-applied-source { margin-top: .625rem; }
 
 /* Evidence values stay on one line; the label column is only as wide as its labels need. */
 .shift-page .kv .k, .shift-page .kv th.k { width: 6.5rem; }
 .kv-via, .kv-via > span:last-child { white-space: nowrap; }
 
-.btn-arrow { flex-shrink: 0; margin-left: .375rem; color: hsl(var(--muted-foreground)); }
 .thread-empty { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: .5rem;
   min-height: 12rem; font-size: 12px; color: hsl(var(--muted-foreground)); }
 
-/* A long source name truncates; the arrow always stays inside the button. */
-.rule-applied-source .btn-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .thread-empty { color: hsl(var(--muted-foreground) / .5); }
 
 /* The evidence column has room: larger type and looser rows. */

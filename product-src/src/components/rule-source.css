@@ -1,0 +1,5 @@
+/* The citation tag: a source's name with ↗. Shared by the rule sheet, the time-entry sheet and the Rules table. */
+.rule-applied-source { max-width: 100%; min-width: 0; }
+/* A long source name truncates; the arrow always stays inside the button. */
+.rule-applied-source .btn-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn-arrow { flex-shrink: 0; margin-left: .375rem; color: hsl(var(--muted-foreground)); }

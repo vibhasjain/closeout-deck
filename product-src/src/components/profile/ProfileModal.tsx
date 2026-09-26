@@ -15,9 +15,9 @@ export function ProfileModal({ onClose }: { onClose(): void }) {
   const [active, setActive] = useState('firm')
   const content = useRef<HTMLDivElement>(null)
   if (rulebook) return <RulebookModal initialSection="authority" onClose={() => setRulebook(false)} />
-  return <ProfileDialog title="Your Payroll profile" description="Everything here is editable, and saves as you change it." onClose={onClose} className="profile-editor-modal">
+  return <ProfileDialog title="Your profile" description="Everything here is editable, and saves as you change it." onClose={onClose} className="profile-editor-modal">
     <div className="profile-editor-modal-body">
-      <nav className="profile-section-rail" aria-label="Payroll profile sections">{sections.map(([id, label]) => <button key={id} type="button" aria-current={active === id ? 'location' : undefined} onClick={() => {
+      <nav className="profile-section-rail" aria-label="Profile sections">{sections.map(([id, label]) => <button key={id} type="button" aria-current={active === id ? 'location' : undefined} onClick={() => {
         setActive(id)
         content.current?.querySelector(`#profile-${id}`)?.scrollIntoView({ block: 'start', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
       }}><ChevronRight size={14} aria-hidden /><span>{label}</span></button>)}</nav>

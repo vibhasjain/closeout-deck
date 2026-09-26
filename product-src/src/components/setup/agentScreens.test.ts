@@ -29,7 +29,7 @@ describe('one black next step per setup pane', () => {
     state.value.setupStep = 'never-contact'
     const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(Agent)))
     expect(html).toContain('class="setup-stage" inert="" aria-hidden="true"')
-    expect(html).toContain('Your Payroll profile is ready')
+    expect(html).toContain('Your profile is ready')
     expect(html).not.toContain('class="setup-stage" hidden')
   })
   it('shows the agent closing line during writing and on ready, with uncovered rows marked Not Yet', () => {
@@ -74,11 +74,11 @@ describe('one black next step per setup pane', () => {
   })
   it('keeps document previews secondary and Finish primary when the completed profile is ready', () => {
     state.value.setupStep = 'ready'
-    state.value.setupClosing = 'Your Payroll profile is ready to use.'
+    state.value.setupClosing = 'Your profile is ready to use.'
     state.value.firm = { name: 'Summit Staffing', domain: 'sample', summary: '', states: ['CA'], verticals: [], clientTypes: [], size: '', staffing: true }
     const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(Agent)))
     expect(html).toContain('aria-label="Open your Rulebook"')
-    expect(html).toContain('aria-label="Open your Payroll profile"')
+    expect(html).toContain('aria-label="Open your profile"')
     expect(html).toContain('profile-card-compact')
     expect(primaryCount(html)).toBe(1)
     expect(html).toMatch(/class="btn primary setup-bottom"[^>]*>Finish →/)
@@ -100,7 +100,7 @@ describe('one black next step per setup pane', () => {
     const render = () => renderToStaticMarkup(createElement(MemoryRouter, null, createElement(Agent)))
     expect(render()).not.toContain('Your call is saved')
     expect(render()).not.toContain('Previous call summary')
-    expect(render()).toContain('Build your Payroll profile')
+    expect(render()).toContain('Build your profile')
     state.value.chat.push({ id: 'call-new', role: 'agent', text: 'This call summary', at: 2, cards: [{ kind: 'call', callId: 'new', seconds: 12 }] })
     expect(render()).toContain('Your call is saved')
     expect(render()).toContain('This call summary')

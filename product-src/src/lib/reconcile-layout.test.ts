@@ -613,23 +613,22 @@ describe('payroll and settings separation', () => {
     expect(pending.flatMap((item) => item.cases.map((entry) => entry.shiftId))).toContain(unrelatedShift.shift.id)
   })
 
-  it('shows Settings as connectors beside the payroll calendar under an Onboarding replay', () => {
+  it('shows Settings as connectors only (the pay calendar lives in Profile) under an Onboarding replay', () => {
     const html = render('/settings')
     expect(html).toContain('<h2>Settings</h2>')
     expect(html).toContain('aria-label="About Settings"')
-    expect(html).toContain('title="Replays the setup steps. Your Payroll calendar and rulebook stay as they are."')
+    expect(html).toContain('title="Replays the setup steps. Your pay calendar and rulebook stay as they are."')
     expect(html.indexOf('>Onboarding<')).toBeLessThan(html.indexOf('settings-columns'))
     // Inbox address first, then one logo tile per timesheet source, grouped.
-    const grid = html.slice(html.indexOf('source-grid-wrap'), html.indexOf('settings-side'))
+    const grid = html.slice(html.indexOf('source-grid-wrap'))
     expect(grid).toContain('class="inbox-address"')
     expect(grid.indexOf('inbox-address')).toBeLessThan(grid.indexOf('source-grid-group'))
     const groups = [...new Set(SOURCES.map((item) => item.group))]
     const tiles = [...grid.matchAll(/<button type="button" class="source-tile[^"]*" title="([^"]+)"/g)].map((match) => match[1])
     expect(tiles).toEqual(groups.flatMap((group) => SOURCES.filter((item) => item.group === group).map((item) => textHtml(item.name))))
     expect([...grid.matchAll(/class="source-grid-group"><div class="lbl">(.*?)<\/div>/g)].map((match) => match[1])).toEqual(groups.map(textHtml))
-    const side = html.match(/<aside\b[^>]*class="settings-side[\s\S]*?<\/aside>/)![0]
-    expect(side).toContain('>Payroll Calendar</h3>')
-    expect(html.indexOf('source-grid-wrap')).toBeLessThan(html.indexOf('settings-side'))
+    // Owner: the pay calendar isn't a Settings concern; it's edited in Profile.
+    for (const gone of ['settings-side', 'Payroll Calendar', 'Main Pay Cycle', 'Other Pay Cycles']) expect(html).not.toContain(gone)
     for (const gone of ['aria-label="Time sources"', '>Sources</button>', '>Destinations</button>', 'aria-label="Payroll destinations"', 'What we know']) expect(html).not.toContain(gone)
   })
 })

@@ -278,7 +278,7 @@ describe('permanent Closeout Agent conversation', () => {
     const lines = elements(message).filter(({ props }) => props.className === 'chat-action')
     const text = (tree: ReactNode) => elements(tree).flatMap(({ props }) => Children.toArray(props.children).filter(child => typeof child === 'string')).join(' ')
     expect(lines).toHaveLength(1)
-    expect(text(message)).toContain('Updated your Payroll profile')
+    expect(text(message)).toContain('Updated your profile')
     expect(text(message)).not.toMatch(/Covered|authority|notes/)
   })
 })

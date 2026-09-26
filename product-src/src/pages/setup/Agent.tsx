@@ -164,12 +164,12 @@ export function Agent() {
   const ready = <section className="setup-split setup-ready">
     <div className="setup-copy">
       <AgentAvatar size={32} />
-      <h1>Your Payroll profile is ready</h1>
+      <h1>Your profile is ready</h1>
       {state.setupClosing && <p className="setup-closing">{state.setupClosing}</p>}
-      <div className="setup-review-actions"><Btn onClick={() => openModal('profile')}>Check out your Payroll profile</Btn><Btn onClick={() => openModal('rulebook')}>View your Rulebook</Btn></div>
+      <div className="setup-review-actions"><Btn onClick={() => openModal('profile')}>Check out your profile</Btn><Btn onClick={() => openModal('rulebook')}>View your Rulebook</Btn></div>
       <Btn className={!modal && step === 'ready' && !busy && !finishing ? 'primary setup-bottom' : 'setup-bottom'} data-setup-finish onClick={() => { modalOpener.current = document.activeElement as HTMLElement | null; setNames(getOnboarding().neverContact ?? []); go('never-contact') }}>Finish →</Btn>
     </div>
-    <div className="setup-documents-pane"><div className="setup-profile-stack"><button type="button" className="setup-rulebook-cover" onClick={() => openModal('rulebook')} aria-label="Open your Rulebook"><ScrollText size={24} aria-hidden /><span>{payrollFirmName(state.firm)}'s Rulebook</span><small>Confidential</small></button><button type="button" className="setup-profile-cover" onClick={() => openModal('profile')} aria-label="Open your Payroll profile"><ProfileCard state={state} compact className="setup-tilted-profile" /></button></div></div>
+    <div className="setup-documents-pane"><div className="setup-profile-stack"><button type="button" className="setup-rulebook-cover" onClick={() => openModal('rulebook')} aria-label="Open your Rulebook"><ScrollText size={24} aria-hidden /><span>{payrollFirmName(state.firm)}'s Rulebook</span><small>Confidential</small></button><button type="button" className="setup-profile-cover" onClick={() => openModal('profile')} aria-label="Open your profile"><ProfileCard state={state} compact className="setup-tilted-profile" /></button></div></div>
   </section>
 
   return <div className="agent-setup" data-step={step} data-on-call={!!voice.snapshot && voice.snapshot.status !== 'ended' || undefined}>
@@ -177,9 +177,9 @@ export function Agent() {
     <OnboardingAccount inert={covered} />
     <div className="setup-stage" inert={covered} aria-hidden={covered || undefined}>
       {voice.snapshot && voice.snapshot.status !== 'ended' ? <CallScreen snapshot={voice.snapshot} onboarding={state} onMute={voice.mute} onEnd={() => { void voice.end().catch(() => {}) }} onRetry={() => { void (voice.snapshot?.errorKind === 'save' ? voice.retrySave() : voice.start()).catch(() => {}) }} onRetryTurn={voice.retryTurn} onKeepTyping={keepTyping} /> : <>
-      {showCallSummary && thisCall && <section className="setup-call-summary"><h1>{thisCall.callSaveError || thisCall.callServerSaved === false ? 'Call ended' : 'Your call is saved'}</h1><Message message={thisCall} /><Btn className="primary" onClick={keepTyping}>{state.covered.length === ONBOARD_TOPICS.length ? 'Review my Payroll profile' : 'Keep typing'}</Btn></section>}
+      {showCallSummary && thisCall && <section className="setup-call-summary"><h1>{thisCall.callSaveError || thisCall.callServerSaved === false ? 'Call ended' : 'Your call is saved'}</h1><Message message={thisCall} /><Btn className="primary" onClick={keepTyping}>{state.covered.length === ONBOARD_TOPICS.length ? 'Review my profile' : 'Keep typing'}</Btn></section>}
       {callsNeedingSave.length > 0 && <section className="setup-call-summary" aria-label="Call notes awaiting saving">{callsNeedingSave.map(message => <Message key={message.id} message={message} />)}</section>}
-      {step === 'welcome' && <section className="setup-centered setup-welcome"><AgentAvatar size={64} /><h1>Welcome, {first}</h1><p>Set up your Closeout Agent for weekly Payroll. Start with your firm and permissions, then build your Payroll profile together.</p><Btn className="primary" onClick={() => go('basics')}>Get started →</Btn></section>}
+      {step === 'welcome' && <section className="setup-centered setup-welcome"><AgentAvatar size={64} /><h1>Welcome, {first}</h1><p>Set up your Closeout Agent for weekly Payroll. Start with your firm and permissions, then build your profile together.</p><Btn className="primary" onClick={() => go('basics')}>Get started →</Btn></section>}
       {step === 'basics' && <section className="setup-centered setup-basics"><h1>Choose your staffing firm</h1>
         <form onSubmit={(event) => { event.preventDefault(); void submitFirm() }}>
           <div className="setup-choice">
@@ -192,7 +192,7 @@ export function Agent() {
         </form>
       </section>}
       {step === 'trust' && <section className="setup-centered"><AgentAvatar size={32} /><h1>Your data and permissions</h1><ul className="setup-trust">{TRUST.map((line) => <li key={line}><Lock size={14} aria-hidden />{line}</li>)}</ul><Btn className="primary" onClick={() => go('intro')}>I agree</Btn></section>}
-      {step === 'intro' && !showCallSummary && <section className="setup-split setup-intro"><div className="setup-copy"><AgentAvatar size={32} /><h1>Build your Payroll profile</h1><p>Your Closeout Agent uses this profile before every pay run. The conversation will fill in the gaps about {payrollFirmName(state.firm)}.</p>
+      {step === 'intro' && !showCallSummary && <section className="setup-split setup-intro"><div className="setup-copy"><AgentAvatar size={32} /><h1>Build your profile</h1><p>Your Closeout Agent uses this profile before every pay run. The conversation will fill in the gaps about {payrollFirmName(state.firm)}.</p>
         <div className="setup-bottom">{VOICE_ENABLED && <Btn className="primary" onClick={() => { void voice.start() }}><Phone size={15} aria-hidden />Jump on a call with your Closeout Agent</Btn>}<Btn className={VOICE_ENABLED ? '' : 'primary'} onClick={() => void ask('Start onboarding')}>Keep typing</Btn></div>
       </div><div className="setup-profile-preview"><ProfileCard state={state} /></div></section>}
       {step === 'conversation' && !showCallSummary && <div className="setup-conversation"><div>
@@ -200,7 +200,7 @@ export function Agent() {
         {state.setupNotice && <p className="setup-notice" role="status">{state.setupNotice}</p>}
         {current ? <QuestionScreen key={`${historyIndex}:${current.question}`} question={current.question} card={current.card} initialAnswer={current.answer} busy={busy} activity={questionActivity} onCall={() => { void voice.start() }} canBack={historyIndex > 0 || !!error} onBack={() => { if (historyIndex === 0) go('intro'); else { setError(''); setHistoryIndex((index) => Math.max(0, index - 1)) } }} onAnswer={answer} />
           : !error && <QuestionSkeleton activity={busy ? questionActivity : 'thinking'} />}
-      </div><aside className="setup-conversation-profile" aria-label="Your live Payroll profile"><ProfileCard state={state} /></aside></div>}
+      </div><aside className="setup-conversation-profile" aria-label="Your live profile"><ProfileCard state={state} /></aside></div>}
       {step === 'writing' && <WritingProfile state={state} onDone={() => go('ready')} />}
       {(step === 'ready' || step === 'never-contact') && ready}
       </>}

@@ -173,23 +173,23 @@ describe('GPT-Live call lifecycle', () => {
     const onActions = vi.fn()
     streamMock.mockImplementation(async function* (_message, _context, mode) {
       if (mode === 'consolidate') {
-        yield { text: 'Your Payroll profile is saved.\n' }
+        yield { text: 'Your profile is saved.\n' }
         yield { text: '```action\n{"type":"cover_topic","topic":"calendar"}\n```' }
         yield { done: true }
       }
     })
     call({ onActions }); await started(); await handle!.dispose()
     expect(onActions).toHaveBeenCalledWith([{ type: 'cover_topic', topic: 'calendar' }])
-    expect(events.find(event => event.type === 'completed')).toMatchObject({ final: 'Your Payroll profile is saved.' })
+    expect(events.find(event => event.type === 'completed')).toMatchObject({ final: 'Your profile is saved.' })
   })
 
   it('prefers an authoritative consolidation final over text deltas', async () => {
     streamMock.mockImplementation(async function* () {
       yield { text: 'Preliminary text.' }
-      yield { done: true, final: 'Your Payroll profile is saved.' }
+      yield { done: true, final: 'Your profile is saved.' }
     })
     call(); await started(); await handle!.dispose()
-    expect(events.find(event => event.type === 'completed')).toMatchObject({ final: 'Your Payroll profile is saved.' })
+    expect(events.find(event => event.type === 'completed')).toMatchObject({ final: 'Your profile is saved.' })
   })
 
   it('keeps a per-turn protocol error inline without hanging up and lets the user retry', async () => {

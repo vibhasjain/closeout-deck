@@ -6,6 +6,7 @@ import { ProfileCard } from './ProfileCard'
 import { ProfileModal } from './ProfileModal'
 import { AuthorityEditor, RulebookModal } from './RulebookModal'
 import { NeverContactInput } from './NeverContactInput'
+import { ProfileEditor } from './ProfileEditor'
 
 const store = vi.hoisted(() => ({ state: null as Onboarding | null, update: vi.fn() }))
 vi.mock('@/lib/onboarding', async (importOriginal) => {
@@ -16,6 +17,12 @@ vi.mock('@/lib/onboarding', async (importOriginal) => {
 beforeEach(() => { store.state = structuredClone(DEFAULTS); store.update.mockReset(); store.update.mockImplementation((patch: Partial<Onboarding>) => { store.state = { ...store.state!, ...patch } }) })
 
 describe('Payroll profile surfaces', () => {
+  it('edits the whole pay calendar in Profile, including adding another pay cycle (Settings no longer has it)', () => {
+    const markup = renderToStaticMarkup(createElement(ProfileEditor, { onEditRulebook: () => {} }))
+    expect(markup).toContain('id="profile-calendar"')
+    expect(markup).toContain('Other pay cycles')
+    expect(markup).toContain('Add Pay Cycle')
+  })
   it('does not present calendar and authority defaults as learned answers', () => {
     const markup = renderToStaticMarkup(createElement(ProfileCard))
     expect(markup.match(/>Not Yet</g)).toHaveLength(7)
@@ -48,7 +55,7 @@ describe('Payroll profile surfaces', () => {
   })
   it('connects the Payroll profile rail to every editor section without extra primary actions', () => {
     const markup = renderToStaticMarkup(createElement(ProfileModal, { onClose() {} }))
-    expect(markup).toContain('aria-label="Payroll profile sections"')
+    expect(markup).toContain('aria-label="Profile sections"')
     for (const id of ['firm', 'calendar', 'workerHours', 'clientHours', 'whoseHours', 'ratesWhere', 'complaints', 'authority', 'notes']) expect(markup).toContain(`id="profile-${id}"`)
     expect(markup.match(/aria-current="location"/g)).toHaveLength(1)
     expect(markup.match(/class="btn primary"/g)).toHaveLength(1)
@@ -127,7 +134,7 @@ describe('Rulebook consent and compact preview', () => {
     expect(card).toContain('>Sample</span>')
     expect(card.match(/>Sample<\/span>/g)).toHaveLength(1)
     expect(card.indexOf('profile-sample')).toBeLessThan(card.indexOf('profile-card-firm'))
-    expect(card.indexOf('<h2>Summit Staffing</h2>')).toBeLessThan(card.indexOf('<p>Payroll profile</p>'))
+    expect(card.indexOf('<h2>Summit Staffing</h2>')).toBeLessThan(card.indexOf('<p>Profile</p>'))
     expect(card).not.toContain('lag:')
     expect(card).not.toContain('access:')
     expect(card).not.toContain(store.state!.profile.workerHours.access)

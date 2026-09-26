@@ -22,13 +22,13 @@ export function ProfileCard({ state: supplied, className = '', compact = false }
   const source = (set: 1 | 2) => sources.filter((item) => item.set === set).map((item) => item.label).join(' · ')
   const calendar = covered.includes('calendar') ? cycleLine({ ...state, name: '' }).replace(/^ · /, '') : ''
   const own = profileAuthoritySummary(state)
-  return <article className={`payroll-profile-card${compact ? ' profile-card-compact' : ''} ${className}`} aria-label="Payroll profile preview" aria-live="polite">
+  return <article className={`payroll-profile-card${compact ? ' profile-card-compact' : ''} ${className}`} aria-label="Profile preview" aria-live="polite">
     {firm?.domain === 'sample' && <span className="tag profile-sample">Sample</span>}
     <header className="profile-card-firm">
       <span className="profile-favicon" aria-hidden="true">
         <Building2 size={22} />{icon && <img src={icon} alt="" onError={(event) => { event.currentTarget.hidden = true }} />}
       </span>
-      <div><h2>{payrollFirmName(firm)}</h2><p>Payroll profile</p>
+      <div><h2>{payrollFirmName(firm)}</h2><p>Profile</p>
         {firm && <span className="profile-firm-details">{[firm.states.join(', '), firm.verticals.join(' · ')].filter(Boolean).join(' · ')}</span>}
       </div>
     </header>

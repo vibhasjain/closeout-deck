@@ -6,8 +6,10 @@ import { BucketTag } from '@/components/BucketTag'
 import { Tag } from '@/components/ui'
 import { useOnboarding } from '@/lib/onboarding'
 import { formatRuleSource, formatRuleText } from '@/lib/rules'
+import './rule-source.css'
 
-function SourceDocumentLink({ url, excerpt, label }: { url?: string; excerpt: string; label: string }) {
+/** The citation tag: the source's name with ↗, opening the document (or a local excerpt when there's no URL). */
+export function SourceDocumentLink({ url, excerpt, label }: { url?: string; excerpt: string; label: string }) {
   const anchor = useRef<HTMLAnchorElement>(null)
 
   useEffect(() => {

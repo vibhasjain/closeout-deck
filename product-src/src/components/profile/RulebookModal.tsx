@@ -31,7 +31,7 @@ function JurisdictionRules({ states }: { states: string[] }) {
     }),
   ]
   return <div className="rulebook-jurisdictions">
-    {states.length === 0 && <p className="profile-muted">Add the states where your team works to your Payroll profile.</p>}
+    {states.length === 0 && <p className="profile-muted">Add the states where your team works to your profile.</p>}
     {groups.map(({ title, rules }) => <section key={title}><h4>{title}</h4>
       {rules.length ? <ul className="profile-rule-list">{rules.map((rule) => <li key={rule.id}><p>{formatRuleText(rule.sentence)}</p><span>{formatRuleSource(rule.source.doc)}{rule.source.cite ? ` · ${rule.source.cite}` : ''}</span></li>)}</ul>
         : <p className="profile-muted">No state-specific rules in the current Rulebook.</p>}

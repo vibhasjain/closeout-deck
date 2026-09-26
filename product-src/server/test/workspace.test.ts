@@ -25,7 +25,7 @@ test('workspace refreshes account context and server-owned handbooks including i
   const cwd = await prepareWorkspace({ email: 'person@hypertrack.io', name: 'Person' }, env)
   const account = await readFile(join(cwd, 'CLAUDE.md'), 'utf8')
   for (const required of ['person@hypertrack.io', 'Person', new Date().toISOString().slice(0, 10),
-    'Payroll profile not set up yet', 'Closeout Agent', 'Payroll with a capital P', 'time entries']) {
+    'Profile not set up yet', 'Closeout Agent', 'Payroll with a capital P', 'time entries']) {
     assert.ok(account.includes(required), required)
   }
   assert.deepEqual((await readdir(join(cwd, 'handbooks'))).sort(), [
