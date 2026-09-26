@@ -22,32 +22,47 @@
 .journey-missing-set { border-top: .5px solid rgba(0,0,0,.1); padding: 12px 14px; }
 .journey-missing-label { margin-bottom: 6px; color: #716f6f; font-size: 12px; }
 .journey-missing-set .first-closeout-options { flex-wrap: wrap; }
-.journey-findings { overflow: hidden; animation: journey-results-reveal .4s cubic-bezier(.22,1,.36,1) both; }
-.journey-findings-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 10px 14px; font-size: 13px; }
-.journey-findings-head > span:last-child { color: #716f6f; font-size: 11px; }
-.journey-findings-counts { display: block; padding: 0 14px 10px; color: #716f6f; font-size: 11px; }
-.journey-carousel-band { padding: 16px 12px 8px; background: #f2f2f2; border-block: .5px solid rgba(0,0,0,.06); }
-.journey-carousel-viewport { position: relative; min-width: 0; width: 100%; overflow: hidden; }
-.journey-carousel-viewport::before, .journey-carousel-viewport::after { content: ''; position: absolute; z-index: 1; top: 0; bottom: 0; width: 14px; pointer-events: none; }
-.journey-carousel-viewport::before { left: 0; background: linear-gradient(to right, #f2f2f2, transparent); }
-.journey-carousel-viewport::after { right: 0; background: linear-gradient(to left, #f2f2f2, transparent); }
-.journey-carousel-viewport[data-at-start='true']::before, .journey-carousel-viewport[data-at-end='true']::after { opacity: 0; }
-.journey-carousel-track { display: flex; width: 100%; min-width: 0; gap: 12px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.journey-findings { overflow: hidden; max-width: 560px; font-family: var(--sans); animation: journey-results-reveal .4s cubic-bezier(.22,1,.36,1) both; }
+.journey-findings-header { padding: 14px 16px; border-bottom: .5px solid rgba(0,0,0,.1); }
+.journey-findings-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.journey-findings-head h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; font-weight: 500; line-height: 20px; }
+.journey-findings-counts { display: block; margin-top: 4px; color: #716f6f; font-size: 12px; line-height: 18px; }
+.journey-carousel-controls { display: flex; align-items: center; gap: 4px; flex-shrink: 0; color: #716f6f; font-size: 12px; line-height: 18px; }
+.journey-carousel-controls > span { margin-right: 4px; }
+.journey-carousel-controls .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; min-height: 28px; min-width: 28px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #100f0f; }
+.journey-carousel-controls .icon-btn:hover:not(:disabled) { background: rgba(0,0,0,.04); }
+.journey-carousel-controls .icon-btn:disabled { opacity: .4; cursor: default; }
+/* Flex stretch makes every slide as tall as the tallest; navigating never moves the footer. */
+.journey-carousel-track { display: flex; width: 100%; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; }
 .journey-carousel-track::-webkit-scrollbar { display: none; }
-.journey-finding { flex: 0 0 min(320px, 80%); min-width: 0; box-sizing: border-box; scroll-snap-align: start; scroll-snap-stop: always; overflow-wrap: anywhere; transition: opacity .24s cubic-bezier(.4,0,.2,1); }
-.journey-finding[data-active='false'] { opacity: .6; }
-.journey-finding h4 { margin: 12px 0 6px; font-size: 14px; line-height: 20px; font-weight: 500; letter-spacing: -.01em; }
-.journey-finding p { margin: 0 0 12px; color: #716f6f; font-size: 12px; line-height: 1.55; }
-.journey-finding-data { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 2px; font-size: 11px; }
-.journey-finding-data + .journey-asked { margin-top: 8px; margin-bottom: 0; }
+.journey-carousel-track:focus-visible { outline: 2px solid #716f6f; outline-offset: -2px; }
+.journey-finding { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; flex: 0 0 100%; min-width: 0; box-sizing: border-box; padding: 16px; scroll-snap-align: start; scroll-snap-stop: always; overflow-wrap: anywhere; }
+.journey-finding > .tag { min-height: 20px; }
+.journey-finding h4 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin: 0; font-size: 15px; line-height: 20px; font-weight: 500; letter-spacing: -.01em; }
+.journey-finding-description { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin: 0; color: #716f6f; font-size: 13px; line-height: 19px; }
+.journey-finding .journey-finding-status { display: flex; align-items: baseline; gap: 6px; margin: auto 0 0; color: #716f6f; font-size: 12px; line-height: 18px; }
+.journey-status-dot { width: 5px; height: 5px; border-radius: 50%; background: #989696; flex: 0 0 5px; align-self: center; }
+.journey-finding[data-state='waiting'] .journey-status-dot, .journey-finding[data-state='judgment'] .journey-status-dot, .journey-finding[data-state='escalated'] .journey-status-dot { background: hsl(var(--verify)); }
+.journey-finding[data-state='fixed'] .journey-status-dot { background: hsl(var(--owed)); }
 .journey-finding-actions { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
-.journey-finding-actions .btn { flex: 1; min-height: 32px; justify-content: center; padding: 6px 10px; border-radius: 5px; }
-.journey-finding-actions .btn:not(.primary) { background: rgba(0,0,0,.04); border-color: transparent; }
-.journey-carousel-controls { display: flex; justify-content: center; gap: 8px; padding-top: 12px; }
-.journey-carousel-controls .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; min-height: 28px; min-width: 28px; border: .5px solid rgba(0,0,0,.1); border-radius: 50%; }
-.journey-carousel-controls .icon-btn:disabled { opacity: .4; }
-.journey-view-issues.btn { width: 100%; min-height: 36px; justify-content: center; background: transparent; border: 0; border-radius: 0 0 10px 10px; font-size: 12px; }
-.journey-findings > .r-note, .journey-findings > [role='alert'] { padding-inline: 14px; }
+.journey-finding-actions .btn { min-height: 36px; justify-content: center; padding: 7px 12px; border-radius: 8px; line-height: 20px; font-size: 12px; box-shadow: none; }
+.journey-finding-actions .btn:not(.primary) { color: #100f0f; background: #fff; border: .5px solid rgba(0,0,0,.18); }
+.journey-finding-actions .btn:not(.primary):hover:not(:disabled) { background: #f7f7f7; }
+.journey-finding-actions .btn:disabled { opacity: 1; cursor: default; }
+.journey-finding-actions .btn[aria-busy='true'] { cursor: progress; }
+.journey-action-label { display: grid; }
+.journey-action-label > span { display: inline-flex; align-items: center; justify-content: center; gap: 6px; grid-area: 1 / 1; white-space: nowrap; }
+.journey-action-measure { visibility: hidden; pointer-events: none; }
+.journey-findings-footer { padding: 10px 16px; border-top: .5px solid rgba(0,0,0,.1); }
+.journey-view-issues.btn { min-height: 18px; padding: 0; background: transparent; border: 0; border-radius: 0; box-shadow: none; color: #716f6f; font-size: 12px; line-height: 18px; text-align: left; }
+.journey-view-issues.btn:hover { color: #100f0f; }
+.journey-findings > .r-note, .journey-findings > [role='alert'] { padding-inline: 16px; }
 @keyframes journey-results-reveal { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-@media (max-width: 767px) { .journey-finding { flex-basis: min(320px, 88.8889%); } .journey-carousel-band { padding-top: 12px; } }
-@media (prefers-reduced-motion: reduce) { .journey-task-status .spinner, .journey-findings { animation: none; } .journey-task-collapse, .journey-task-toggle > svg, .journey-finding, .journey-scan-chip { transition: none; } .journey-carousel-track { scroll-behavior: auto; } .journey-running-beam { display: none; } }
+@media (max-width: 767px) {
+  .journey-carousel-controls .icon-btn { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
+  .journey-finding-actions .btn { min-height: 44px; }
+  .journey-view-issues.btn { min-height: 44px; }
+  .journey-findings-header { padding-block: 10px; }
+  .journey-findings-footer { padding-block: 4px; }
+}
+@media (prefers-reduced-motion: reduce) { .journey-task-status .spinner, .journey-findings, .journey-finding .spinner { animation: none; } .journey-task-collapse, .journey-task-toggle > svg, .journey-scan-chip { transition: none; } .journey-carousel-track { scroll-behavior: auto; } .journey-running-beam { display: none; } }

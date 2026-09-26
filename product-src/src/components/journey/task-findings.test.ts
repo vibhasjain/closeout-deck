@@ -1,4 +1,4 @@
-import { Children, createElement, isValidElement, type ReactElement, type ReactNode } from 'react'
+import { Children, createElement, isValidElement, type DependencyList, type EffectCallback, type KeyboardEvent, type ReactElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { readFileSync } from 'node:fs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -16,10 +16,38 @@ import { findingCounts } from '@/lib/findingCounts'
 
 const source = vi.hoisted(() => ({ cycle: undefined as CyclePayload | undefined, row: undefined as CycleSummary | undefined, error: null as string | null, threads: [] as JourneyThread[], reduced: false, pipelineRunning: false }))
 const actions = vi.hoisted(() => ({ navigate: vi.fn(), openDrawer: vi.fn() }))
+// Exercise real event handlers with persistent component state in this Node suite.
+const hooks = vi.hoisted(() => ({ active: false, cursor: 0, slots: [] as unknown[], effects: [] as EffectCallback[], cleanups: new Set<() => void>() }))
 vi.mock('react', async original => ({
   ...await original<typeof import('react')>(),
-  useState: <T>(value: T | (() => T)) => [typeof value === 'function' ? (value as () => T)() : value, vi.fn()],
-  useEffect: vi.fn(), useRef: <T>(current: T) => ({ current }),
+  useState: <T>(initial: T | (() => T)) => {
+    const value = () => typeof initial === 'function' ? (initial as () => T)() : initial
+    if (!hooks.active) return [value(), vi.fn()]
+    const slot = hooks.cursor++
+    if (!(slot in hooks.slots)) hooks.slots[slot] = value()
+    return [hooks.slots[slot] as T, (next: T | ((previous: T) => T)) => {
+      hooks.slots[slot] = typeof next === 'function' ? (next as (previous: T) => T)(hooks.slots[slot] as T) : next
+    }]
+  },
+  useRef: <T>(current: T) => {
+    if (!hooks.active) return { current }
+    const slot = hooks.cursor++
+    if (!(slot in hooks.slots)) hooks.slots[slot] = { current }
+    return hooks.slots[slot]
+  },
+  useEffect: (effect: EffectCallback, dependencies?: DependencyList) => {
+    if (!hooks.active) return
+    const slot = hooks.cursor++
+    const previous = hooks.slots[slot] as { dependencies?: DependencyList; cleanup?: () => void } | undefined
+    if (previous && dependencies && previous.dependencies && dependencies.length === previous.dependencies.length && dependencies.every((value, index) => Object.is(value, previous.dependencies![index]))) return
+    hooks.effects.push(() => {
+      previous?.cleanup?.()
+      if (previous?.cleanup) hooks.cleanups.delete(previous.cleanup)
+      const cleanup = effect() || undefined
+      if (cleanup) hooks.cleanups.add(cleanup)
+      hooks.slots[slot] = { dependencies, cleanup }
+    })
+  },
 }))
 vi.mock('@/lib/useReducedMotion', () => ({ useReducedMotion: () => source.reduced }))
 vi.mock('@/lib/useTweened', () => ({ useTweened: (value: number) => value }))
@@ -35,10 +63,36 @@ vi.mock('@/lib/journey', async original => ({
   useJourneyCycle: () => ({ cycle: source.cycle, row: source.row, running: !source.cycle?.runAt, loading: false, error: source.error, pipelineRunning: source.pipelineRunning }),
   useJourneyThreads: () => ({ threads: source.threads, loading: false, error: null }),
 }))
-type ElementProps = { children?: ReactNode; footer?: ReactNode; className?: string; onClick?(): void; 'data-state'?: string }
+type ElementProps = {
+  children?: ReactNode; footer?: ReactNode; className?: string; onClick?(): void; onKeyDown?(event: KeyboardEvent<HTMLDivElement>): void
+  onPointerDown?(): void; onWheel?(): void
+  disabled?: boolean; 'aria-label'?: string; 'data-state'?: string; 'data-issue'?: string; 'data-active'?: boolean; ref?: { current: unknown }
+}
 const elements = (tree: ReactNode): ReactElement<ElementProps>[] => Children.toArray(tree).flatMap(child => isValidElement<ElementProps>(child) ? [child, ...elements(child.props.children), ...elements(child.props.footer)] : [])
 const textOf = (tree: ReactNode): string => Children.toArray(tree).map(child => isValidElement<ElementProps>(child) ? textOf(child.props.children) : String(child)).join('')
 const button = (tree: ReactNode, text: string) => elements(tree).find(item => typeof item.props.onClick === 'function' && textOf(item.props.children) === text)!
+function interactiveCard() {
+  hooks.active = true
+  hooks.cursor = 0
+  hooks.effects = []
+  try { return FindingsCard({ cycleId: source.cycle!.cycle.id }) }
+  finally {
+    hooks.active = false
+    hooks.effects.forEach(effect => effect())
+  }
+}
+function attachTrack(tree: ReactNode, count = 3) {
+  const scrollTo = vi.fn()
+  const node = {
+    clientWidth: 360, offsetWidth: 360, scrollLeft: 0, scrollTo,
+    children: Array.from({ length: count }, (_, index) => ({ offsetLeft: index * 360, offsetWidth: 360, dataset: {} as { issue?: string; state?: string } })),
+  }
+  const slides = elements(tree).filter(item => item.type === 'article')
+  node.children.forEach((child, index) => { child.dataset = { issue: slides[index].props['data-issue'], state: slides[index].props['data-state'] } })
+  scrollTo.mockImplementation(({ left }: { left: number }) => { node.scrollLeft = left })
+  elements(tree).find(item => item.props.className === 'journey-carousel-track')!.props.ref!.current = node
+  return node
+}
 function cycleFixture() {
   const payload = structuredClone(fixture.payload) as CyclePayload
   const rules = ['CON-MARGIN-01', 'SRC-VMS-01', 'CS-01']
@@ -52,6 +106,8 @@ function cycleFixture() {
 }
 beforeEach(() => {
   vi.clearAllMocks()
+  hooks.slots = []
+  hooks.active = false
   source.cycle = cycleFixture()
   source.row = undefined
   source.error = null
@@ -60,7 +116,12 @@ beforeEach(() => {
   source.pipelineRunning = false
   vi.stubGlobal('localStorage', { getItem: () => null, setItem: vi.fn() })
 })
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  hooks.cleanups.forEach(cleanup => cleanup())
+  hooks.cleanups.clear()
+  vi.useRealTimers()
+  vi.unstubAllGlobals()
+})
 
 describe('server-driven task card', () => {
   it('keeps a running scan still and removes the beam under reduced motion', () => {
@@ -179,6 +240,137 @@ describe('server-driven task card', () => {
 })
 
 describe('findings carousel', () => {
+  it('renders one surface with a full-width track, header controls, and the footer inside the card', () => {
+    const tree = FindingsCard({ cycleId: source.cycle!.cycle.id })
+    const html = renderToStaticMarkup(tree)
+    expect(tree.type).toBe('section')
+    expect(tree.props.className).toBe('journey-findings')
+    expect(html).not.toContain('journey-carousel-band')
+    expect(html).not.toContain('journey-carousel-viewport')
+    expect(html).not.toContain('approval-card')
+    const direct = Children.toArray(tree.props.children).filter(isValidElement<ElementProps>)
+    expect(direct.some(child => child.props.className === 'journey-carousel-track')).toBe(true)
+    const header = elements(tree).find(item => item.props.className === 'journey-findings-head')!
+    const previous = elements(header).find(item => item.props['aria-label'] === 'Previous finding')!
+    const next = elements(header).find(item => item.props['aria-label'] === 'Next finding')!
+    expect(previous.props.disabled).toBe(true)
+    expect(next.props.disabled).toBe(false)
+    expect(renderToStaticMarkup(header)).toContain('1 of 3')
+    expect(html.match(/>Sample</g)).toHaveLength(1)
+    expect(html).toContain('View all 3 issues')
+  })
+
+  it('moves one full slide with keyboard arrows, clamps at the ends, and honors reduced motion', () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: source.reduced }))
+    let tree = interactiveCard()
+    const track = attachTrack(tree)
+    const key = (value: string) => {
+      const preventDefault = vi.fn()
+      const handler = elements(tree).find(item => item.props.onKeyDown)!
+      handler.props.onKeyDown!({ key: value, preventDefault, target: { tagName: 'DIV' } } as unknown as KeyboardEvent<HTMLDivElement>)
+      tree = interactiveCard()
+      return preventDefault
+    }
+    expect(key('ArrowRight')).toHaveBeenCalledOnce()
+    expect(track.scrollTo).toHaveBeenLastCalledWith({ left: 360, behavior: 'smooth' })
+    expect(renderToStaticMarkup(tree)).toContain('2 of 3')
+    key('ArrowRight')
+    expect(renderToStaticMarkup(tree)).toContain('3 of 3')
+    expect(elements(tree).find(item => item.props['aria-label'] === 'Next finding')!.props.disabled).toBe(true)
+    key('ArrowRight')
+    expect(renderToStaticMarkup(tree)).toContain('3 of 3')
+    source.reduced = true
+    key('ArrowLeft')
+    expect(track.scrollTo).toHaveBeenLastCalledWith({ left: 360, behavior: 'instant' })
+    key('ArrowLeft')
+    expect(renderToStaticMarkup(tree)).toContain('1 of 3')
+    expect(elements(tree).find(item => item.props['aria-label'] === 'Previous finding')!.props.disabled).toBe(true)
+    key('ArrowLeft')
+    expect(renderToStaticMarkup(tree)).toContain('1 of 3')
+    expect(key('Enter')).not.toHaveBeenCalled()
+  })
+
+  it.each(['automatic', 'pointer', 'wheel', 'pointer-pending', 'wheel-pending'] as const)('holds approval for 800ms and respects %s navigation', async interaction => {
+    vi.useFakeTimers()
+    vi.stubGlobal('window', { setTimeout, clearTimeout })
+    vi.stubGlobal('matchMedia', () => ({ matches: false }))
+    const cycle = source.cycle!
+    cycle.results[1].rows = [{ ...cycle.results[1].rows[0], ruleId: 'CA-MB-01' }]
+    cycle.groups[1] = { ...cycle.groups[1], ruleId: 'CA-MB-01' }
+    const item = carouselFindings(cycle, DEFAULTS)[0]
+    const decision = { id: 'approval-hold', cycleId: cycle.cycle.id, groupId: item.group.ruleId, shiftIds: item.resolution.cases.map(entry => entry.shiftId), decision: 'approved' as const, reason: '', by: 'user' as const, at: '' }
+    const updated = { ...cycle, decisions: [decision] }
+    let release!: (response: Response) => void
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(resolve => { release = resolve })))
+    let tree = interactiveCard()
+    const track = attachTrack(tree)
+    button(tree, 'Approve 1').props.onClick!()
+    tree = interactiveCard()
+    const pending = renderToStaticMarkup(tree)
+    expect(pending).toContain('aria-busy="true"')
+    expect(pending).toContain('Approving…')
+    expect(pending).toMatch(/<button[^>]*disabled[^>]*>[\s\S]*?Approving…/)
+    expect(pending).toContain('spinner')
+    expect(track.scrollTo).not.toHaveBeenCalled()
+    const cancel = () => {
+      const trackElement = elements(tree).find(entry => entry.props.className === 'journey-carousel-track')!
+      const handler = interaction.startsWith('pointer') ? trackElement.props.onPointerDown : trackElement.props.onWheel
+      expect(handler).toBeTypeOf('function')
+      handler!()
+    }
+    if (interaction.endsWith('-pending')) cancel()
+    await vi.advanceTimersByTimeAsync(0)
+    release(new Response(JSON.stringify({ decision, cycle: updated }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    await vi.advanceTimersByTimeAsync(0)
+    source.cycle = updated
+    tree = interactiveCard()
+    const approved = renderToStaticMarkup(tree)
+    const slides = elements(tree).filter(entry => entry.type === 'article')
+    track.children.forEach((child, index) => { child.dataset = { issue: slides[index].props['data-issue'], state: slides[index].props['data-state'] } })
+    expect(approved).toContain('Approved ✓')
+    expect(approved).toContain('Approved by you')
+    expect(approved).toContain('2 to decide · 0 waiting on evidence')
+    expect(approved).toContain('1 of 3')
+    const first = approved.split('<article')[1]
+    expect(first).toMatch(/<button[^>]*disabled[^>]*>[\s\S]*?Approved ✓/)
+    expect(first).not.toMatch(/class="[^"]*\bprimary\b[^"]*"/)
+    if (interaction.endsWith('-pending')) expect(track.scrollTo).not.toHaveBeenCalled()
+    else expect(track.scrollTo).toHaveBeenLastCalledWith({ left: 0, behavior: 'instant' })
+    track.scrollTo.mockClear()
+    if (interaction === 'pointer' || interaction === 'wheel') cancel()
+    await vi.advanceTimersByTimeAsync(799)
+    expect(renderToStaticMarkup(interactiveCard())).toContain('1 of 3')
+    expect(track.scrollTo).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(1)
+    tree = interactiveCard()
+    if (interaction === 'automatic') {
+      expect(renderToStaticMarkup(tree)).toContain('2 of 3')
+      expect(track.scrollTo).toHaveBeenLastCalledWith({ left: 360, behavior: 'smooth' })
+      expect(elements(tree).filter(entry => entry.type === 'article' && entry.props['data-active']).map(entry => entry.props['data-state'])).toEqual(['proposed'])
+    } else {
+      expect(renderToStaticMarkup(tree)).toContain('1 of 3')
+      expect(track.scrollTo).not.toHaveBeenCalled()
+    }
+  })
+
+  it('keeps held entries and approved entries as separate uniquely keyed slides for the same rule', () => {
+    const cycle = source.cycle!
+    cycle.week.push({ ...cycle.week[2], id: 'second-duplicate-entry' })
+    cycle.results.push({ ...structuredClone(cycle.results[2]), held: true })
+    cycle.decisions = [{ id: 'partial', cycleId: cycle.cycle.id, groupId: 'CS-01', shiftIds: [cycle.week[2].id], decision: 'approved', reason: null, by: 'user', at: '' }]
+    const items = carouselFindings(cycle, DEFAULTS).filter(item => item.group.ruleId === 'CS-01')
+    expect(items).toHaveLength(2)
+    expect(items.map(item => item.resolution.state)).toEqual(['fixed', 'waiting'])
+    expect(items.map(item => item.resolution.cases.length)).toEqual([1, 1])
+    const tree = FindingsCard({ cycleId: cycle.cycle.id })
+    const slides = elements(tree).filter(entry => entry.type === 'article' && entry.props['data-issue'] === 'CS-01')
+    expect(new Set(slides.map(slide => slide.key)).size).toBe(2)
+    const html = renderToStaticMarkup(tree)
+    expect(html).toContain('1 to decide · 2 waiting on evidence')
+    expect(html).toContain('View all 4 issues')
+    expect(html).toContain('Approved by you')
+  })
+
   it('reconciles the row and carousel before and after a decision, while the footer includes every issue', () => {
     const cycle = source.cycle!
     const renderBoth = () => {
@@ -196,7 +388,8 @@ describe('findings carousel', () => {
     const after = renderBoth()
     expect(after.row).toContain('1 to decide · 1 waiting on evidence')
     expect(after.carousel).toContain('1 to decide · 1 waiting on evidence')
-    expect(after.carousel).toContain('View all issues')
+    expect(after.carousel).toContain('View all 3 issues')
+    expect(after.carousel).toContain('Approved by you')
   })
 
   it('uses the work-pane triage in proposed, waiting, judgment order', () => {
@@ -205,9 +398,9 @@ describe('findings carousel', () => {
     expect(html).toContain('1 of 3')
     const cards = html.split('<article').slice(1)
     expect(cards).toHaveLength(3)
-    expect(cards[0].match(/class="btn primary"/g)).toHaveLength(1)
-    expect(cards[1]).not.toContain('class="btn primary"')
-    expect(cards[2]).not.toContain('class="btn primary"')
+    expect(cards[0].match(/class="[^"]*\bprimary\b[^"]*"/g)).toHaveLength(1)
+    expect(cards[1]).not.toMatch(/class="[^"]*\bprimary\b[^"]*"/)
+    expect(cards[2]).not.toMatch(/class="[^"]*\bprimary\b[^"]*"/)
     expect(cards[2]).toContain('Escalate')
   })
   it('gives only the proposed item in view a black Approve, and only while review is the next step (H3)', () => {
@@ -215,14 +408,14 @@ describe('findings carousel', () => {
     cycle.results[1].rows = [{ ...cycle.results[1].rows[0], ruleId: 'CA-MB-01' }]
     cycle.groups[1] = { ...cycle.groups[1], ruleId: 'CA-MB-01' }
     expect(carouselFindings(cycle, DEFAULTS).filter(item => item.resolution.state === 'proposed')).toHaveLength(2)
-    const primaries = () => (renderToStaticMarkup(createElement(FindingsCard, { cycleId: cycle.cycle.id })).match(/class="btn primary"/g) ?? []).length
+    const primaries = () => (renderToStaticMarkup(createElement(FindingsCard, { cycleId: cycle.cycle.id })).match(/class="[^"]*\bprimary\b[^"]*"/g) ?? []).length
     expect(primaries()).toBe(1)
     cycle.nextStep = { kind: 'review', label: 'Review 3 issues', detail: '', counts: { missingSets: 0, gaps: 0, openGroups: 3 } }
     expect(primaries()).toBe(1)
     cycle.nextStep = { kind: 'get_timesheets', label: 'Get timesheets', detail: 'No location yet', counts: { missingSets: 1, gaps: 0, openGroups: 3 } }
     expect(primaries()).toBe(0)
     cycle.nextStep = undefined
-    expect((renderToStaticMarkup(createElement(FindingsCard, { cycleId: cycle.cycle.id, live: false })).match(/class="btn primary"/g) ?? [])).toHaveLength(0)
+    expect((renderToStaticMarkup(createElement(FindingsCard, { cycleId: cycle.cycle.id, live: false })).match(/class="[^"]*\bprimary\b[^"]*"/g) ?? [])).toHaveLength(0)
   })
   it('N5: shows each group\'s money from the same function as the pane, never the server exposure label', () => {
     const cycle = source.cycle!
@@ -234,7 +427,7 @@ describe('findings carousel', () => {
     for (const item of items) {
       const same = pane.find(group => group.ruleId === item.resolution.ruleId && group.state === item.resolution.state)!
       expect([item.resolution.current, item.resolution.resolved]).toEqual([same.current, same.resolved])
-      expect(html).toContain(renderToStaticMarkup(createElement(PayDelta, { current: same.current, resolved: same.resolved, size: 'sm' })))
+      expect(html).toContain(renderToStaticMarkup(createElement(PayDelta, { current: same.current, resolved: same.resolved, size: 'sm', align: 'start', timeEntries: same.cases.length })))
       expect(findingEvidence(cycle, item).amountLabel).toBe(payChange(same))
     }
   })
@@ -252,7 +445,8 @@ describe('findings carousel', () => {
     expect(hasAskableGaps(cycle, waiting.resolution, DEFAULTS)).toBe(true)
     tree = FindingsCard({ cycleId: cycle.cycle.id })
     expect(textOf(tree)).toContain('Not asked yet')
-    expect(button(tree, 'Review gaps')).toBeDefined()
+    expect(button(tree, 'View time entry')).toBeDefined()
+    expect(button(tree, 'Review gaps')).toBeUndefined()
   })
   it('names rule-only groups in the evidence drawer instead of showing the rule id (D14)', () => {
     const cycle = source.cycle!, item = carouselFindings(cycle, DEFAULTS)[0]
@@ -273,11 +467,11 @@ describe('findings carousel', () => {
     expect(init.method).toBe('POST')
     expect(JSON.parse(init.body)).toEqual({ groupId: 'CS-01', decision: 'approved', shiftIds: decision.shiftIds })
     expect(getDataSnapshot().payloads.find(payload => payload.cycle.id === cycle.cycle.id)?.decisions).toEqual([decision])
-    expect(carouselFindings(updated, DEFAULTS).map(item => item.resolution.state)).toEqual(['waiting', 'judgment'])
+    expect(carouselFindings(updated, DEFAULTS).map(item => item.resolution.state)).toEqual(['fixed', 'waiting', 'judgment'])
     const workPaneCycle = serverCycles(DEFAULTS).find(item => item.id === cycle.cycle.id)!
     const workPaneGroups = resolutionGroups(workPaneCycle, DEFAULTS.resolutions)
     expect(workPaneGroups.find(item => item.ruleId === 'CS-01')).toMatchObject({ state: 'fixed', approved: true })
-    expect(workPaneGroups.filter(item => item.state !== 'fixed').map(item => item.state)).toEqual(carouselFindings(updated, DEFAULTS).map(item => item.resolution.state))
+    expect(workPaneGroups.filter(item => item.state !== 'fixed').map(item => item.state)).toEqual(carouselFindings(updated, DEFAULTS).filter(item => item.resolution.state !== 'fixed').map(item => item.resolution.state))
   })
   it('shows the recorded thread counterparty and keeps the evidence from the server payload', () => {
     const cycle = source.cycle!, waiting = carouselFindings(cycle, DEFAULTS)[1]
@@ -309,22 +503,24 @@ describe('findings carousel', () => {
     expect(carouselFindings(cycle, DEFAULTS, [thread])[1].asked).toBe('Taylor Chen')
   })
   it('focuses the review list and contains a swipeable carousel at 390px', () => {
-    button(FindingsCard({ cycleId: source.cycle!.cycle.id }), 'View all issues').props.onClick!()
+    button(FindingsCard({ cycleId: source.cycle!.cycle.id }), 'View all 3 issues →').props.onClick!()
     expect(actions.navigate).toHaveBeenCalledWith('/payroll?cycle=2026-09-20&step=review&filter=needs-review')
     const layout = findingsLayout(390, 16, 3)
     expect(layout).toMatchObject({ width: 358, pageWidth: 390, pageOverflow: false, scrollSnap: 'x mandatory' })
-    expect(layout.cardWidth).toBeCloseTo((358 - 24) * 8 / 9)
+    expect(layout.cardWidth).toBe(layout.width)
     expect(layout.scrollWidth).toBeGreaterThan(layout.width)
     for (const width of [300, 390, 768]) {
       const narrow = findingsLayout(width, 16, 10)
       expect(narrow.cardWidth).toBeLessThanOrEqual(narrow.width)
       expect(narrow.contentWidth).toBeGreaterThan(narrow.pageWidth)
-      expect(narrow.pageWidth).toBe(width)
+      expect(narrow.pageWidth).toBeLessThanOrEqual(width)
       expect(narrow.pageOverflow).toBe(false)
     }
     const css = readFileSync(new URL('./task-findings.css', import.meta.url), 'utf8')
-    expect(css).toMatch(/\.journey-findings \{ overflow: hidden;/)
-    expect(css).toContain('flex: 0 0 min(320px, 80%)')
+    expect(css).toMatch(/\.journey-findings\s*\{[^}]*overflow:\s*hidden/s)
+    expect(css).toContain('flex: 0 0 100%')
+    expect(css).not.toContain('.journey-carousel-band')
+    expect(css).not.toContain('.journey-carousel-viewport')
     expect(css).toContain('overflow-x: auto')
     expect(css).toContain('scroll-snap-type: x mandatory')
     expect(css).toContain('overscroll-behavior-x: contain')

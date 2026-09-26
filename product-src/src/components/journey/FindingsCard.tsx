@@ -1,12 +1,11 @@
 import { SkeletonRegion } from '@/components/Skeleton'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ButtonHTMLAttributes } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { FindingDetail } from '@/components/SampleResult'
-import { ApprovalCard, RollingDigits } from '@/components/beautiful/approval-card'
-import { FormCard, gapRows } from '@/components/journey/FormCard'
+import { gapRows } from '@/components/journey/FormCard'
 import { useOverlay } from '@/components/shell/Overlay'
-import { Btn, PayDelta, Tag } from '@/components/ui'
+import { Btn, PayDelta, Spinner, Tag } from '@/components/ui'
 import { money } from '@/bench/engine.js'
 import { getDataSnapshot, hydrate, type CyclePayload, type FileRecord, type FindingGroup } from '@/lib/data'
 import { kindLabel } from '@/lib/desk'
@@ -16,7 +15,6 @@ import type { FindingEvidence } from '@/lib/issueEmail'
 import { useOnboarding, type Onboarding } from '@/lib/onboarding'
 import { resolutionGroups, type ResolutionGroup } from '@/lib/resolution'
 import { findingCounts } from '@/lib/findingCounts'
-import { useTweened } from '@/lib/useTweened'
 import type { EvidenceRow } from '@/lib/sample'
 import { FindingCountSummary } from './FindingCountSummary'
 import './task-findings.css'
@@ -43,33 +41,45 @@ export function hasAskableGaps(payload: CyclePayload, resolution: ResolutionGrou
 export function carouselFindings(payload: CyclePayload, state: Onboarding, threads: JourneyThread[] = []): CarouselFinding[] {
   const cycle = hydrate(payload, state)
   const groups = [...payload.groups, ...payload.extraGroups]
-  return resolutionGroups(cycle, state.resolutions, state.undone[cycle.id], threads, state.neverContact ?? []).filter(item => item.state !== 'fixed').flatMap(resolution => {
+  return resolutionGroups(cycle, state.resolutions, state.undone[cycle.id], threads, state.neverContact ?? []).filter(item => item.state !== 'fixed' || item.approved).sort((a, b) => {
+    // An approval keeps its place in the carousel, including after a refresh.
+    const rank = { proposed: 0, fixed: 0, waiting: 1, judgment: 2, escalated: 3 }
+    return rank[a.state] - rank[b.state] || b.cases.length - a.cases.length
+      || groups.findIndex(group => group.ruleId === a.ruleId) - groups.findIndex(group => group.ruleId === b.ruleId)
+  }).flatMap(resolution => {
     const group = groups.find(group => group.ruleId === resolution.ruleId)
     if (!group) return []
     return [{ group, resolution, asked: resolution.asked }]
   })
 }
 
-/** J&J's 80% slides (8/9 on phones) retain a glimpse of the next finding. */
+/** Each slide fills the clipped card body; the track alone owns horizontal overflow. */
 // eslint-disable-next-line react-refresh/only-export-components
 export function findingsLayout(viewportWidth: number, panePadding = 16, itemCount = 1) {
-  const width = Math.max(0, viewportWidth - 2 * panePadding)
-  const cardWidth = Math.min(320, Math.max(0, width - 24) * (viewportWidth < 768 ? 8 / 9 : .8))
-  const contentWidth = cardWidth * itemCount + Math.max(0, itemCount - 1) * 12
+  const width = Math.min(560, Math.max(0, viewportWidth - 2 * panePadding))
+  const contentWidth = width * itemCount
   const scrollWidth = Math.max(width, contentWidth)
-  // The track owns its horizontal overflow; only its clipped viewport contributes to the page.
-  const pageWidth = Math.min(width, scrollWidth) + 2 * panePadding
-  return { width, cardWidth, contentWidth, scrollWidth, pageWidth, pageOverflow: pageWidth > viewportWidth, scrollSnap: 'x mandatory' as const }
+  const pageWidth = width + 2 * panePadding
+  return { width, cardWidth: width, contentWidth, scrollWidth, pageWidth, pageOverflow: pageWidth > viewportWidth, scrollSnap: 'x mandatory' as const }
 }
 
-function FindingCount({ value }: { value: number }) {
-  return <span className="tabular-nums">{Math.round(useTweened(value)).toLocaleString()}</span>
+/** Small replacement seam for the shared pending-action button. Labels reserve the same width. */
+function CardAction({ pending = false, done = false, pendingLabel = 'Approving…', doneLabel = 'Approved ✓', children, className, disabled, ...props }:
+  ButtonHTMLAttributes<HTMLButtonElement> & { pending?: boolean; done?: boolean; pendingLabel?: string; doneLabel?: string }) {
+  const label = pending ? <><Spinner />{pendingLabel}</> : done ? doneLabel : children
+  return <Btn {...props} className={className} disabled={disabled || pending || done} aria-busy={pending || undefined}>
+    <span className="journey-action-label">
+      <span>{label}</span>
+      {props.onClick && pendingLabel && <span className="journey-action-measure" aria-hidden><Spinner />{pendingLabel}</span>}
+      {props.onClick && doneLabel && <span className="journey-action-measure" aria-hidden>{doneLabel}</span>}
+      <span className="journey-action-measure" aria-hidden>{children}</span>
+    </span>
+  </Btn>
 }
 
-/** The approval card's rolling step counter; screen readers get the settled text. */
+/** Keep the visible position in sync with the selected slide and its disabled arrows. */
 function CarouselPosition({ current, total }: { current: number; total: number }) {
-  const text = `${current} of ${total}`
-  return <span className="tabular-nums" aria-live="polite"><span className="sr-only">{text}</span><span aria-hidden="true"><RollingDigits value={text} /></span></span>
+  return <span className="tabular-nums" aria-live="polite">{current} of {total}</span>
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -99,7 +109,7 @@ export function findingEvidence(payload: CyclePayload, item: CarouselFinding, fi
   return { ...item.group, tag: item.group.tag === item.group.ruleId ? kindLabel(item.group.ruleId) : item.group.tag, id: item.group.id ?? 0, cases, amountLabel: payChange(item.resolution) }
 }
 
-/** `live`: the newest actionable card in the agent pane (H3); only then does the item in view get a black Approve. */
+/** `live`: only the newest actionable card gets the pane's black next-step button. */
 export function FindingsCard({ cycleId, live = true }: { cycleId: string; live?: boolean }) {
   const { cycle, loading, empty, error } = useJourneyCycle(cycleId)
   const { threads } = useJourneyThreads(cycleId)
@@ -107,63 +117,104 @@ export function FindingsCard({ cycleId, live = true }: { cycleId: string; live?:
   const { openDrawer } = useOverlay()
   const navigate = useNavigate()
   const track = useRef<HTMLDivElement>(null)
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const requestVersion = useRef(0)
+  const navigationVersion = useRef(0)
   const [position, setPosition] = useState(0)
   const [pending, setPending] = useState<string | null>(null)
   const [failure, setFailure] = useState<string | null>(null)
+  useEffect(() => () => { clearTimeout(advanceTimer.current); requestVersion.current++ }, [cycleId])
   if (!cycle) return loading && !error ? <SkeletonRegion className="journey-findings" /> : <div className="journey-findings" role={error ? 'alert' : 'status'}>{error ?? (empty ? 'No time entries yet' : 'Findings are not available.')}</div>
   const items = carouselFindings(cycle, state, threads)
-  const askable = new Set(items.filter(item => item.resolution.state === 'waiting' && !item.asked && hasAskableGaps(cycle, item.resolution, state, threads)))
   const index = Math.min(position, Math.max(0, items.length - 1))
   const counts = findingCounts(items.map(item => item.resolution))
   const days = hydrate(cycle, state).days
-  // One black button, and only when approving is the cycle's next step.
   const primary = live && (!cycle.nextStep || cycle.nextStep.kind === 'review')
 
-  async function act(item: CarouselFinding, decision: 'approved' | 'escalated') {
-    const id = groupId(item.group)
-    setPending(id); setFailure(null)
-    try { await decide(cycleId, { groupId: id, decision, shiftIds: item.resolution.cases.map(entry => entry.shiftId) }) }
-    catch (error) { setFailure(error instanceof Error ? error.message : 'The decision could not be saved.') }
-    finally { setPending(null) }
+  function cancelAdvance() {
+    clearTimeout(advanceTimer.current)
+    navigationVersion.current++
   }
-  function move(next: number) {
-    const target = track.current?.children[next] as HTMLElement | undefined
-    if (!target || !track.current) return
-    track.current.scrollTo({ left: target.offsetLeft - (track.current.children[0] as HTMLElement).offsetLeft,
-      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
+  function move(next: number, instant = false) {
+    cancelAdvance()
+    const node = track.current
+    const target = node?.children[next] as HTMLElement | undefined
+    if (!node || !target) return
+    // Keep arrow-key navigation usable when the focused action's slide becomes inert.
+    if (typeof document !== 'undefined' && node.contains(document.activeElement)) node.focus({ preventScroll: true })
+    node.scrollTo({ left: target.offsetLeft - (node.children[0] as HTMLElement).offsetLeft,
+      behavior: instant || matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
     setPosition(next)
   }
+  async function act(item: CarouselFinding, decision: 'approved' | 'escalated') {
+    const id = groupId(item.group), version = ++requestVersion.current
+    const navigation = navigationVersion.current
+    clearTimeout(advanceTimer.current)
+    setPending(id); setFailure(null)
+    try {
+      const result = await decide(cycleId, { groupId: id, decision, shiftIds: item.resolution.cases.map(entry => entry.shiftId) })
+      if (version !== requestVersion.current) return
+      if (decision === 'approved' && navigation === navigationVersion.current) {
+        // Partial pane approvals can merge into one group. Keep the approved issue in view.
+        const approvedIndex = carouselFindings(result.cycle, state, threads).findIndex(entry => groupId(entry.group) === id && entry.resolution.approved)
+        if (approvedIndex >= 0) move(approvedIndex, true)
+        advanceTimer.current = setTimeout(() => {
+          const slides = Array.from(track.current?.children ?? []) as HTMLElement[]
+          const at = slides.findIndex(slide => slide.dataset.issue === id && slide.dataset.state === 'fixed')
+          // Skip waiting evidence and completed decisions; wrap to an earlier undecided issue.
+          const next = slides.map((_, offset) => (at + offset + 1) % slides.length)
+            .find(candidate => ['proposed', 'judgment'].includes(slides[candidate].dataset.state ?? ''))
+          if (next !== undefined) move(next)
+        }, 800)
+      }
+    } catch (error) {
+      if (version === requestVersion.current) setFailure(error instanceof Error ? error.message : 'The decision could not be saved.')
+    } finally { if (version === requestVersion.current) setPending(null) }
+  }
 
-  return <section className="journey-findings" aria-label="Closeout findings">
-    <div className="journey-findings-head"><span>Issues{cycle.sample && <> · <Tag>Sample</Tag></>}</span><CarouselPosition current={items.length ? index + 1 : 0} total={items.length} /></div>
-    <FindingCountSummary counts={counts} className="journey-findings-counts" />
-    {items.length ? <>
-      <div className="journey-carousel-band">
-      <div className="journey-carousel-viewport" data-at-start={index === 0} data-at-end={index === items.length - 1}>
-        <div className="journey-carousel-track" ref={track} role="list" aria-label="Findings" onScroll={event => {
-          const node = event.currentTarget, first = node.children[0] as HTMLElement | undefined
-          if (first) setPosition(Math.round(node.scrollLeft / (first.offsetWidth + 12)))
-        }}>
-          {items.map((item, at) => <ApprovalCard className="journey-finding" key={`${groupId(item.group)}:${item.resolution.state}`} role="listitem" data-state={item.resolution.state} data-active={at === index} inert={at !== index} footer={<div className="journey-finding-actions">
-              {/* Only missing time uses the gaps form. Other entries open evidence, without promising an ask. */}
-              {item.resolution.state === 'waiting' && !item.asked && (askable.has(item)
-                ? <Btn onClick={() => openDrawer(<FormCard form="gaps" cycleId={cycleId} />, 'Missing time entries')}>Review gaps</Btn>
-                : <Btn onClick={() => navigate(shiftHref(cycleId, item.resolution.cases[0].shiftId))}>View time entry</Btn>)}
-              {item.resolution.state === 'proposed' && <Btn className={primary && at === index ? 'primary' : undefined} disabled={pending !== null} onClick={() => void act(item, 'approved')}>{pending === groupId(item.group) ? 'Approving…' : `Approve ${item.resolution.cases.length.toLocaleString()}`}</Btn>}
-              {item.resolution.state === 'judgment' && <Btn disabled={pending !== null} onClick={() => void act(item, 'escalated')}>{pending === groupId(item.group) ? 'Escalating…' : 'Escalate'}</Btn>}
-              <Btn onClick={() => openDrawer(<FindingDetail finding={findingEvidence(cycle, item, getDataSnapshot().files)} dayLabel={day => days[day] ?? ''} />, 'Evidence', cycle.sample ? 'Sample' : undefined)}>Evidence</Btn>
-            </div>}>
-            <Tag>{item.resolution.state === 'proposed' ? 'Proposed' : item.resolution.state === 'waiting' ? 'Waiting' : item.resolution.state === 'escalated' ? `Escalated · ${item.resolution.owner}` : 'Needs Judgment'}</Tag>
-            <h4>{item.group.title}</h4><p>{item.group.summary}</p>
-            <div className="journey-finding-data"><span className="tabular-nums"><FindingCount value={item.resolution.cases.length} /> time {item.resolution.cases.length === 1 ? 'entry' : 'entries'}</span><PayDelta current={item.resolution.current} resolved={item.resolution.resolved} size="sm" /></div>
-            {item.resolution.state === 'waiting' && <p className="journey-asked">{item.asked ? `Asked ${item.asked}` : 'Not asked yet'}</p>}
-          </ApprovalCard>)}
+  return <section className="journey-findings" aria-label="Closeout findings" aria-roledescription="carousel" onKeyDown={event => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return
+    event.preventDefault()
+    move(Math.max(0, Math.min(items.length - 1, index + (event.key === 'ArrowRight' ? 1 : -1))))
+  }}>
+    <header className="journey-findings-header">
+      <div className="journey-findings-head">
+        <h3>Issues{cycle.sample && <Tag>Sample</Tag>}</h3>
+        <div className="journey-carousel-controls">
+          <CarouselPosition current={items.length ? index + 1 : 0} total={items.length} />
+          <button type="button" className="icon-btn" aria-label="Previous finding" disabled={index === 0} onClick={() => move(index - 1)}><ChevronLeft size={16} aria-hidden /></button>
+          <button type="button" className="icon-btn" aria-label="Next finding" disabled={!items.length || index === items.length - 1} onClick={() => move(index + 1)}><ChevronRight size={16} aria-hidden /></button>
         </div>
       </div>
-      <div className="journey-carousel-controls"><button type="button" className="icon-btn" aria-label="Previous finding" disabled={index === 0} onClick={() => move(index - 1)}><ChevronLeft size={15} aria-hidden /></button><button type="button" className="icon-btn" aria-label="Next finding" disabled={index === items.length - 1} onClick={() => move(index + 1)}><ChevronRight size={15} aria-hidden /></button></div>
-      </div>
-    </> : <p className="r-note">No issues waiting for review.</p>}
+      <FindingCountSummary counts={counts} className="journey-findings-counts" />
+    </header>
+    {items.length ? <div className="journey-carousel-track" ref={track} role="list" aria-label="Issues" tabIndex={0} onPointerDown={cancelAdvance} onWheel={cancelAdvance} onScroll={event => {
+      const node = event.currentTarget
+      if (node.clientWidth) setPosition(Math.max(0, Math.min(items.length - 1, Math.round(node.scrollLeft / node.clientWidth))))
+    }}>
+      {items.map((item, at) => {
+        const approved = item.resolution.state === 'fixed' && item.resolution.approved
+        const escalated = item.resolution.state === 'escalated'
+        const deciding = pending === groupId(item.group)
+        const status = approved ? 'Approved by you' : escalated ? `Escalated to ${item.resolution.owner ?? 'review owner'}` : item.asked
+          ? `Asked ${item.asked}${threads.some(thread => thread.counterparty.name === item.asked && thread.messages.some(message => message.dir === 'out' && message.status === 'not_sent_demo')) ? ' · Not Sent · Demo' : ''}`
+          : 'Not asked yet'
+        return <article className="journey-finding" key={`${groupId(item.group)}:${item.resolution.cases.map(entry => entry.shiftId).join(',')}`} role="listitem" aria-label={`${at + 1} of ${items.length}: ${item.group.title}`} data-issue={groupId(item.group)} data-state={item.resolution.state} data-active={at === index} inert={at !== index}>
+          <Tag tone={item.resolution.state === 'waiting' || item.resolution.state === 'judgment' || escalated ? 'amber' : approved ? undefined : 'blue'}>{approved ? 'Approved' : item.resolution.state === 'proposed' ? 'Proposed' : item.resolution.state === 'waiting' ? 'Waiting' : escalated ? 'Escalated' : 'Needs Judgment'}</Tag>
+          <h4>{item.group.title}</h4>
+          <p className="journey-finding-description">{item.group.summary}</p>
+          <PayDelta current={item.resolution.current} resolved={item.resolution.resolved} timeEntries={item.resolution.cases.length} size="sm" align="start" />
+          <p className="journey-finding-status" role={at === index ? 'status' : undefined}><span className="journey-status-dot" aria-hidden />{status}</p>
+          <div className="journey-finding-actions">
+            {item.resolution.state === 'waiting' && <CardAction pendingLabel="" doneLabel="" onClick={() => navigate(shiftHref(cycleId, item.resolution.cases[0].shiftId))}>View time entry</CardAction>}
+            {(item.resolution.state === 'proposed' || approved) && <CardAction className={primary && at === index && !approved ? 'primary' : undefined} pending={deciding} done={approved} disabled={pending !== null} onClick={() => void act(item, 'approved')}>Approve {item.resolution.cases.length.toLocaleString()}</CardAction>}
+            {(item.resolution.state === 'judgment' || escalated) && <CardAction className={primary && at === index && !escalated ? 'primary' : undefined} pending={deciding} done={escalated} pendingLabel="Escalating…" doneLabel="Escalated ✓" disabled={pending !== null} onClick={() => void act(item, 'escalated')}>Escalate</CardAction>}
+            <CardAction pendingLabel="" doneLabel="" onClick={() => openDrawer(<FindingDetail finding={findingEvidence(cycle, item, getDataSnapshot().files)} dayLabel={day => days[day] ?? ''} />, 'Evidence', cycle.sample ? 'Sample' : undefined)}>Evidence</CardAction>
+          </div>
+        </article>
+      })}
+    </div> : <p className="r-note">No issues waiting for review.</p>}
     {failure && <p role="alert">{failure}</p>}
-    <Btn className="journey-view-issues" onClick={() => navigate(`/payroll?${new URLSearchParams({ cycle: cycleId, step: 'review', filter: 'needs-review' })}`)}>View all issues</Btn>
+    <footer className="journey-findings-footer"><CardAction className="journey-view-issues" pendingLabel="" doneLabel="" onClick={() => navigate(`/payroll?${new URLSearchParams({ cycle: cycleId, step: 'review', filter: 'needs-review' })}`)}>View all {items.length} issues →</CardAction></footer>
   </section>
 }

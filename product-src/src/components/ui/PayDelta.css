@@ -16,6 +16,7 @@
   gap: .5rem;
 }
 
+.pay-amounts-entries,
 .pay-amounts-current,
 .pay-amounts-resolved {
   display: flex;
@@ -41,3 +42,25 @@
 /* A single large pair (the shift footer) isn't a ledger column: the two sit together, left-aligned. */
 .pay-amounts-lg { gap: 1.5rem; text-align: left; }
 .pay-amounts-horizontal.pay-amounts-lg > span { min-width: 0; align-items: flex-start; }
+
+/* The chat card reads left to right; ledger rows retain the end-aligned default. */
+.pay-amounts-start {
+  --pay-amount-size: 13px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  max-width: 100%;
+  text-align: left;
+}
+.pay-amounts-start > span {
+  min-width: 0;
+  align-items: flex-start;
+}
+.pay-amounts-start .pay-amounts-caption {
+  color: hsl(var(--muted-foreground));
+  font-size: 11px;
+}
+.pay-amounts-change {
+  margin-left: .5rem;
+  font-variant-numeric: tabular-nums;
+}

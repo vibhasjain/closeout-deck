@@ -108,7 +108,8 @@ describe('held, escalated and decision-aware Payroll', () => {
     expect(source.context).toHaveBeenLastCalledWith(expect.objectContaining({ selection: expect.objectContaining({ gross: exported.gross }) }), true)
     expect(resolutionGroups(c, {}).find(group => group.ruleId === 'CON-MARGIN-01')).toMatchObject({ state: 'escalated', owner: 'account manager', resolved: 200 })
     const findings = renderToStaticMarkup(createElement(FindingsCard, { cycleId: c.id }))
-    expect(findings).toContain('Escalated · account manager')
+    expect(findings).toContain('>Escalated<')
+    expect(findings).toContain('Escalated to account manager')
   })
 
   it('uses the immutable sent batch total and worker count including an adjustment-only worker', () => {
