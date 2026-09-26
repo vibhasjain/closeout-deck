@@ -106,10 +106,14 @@ type AuthorityPatch = Partial<Onboarding['authority']>
 /** P6: an explicit answer to the authority goal is consent and applies now; only an amount the user never said stays a suggestion. */
 function authorityConsent(before: Onboarding, answer: string, actions: Action[]): { state: Pick<Onboarding, 'authority' | 'authorityConfigured' | 'authoritySuggestion'>; saved: AuthorityPatch; suggested: AuthorityPatch | null } | null {
   const amounts = [...answer.matchAll(/\$\s?(\d[\d,]*(?:\.\d+)?)/g)].map((match) => Number(match[1].replace(/,/g, '')))
-  // An ask-first answer with no amounts is a blanket restriction, whatever the model proposed.
+  // An ask-first answer with no amounts restricts what it is about, whatever the model proposed:
+  // "ask before any contact" keeps an earlier "$100 on your own"; a bare "ask me first" restricts everything.
   if (!amounts.length && /\b(ask (?:me )?(?:first|before)|nothing (?:on your own|without)|spend nothing)\b/i.test(answer)) {
-    return { state: { authorityConfigured: true, authority: { ...ASK_FIRST, briefing: before.authority.briefing }, authoritySuggestion: null },
-      saved: { autoFix: false, textSupervisors: false, textWorkers: false }, suggested: null }
+    const contact = /\b(contact|text|messag|reach|call|email|supervisor|worker)/i.test(answer)
+    const fixing = /\b(fix|chang|correct|adjust|edit|spend|pay)/i.test(answer)
+    const saved: AuthorityPatch = { ...(fixing || !contact ? { autoFix: false, limit: 0 } : {}), ...(contact || !fixing ? { textSupervisors: false, textWorkers: false } : {}) }
+    const base = before.authorityConfigured ? before.authority : { ...ASK_FIRST, briefing: before.authority.briefing }
+    return { state: { authorityConfigured: true, authority: { ...base, ...saved }, authoritySuggestion: fixing || !contact ? null : before.authoritySuggestion }, saved, suggested: null }
   }
   const patches = actions.flatMap((action) => action.type === 'set_authority' ? [authorityPatch(action.patch)] : [])
   if (!patches.length) return null

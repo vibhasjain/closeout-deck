@@ -220,6 +220,22 @@ describe('the agent owns the conversation', () => {
     applyOnboardReply({ question: 'Next?', card: { kind: 'question', input: 'text', topics: ['clientHours'] }, actions: [{ type: 'set_profile', field: 'workerHours', value: 'Recruiters forward text screenshots to me' }] })
     expect(getOnboarding().profile.workerHours).toBe('Recruiters forward text screenshots to me')
   })
+  it('D4 run 4: a later "ask me before any contact" keeps the $100 limit the user already gave', () => {
+    const limit = 'Ask me before fixing anything over $100. Anything up to $100 per entry you can fix on your own.'
+    updateOnboarding({ setupHistory: [{ question: 'Should I ask before every fix, or fix small gaps up to a limit?', card: { kind: 'question', input: 'text', topics: ['authority'] }, answer: limit }] })
+    applyOnboardReply({ question: 'And contacting supervisors or workers?', card: { kind: 'question', input: 'text', topics: ['authority'] },
+      actions: [{ type: 'set_authority', patch: { autoFix: true, limit: 100 } }] })
+    const history = getOnboarding().setupHistory
+    updateOnboarding({ setupHistory: [...history.slice(0, -1), { ...history.at(-1)!, answer: 'Ask me before any contact.' }] })
+    applyOnboardReply({ question: 'All set.', card: { kind: 'onboard_complete' }, actions: [{ type: 'set_authority', patch: { autoFix: false, limit: 0, textSupervisors: false, textWorkers: false } }] })
+    expect(getOnboarding()).toMatchObject({ authorityConfigured: true, authority: { autoFix: true, limit: 100, weeklyCap: null, textSupervisors: false, textWorkers: false } })
+  })
+  it('a bare "ask me first" still restricts fixing and contact', () => {
+    updateOnboarding({ authorityConfigured: true, authority: { ...ASK_FIRST, autoFix: true, limit: 100, textSupervisors: true },
+      setupHistory: [{ question: 'Anything else about limits?', card: { kind: 'question', input: 'text', topics: ['authority'] }, answer: 'Actually, ask me first.' }] })
+    applyOnboardReply({ question: 'All set.', card: { kind: 'onboard_complete' }, actions: [] })
+    expect(getOnboarding().authority).toMatchObject({ autoFix: false, limit: 0, textSupervisors: false, textWorkers: false })
+  })
   it('records an explicit ask-first authority answer as restrictive consent', () => {
     updateOnboarding({ setupHistory: [{ question: 'What may I do myself?', card: { kind: 'question', input: 'text', topics: ['authority'] }, answer: 'Ask before every fix and spend nothing.' }] })
     applyOnboardReply({ question: 'All set.', card: { kind: 'onboard_complete' }, actions: [{ type: 'set_authority', patch: { autoFix: true, limit: 1000 } }] })
