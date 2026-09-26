@@ -1,0 +1,5 @@
+#!/bin/sh
+# A post-merge failure reports a bad render; Git has already completed the merge.
+set -eu
+cd "$(git rev-parse --show-toplevel)/product-src"
+exec npm run smoke:clip

@@ -48,13 +48,14 @@ export function Sheet({ cycle, shifts, groupBy, selected, onSelect, days, includ
   const columns = 7
 
   return <table className={`sheet payments-sheet by-${groupBy}`} aria-label={groupBy === 'worker' ? 'Time entries by worker' : 'Flagged time entries by rule'}>
-      <colgroup>{[11, 18, 18, 11, 22, 9, 11].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}</colgroup>
+      {/* Widths live in sheet.css so a narrow pane can drop Delta and give its room to Pay. */}
+      <colgroup>{['day', 'worker', 'site', 'hours', 'pay', 'delta', 'status'].map((name) => <col key={name} className={`sheet-col-${name}${name === 'delta' ? ' sheet-delta' : ''}`} />)}</colgroup>
       <thead><tr>
         <th scope="col">Day</th>
         <th scope="col">Worker</th>
         <th scope="col">Site</th>
         <th scope="col" className="num sheet-hours">Hours</th><th scope="col" className="num">Pay</th>
-        <th scope="col" className="num" title="Difference from the submitted sheet">Delta</th><th scope="col">Status</th>
+        <th scope="col" className="num sheet-delta" title="Difference from the submitted sheet">Delta</th><th scope="col">Status</th>
       </tr></thead>
       <tbody>
         {groups.slice(0, limit).map((group) => {
@@ -73,7 +74,7 @@ export function Sheet({ cycle, shifts, groupBy, selected, onSelect, days, includ
               </th>
               <th className="num mono sheet-hours">{fmtHM(hours)}</th>
               <th className="num"><PayDelta current={current} resolved={pay} size="sm" /></th>
-              <th className={`num mono${groupBy === 'worker' ? ` pay-delta ${deltaTone(pay - current)}` : ''}`}>
+              <th className={`num mono sheet-delta${groupBy === 'worker' ? ` pay-delta ${deltaTone(pay - current)}` : ''}`}>
                 {groupBy === 'worker' ? money(Math.abs(pay - current)) : exposure}
               </th>
               <th />
@@ -95,7 +96,7 @@ export function Sheet({ cycle, shifts, groupBy, selected, onSelect, days, includ
                 <td><span className="block fade-trunc" title={s.worker}>{s.worker}</span></td>
                 <td><span className="site-name fade-trunc" title={`${s.fac.name} · ${s.fac.city}, ${s.fac.state}`}>{s.fac.name}</span></td>
                 <td className="num mono sheet-hours">{fmtHM(journeyShiftMinutes(rs))}</td><td className="num"><PayDelta current={rs.naive} resolved={pay} size="sm" /></td>
-                <td className={`num mono pay-delta ${deltaTone(delta)}`}>{money(Math.abs(delta))}</td>
+                <td className={`num mono sheet-delta pay-delta ${deltaTone(delta)}`}>{money(Math.abs(delta))}</td>
                 <td>{rs.held ? <Tag tone="amber">Held</Tag> : escalated ? <Tag tone="amber">Escalated</Tag> : flagged && <Tag tone="amber">Flagged</Tag>}</td>
               </tr>
             })}
@@ -107,7 +108,7 @@ export function Sheet({ cycle, shifts, groupBy, selected, onSelect, days, includ
                 <td>Adjustment for {item.cycleId}</td>
                 <td className="num mono sheet-hours">{fmtHM(line.regular_hours * 60)}</td>
                 <td className="num"><PayDelta current={0} resolved={line.gross} size="sm" /></td>
-                <td className={`num mono pay-delta ${deltaTone(line.gross)}`}>{money(Math.abs(line.gross))}</td>
+                <td className={`num mono sheet-delta pay-delta ${deltaTone(line.gross)}`}>{money(Math.abs(line.gross))}</td>
                 <td><Tag>Adjustment</Tag></td>
               </tr>
             })}

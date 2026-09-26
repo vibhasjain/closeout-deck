@@ -67,6 +67,14 @@ describe('Loom layout contracts', () => {
     for (const sheet of sheets) expect(readFileSync(new URL(sheet, root), 'utf8'), sheet).not.toMatch(/overscroll-behavior(-[xy])?: (contain|auto)/)
   })
 
+  it('drops the Delta column in a narrow payroll pane so Pay never runs into it (the iPad overlap)', () => {
+    const sheet = css('../sheet.css')
+    expect(sheet).toMatch(/@container payroll \(max-width: 860px\) \{\s*\.payments-sheet \.sheet-delta \{ display: none; \}\s*\.payments-sheet \.sheet-col-pay \{ width: 31%; \}/)
+    const markup = css('../Sheet.tsx')
+    expect(markup).not.toMatch(/<col [^>]*style=/)
+    expect(markup.match(/sheet-delta/g)?.length).toBe(5)
+  })
+
   it('sizes the square HyperTrack mark by height on every width (a wordmark width made it 126px tall on phones)', () => {
     const shell = css('./shell.css')
     expect(shell).toMatch(/\.brand img \{[^}]*height: 26px; width: auto;/)

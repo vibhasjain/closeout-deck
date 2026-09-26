@@ -1,0 +1,5 @@
+#!/bin/sh
+# Git aborts the push if the render guard fails.
+set -eu
+cd "$(git rev-parse --show-toplevel)/product-src"
+exec npm run smoke:clip

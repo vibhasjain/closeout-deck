@@ -2,3 +2,16 @@
 .payments-sheet tr.grp th > .pay-amounts { text-align: left; }
 .sheet.payments-sheet .sheet-hours,
 .sheet.payroll-summary-clients .sheet-hours { padding-right: 1.25rem; }
+
+.payments-sheet .sheet-col-day, .payments-sheet .sheet-col-hours, .payments-sheet .sheet-col-status { width: 11%; }
+.payments-sheet .sheet-col-worker, .payments-sheet .sheet-col-site { width: 18%; }
+.payments-sheet .sheet-col-pay { width: 22%; }
+.payments-sheet .sheet-col-delta { width: 9%; }
+
+/* A narrow pane (e.g. an iPad with the agent open) drops Delta: Pay already shows current and resolved, and gets
+   Delta's room so the two amounts never run into the next column. Narrower still, the table scrolls sideways. */
+@container payroll (max-width: 860px) {
+  .payments-sheet .sheet-delta { display: none; }
+  .payments-sheet .sheet-col-pay { width: 31%; }
+  .reconcile-sheet table.payments-sheet { min-width: 640px; }
+}

@@ -205,7 +205,7 @@ describe('Payroll review composition', () => {
       expect(cells[2][2]).toContain('pay-amounts')
       const delta = rows.reduce((sum, row) => sum + row.pay, 0) - rows.reduce((sum, row) => sum + row.naive, 0)
       const tone = Math.abs(delta) < 0.005 ? '' : delta > 0 ? 'owed' : 'overpay'
-      expect(cells[3][1]).toContain(`class="num mono pay-delta ${tone}"`)
+      expect(cells[3][1]).toContain(`class="num mono sheet-delta pay-delta ${tone}"`)
       expect(cells[3][2]).toBe(money(Math.abs(delta)))
       expect(cells[4][2]).toBe('')
       expect(payAmounts(header)).toEqual([
