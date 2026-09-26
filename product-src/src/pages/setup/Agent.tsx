@@ -106,7 +106,7 @@ export function Agent() {
   function keepTyping() {
     voice.dismiss()
     const next = ONBOARD_TOPICS.find(topic => !getOnboarding().covered.includes(topic))
-    void ask(next ? `Continue our conversation by typing. Ask about the next uncovered goal: ${next}. Keep the answers from our call.` : 'We finished our call. Review the covered goals and finish my Payroll profile.')
+    void ask(next ? `Continue our conversation by typing. Ask about the next uncovered goal: ${next}. Keep the answers from our call.` : 'We finished our call. Review the covered goals and finish my profile.')
   }
 
   function submitFirm() {

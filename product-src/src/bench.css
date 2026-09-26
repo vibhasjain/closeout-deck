@@ -726,11 +726,6 @@ button.stat:active { transform: none; }
 .rule-composer-modal .drawer-head { padding: 0; border: 0; }
 .rules-sheet .rule-bucket-col { width: 12rem; }
 .rule-proposal-text { text-align: left; background: none; border: 0; padding: 0; font: inherit; }
-/* Settings: connectors on the left, the payroll calendar in a side column. */
-.settings-columns.settings-two { display: grid; grid-template-columns: minmax(0, 1fr) 380px; min-height: 0; flex: 1; }
-.settings-two > .settings-side { border-left: 1px solid hsl(var(--border)); }
-.settings-side h3 { margin: 0 0 1rem; font-size: 13px; font-weight: 600; }
-.settings-side form { grid-template-columns: 1fr; }
 
 /* Connector logos: no box inside the box, full colour. */
 .source-tile .tile { border: 0; background: none; box-shadow: none; width: 100%; height: 100%; padding: 0; }
@@ -745,5 +740,3 @@ button.stat:active { transform: none; }
   color: hsl(var(--foreground)); }
 .bucket-tag { text-transform: capitalize; }
 .issue-tag { text-transform: none; }
-.settings-side .settings-cycle-head { margin: 0 0 .75rem; color: hsl(var(--muted-foreground)); font-size: 12px; font-weight: 500; }
-.settings-side .payroll-calendar + .settings-cycle-head { margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid hsl(var(--border)); }
