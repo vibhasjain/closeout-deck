@@ -628,7 +628,9 @@ describe('payroll and settings separation', () => {
     expect(tiles).toEqual(groups.flatMap((group) => SOURCES.filter((item) => item.group === group).map((item) => textHtml(item.name))))
     expect([...grid.matchAll(/class="source-grid-group"><div class="lbl">(.*?)<\/div>/g)].map((match) => match[1])).toEqual(groups.map(textHtml))
     // Owner: the pay calendar isn't a Settings concern; it's edited in Profile.
-    for (const gone of ['settings-side', 'Payroll Calendar', 'Main Pay Cycle', 'Other Pay Cycles']) expect(html).not.toContain(gone)
+    for (const gone of ['settings-side', 'Payroll Calendar', 'Main Pay Cycle', 'Other Pay Cycles', 'start-over', 'Start over']) expect(html).not.toContain(gone)
+    // Owner: Settings is only the connectors, taking the whole pane (no second column).
+    expect(html).toContain('class="settings-columns settings-one"')
     for (const gone of ['aria-label="Time sources"', '>Sources</button>', '>Destinations</button>', 'aria-label="Payroll destinations"', 'What we know']) expect(html).not.toContain(gone)
   })
 })

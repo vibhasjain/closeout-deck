@@ -3,15 +3,14 @@ import { ConnectorGrid } from '@/components/ConnectorGrid'
 import { PageTitle } from '@/components/shell/PageTitle'
 import { PaintBoundary } from '@/components/shell/PaintBoundary'
 import { SkeletonRegion } from '@/components/Skeleton'
-import { StartOver } from '@/components/StartOver'
 import { Btn } from '@/components/ui'
 import './settings.css'
 
-/** Settings is your connectors. The pay calendar lives in Profile. HyperTrack accounts also get Start over, last. */
+/** Settings is your connectors, full width. The pay calendar lives in Profile; Start over lives in the account menu. */
 export function Settings() {
   return <PaintBoundary routeKey="settings" fallback={<div className="settings-layout">
     <PageTitle title="Settings" description="Manage your connected sources." />
-    <div className="settings-columns"><SkeletonRegion variant="review" /></div>
+    <div className="settings-columns settings-one"><SkeletonRegion variant="review" /></div>
   </div>}><SettingsContents /></PaintBoundary>
 }
 
@@ -26,9 +25,8 @@ function SettingsContents() {
           Onboarding
         </Btn>
       } />
-      <div className="settings-columns">
+      <div className="settings-columns settings-one">
         <ConnectorGrid />
-        <StartOver />
       </div>
     </div>
   )

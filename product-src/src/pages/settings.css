@@ -1,9 +1,2 @@
-/* The shell can narrow Settings even on a wide screen; keep both sections reachable. */
-@container main-pane (max-width: 700px) {
-  .main .settings-columns.settings-two { grid-template-columns: minmax(0, 1fr); grid-template-rows: max-content max-content; align-content: start; overflow-y: auto; }
-  .main .settings-two > .detail-body { min-width: 0; overflow: visible; }
-  .main .settings-two > .settings-side { border-left: 0; border-top: 1px solid hsl(var(--border)); }
-}
-
-/* Start over (HyperTrack accounts only): quiet and last, under a rule. The flow's own styles live in start-over.css. */
-.settings-side .start-over { margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid hsl(var(--border)); }
+/* Settings is only the connectors, using the whole pane. */
+.settings-columns.settings-one { grid-template-columns: minmax(0, 1fr); overflow-y: auto; }
