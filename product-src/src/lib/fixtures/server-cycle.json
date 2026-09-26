@@ -363,7 +363,16 @@
         "deltaUnder": 0,
         "deltaOver": 0,
         "payableMin": 480,
-        "rate": 20
+        "rate": 20,
+        "passed": [
+          0,
+          1,
+          2,
+          3,
+          5,
+          6,
+          7
+        ]
       },
       {
         "rows": [
@@ -405,7 +414,15 @@
         "deltaUnder": 0,
         "deltaOver": 0,
         "payableMin": 480,
-        "rate": 20
+        "rate": 20,
+        "passed": [
+          0,
+          1,
+          2,
+          3,
+          6,
+          7
+        ]
       },
       {
         "rows": [
@@ -452,7 +469,15 @@
         "deltaUnder": 0,
         "deltaOver": 160,
         "payableMin": 480,
-        "rate": 20
+        "rate": 20,
+        "passed": [
+          0,
+          1,
+          2,
+          3,
+          5,
+          6
+        ]
       },
       {
         "rows": [
@@ -507,7 +532,12 @@
         "deltaUnder": 0,
         "deltaOver": 0,
         "payableMin": 0,
-        "rate": 20
+        "rate": 20,
+        "passed": [
+          0,
+          3,
+          6
+        ]
       },
       {
         "rows": [
@@ -549,7 +579,15 @@
         "deltaUnder": 0,
         "deltaOver": 0,
         "payableMin": 480,
-        "rate": 20
+        "rate": 20,
+        "passed": [
+          0,
+          1,
+          2,
+          3,
+          5,
+          6
+        ]
       },
       {
         "rows": [
@@ -591,7 +629,14 @@
         "deltaUnder": 0,
         "deltaOver": 0,
         "payableMin": 480,
-        "rate": 20
+        "rate": 20,
+        "passed": [
+          0,
+          1,
+          2,
+          3,
+          6
+        ]
       },
       {
         "rows": [
@@ -633,7 +678,14 @@
         "deltaUnder": 0,
         "deltaOver": 0,
         "payableMin": 480,
-        "rate": 20
+        "rate": 20,
+        "passed": [
+          0,
+          1,
+          2,
+          3,
+          6
+        ]
       },
       {
         "rows": [
@@ -675,7 +727,15 @@
         "deltaUnder": 0,
         "deltaOver": 0,
         "payableMin": 480,
-        "rate": 20
+        "rate": 20,
+        "passed": [
+          0,
+          1,
+          2,
+          3,
+          5,
+          6
+        ]
       },
       {
         "rows": [
@@ -717,7 +777,14 @@
         "deltaUnder": 0,
         "deltaOver": 0,
         "payableMin": 480,
-        "rate": 20
+        "rate": 20,
+        "passed": [
+          0,
+          1,
+          2,
+          3,
+          6
+        ]
       },
       {
         "rows": [
@@ -759,7 +826,15 @@
         "deltaUnder": 0,
         "deltaOver": 0,
         "payableMin": 480,
-        "rate": 20
+        "rate": 20,
+        "passed": [
+          0,
+          1,
+          2,
+          3,
+          5,
+          6
+        ]
       },
       {
         "rows": [
@@ -801,7 +876,14 @@
         "deltaUnder": 0,
         "deltaOver": 0,
         "payableMin": 480,
-        "rate": 20
+        "rate": 20,
+        "passed": [
+          0,
+          1,
+          2,
+          3,
+          6
+        ]
       }
     ],
     "totals": {
@@ -968,7 +1050,22 @@
         "Pacific Cold Storage|Ben Smith|0"
       ]
     },
-    "rulesChecked": 14
+    "rulesChecked": [
+      "CS-01",
+      "TS-COMPLETE",
+      "CS-16H",
+      "CS-OVLP",
+      "CS-SPEED",
+      "CS-EXACT",
+      "CS-EDIT",
+      "SRC-VMS-01",
+      "CA-ROUND-0",
+      "CA-MB-01",
+      "CA-OT-8",
+      "CA-SS-01",
+      "CA-RT-01",
+      "FED-OT-40"
+    ]
   },
   "files": [
     {

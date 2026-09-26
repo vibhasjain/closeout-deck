@@ -1,4 +1,4 @@
-import { fmtHM } from '../../src/bench/engine.js'
+import { fmtHM, RERUN_RULES, RULES } from '../../src/bench/engine.js'
 import { effectiveJourneyRun, journeyAdjustments, journeyPayroll, type PayrollLine } from '../../src/lib/journeyPay.ts'
 import type { CyclePayload } from './pipeline.ts'
 import { isPlainObject, ValidationError } from './validation.ts'
@@ -28,18 +28,28 @@ const JUDGMENT = new Set(['CON-MARGIN-01'])
 const SET_NAMES = { 1: 'worker-reported time', 2: 'client-approved time', 3: 'location' } as const
 export const gapId = (e: { client: string; worker: string; day: number }) => `${e.client}|${e.worker}|${e.day}`
 
-/** rerunEngine (src/bench/engine.js) re-prices these rules only on shifts that already carry a row for them, pass and na included. */
-export const RERUN_RULES = new Set(['CA-OT-8', 'CA-MB-01', 'CA-RT-01', 'CON-MIN-4H', 'CA-SS-01', 'FED-OT-40', 'FED-RR-01'])
+const kindOf = new Map(RULES.map(rule => [rule.id, rule.kind]))
 /** The app's copy of a stored run (under half the bytes). The stored run keeps everything for exports, disputes and the agent's workspace.
- * Dropped: pass/na rows the app never reads (rulesChecked keeps their count), kindDefault (RULES has it), provenance column maps and entry ids. */
+ * Dropped: pass/na rows except the ones rerunEngine re-prices (RERUN_RULES). Each result's `passed` keeps the rules of its dropped
+ * pass rows, as indexes into `rulesChecked` (every rule the run checked). kindDefault goes where RULES has the same kind.
+ * Provenance column maps and entry ids go too: the agent's data/entries has both, and getEntries loads them per shift. */
 export function wireCycle(p: CyclePayload) {
-  const checked = new Set<string>()
-  const results = p.results.map(result => ({ ...result, rows: result.rows.flatMap(({ kindDefault, ...row }) => {
-    void kindDefault; checked.add(row.ruleId)
-    return row.effect || (row.status !== 'pass' && row.status !== 'na') || RERUN_RULES.has(row.ruleId) ? [row] : []
-  }) }))
+  const rulesChecked = [...new Set(p.results.flatMap(result => result.rows.map(row => row.ruleId)))]
+  const index = new Map(rulesChecked.map((ruleId, i) => [ruleId, i]))
+  const results = p.results.map(result => {
+    const passed = new Set<number>(), rows: typeof result.rows = []
+    for (const row of result.rows) {
+      if (!row.effect && (row.status === 'pass' || row.status === 'na') && !RERUN_RULES.includes(row.ruleId)) {
+        if (row.status === 'pass') passed.add(index.get(row.ruleId)!)
+        continue
+      }
+      const { kindDefault, ...rest } = row
+      rows.push(kindDefault === kindOf.get(row.ruleId) ? rest : row)
+    }
+    return { ...result, rows, passed: [...passed] }
+  })
   const week = p.week.map(({ entryIds, prov: { cols, ...prov }, ...shift }) => { void entryIds; void cols; return { ...shift, prov } })
-  return { ...p, week, results, rulesChecked: checked.size }
+  return { ...p, week, results, rulesChecked }
 }
 
 export function summarize(p: CyclePayload): CycleSummary {

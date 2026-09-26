@@ -47,16 +47,17 @@ function json(response: ServerResponse, status: number, body: unknown): void {
   response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' })
   response.end(JSON.stringify(body))
 }
-function gzipJson(response: ServerResponse, status: number, body: string | Buffer): void {
+function gzipJson(response: ServerResponse, status: number, gzipped: Buffer): void {
   response.writeHead(status, { 'Content-Type': 'application/json', 'Content-Encoding': 'gzip', 'Cache-Control': 'no-store' })
-  response.end(typeof body === 'string' ? gzipSync(body) : body)
+  response.end(gzipped)
 }
 /** Appends fields (a JSON object) to the app's payload JSON without re-serializing its time entries. */
-const withFields = (payload: string, fields: string) => payload.slice(0, payload.lastIndexOf('}')) + ',' + fields.slice(1)
+const withFields = (payload: Buffer, fields: string) => Buffer.concat([payload.subarray(0, payload.lastIndexOf('}')), Buffer.from(',' + fields.slice(1))])
 
 // ponytail: in-process caches keyed by the content-addressed run; a second machine just recomputes.
-// Bounded by entry count: the app's payload is ~7 MB for 2,000 workers, its gzip ~0.3 MB.
-const summaries = new Map<string, CycleSummary>(), wires = new Map<string, string>(), gzips = new Map<string, Buffer>()
+// Bounded by entry count: the app's payload is ~6.7 MB of UTF-8 for 2,000 workers, its gzip ~0.3 MB, so about 32 MB when full.
+// Payloads stay Buffers: the notes carry '≤', and V8 stores a string with any non-Latin-1 character at two bytes a character.
+const summaries = new Map<string, CycleSummary>(), wires = new Map<string, Buffer>(), gzips = new Map<string, Buffer>()
 function remember<T>(cache: Map<string, T>, key: string, value: T, max = 64) {
   cache.set(key, value)
   if (cache.size > max) cache.delete(cache.keys().next().value!)
@@ -73,7 +74,7 @@ async function summaryFor(store: DataStore, email: string, run: RunRecord): Prom
   return summaries.get(key) ?? remember(summaries, key, summarize(JSON.parse(await runText(store, email, run)) as CyclePayload))
 }
 
-type Loaded = { key: string; summary: CycleSummary; wire(): Promise<string> }
+type Loaded = { key: string; summary: CycleSummary; wire(): Promise<Buffer> }
 async function loadCycle(req: JourneyRequest, cycleId: string, parse: true): Promise<Loaded & { payload: CyclePayload }>
 async function loadCycle(req: JourneyRequest, cycleId: string, parse?: false): Promise<Loaded & { payload?: CyclePayload }>
 async function loadCycle(req: JourneyRequest, cycleId: string, parse = false) {
@@ -85,7 +86,7 @@ async function loadCycle(req: JourneyRequest, cycleId: string, parse = false) {
   const payload = parse || !summaries.has(key) ? await read() : undefined
   return { key, payload, summary: summaries.get(key) ?? remember(summaries, key, summarize(payload!)),
     /** The app's copy of the run (wireCycle). The stored run is read again only on a cache miss. */
-    wire: async () => wires.get(key) ?? remember(wires, key, JSON.stringify(wireCycle(payload ?? await read())), 8) }
+    wire: async () => wires.get(key) ?? remember(wires, key, Buffer.from(JSON.stringify(wireCycle(payload ?? await read()))), 4) }
 }
 
 async function journeyState(req: JourneyRequest, summary: CycleSummary) {
@@ -103,7 +104,7 @@ async function journeyOnlyCycle(req: JourneyRequest, cycleId: string): Promise<v
   const dates = cycleDates(cycle), counts = { set1: 0, set2: 0, set3: 0 }
   const state = await journeyState(req, { id: cycleId, start: dates.start, cutoff: dates.cutoff, deadline: dates.deadline, counts, gaps: [], groups: [], supervisors: {} })
   if (!state.adjustments.length && !state.decisions.length && !state.batch && !state.threads.length) throw new DataError(404, 'not_found')
-  json(req.response, 200, { cycle: dates, sample: false, runId: null, runAt: null, sites: [], week: [], results: [], rulesChecked: 0,
+  json(req.response, 200, { cycle: dates, sample: false, runId: null, runAt: null, sites: [], week: [], results: [], rulesChecked: [],
     totals: { under: 0, over: 0, flags: 0, held: 0, gross: 0, naive: 0, shifts: 0, workers: 0 }, counts, groups: [], extraGroups: [], gaps: [],
     intake: { sources: [], expected: [], received: [] }, decisions: state.decisions, batch: state.batch, nextStep: state.nextStep, adjustments: state.adjustments })
 }
@@ -184,7 +185,8 @@ async function handleLockedJourney(req: JourneyRequest): Promise<boolean> {
         groupId: group.id, shiftIds, decision: input.decision, reason: input.reason, by: 'user', at: now })
       const state = await journeyState(req, summary)
       await req.sync()
-      gzipJson(response, 200, `{"decision":${JSON.stringify(decision)},"cycle":${withFields(await wire(), JSON.stringify({ decisions: state.decisions, batch: state.batch, nextStep: state.nextStep, adjustments: state.adjustments }))}}`)
+      const cycle = withFields(await wire(), JSON.stringify({ decisions: state.decisions, batch: state.batch, nextStep: state.nextStep, adjustments: state.adjustments }))
+      gzipJson(response, 200, gzipSync(Buffer.concat([Buffer.from(`{"decision":${JSON.stringify(decision)},"cycle":`), cycle, Buffer.from('}')])))
       return true
     }
     if (action === 'asks') {

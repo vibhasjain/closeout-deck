@@ -573,6 +573,13 @@ function runEngine(week, paramOverrides) {
 }
 
 /**
+ * The rules rerunEngine re-prices from their own rows (pass and na included). The server's app payload
+ * (wireCycle) keeps those rows, so this list gates both: a rule re-priced here but missing from it is skipped.
+ */
+const RERUN = { minutes: ['CA-OT-8', 'CA-MB-01', 'CA-RT-01', 'CON-MIN-4H'], rate: ['CA-SS-01'], weekly: ['FED-OT-40', 'FED-RR-01'] };
+const RERUN_RULES = Object.values(RERUN).flat();
+
+/**
  * Re-run payout from immutable engine evidence after review decisions. Source rows retain
  * pipeline reconciliation and full-workweek context; only dismissed effects are removed.
  * The dependency pass uses effective working minutes/rates before repricing premiums.
@@ -606,11 +613,8 @@ function rerunEngine(week, snapshots, dismissed) {
     record.rows = record.rows.filter(row => row.ruleId !== ruleId).concat(evaluated);
   };
   for (const record of records) {
-    if (record.changedMinutes) {
-      replace(record, 'CA-OT-8'); replace(record, 'CA-MB-01');
-      replace(record, 'CA-RT-01'); replace(record, 'CON-MIN-4H');
-    }
-    if (record.changedMinutes || record.changedRate) replace(record, 'CA-SS-01');
+    if (record.changedMinutes) for (const ruleId of RERUN.minutes) replace(record, ruleId);
+    if (record.changedMinutes || record.changedRate) for (const ruleId of RERUN.rate) replace(record, ruleId);
   }
   // Grouping by the captured payroll context keeps biweekly and partial-week cycles separate.
   const groups = new Map();
@@ -630,7 +634,7 @@ function rerunEngine(week, snapshots, dismissed) {
     const totalDaily = (captured?.workerDailyOtMin ?? oldDaily) + daily - oldDaily;
     const overtime = Math.max(0, worked - MIN(P('FED-OT-40', 'weekly_h')) - totalDaily);
     for (const record of group) for (const row of record.rows) {
-      if (row.status === 'na' || dismissed(record.shift.id, row.ruleId)) continue;
+      if (row.status === 'na' || !RERUN.weekly.includes(row.ruleId) || dismissed(record.shift.id, row.ruleId)) continue;
       if (row.ruleId === 'FED-OT-40') row.effect = overtime ? { otPremiumMin: overtime * 0.5 } : undefined;
       if (row.ruleId === 'FED-RR-01') row.effect = overtime && record.shift.diff
         ? { premiumAmt: Math.round(H(overtime) * 1.5 * record.shift.diff * 100) / 100 } : undefined;
@@ -842,7 +846,7 @@ function makeWeek({ seed = 20260824, scripted = true, start } = {}) {
 }
 
 // ---------- exports / self-check ----------
-export { FACILITIES, FEATURES, RULES, makeWeek, runEngine, rerunEngine, backtest, fireCount, dayLabels, fmtT, fmtH, fmtHM, money, DAYS, MIN, H };
+export { FACILITIES, FEATURES, RULES, RERUN_RULES, makeWeek, runEngine, rerunEngine, backtest, fireCount, dayLabels, fmtT, fmtH, fmtHM, money, DAYS, MIN, H };
 
 export function selfCheck() {
   const week = makeWeek();

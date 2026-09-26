@@ -14,7 +14,7 @@ import { Btn, Empty, Lbl, PayDelta, Tag } from '@/components/ui'
 import { discrepancies, effectiveResolutions, provenance, rowResolution, shortShiftId, topstats, useDesk, type DeskCycle } from '@/lib/desk'
 import { decide, groupId } from '@/lib/journey'
 import { getDataSnapshot } from '@/lib/data'
-import { journeyShiftPay } from '@/lib/journeyPay'
+import { journeyShiftPay, shiftRules } from '@/lib/journeyPay'
 import { getOnboarding, useOnboarding } from '@/lib/onboarding'
 import { shiftListHref } from '@/lib/navigation'
 import { resolutionGroups } from '@/lib/resolution'
@@ -139,6 +139,7 @@ export function ShiftPage() {
   const groupCases = (ruleId: string) => cycle.run.shifts.filter((item) => item.rows.some((row) => row.ruleId === ruleId && (row.status === 'flag' || row.status === 'held'))).map((item) => item.shift.id)
   const approvalCount = pendingRules.reduce((count, ruleId) => count + groupCases(ruleId).length, 0)
 
+  const agentView = shiftRules(rs ?? { rows: [] }, cycle.rulesChecked)
   useSetChatSuggestions(suggestions)
   useSetChatContext({
     page: `${parent}/${shiftId}`, step: 'shift',
@@ -148,11 +149,12 @@ export function ShiftPage() {
       site: rs.shift.fac.name, day: cycle.days[rs.shift.day], sheetPay: rs.naive, closeoutPay: journeyShiftPay(rs), held: rs.held,
       scheduled: rs.shift.sched, punches: rs.shift.punches, geofence: rs.shift.geo,
       badgeIn: rs.shift.badgeIn, badgeOut: rs.shift.badgeOut, meal: rs.shift.meal,
+      // File and row only: the column map is not in the app's payload; the agent reads it from data/entries in its workspace.
       source: provenance(cycle, rs.shift, cycle.week.findIndex(({ id }) => id === rs.shift.id)),
-      fired: rs.rows.filter((row) => row.status === 'flag' || row.status === 'held' || row.status === 'applied'),
+      fired: agentView.fired,
     } : undefined,
     discrepancies: items.filter((item) => item.shiftId === shiftId),
-    rules: RULES.filter((rule) => rs?.rows.some((row) => row.ruleId === rule.id && row.status !== 'na')).map(({ id, sentence }) => ({ id, sentence })),
+    rules: agentView.rules,
   })
 
   async function approve() {

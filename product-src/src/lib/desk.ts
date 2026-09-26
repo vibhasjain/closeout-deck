@@ -21,6 +21,7 @@ export interface DeskCycle extends Cycle {
   extraGroups?: CyclePayload['extraGroups']
   gaps?: CyclePayload['gaps']
   intake?: CyclePayload['intake']
+  rulesChecked?: CyclePayload['rulesChecked']
   decisions?: JourneyDecision[]
   adjustments?: CyclePayload['adjustments']
   batch?: JourneyBatch | null

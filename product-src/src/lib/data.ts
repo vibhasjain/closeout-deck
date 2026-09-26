@@ -38,10 +38,11 @@ export interface CyclePayload {
   decisions?: JourneyDecision[]; batch?: JourneyBatch | null; nextStep?: NextStep; adjustments?: JourneyPayAdjustment[]
   /** A shift's time entries, with their column maps, load on demand: getEntries(cycle, { shift }). */
   week: (Omit<Shift, 'fac'> & { fac: number; sample?: boolean; prov: DataProvenance })[]
-  /** Rows the app reads: flag, held, applied, any with an effect, and the pass/na rows rerunEngine re-prices. */
-  results: Omit<RunShift, 'shift'>[]
-  /** Distinct rules the engine checked, counting the pass/na rows the server leaves out. */
-  rulesChecked: number
+  /** Rows the app reads: flag, held, applied, any with an effect, and the pass/na rows rerunEngine re-prices.
+   * passed: the rules of the pass rows the server leaves out, as indexes into rulesChecked (shiftRules reads both). */
+  results: (Omit<RunShift, 'shift'> & { passed?: number[] })[]
+  /** Every rule the engine checked, including the ones whose rows the server leaves out. Absent from servers before Sep 26 2026. */
+  rulesChecked?: string[]
   totals: { under: number; over: number; flags: number; held: number; gross: number; naive: number; shifts: number; workers: number }
   counts: { set1: number; set2: number; set3: number }; groups: FindingGroup[]; extraGroups: FindingGroup[]; gaps: DataGap[]
   intake: { sources: { id: string; name: string; short: string; set: 1 | 2 | 3; method: string; sample?: boolean; site?: string | null; lastReceived: string | null }[]; expected: { worker: string; client: string; day: number; source: string; onSite?: number }[]; received: string[] }
@@ -142,7 +143,7 @@ export function hydrate(payload: CyclePayload, cal: Onboarding, files: FileRecor
   return { ...cycle, week, run: { shifts, totals, ctx },
     days: daysOf(cycle), scripted: false, label: cycleLabel(cycle), statusTag: payload.batch ? 'Paid' : cycle.status === 'in-progress' ? 'In Progress' : 'Pending', rememberedRuleIds: remembered(cycle, cal),
     decisions: payload.decisions, batch: payload.batch, nextStep: payload.nextStep, adjustments: payload.adjustments,
-    server: true, sample: payload.sample, sites: payload.sites, groups: payload.groups, extraGroups: payload.extraGroups, gaps: payload.gaps, intake: payload.intake,
+    server: true, sample: payload.sample, sites: payload.sites, rulesChecked: payload.rulesChecked, groups: payload.groups, extraGroups: payload.extraGroups, gaps: payload.gaps, intake: payload.intake,
   }
 }
 /** Before any time entries arrive, the next step is getting them: no run, no findings, no invented rows. */

@@ -10,8 +10,9 @@ import { createServer } from '../src/index.ts'
 import { gunzipSync } from 'node:zlib'
 import { createMemoryDataStore } from '../src/datastore.ts'
 import { signSession } from '../src/auth.ts'
-import { RERUN_RULES } from '../src/journey.ts'
 import type { CyclePayload } from '../src/pipeline.ts'
+import { RERUN_RULES } from '../../src/bench/engine.js'
+import { effectiveJourneyRun, journeyPayroll, shiftRules } from '../../src/lib/journeyPay.ts'
 
 const baseEnv = { NODE_ENV: 'development', CLOSEOUT_DEV_EMAIL: 'dev@hypertrack.io', ALLOWED_DOMAINS: 'hypertrack.io', SESSION_SECRET: 'p5-test-secret-that-is-at-least-32-bytes' }
 const post = (body: unknown) => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -84,20 +85,29 @@ test('sample HTTP seed, gzip cycle, evidence, idempotence and deletion use the o
   const detail = await fetch(`${url}/data/cycles/${seeded.cycleId}`)
   assert.equal(detail.status, 200)
   assert.equal(detail.headers.get('content-encoding'), 'gzip')
-  const cycle = await detail.json() as { week: { id: string; entryIds?: string[]; prov: object }[]; extraGroups: { ruleId: string; cases: number }[]; results: CyclePayload['results']; rulesChecked: number }
+  const cycle = await detail.json() as { week: { id: string; entryIds?: string[]; prov: object }[]; extraGroups: { ruleId: string; cases: number }[]; results: (CyclePayload['results'][number] & { passed: number[] })[]; rulesChecked: string[] }
   assert.equal(cycle.week.length, 6283)
   assert.equal(cycle.extraGroups.find(g => g.ruleId === 'CA-OT-8')?.cases, 1452)
   // The app's copy drops what it never reads; the stored run keeps all of it.
   const run = (await store.getRun(baseEnv.CLOSEOUT_DEV_EMAIL, seeded.cycleId))!
   const stored = JSON.parse(gunzipSync((await store.getObject(baseEnv.CLOSEOUT_DEV_EMAIL, run.storagePath))!).toString()) as CyclePayload
   const rows = cycle.results.flatMap(r => r.rows), storedRows = stored.results.flatMap(r => r.rows)
-  assert.equal(cycle.rulesChecked, new Set(storedRows.map(row => row.ruleId)).size)
-  assert.equal(cycle.rulesChecked, 20)
-  assert.ok(rows.every(row => !('kindDefault' in row) && (row.effect || (row.status !== 'pass' && row.status !== 'na') || RERUN_RULES.has(row.ruleId))), 'no pass/na rows but the rerun markers')
+  assert.deepEqual(cycle.rulesChecked, [...new Set(storedRows.map(row => row.ruleId))])
+  assert.equal(cycle.rulesChecked.length, 20)
+  assert.ok(rows.every(row => !('kindDefault' in row) && (row.effect || (row.status !== 'pass' && row.status !== 'na') || RERUN_RULES.includes(row.ruleId))), 'no pass/na rows but the rerun markers')
   const fired = (list: typeof rows) => list.filter(row => row.status !== 'pass' && row.status !== 'na').length
   assert.equal(fired(rows), fired(storedRows))
   assert.ok(storedRows.length > 2.5 * rows.length)
   assert.ok(cycle.week.every(shift => !('entryIds' in shift) && !('cols' in shift.prov)))
+  // Same pay and the same Closeout Agent view of every time entry (ShiftPage) from either copy, before and after dismissals.
+  const week = stored.week.map(s => ({ ...s, fac: stored.sites[s.fac] }))
+  const effectRules = [...new Set(storedRows.filter(row => row.effect).map(row => row.ruleId))]
+  for (const dismissed of [[], ...effectRules.map(ruleId => [ruleId]), effectRules]) {
+    const decisions = dismissed.map(ruleId => ({ groupId: ruleId, decision: 'dismissed' }))
+    assert.deepEqual(journeyPayroll(week, cycle.results, decisions), journeyPayroll(week, stored.results, decisions), dismissed.join())
+    const view = effectiveJourneyRun(week, cycle.results, decisions).map(result => shiftRules(result, cycle.rulesChecked))
+    assert.deepEqual(view, effectiveJourneyRun(week, stored.results, decisions).map(result => shiftRules(result)), dismissed.join())
+  }
   // A shift's time entries load on demand, with their column maps.
   const first = stored.week[0]
   const evidence = await fetch(`${url}/data/entries?cycle=${seeded.cycleId}&shift=${first.id}`)

@@ -43,8 +43,8 @@ function cycleFixture() {
   const payload = structuredClone(fixture.payload) as CyclePayload
   const rules = ['CON-MARGIN-01', 'SRC-VMS-01', 'CS-01']
   payload.week = payload.week.slice(0, 3)
-  payload.results = payload.results.slice(0, 3).map((row, i) => ({ ...row, rows: [{ ruleId: rules[i], status: 'flag', note: `Evidence for ${rules[i]}` }] }))
-  payload.rulesChecked = rules.length
+  payload.results = payload.results.slice(0, 3).map((row, i) => ({ ...row, passed: [], rows: [{ ruleId: rules[i], status: 'flag', note: `Evidence for ${rules[i]}` }] }))
+  payload.rulesChecked = rules
   payload.groups = rules.map((ruleId, i) => ({ ...payload.groups[0], ruleId, id: i + 1, cases: 1, title: `Finding ${ruleId}` }))
   payload.extraGroups = []
   payload.decisions = []
@@ -123,15 +123,17 @@ describe('server-driven task card', () => {
     expect(onAnswer).toHaveBeenCalledWith('Set 3: Use sample')
   })
   it('counts the rules the server checked, including the pass/na rows it leaves out of the payload', () => {
-    const cycle = { ...source.cycle!, rulesChecked: 20 }
+    const cycle = { ...source.cycle!, rulesChecked: Array.from({ length: 20 }, (_, i) => `RULE-${i}`) }
     source.cycle = cycle
     expect(new Set(cycle.results.flatMap(result => result.rows.map(row => row.ruleId))).size).toBe(3)
     expect(taskProgress(cycle).rules).toBe(20)
     const html = renderToStaticMarkup(createElement(TaskCard, { cycleId: cycle.cycle.id }))
     expect(html).toMatch(/Applying rules<\/span><span class="beautiful-task-amount tabular-nums"><span class="tabular-nums journey-count">20</)
     expect(html).toMatch(/Rules checked<\/span><span class="tabular-nums"><span class="tabular-nums journey-count">20</)
-    // The recorded server payload carries the count of its full engine run.
+    // The recorded server payload carries the rules of its full engine run.
     expect(taskProgress(fixture.payload as CyclePayload).rules).toBe(14)
+    // A server from before rulesChecked sends every row, so the rows give the count.
+    expect(taskProgress({ ...cycle, rulesChecked: undefined }).rules).toBe(3)
   })
   it('renders a real no-run list row with its counts, missing choices and live Running status', () => {
     const cycle = source.cycle!

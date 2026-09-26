@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { createTraceMapper, runClaude, type ClaudeEvent } from '../src/claude.ts'
 import {
   buildExport, defaultDestination, draftAsk, nextStep, openGaps, summarize, toCsv, validateAsks, validateDecision, validateDispute,
-  validateMessage, validateResolve, validateSend, wireCycle, CSV_COLUMNS, RERUN_RULES,
+  validateMessage, validateResolve, validateSend, wireCycle, CSV_COLUMNS,
 } from '../src/journey.ts'
 import type { Batch, Decision, Dispute, JourneyCycle, ReviewGroup, Thread } from '../src/journey.ts'
 import { createJourneyStore, createMemoryJourneyStore } from '../src/journeyStore.ts'
@@ -15,8 +15,8 @@ import { chmod, mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { CyclePayload } from '../src/pipeline.ts'
-import { FACILITIES, runEngine, type Shift } from '../../src/bench/engine.js'
-import { effectiveJourneyRun, journeyPayroll } from '../../src/lib/journeyPay.ts'
+import { FACILITIES, RERUN_RULES, runEngine, type Shift } from '../../src/bench/engine.js'
+import { effectiveJourneyRun, journeyPayroll, shiftRules } from '../../src/lib/journeyPay.ts'
 
 const email = 'person@hypertrack.io'
 const counts = { set1: 10, set2: 10, set3: 10 }
@@ -176,15 +176,22 @@ test('the app payload drops pass/na rows, keeps rerun markers, and pays the same
     punches: [{ in: 480, out: 1020 }], mealMin: 30, geo: [475, 1025] }))
   const cycles = [moneyPayload(overtimeWeek), moneyPayload([moneyShift({ contractMin: true })]),
     moneyPayload([moneyShift({ orientation: true, punches: [{ in: 480, out: 1020 }], geo: [475, 1025] })])]
-  type Payable = Pick<ReturnType<typeof wireCycle>, 'week' | 'sites' | 'results'>
+  type Payable = Pick<ReturnType<typeof wireCycle>, 'week' | 'sites'> & Pick<CyclePayload, 'results'>
   const rows = (p: Pick<Payable, 'results'>) => p.results.flatMap(r => r.rows)
-  const pay = (p: Payable, ruleId: string) => journeyPayroll(p.week.map(s => ({ ...s, fac: p.sites[s.fac] })), p.results, [decision(ruleId, 'dismissed')])
+  const week = (p: Payable) => p.week.map(s => ({ ...s, fac: p.sites[s.fac] }))
+  const pay = (p: Payable, ruleId: string) => journeyPayroll(week(p), p.results, [decision(ruleId, 'dismissed')])
+  // The Closeout Agent's view of each time entry (ShiftPage): fired rows with their kind, and every rule it went through.
+  const agentView = (p: Payable, ruleId: string, rulesChecked?: string[]) => effectiveJourneyRun(week(p), p.results, [decision(ruleId, 'dismissed')])
+    .map(result => shiftRules(result, rulesChecked))
   for (const cycle of cycles) {
     const wire = wireCycle(cycle), ruleIds = new Set(rows(cycle).map(row => row.ruleId))
-    assert.equal(wire.rulesChecked, ruleIds.size)
+    assert.deepEqual(wire.rulesChecked, [...ruleIds])
     assert.ok(rows(wire).length < rows(cycle).length)
-    assert.ok(rows(wire).every(row => !('kindDefault' in row) && (row.effect || (row.status !== 'pass' && row.status !== 'na') || RERUN_RULES.has(row.ruleId))))
-    for (const ruleId of ruleIds) assert.deepEqual(pay(wire, ruleId), pay(cycle, ruleId), ruleId)
+    assert.ok(rows(wire).every(row => !('kindDefault' in row) && (row.effect || (row.status !== 'pass' && row.status !== 'na') || RERUN_RULES.includes(row.ruleId))))
+    for (const ruleId of ruleIds) {
+      assert.deepEqual(pay(wire, ruleId), pay(cycle, ruleId), ruleId)
+      assert.deepEqual(agentView(wire, ruleId, wire.rulesChecked), agentView(cycle, ruleId), ruleId)
+    }
   }
   // Why the markers stay: dismissing daily overtime moves it to the weekly rule's pass row.
   const wire = wireCycle(cycles[0]), bare = { ...wire, results: wire.results.map(r => ({ ...r, rows: r.rows.filter(row => row.status !== 'pass' && row.status !== 'na') })) }

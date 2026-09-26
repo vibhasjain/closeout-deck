@@ -141,6 +141,8 @@ export type Feature = [id: string, desc: string, fn: (s: Shift, ctx: EngineConte
 export const FACILITIES: Record<string, Facility>
 export const FEATURES: Feature[]
 export const RULES: Rule[]
+/** Rules rerunEngine re-prices from their own rows, pass and na included. */
+export const RERUN_RULES: readonly string[]
 export const DAYS: string[]
 export function makeWeek(o?: { seed?: number; scripted?: boolean; start?: string }): Shift[]
 export function runEngine(week: Shift[], overrides?: Record<string, number>): Run

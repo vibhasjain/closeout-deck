@@ -1,4 +1,4 @@
-import { rerunEngine, type RunShift, type Shift } from '../bench/engine.js'
+import { RULES, rerunEngine, type RunShift, type Shift } from '../bench/engine.js'
 
 export interface PayDecision { id?: string; groupId: string; decision: string; shiftIds?: string[]; at?: string }
 export interface PayrollLine { worker: string; regular_hours: number; ot_hours: number; premium_hours: number; gross: number; held_entries: number }
@@ -33,6 +33,18 @@ export function effectiveJourneyRun(week: Shift[], results: Omit<RunShift, 'shif
     return results.map((result, i) => ({ ...result, shift: week[i] }))
   }
   return rerunEngine(week, results, dismissed).map((result, i) => ({ ...result, held: results[i].held || result.held }))
+}
+
+/** What the Closeout Agent sees of a time entry, as the stored run has it: the rows that fired and every rule it went through (any row but na).
+ * The app's payload leaves out pass rows and kindDefault (server wireCycle): `passed` indexes the cycle's rulesChecked, RULES has the kind. */
+export function shiftRules(result: Pick<RunShift, 'rows'> & { passed?: number[] }, rulesChecked: readonly string[] = []) {
+  const checked = new Set(result.passed?.map(i => rulesChecked[i]))
+  for (const row of result.rows) if (row.status !== 'na') checked.add(row.ruleId)
+  return {
+    fired: result.rows.filter(row => row.status === 'flag' || row.status === 'held' || row.status === 'applied')
+      .map(({ ruleId, ...row }) => ({ ruleId, kindDefault: RULES.find(rule => rule.id === ruleId)?.kind, ...row })),
+    rules: RULES.filter(rule => checked.has(rule.id)).map(({ id, sentence }) => ({ id, sentence })),
+  }
 }
 
 /** Identical rounding and effective-engine amounts for the browser preview and server export. */
