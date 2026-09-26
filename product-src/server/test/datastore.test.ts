@@ -330,3 +330,15 @@ test('Supabase call rows upsert after the account row and read back scoped to th
   const read = requests.at(-1)!
   assert.equal(read.url.searchParams.get('email'), `eq.${email}`); assert.equal(read.url.searchParams.get('id'), `eq.${call.id}`)
 })
+
+test('Supabase empty-cycle markers upsert per account and cycle, and read back scoped to the account', async () => {
+  const { store, requests } = mockStore((url, method) => method === 'GET' && url.pathname.endsWith('/closeout_empty_cycles')
+    ? [{ cycle_id: '2026-09-27', input_hash: 'abc' }] : [])
+  await store.setEmptyCycle(email, '2026-09-27', 'abc')
+  const [account, write] = requests
+  assert.ok(account.url.pathname.endsWith('/closeout_state'))
+  assert.ok(write.url.pathname.endsWith('/closeout_empty_cycles')); assert.equal(write.method, 'POST'); assert.equal(write.url.searchParams.get('on_conflict'), 'email,cycle_id')
+  assert.deepEqual(write.body, { email, cycle_id: '2026-09-27', input_hash: 'abc' })
+  assert.deepEqual(await store.listEmptyCycles(email), { '2026-09-27': 'abc' })
+  assert.equal(requests.at(-1)!.url.searchParams.get('email'), `eq.${email}`)
+})

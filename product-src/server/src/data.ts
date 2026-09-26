@@ -13,8 +13,9 @@ export class DataError extends Error {
 }
 const hash = (value: string | Uint8Array) => createHash('sha256').update(value).digest('hex')
 // An empty week publishes no run, so without this every read reloads all entries to rebuild it.
-// ponytail: in-process, keyed by input hash like the cycle summaries; a restart or second machine rebuilds once.
-const emptyCycles = new Map<string, string>()
+// Keyed by input hash like the runs: in-process first, then closeout_empty_cycles, so a deploy does not rebuild either.
+// Exported so a test can clear it, as a restart does.
+export const emptyCycles = new Map<string, string>()
 // Every ingest holds the account's data lock from 'received' to its final status, so a 'received' file
 // seen by another ingest was left by one that failed: it is ingested again under its own id, never reused.
 const interrupted = (file: FileRecord | null) => file?.status === 'received'
@@ -220,20 +221,24 @@ export class DataService {
     for (const cycle of cycles) cycle.status = cycle.end >= today ? 'in-progress' : cycle.id === current[1].id ? 'needs-review' : 'reviewed'
     for (const run of prior) if (!cycles.some(c => c.id === run.cycleId)) await this.store.deleteRun(email, run.cycleId)
     const ids: string[] = []
-    let entries: TimeEntry[] | undefined
+    let entries: TimeEntry[] | undefined, stored: Record<string, string> | undefined
     for (const cycle of cycles) {
       const start = dateKey(cycle.start), end = dateKey(cycle.end)
       if (!files.some(f => f.status === 'normalized' && f.firstDate && f.lastDate && f.firstDate <= end && f.lastDate >= start) && !prior.some(r => r.cycleId === cycle.id)) continue
       const old = prior.find(r => r.cycleId === cycle.id), emptyKey = `${email}|${cycle.id}`
       const inputHash = pipelineInputHash({ cycle, calendar, files, facts, engineSha, timezone: typeof doc.timezone === 'string' ? doc.timezone : undefined })
       if ((old ? old.inputHash : emptyCycles.get(emptyKey)) === inputHash) continue
+      if (!old) {
+        stored ??= await this.store.listEmptyCycles(email)
+        if (stored[cycle.id] === inputHash) { remember(emptyKey, inputHash); continue }
+      }
       entries ??= await this.store.listEntries(email)
       const built = buildCycle({ email, cycle, calendar, entries, files, facts, sources, engineSha, now, timezone: typeof doc.timezone === 'string' ? doc.timezone : undefined })
       const { payload } = built
       if (!payload.week.length) {
         if (old) await this.store.deleteRun(email, cycle.id)
-        emptyCycles.set(emptyKey, inputHash)
-        if (emptyCycles.size > 4096) emptyCycles.delete(emptyCycles.keys().next().value!)
+        await this.store.setEmptyCycle(email, cycle.id, inputHash)
+        remember(emptyKey, inputHash)
         continue
       }
       await this.store.saveRun(email, { cycleId: cycle.id, runId: payload.runId, periodStart: start,
@@ -310,8 +315,11 @@ export class DataService {
           const exact = rows.filter(row => row[siteColumn] === body.site)
           rows = (exact.length ? exact : rows.filter(row => row[siteColumn] === rows[0]?.[siteColumn])).map(row => row.map((cell, i) => i === siteColumn ? String(body.site) : cell))
         }
-        // A harmless skipped footer gives identical sample shapes distinct upload hashes per connector.
-        const bytes = Buffer.from([grid[0], ...rows, [`Total: Sample ${String(body.system ?? 'connection')} ${String(body.site ?? '')}`]].map(row => row.map(csvCell).join(',')).join('\r\n') + '\r\n')
+        // A harmless skipped footer names the source, the vendor and its client, so another connector gets its own upload hash
+        // while a repeat of the same source (ADP from the card, then ADP Workforce Now in Settings) hashes the same and returns its file.
+        const layout = libraryMapping(parsed, input.name, '')
+        const vendor = typeof body.system === 'string' && !GENERIC_SYSTEM.test(body.system) && !systemKey ? body.system : layout?.source.system ?? 'connection'
+        const bytes = Buffer.from([grid[0], ...rows, [`Total: Sample ${vendor} ${String(body.site ?? layout?.source.site ?? '')}`]].map(row => row.map(csvCell).join(',')).join('\r\n') + '\r\n')
         const existing = await this.storedFile(email, bytes)
         if (existing) { files.push(connected(existing)); continue }
         // A generic label ("Time entries") is not a system; the sample file's own vendor names the source.
@@ -354,6 +362,10 @@ export class DataService {
   }
 }
 
+function remember(key: string, inputHash: string): void {
+  emptyCycles.set(key, inputHash)
+  if (emptyCycles.size > 4096) emptyCycles.delete(emptyCycles.keys().next().value!)
+}
 function entryIdentity(e: TimeEntry) { return `${e.workerKey}|${e.siteKey}|${e.workDate}|${e.start}|${e.end}|${e.kind}` }
 function csvCell(value: string): string { return /[",\n\r]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value }
 export function cycleDates(cycle: Cycle) {

@@ -11,7 +11,9 @@ export const VOICE_ERROR = 'The Closeout Agent could not start the call. Try aga
 export const MAX_SDP_CHARS = 65_536
 export const MAX_LIVE_CONTEXT_BYTES = 4_096
 export const MAX_TRANSCRIPT_ITEMS = 200
-export const MAX_TRANSCRIPT_CHARS = 400
+export const MAX_TRANSCRIPT_CHARS = 4_000
+// 200 full turns of 4,000 characters, even at 2.5 bytes a character (non-ASCII speech), plus JSON overhead.
+export const MAX_CALL_END_BYTES = 2 * 1024 * 1024
 export const MAX_CALL_SECONDS = 3_600
 
 export type Purpose = 'onboard' | 'desk'

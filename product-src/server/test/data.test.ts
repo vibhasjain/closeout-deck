@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { recentCycles } from '../../src/lib/cycles.ts'
-import { DataError, DataService, dateKey, localToday } from '../src/data.ts'
+import { DataError, DataService, dateKey, emptyCycles, localToday } from '../src/data.ts'
 import { createMemoryDataStore } from '../src/datastore.ts'
 import type { EntryQuery } from '../src/datastore.ts'
 import { parseFile } from '../src/ingest.ts'
@@ -97,9 +97,30 @@ test('a cycle whose overlapping file builds no time entries is not rebuilt on ev
   assert.equal(reads, 1); assert.equal(await store.getRun(email, '2026-09-27'), null)
   assert.deepEqual(await service.recompute(email, {}, now), [])
   assert.equal(reads, 1)
-  // Changed inputs still rebuild the cycle.
+  // A deploy restarts the process: the memo is gone, the stored marker is not.
+  emptyCycles.clear()
+  const restarted = new DataService({ ...store, listEntries: (...args) => { reads++; return store.listEntries(...args) } })
+  assert.deepEqual(await restarted.recompute(email, {}, now), [])
+  assert.equal(reads, 1, 'an unchanged empty cycle is not rebuilt after a restart')
+  // Changed inputs still rebuild the cycle, before and after a restart.
   await service.setFact(email, { kind: 'account', key: 'burden', value: { value: 0.3 } }, {}, new Date(now.getTime() + 1000))
   assert.equal(reads, 2)
+  emptyCycles.clear()
+  assert.deepEqual(await restarted.recompute(email, {}, now), [])
+  assert.equal(reads, 2, 'the rebuilt marker is stored too')
+  await restarted.setFact(email, { kind: 'account', key: 'burden', value: { value: 0.4 } }, {}, new Date(now.getTime() + 2000))
+  assert.equal(reads, 3)
+})
+
+test('a stored empty marker never hides time entries that arrive later', async () => {
+  const store = createMemoryDataStore(), service = new DataService(store)
+  const location = Buffer.from('Worker,Site,Date,Entered,Exited\r\nAna Pena,Pacific Cold Storage,09/15/2026,6:00 AM,2:00 PM\r\n')
+  await service.ingestFile(email, { name: 'hypertrack_location_09-20-2026.csv', bytes: location, set: 3, method: 'simulated' }, {}, now)
+  assert.equal(await store.getRun(email, '2026-09-20'), null)
+  emptyCycles.clear()
+  const file = await new DataService(store).ingestFile(email, { name: 'bullhorn_09-20-2026.csv', bytes: csv({ date: '09/15/2026' }), set: 1 }, {}, now)
+  assert.deepEqual(file.cycles, ['2026-09-20'])
+  assert.equal((await store.getRunPayload(email, '2026-09-20'))?.week.length, 1)
 })
 
 test('a connect reads only its own set and dates for duplicates, and the full entry list once to rebuild', async () => {
@@ -202,6 +223,21 @@ test('simulated sheet and inbox connectors load their source sample shape and re
   const inbox = await service.connect(email, { set: 1, system: 'Forwarding inbox', site: 'Pacific Cold Storage' }, {}, now)
   assert.equal(inbox.files[0].status, 'normalized')
   assert.ok((await store.listEntries(email, { fileId: inbox.files[0].id })).every(e => e.site === 'Pacific Cold Storage' && e.sample))
+})
+
+test('QA R4-6: a repeat connect of the same source and period returns its file; another client or vendor still loads its own', async () => {
+  const { store, service } = setup()
+  const card = await service.connect(email, { set: 2, system: 'ADP', site: 'Lonestar Packaging' }, {}, now)
+  const entries = (await store.listEntries(email)).length
+  const settings = await service.connect(email, { set: 2, system: 'ADP Workforce Now' }, {}, now)
+  assert.equal(settings.files[0].id, card.files[0].id); assert.equal(settings.files[0].status, 'normalized')
+  assert.equal((await store.listFiles(email)).length, 1)
+  assert.equal((await store.listEntries(email)).length, entries)
+  const other = await service.connect(email, { set: 2, system: 'ADP Workforce Now', site: 'Mercy General' }, {}, now)
+  assert.notEqual(other.files[0].id, card.files[0].id)
+  const sheet = await service.connect(email, { set: 2, system: 'Shared sheet', site: 'Lonestar Packaging' }, {}, now)
+  assert.notEqual(sheet.files[0].id, card.files[0].id)
+  assert.equal((await store.listFiles(email)).length, 3)
 })
 
 test('a connection site stays on its source; the cached layout mapping never inherits it', async () => {

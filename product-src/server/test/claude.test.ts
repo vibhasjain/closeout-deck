@@ -93,7 +93,7 @@ let input = '';
 process.stdin.on('data', chunk => input += chunk);
 process.stdin.on('end', () => {
   if (scenario === 'trace-retry') {
-    for (const file of ['handbooks/ingest.md', ...Array.from({length:3}, (_, n) => 'data/' + (resume ? 'resume' : 'fresh') + n + '.json')]) {
+    for (const file of ['handbooks/ingest.md', ...(resume ? ['gaps.md', 'decisions.jsonl', 'journey.md'] : ['entries/2026-09-20.jsonl', 'findings/2026-09-20.jsonl', 'gaps.md']).map(name => 'data/' + name)]) {
       send({type:'assistant', message:{content:[{type:'tool_use',name:'Read',input:{file_path:file}}]}});
     }
   }
@@ -279,7 +279,7 @@ test('data traces and handbook deduplication span a failed resume and its fresh 
   await runClaude(f.options)
   assert.equal((await f.calls()).length, 2)
   const traces = f.events.filter((event): event is { trace: string } => 'trace' in event).map(event => event.trace)
-  assert.deepEqual(traces, ['Read handbooks/ingest.md', 'Read data/resume0.json', 'Read data/resume1.json', 'Read data/resume2.json'])
+  assert.deepEqual(traces, ['Read handbooks/ingest.md', 'Read the open gaps', 'Read the decisions', 'Read the closeout history'])
   assert.equal(f.events.filter(event => 'done' in event).length, 1)
 })
 

@@ -1,8 +1,9 @@
 import { execFile, spawn } from 'node:child_process'
-import { realpathSync } from 'node:fs'
+import { readFileSync, realpathSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
-import { delimiter, isAbsolute, normalize, relative, sep } from 'node:path'
+import { delimiter, isAbsolute, join, normalize, relative, sep } from 'node:path'
 import { promisify } from 'node:util'
+import { cycleLabel, type Cycle } from '../../src/lib/cycles.ts'
 import { readSessionId, writeSessionId } from './workspace.js'
 
 export const AGENT_ERROR = 'The Closeout Agent hit a problem. Try again in a moment.'
@@ -43,10 +44,27 @@ export function mapStreamLine(line: string, sessionId: string, state: StreamStat
   return null
 }
 
+const WHAT: Record<string, string> = { cycles: 'the closeout summary', findings: 'the findings', entries: 'the time entries', batches: 'the Payroll batch' }
+const FIXED: Record<string, string> = { 'data/decisions.jsonl': 'the decisions', 'data/gaps.md': 'the open gaps', 'data/journey.md': 'the closeout history' }
+
+/** A data read as a person says it, never with an id. Names come from the account records this turn's workspace was built from. */
+export function dataTrace(cwd: string, rel: string): string | null {
+  const read = (path: string) => { try { return readFileSync(join(cwd, path), 'utf8') } catch { return '' } }
+  const name = (pattern: RegExp) => pattern.exec(read(rel))?.[1].replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 80)
+  if (FIXED[rel]) return `Read ${FIXED[rel]}`
+  const [, folder, id] = /^data\/(cycles|findings|entries|batches|threads|disputes)\/([\w-]+)\.(?:json|jsonl|csv|md)$/.exec(rel) ?? []
+  if (folder === 'threads') { const who = name(/^Counterparty: [^·\n]*· (.+?)(?: \([^()\n]*\))?$/m); return who ? `Read the thread with ${who}` : 'Read a thread' }
+  if (folder === 'disputes') { const who = name(/^Worker: (.+)$/m); return who ? `Read the dispute from ${who}` : 'Read a dispute' }
+  if (!folder || !/^\d{4}-\d{2}-\d{2}$/.test(id)) return null
+  const day = (key: string) => new Date(`${key}T00:00:00`)
+  const start = /"start":"(\d{4}-\d{2}-\d{2})"/.exec(read(`data/cycles/${id}.json`))?.[1]
+  return `Read ${WHAT[folder]} for ${start ? cycleLabel({ start: day(start), end: day(id) } as Cycle) : `the week ending ${day(id).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}`
+}
+
 /**
  * Quiet trace frames for the chat: each Read of a workspace handbook becomes "Read handbooks/x.md",
- * and Reads under data/ become "Read data/<path>", at most 3 of those per turn, including a resume retry. Paths are shown
- * relative to the account workspace, never absolute, and each trace is emitted once.
+ * and Reads under data/ become a human line (dataTrace), at most 3 of those per turn, including a resume retry.
+ * Paths never reach the chat, and each trace is emitted once.
  */
 export function createTraceMapper(cwd: string): (line: string) => { trace: string }[] {
   const seen = new Set<string>()
@@ -66,9 +84,11 @@ export function createTraceMapper(cwd: string): (line: string) => { trace: strin
       const rel = normalize(!isAbsolute(file) ? file : relative(file.startsWith(real + sep) ? real : cwd, file)).split(sep).join('/')
       const kind = /^handbooks\/[^/]+\.md$/.test(rel) ? 'handbook' : /^data\/./.test(rel) ? 'data' : null
       if (!kind || seen.has(rel) || (kind === 'data' && dataTraces >= 3)) continue
+      const trace = kind === 'data' ? dataTrace(cwd, rel) : `Read ${rel}`
+      if (!trace) continue
       seen.add(rel)
       if (kind === 'data') dataTraces++
-      frames.push({ trace: `Read ${rel}` })
+      frames.push({ trace })
     }
     return frames
   }

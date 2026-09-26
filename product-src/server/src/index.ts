@@ -6,7 +6,7 @@ import { authenticate, AuthError, InviteOnlyError, isAllowedEmail, signSession, 
 import { AGENT_ERROR, getClaudeVersion, runClaude } from './claude.ts'
 import { systemPrompt, onboardPrompt, ingestPrompt, livePrompt, scribePrompt, delegatePrompt, consolidatePrompt, withMemory } from './prompts.ts'
 import { runDataTurn, scribeOutput, spokenAnswer } from './agentTurn.ts'
-import { createLiveSession, LiveSessions, LiveUpstreamError, validateCallEnd, validateLiveBody, validateSdp, VOICE_ERROR } from './live.ts'
+import { createLiveSession, LiveSessions, LiveUpstreamError, MAX_CALL_END_BYTES, validateCallEnd, validateLiveBody, validateSdp, VOICE_ERROR } from './live.ts'
 import { createDictation, DictateUpstreamError, DICTATE_ERROR } from './dictate.ts'
 import { FirmError, FirmReader, extractFirm, firmCacheFromEnv } from './firm.ts'
 import { GlobalSemaphore, KeyedMutex, QueueFullError, TurnRateLimit, UserQueue } from './queue.ts'
@@ -235,7 +235,7 @@ export function createServer(options: ServerOptions = {}) {
     }
     const callEnd = /^\/live-session\/([^/]+)\/end$/.exec(path)
     if (request.method === 'POST' && callEnd) {
-      const body = validateCallEnd(await readJson(request, 131_072))
+      const body = validateCallEnd(await readJson(request, MAX_CALL_END_BYTES))
       const call = live.get(user.email, callEnd[1])
       if (!call) { json(response, 404, { error: 'not_found' }); return }
       const record = { id: call.id, startedAt: new Date(call.startedAt).toISOString(), seconds: body.seconds, transcript: body.transcript, summary: null }

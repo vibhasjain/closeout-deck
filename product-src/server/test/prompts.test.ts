@@ -40,3 +40,11 @@ test('E2E N14: the agent never promises a later follow-up; a logged dispute gets
     assert.match(prompt, /recommend Adjust \(the hours, the amount and why, from the evidence\) or Reject \(why\) in that reply, with the dispute form card/)
   }
 })
+
+test('QA R4-3: the agent names only controls that are shown, and says why when nobody can be asked', () => {
+  for (const prompt of [systemPrompt({}), delegatePrompt({})]) {
+    assert.match(prompt, /Name only buttons and controls the user can actually see, by their shown label: those on the card or form you attach, or on the current page/)
+    assert.match(prompt, /When nobody can be asked, never tell the user to press Ask: say why \(no time entry is missing hours, or everyone left is on the never-contact list\) and offer the real next step/)
+    assert.match(prompt, /Never refer to an ask or note as drafted or sent unless data\/threads\/ has it/)
+  }
+})

@@ -87,15 +87,18 @@ test('every dispute entry point requires a sent batch owned by this account', as
 test('outgoing messages recheck current never-contact names and legacy site context without mutation', async () => {
   const { journey, doc, call } = await setup()
   await journey.saveConversation(email, thread(), [])
-  doc.neverContact = ['Ana Diaz']
-  assert.equal((await call(`/data/threads/${thread().id}/messages`, { dir: 'out', text: 'Follow up' })).status, 403)
+  doc.neverContact = ['Dana Ruiz', 'ana  díaz']
+  // QA R4-4: a stable code and the name as the user wrote it on the list, nothing else.
+  const blocked = await call(`/data/threads/${thread().id}/messages`, { dir: 'out', text: 'Follow up' })
+  assert.equal(blocked.status, 403); assert.deepEqual(blocked.body, { error: 'never_contact', name: 'ana  díaz' })
   assert.deepEqual(await journey.listMessages(email, [thread().id]), [])
   assert.equal((await journey.listThreads(email))[0].status, 'open')
   assert.equal((await call(`/data/threads/${thread().id}/messages`, { dir: 'in', text: 'Voluntary reply' })).status, 201)
   const siteThread = { ...thread('t_0000000000000002'), counterparty: { kind: 'site' as const, name: 'Maria Castillo', gapIds: ['Pacific Cold Storage|Ana Diaz|1'] } }
   await journey.saveConversation(email, siteThread, [])
   doc.neverContact = ['Pacific Cold Storage']
-  assert.equal((await call(`/data/threads/${siteThread.id}/messages`, { dir: 'out', text: 'Follow up' })).status, 403, 'site remains blocked after its gap reconciles')
+  const site = await call(`/data/threads/${siteThread.id}/messages`, { dir: 'out', text: 'Follow up' })
+  assert.equal(site.status, 403, 'site remains blocked after its gap reconciles'); assert.deepEqual(site.body, { error: 'never_contact', name: 'Pacific Cold Storage' })
   const disputeThread = { ...thread('t_0000000000000003'), disputeId: dispute().id }
   await journey.saveConversation(email, disputeThread, [], dispute())
   doc.neverContact = ['Ana Diaz']

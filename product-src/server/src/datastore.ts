@@ -71,6 +71,9 @@ export interface DataStore {
   getRun(email: string, cycleId: string): Promise<RunRecord | null>
   deleteRun(email: string, cycleId: string): Promise<void>
   saveRun(email: string, run: RunRecord, findings: FindingCase[], payload: CyclePayload): Promise<void>
+  /** cycleId → the input hash of a week that built no time entries (closeout_empty_cycles). */
+  listEmptyCycles(email: string): Promise<Record<string, string>>
+  setEmptyCycle(email: string, cycleId: string, inputHash: string): Promise<void>
   getRunPayload(email: string, run: RunRecord | string): Promise<CyclePayload | null>
   listFindings(email: string, cycleId: string): Promise<FindingCase[]>
   manifest(email: string): Promise<DataManifest>
@@ -145,12 +148,13 @@ export function createMemoryDataStore(): DataStore {
     sources: Map<string, SourceRecord>; mappings: Map<string, MappingRecord>; files: Map<string, FileRecord>
     entries: Map<string, TimeEntry>; facts: Map<string, FactRecord>; runs: Map<string, RunRecord>
     findings: Map<string, FindingCase[]>; objects: Map<string, Buffer>; chat: Map<string, ChatRecord>; calls: Map<string, CallRecord>
+    empty: Map<string, string>
   }
   const accounts = new Map<string, Account>()
   function account(email: string): Account {
     let current = accounts.get(email)
     if (!current) {
-      current = { sources: new Map(), mappings: new Map(), files: new Map(), entries: new Map(), facts: new Map(), runs: new Map(), findings: new Map(), objects: new Map(), chat: new Map(), calls: new Map() }
+      current = { sources: new Map(), mappings: new Map(), files: new Map(), entries: new Map(), facts: new Map(), runs: new Map(), findings: new Map(), objects: new Map(), chat: new Map(), calls: new Map(), empty: new Map() }
       accounts.set(email, current)
     }
     return current
@@ -220,6 +224,8 @@ export function createMemoryDataStore(): DataStore {
       state.runs.set(run.cycleId, clone(run))
       if (old && old.runId !== run.runId) { state.findings.delete(old.runId); state.objects.delete(old.storagePath) }
     },
+    async listEmptyCycles(email) { return Object.fromEntries(account(email).empty) },
+    async setEmptyCycle(email, cycleId, inputHash) { account(email).empty.set(cycleId, inputHash) },
     async getRunPayload(email, input) {
       const run = typeof input === 'string' ? await store.getRun(email, input) : input
       if (!run || (await store.getRun(email, run.cycleId))?.runId !== run.runId) return null
@@ -458,6 +464,16 @@ export function createDataStore(client: SupabaseClient): DataStore {
         const { error: objectError } = await bucket.remove([checkedPath(email, previous.storagePath)])
         if (objectError) throw dataFailure('data_object_cleanup_failed', objectError)
       }
+    },
+    async listEmptyCycles(email) {
+      const { data, error } = await table('empty_cycles').select('cycle_id,input_hash').eq('email', email)
+      if (error) throw dataFailure('data_empty_cycles_read_failed', error)
+      return Object.fromEntries((data as Row[]).map(row => [String(row.cycle_id), String(row.input_hash)]))
+    },
+    async setEmptyCycle(email, cycleId, inputHash) {
+      await store.ensureAccount(email)
+      const { error } = await table('empty_cycles').upsert({ email, cycle_id: cycleId, input_hash: inputHash }, { onConflict: 'email,cycle_id' })
+      if (error) throw dataFailure('data_empty_cycles_write_failed', error)
     },
     async getRunPayload(email, input) {
       const run = typeof input === 'string' ? await store.getRun(email, input) : input

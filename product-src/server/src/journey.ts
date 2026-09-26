@@ -144,10 +144,10 @@ export function counterpartyFor(gap: IntakeGap, summary: CycleSummary): Counterp
   return { kind: 'worker', name: gap.worker }
 }
 
-/** Never-contact names match the person, and for a site ask, the site too. */
-export function neverContacted(cp: Counterparty, gaps: IntakeGap[], list: unknown): boolean {
-  const names = new Set((Array.isArray(list) ? list : []).filter((n): n is string => typeof n === 'string').map(norm).filter(Boolean))
-  return names.has(norm(cp.name)) || (cp.kind === 'site' && [...gaps.map(g => g.client), ...(cp.siteNames ?? [])].some(name => names.has(norm(name))))
+/** Never-contact names match the person, and for a site ask, the site too. Returns the list entry that matched, as the user wrote it. */
+export function neverContacted(cp: Counterparty, gaps: IntakeGap[], list: unknown): string | null {
+  const targets = new Set([cp.name, ...(cp.kind === 'site' ? [...gaps.map(g => g.client), ...(cp.siteNames ?? [])] : [])].map(norm))
+  return (Array.isArray(list) ? list : []).find((n): n is string => typeof n === 'string' && !!norm(n) && targets.has(norm(n))) ?? null
 }
 
 /** `due` is the reply-by date (YYYY-MM-DD, never past: see replyBy); it defaults to the cutoff for callers without a calendar. */

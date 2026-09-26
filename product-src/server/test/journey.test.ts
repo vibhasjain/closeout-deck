@@ -209,12 +209,34 @@ test('trace frames name workspace-relative handbook and data reads, at most 3 da
   assert.deepEqual(trace(read(`${cwd}/handbooks/send-to-payroll.md`, `${cwd}/nextstep.md`)), [{ trace: 'Read handbooks/send-to-payroll.md' }])
   assert.deepEqual(trace(read(`${cwd}/handbooks/send-to-payroll.md`)), [], 'a repeated read is traced once')
   assert.deepEqual(trace(read('data/cycles/2026-09-20.json', `${cwd}/data/threads/t_1.md`, `${cwd}/data/gaps.md`, `${cwd}/data/entries/2026-09-20.jsonl`)).map(f => f.trace),
-    ['Read data/cycles/2026-09-20.json', 'Read data/threads/t_1.md', 'Read data/gaps.md'])
+    ['Read the closeout summary for the week ending Sep 20', 'Read a thread', 'Read the open gaps'])
   assert.deepEqual(trace(read(`${cwd}/handbooks/disputes.md`)), [{ trace: 'Read handbooks/disputes.md' }], 'handbooks are not capped')
   assert.deepEqual(trace(read(`${cwd}/../other/handbooks/x.md`, '/etc/handbooks/y.md')), [], 'nothing outside the workspace')
   assert.deepEqual(trace(JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Grep', input: { pattern: 'x', path: `${cwd}/handbooks/a.md` } }] } })), [])
   assert.deepEqual(trace(JSON.stringify({ type: 'stream_event', event: { type: 'content_block_start', content_block: { type: 'tool_use', name: 'Read' } } })), [])
   assert.deepEqual(trace('not json "tool_use"'), [])
+})
+
+test('QA R4-4: data traces are human lines with names from the account records, never ids', async t => {
+  const cwd = await mkdtemp(join(tmpdir(), 'closeout-trace-names-'))
+  t.after(() => rm(cwd, { recursive: true, force: true }))
+  const journey = createMemoryJourneyStore(), cycleId = '2026-09-20'
+  const worker: Thread = { id: 't_b68b371fa1af79b1', cycleId, shiftId: null, disputeId: 'dp_3f937f317e353363', status: 'open', createdAt: '2026-09-21T00:00:00.000Z', counterparty: { kind: 'worker', name: 'Abel Alvarez' } }
+  const site: Thread = { ...worker, id: 't_0000000000000002', disputeId: null, counterparty: { kind: 'site', name: 'Travis Reed', contact: 'travis@lonestar.example' } }
+  await journey.saveConversation(email, worker, [], { id: 'dp_3f937f317e353363', cycleId, worker: 'Abel Alvarez', description: 'Missing 15 minutes', source: 'paste', status: 'open', adjustment: null, createdAt: '2026-09-21T00:00:00.000Z' })
+  await journey.saveConversation(email, site, [])
+  await writeJourney({ email, store: createMemoryDataStore(), journey, doc: {}, runs: [], legacy: [], cycleIds: [cycleId], io: {
+    write: async (path, value) => { await mkdir(join(cwd, path, '..'), { recursive: true }); await writeFile(join(cwd, path), value) },
+    present: async () => false, list: async () => [], remove: async path => rm(join(cwd, path), { recursive: true, force: true }) } })
+  await mkdir(join(cwd, 'data', 'cycles'), { recursive: true })
+  await writeFile(join(cwd, 'data', 'cycles', `${cycleId}.json`), JSON.stringify({ cycle: { id: cycleId, start: '2026-09-14', end: cycleId } }))
+  const read = (...paths: string[]) => JSON.stringify({ type: 'assistant', message: { content: paths.map(file_path => ({ type: 'tool_use', name: 'Read', input: { file_path: join(cwd, file_path) } })) } })
+  const lines = [...createTraceMapper(cwd)(read('data/disputes/dp_3f937f317e353363.md', 'data/threads/t_0000000000000002.md', 'data/entries/2026-09-20.jsonl')),
+    ...createTraceMapper(cwd)(read('data/threads/t_b68b371fa1af79b1.md', 'data/findings/2026-09-20.jsonl', 'data/batches/2026-09-20.csv')),
+    ...createTraceMapper(cwd)(read('data/decisions.jsonl', 'data/journey.md', 'handbooks/disputes.md', 'data/other/x_123.md'))].map(f => f.trace)
+  assert.deepEqual(lines, ['Read the dispute from Abel Alvarez', 'Read the thread with Travis Reed', 'Read the time entries for Sep 14 to 20',
+    'Read the thread with Abel Alvarez', 'Read the findings for Sep 14 to 20', 'Read the Payroll batch for Sep 14 to 20',
+    'Read the decisions', 'Read the closeout history', 'Read handbooks/disputes.md'])
 })
 
 test('trace frames also match the CLI\'s resolved workspace path', async t => {

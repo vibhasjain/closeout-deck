@@ -50,7 +50,7 @@ export async function runDataTurn(input: {
       if (options.signal?.aborted) return
       if ('done' in event) terminal = event
       else if ('trace' in event) {
-        const data = event.trace.startsWith('Read data/')
+        const data = !event.trace.startsWith('Read handbooks/')
         if (!traces.has(event.trace) && (!data || dataTraces < 3)) {
           traces.add(event.trace); if (data) dataTraces++; emit(event)
         }

@@ -246,7 +246,9 @@ async function handleLockedJourney(req: JourneyRequest): Promise<boolean> {
       const legacySites = (thread.counterparty.gapIds ?? []).map(id => id.split('|')[0])
       const counterparty = { ...thread.counterparty, siteNames: [...thread.counterparty.siteNames ?? [], ...sites, ...legacySites] }
       const doc = req.currentDoc ? await req.currentDoc() : req.doc
-      if (neverContacted(counterparty, gaps, doc.neverContact)) throw new DataError(403, 'never_contact')
+      // A stable code and the name the user put on the list: the client says who, never shows the code.
+      const name = neverContacted(counterparty, gaps, doc.neverContact)
+      if (name) { json(response, 403, { error: 'never_contact', name }); return true }
     }
     // Sending is simulated: an outgoing message is logged, never delivered.
     const message: Message = { id: newId('m'), threadId: thread.id, dir: input.dir, text: input.text, status: input.dir === 'out' ? 'not_sent_demo' : 'recorded', at: new Date().toISOString() }

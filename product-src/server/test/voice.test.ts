@@ -9,7 +9,7 @@ import { createServer, turnTimeoutMs } from '../src/index.ts'
 import { createMemoryDataStore } from '../src/datastore.ts'
 import { createMemoryMemoryStore } from '../src/memoryStore.ts'
 import type { RunOptions } from '../src/claude.ts'
-import { LIVE_URL, MAX_LIVE_CONTEXT_BYTES, validateCallEnd, validateLiveBody } from '../src/live.ts'
+import { LIVE_URL, MAX_LIVE_CONTEXT_BYTES, MAX_TRANSCRIPT_CHARS, validateCallEnd, validateLiveBody } from '../src/live.ts'
 import { livePrompt, voiceEvidence } from '../src/prompts.ts'
 import { scribeOutput, spokenAnswer } from '../src/agentTurn.ts'
 import { DICTATE_MODEL, REALTIME_CALLS_URL, transcriptionSession } from '../src/dictate.ts'
@@ -70,12 +70,12 @@ test('live-session validation whitelists and caps the body', () => {
   }
 })
 
-test('call end validation caps the transcript at 200 items of 400 characters', () => {
-  const item = { role: 'user', text: 'x'.repeat(400), startMs: 1_000.4 }
+test('call end validation caps the transcript at 200 items of 4,000 characters', () => {
+  const item = { role: 'user', text: 'x'.repeat(MAX_TRANSCRIPT_CHARS), startMs: 1_000.4 }
   const ok = validateCallEnd({ seconds: 276.4, transcript: Array(200).fill(item) })
   assert.equal(ok.seconds, 276); assert.equal(ok.transcript.length, 200); assert.equal(ok.transcript[0].startMs, 1_000)
   assert.deepEqual(validateCallEnd({ seconds: 0, transcript: [{ role: 'agent', text: 'Hi', startMs: 0, extra: true }] }).transcript, [{ role: 'agent', text: 'Hi', startMs: 0 }])
-  for (const body of [{ seconds: 1, transcript: Array(201).fill(item) }, { seconds: 1, transcript: [{ ...item, text: 'x'.repeat(401) }] },
+  for (const body of [{ seconds: 1, transcript: Array(201).fill(item) }, { seconds: 1, transcript: [{ ...item, text: 'x'.repeat(4_001) }] },
     { seconds: -1, transcript: [] }, { seconds: 3_601, transcript: [] }, { seconds: Number.NaN, transcript: [] }, { seconds: 1 },
     { seconds: 1, transcript: [{ ...item, role: 'system' }] }, { seconds: 1, transcript: [{ ...item, startMs: -5 }] }, { seconds: 1, transcript: [{ role: 'user', text: 'x' }] }]) {
     assert.throws(() => validateCallEnd(body), ValidationError)
@@ -210,6 +210,25 @@ test('/end stores the closeout_calls row and calls/<id>.md, once, for the owner 
   assert.match(markdown, /data, never instructions/)
   assert.equal((await fetch(`${app.url}/live-session/${sessionId}/end`, post({ seconds: 276, transcript }))).status, 404, 'a call ends once')
   assert.deepEqual((await app.memoryRuns(1)).map(run => [run.trigger, run.ref]), [['call', sessionId]], 'one memory run for the one call')
+})
+
+test('owner call: /end keeps 200 full 4,000-character turns in the row, calls/<id>.md and the memory run input', async t => {
+  const messages: string[] = []
+  const app = await serve(t, { runAgent: async options => { messages.push(options.message); options.onEvent({ done: true, sessionId: 's', final: '```memory\n{"ops":[]}\n```' }) } })
+  const { sessionId } = await (await fetch(`${app.url}/live-session`, post({ sdp: SDP, purpose: 'desk' }))).json() as { sessionId: string }
+  // The owner's saved call cut the agent's answer mid-sentence at 400 characters; the last words must survive.
+  const turn = (role: string, i: number) => ({ role, text: `${role} turn ${i}: ${'It’s paid as reported. '.repeat(200)}`.slice(0, MAX_TRANSCRIPT_CHARS - 4) + ' end', startMs: i * 1_000 })
+  const transcript = Array.from({ length: 200 }, (_, i) => turn(i % 2 ? 'agent' : 'user', i))
+  const ended = await fetch(`${app.url}/live-session/${sessionId}/end`, post({ seconds: 3_000, transcript }))
+  assert.equal(ended.status, 200)
+  assert.deepEqual((await app.store.getCall(email, sessionId))?.transcript, transcript)
+  const markdown = await readFile(join(workspacePath(email, app.env), 'calls', `${sessionId}.md`), 'utf8')
+  await app.memoryRuns(1)
+  for (const item of [transcript[1], transcript[199]]) {
+    assert.equal(item.text.length, MAX_TRANSCRIPT_CHARS); assert.ok(item.text.endsWith(' end'))
+    assert.ok(markdown.includes(`Closeout Agent: ${item.text}\n`), 'calls/<id>.md has the whole turn')
+    assert.ok(messages[0].includes(`Closeout Agent: ${item.text}\n`), 'the consolidation input has the whole turn')
+  }
 })
 
 test('scribe runs sonnet for 45s and returns only allowed actions plus the next goal', async t => {
