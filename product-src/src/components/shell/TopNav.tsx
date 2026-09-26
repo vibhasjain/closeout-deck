@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
-import { Banknote, ClipboardList, Ellipsis, ListChecks, LogOut, Menu, PanelLeft, Settings, UserRound, X } from 'lucide-react'
+import { Banknote, ClipboardList, Ellipsis, ListChecks, LogOut, Menu, PanelLeft, RotateCcw, Settings, UserRound, X } from 'lucide-react'
 import { NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { recentCycles } from '@/lib/cycles'
 import { intakeHref } from '@/lib/intake'
 import { signOut, viewerSession } from '@/lib/viewerSession'
+import { startOverAllowed } from '@/lib/startOver'
+import { StartOver } from '@/components/StartOver'
 import { useOnboarding } from '@/lib/onboarding'
 import { useCurrentEmail } from '@/lib/useCurrentEmail'
 import { GettingStarted } from './GettingStarted'
@@ -33,7 +35,8 @@ export function TopNav({ wide = true }: { wide?: boolean } = {}) {
   const [signingOut, setSigningOut] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [previousWide, setPreviousWide] = useState(wide)
-  const [accountOpen, setAccountOpen] = useState(false)
+  // The account area is closed, showing its menu, or showing Start over's typed confirm in the menu's place.
+  const [accountOpen, setAccountOpen] = useState<false | 'menu' | 'start-over'>(false)
   const header = useRef<HTMLElement>(null)
   const drawer = useRef<HTMLDivElement>(null)
   const menuTrigger = useRef<HTMLButtonElement>(null)
@@ -108,6 +111,9 @@ export function TopNav({ wide = true }: { wide?: boolean } = {}) {
     }
   }
   const navigateTo = (to: string) => { closeDrawer(); navigate(to) }
+  // Closing Start over hands focus back to the account row.
+  const openStartOver = () => setAccountOpen('start-over')
+  const closeStartOver = () => { setAccountOpen(false); accountTrigger.current?.focus() }
   const pendingHref = intakeHref(recentCycles(state, 2)[1].id)
   const intakeActive = pathname === '/payroll' && params.get('step') === 'intake'
 
@@ -139,13 +145,16 @@ export function TopNav({ wide = true }: { wide?: boolean } = {}) {
       <PayRuns onNavigate={closeDrawer} />
       <GettingStarted onNavigate={closeDrawer} />
       <div ref={account} className="sidebar-account">
-        {wide ? <button ref={accountTrigger} type="button" className="sidebar-account-trigger" aria-label="Account menu" title={`${name}${email ? ` · ${email}` : ''}`} aria-haspopup="menu" aria-expanded={accountOpen} aria-controls={accountMenuId} onClick={() => setAccountOpen((open) => !open)}>
+        {wide ? <button ref={accountTrigger} type="button" className="sidebar-account-trigger" aria-label="Account menu" title={`${name}${email ? ` · ${email}` : ''}`} aria-haspopup="menu" aria-expanded={!!accountOpen} aria-controls={accountMenuId} onClick={() => setAccountOpen((open) => open ? false : 'menu')}>
           <span className="account-avatar" aria-hidden="true">{name.trim().slice(0, 1).toUpperCase()}</span>
           <span className="sidebar-label account-details"><span className="account-name">{name}</span><span className="account-email">{email || 'Signed in'}</span></span>
           <Ellipsis className="sidebar-label" size={16} aria-hidden="true" />
         </button> : <div className="sidebar-account-identity"><span className="account-avatar" aria-hidden="true">{name.trim().slice(0, 1).toUpperCase()}</span><span className="account-details"><span className="account-name">{name}</span><span className="account-email">{email || 'Signed in'}</span></span></div>}
         {!wide && <button type="button" className="sidebar-logout" disabled={signingOut} onClick={() => void logOut()}><LogOut size={16} aria-hidden="true" />Log out</button>}
-        {wide && accountOpen && <div id={accountMenuId} className="sidebar-account-menu" role="menu" aria-label="Account" onKeyDown={(event) => {
+        {!wide && startOverAllowed() && (accountOpen === 'start-over' ? <StartOver onClose={closeStartOver} />
+          : <button type="button" className="sidebar-logout" onClick={openStartOver}><RotateCcw size={16} aria-hidden="true" />Start over</button>)}
+        {wide && accountOpen === 'start-over' && <div className="sidebar-start-over"><StartOver onClose={closeStartOver} /></div>}
+        {wide && accountOpen === 'menu' && <div id={accountMenuId} className="sidebar-account-menu" role="menu" aria-label="Account" onKeyDown={(event) => {
           if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
           event.preventDefault()
           const items = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
@@ -154,6 +163,7 @@ export function TopNav({ wide = true }: { wide?: boolean } = {}) {
           items[next]?.focus()
         }}>
           <button type="button" role="menuitem" onClick={() => navigateTo('/setup/agent')}><ListChecks size={15} aria-hidden="true" />Onboarding</button>
+          {startOverAllowed() && <button type="button" role="menuitem" onClick={openStartOver}><RotateCcw size={15} aria-hidden="true" />Start over</button>}
           <button type="button" role="menuitem" aria-label="Log out" disabled={signingOut} onClick={() => void logOut()}><LogOut size={15} aria-hidden="true" />Log out</button>
         </div>}
       </div>

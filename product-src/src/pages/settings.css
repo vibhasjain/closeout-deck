@@ -5,12 +5,5 @@
   .main .settings-two > .settings-side { border-left: 0; border-top: 1px solid hsl(var(--border)); }
 }
 
-/* Start over (HyperTrack accounts only): quiet, last, outline buttons only. */
-.settings-start-over { margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid hsl(var(--border)); font-size: 13px; }
-.settings-start-over h4 { margin: 0 0 .5rem; font-size: 13px; font-weight: 600; }
-.settings-start-over p { margin: 0 0 .75rem; color: hsl(var(--muted-foreground)); line-height: 1.5; }
-.settings-start-over form { display: grid; gap: .5rem; }
-.settings-start-over label { color: hsl(var(--muted-foreground)); }
-.settings-start-over .q-input { font-size: 13px; }
-.settings-start-over-actions { display: flex; gap: .5rem; }
-.settings-start-over .settings-start-over-error { margin: .75rem 0 0; color: hsl(var(--foreground)); }
+/* Start over (HyperTrack accounts only): quiet and last, under a rule. The flow's own styles live in start-over.css. */
+.settings-side .start-over { margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid hsl(var(--border)); }

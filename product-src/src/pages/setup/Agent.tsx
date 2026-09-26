@@ -12,6 +12,7 @@ import { ProfileDialog } from '@/components/profile/ProfileDialog'
 import { RulebookModal } from '@/components/profile/RulebookModal'
 import { NeverContactInput } from '@/components/profile/NeverContactInput'
 import { JourneyBar } from '@/components/setup/JourneyBar'
+import { OnboardingAccount } from '@/components/setup/OnboardingAccount'
 import { VOICE_ENABLED } from '@/lib/flags'
 import { useVoiceCall } from '@/lib/useVoiceCall'
 import { CallScreen } from '@/components/voice/CallScreen'
@@ -153,6 +154,7 @@ export function Agent() {
 
   return <div className="agent-setup" data-step={step} data-on-call={!!voice.snapshot && voice.snapshot.status !== 'ended' || undefined}>
     <JourneyBar state={state} />
+    <OnboardingAccount />
     <div className="setup-stage" inert={modal !== null || neverContactOpen} aria-hidden={modal !== null || neverContactOpen || undefined}>
       {voice.snapshot && voice.snapshot.status !== 'ended' ? <CallScreen snapshot={voice.snapshot} onboarding={state} onMute={voice.mute} onEnd={() => { void voice.end().catch(() => {}) }} onRetry={() => { void (voice.snapshot?.errorKind === 'save' ? voice.retrySave() : voice.start()).catch(() => {}) }} onRetryTurn={voice.retryTurn} onKeepTyping={keepTyping} /> : <>
       {showCallSummary && thisCall && <section className="setup-call-summary"><h1>{thisCall.callSaveError || thisCall.callServerSaved === false ? 'Call ended' : 'Your call is saved'}</h1><Message message={thisCall} /><Btn className="primary" onClick={keepTyping}>{state.covered.length === ONBOARD_TOPICS.length ? 'Review my Payroll profile' : 'Keep typing'}</Btn></section>}

@@ -1,0 +1,9 @@
+/* Start over: one flow for Settings and the account menus. Outline buttons only, never the pane's black next step. */
+.start-over { font-size: 13px; }
+.start-over h4 { margin: 0 0 .5rem; font-size: 13px; font-weight: 600; }
+.start-over p { margin: 0 0 .75rem; color: hsl(var(--muted-foreground)); line-height: 1.5; }
+.start-over form { display: grid; gap: .5rem; }
+.start-over label { color: hsl(var(--muted-foreground)); }
+.start-over .q-input { font-size: 13px; }
+.start-over-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.start-over .start-over-error { margin: .75rem 0 0; color: hsl(var(--foreground)); }

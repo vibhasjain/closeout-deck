@@ -62,6 +62,28 @@ describe('Start over', () => {
     expect(assign).toHaveBeenCalledWith('/product/')
   })
 
+  it('opens straight into the typed confirm when an account menu hosts it, with the wipe disabled until typed', async () => {
+    const { StartOver } = await import('./StartOver')
+    const html = renderToStaticMarkup(createElement(StartOver, { onClose() {} }))
+    expect(html).toContain('Wipes your onboarding')
+    expect(html).toContain('Type “start over” to confirm')
+    expect(html).toMatch(/<button type="submit" disabled="" class="btn">Wipe and start over<\/button>/)
+    expect(html).toMatch(/<button type="button" class="btn">Cancel<\/button>/)
+    expect(html).not.toContain('primary')
+    session.email = 'ops@acme.com'
+    expect(renderToStaticMarkup(createElement(StartOver, { onClose() {} }))).toBe('')
+  })
+
+  it('a server refusal hides Start over everywhere until the next page load', async () => {
+    backend(403)
+    const { startOver, startOverAllowed } = await import('@/lib/startOver')
+    const { StartOver } = await import('./StartOver')
+    expect(startOverAllowed()).toBe(true)
+    expect(await startOver('start over')).toBe('not_internal')
+    expect(startOverAllowed()).toBe(false)
+    expect(renderToStaticMarkup(createElement(StartOver))).toBe('')
+  })
+
   it('keeps everything and stays put on busy, refusal or failure', async () => {
     for (const [status, result] of [[409, 'busy'], [403, 'not_internal'], [500, 'failed']] as const) {
       vi.resetModules()

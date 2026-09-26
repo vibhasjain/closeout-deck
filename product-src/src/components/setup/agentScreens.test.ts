@@ -44,6 +44,16 @@ describe('one black next step per setup pane', () => {
     const html = renderToStaticMarkup(createElement(QuestionScreen, { question: 'How do hours arrive?', card: { kind: 'question', input: 'text', topics: ['workerHours'] }, initialAnswer: 'Email', canBack: true, canForward: true, onBack() {}, onForward() {}, onAnswer() {} }))
     expect(html).toContain('Forward →')
   })
+  it.each(['welcome', 'conversation', 'ready'] as const)('%s keeps a quiet account corner with Log out, outside the one black next step', (step) => {
+    state.value.setupStep = step
+    const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(Agent)))
+    const corner = html.slice(html.indexOf('<div class="setup-account">'), html.indexOf('<div class="setup-stage"'))
+    expect(corner).toMatch(/<button type="button" class="setup-account-trigger" popoverTarget="([^"]+)" aria-label="Account menu"[^>]*>.*<div id="\1" popover="auto"/)
+    expect(corner).toContain('Log out')
+    expect(corner).not.toContain('primary')
+    // This session has no HyperTrack email, so no Start over.
+    expect(corner).not.toContain('Start over')
+  })
   it('personalizes the welcome from the viewer session', () => {
     expect(renderToStaticMarkup(createElement(MemoryRouter, null, createElement(Agent)))).toContain('Welcome, Morgan')
   })

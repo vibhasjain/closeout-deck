@@ -121,6 +121,10 @@
 .sidebar-account-menu { position: absolute; left: .5rem; right: .5rem; bottom: calc(100% - .25rem); z-index: 50; min-width: 180px; padding: .25rem; border: 1px solid hsl(var(--border)); border-radius: .375rem; background: hsl(var(--background)); box-shadow: 0 2px 8px rgb(0 0 0 / .06); }
 .sidebar-account-menu button { display: flex; align-items: center; gap: .5rem; width: 100%; min-height: 44px; padding: .375rem .5rem; border-radius: .25rem; font: 13px/1.5 var(--sans); text-align: left; }
 .sidebar-account-menu button:hover, .sidebar-account-menu button:focus-visible { background: hsl(var(--muted)); }
+/* Start over's typed confirm takes the menu's place. It is wider than the rail, so it floats out like the menu does; in the phone drawer it sits inline. */
+.sidebar-start-over { position: absolute; left: .5rem; bottom: calc(100% - .25rem); z-index: 50; width: 288px; padding: .75rem; border: 1px solid hsl(var(--border)); border-radius: .375rem; background: hsl(var(--background)); box-shadow: 0 2px 8px rgb(0 0 0 / .06); }
+.sidebar-account > .start-over { padding: .5rem .625rem; }
+.sidebar-account .start-over .btn { min-height: 44px; }
 
 @media (max-width: 1023.98px) {
   .sidebar .icon-box, .sidebar .icon-btn { min-width: 44px; min-height: 44px; }
