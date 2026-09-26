@@ -62,7 +62,7 @@ describe('HyperTrack navigation and unified sign out', () => {
     expect(children[0].props['aria-label']).toBe('Open sidebar')
     const image = elements(children[1]).find(({ type }) => type === 'img')!
     expect(image.props).toMatchObject({ alt: 'HyperTrack' })
-    expect(image.props.src).toMatch(/hypertrack-logo\.svg$/)
+    expect(image.props.src).toMatch(/logo-small\.svg$/) // the mark only: no HyperTrack name, no Closeout
     expect(text(topbar)).toBe('')
     expect(text(tree)).not.toContain('Closeout')
   })

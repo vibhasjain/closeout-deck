@@ -117,12 +117,12 @@ export function TopNav({ wide = true }: { wide?: boolean } = {}) {
         setDrawerOpen(true)
         if (agentOpen) setParams((previous) => { const next = new URLSearchParams(previous); next.delete('agent'); return next })
       }}><Menu size={18} aria-hidden="true" /></button>
-      <div className="brand"><img className="brand-wordmark" src={import.meta.env.BASE_URL + 'hypertrack-logo.svg'} alt="HyperTrack" width="126" height="24" /></div>
+      <div className="brand"><img className="brand-logo" src={import.meta.env.BASE_URL + 'logo-small.svg'} alt="HyperTrack" width="28" height="28" /></div>
     </div>
     {!wide && drawerOpen && <div className="sidebar-scrim" aria-hidden="true" onClick={closeDrawer} />}
     <div id={sidebarId} ref={drawer} className="sidebar-surface" role={!wide && drawerOpen ? 'dialog' : undefined} aria-modal={!wide && drawerOpen ? true : undefined} aria-label={!wide && drawerOpen ? 'Navigation' : undefined} tabIndex={!wide && drawerOpen ? -1 : undefined} inert={!wide && !drawerOpen}>
       <div className="sidebar-brand-row">
-        <div className="brand"><img className="brand-wordmark" src={import.meta.env.BASE_URL + 'hypertrack-logo.svg'} alt="HyperTrack" width="137" height="26" /><img className="brand-mark" src={import.meta.env.BASE_URL + 'logo-small.svg'} alt="HyperTrack" width="26" height="26" /></div>
+        <div className="brand"><img className="brand-logo" src={import.meta.env.BASE_URL + 'logo-small.svg'} alt="HyperTrack" width="28" height="28" /></div>
         <button type="button" className="btn icon-box sidebar-collapse" aria-label={state.sidebar === 'rail' ? 'Expand sidebar' : 'Collapse sidebar'} onClick={() => update({ sidebar: state.sidebar === 'full' ? 'rail' : 'full' })}><PanelLeft size={16} aria-hidden="true" /><img className="sidebar-expand-mark" src={import.meta.env.BASE_URL + 'logo-small.svg'} alt="HyperTrack" width="26" height="26" /></button>
         <button type="button" className="btn icon-box sidebar-close" aria-label="Close sidebar" onClick={closeDrawer}><X size={18} aria-hidden="true" /></button>
       </div>

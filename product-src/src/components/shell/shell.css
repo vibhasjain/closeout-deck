@@ -10,7 +10,7 @@
 .rail-layout > .aux { min-height: 0; overflow: hidden; }
 .brand { flex-shrink: 0; }
 .brand img { display: block; height: 26px; width: auto; filter: grayscale(1); }
-.brand .brand-mark, .sidebar-expand-mark { display: none; }
+.sidebar-expand-mark { display: none; }
 
 .scrim.overlay-scrim { position: fixed; inset: 0; visibility: visible; transform: none; opacity: 0; pointer-events: none; transition: opacity 120ms var(--ease-out); }
 .scrim.overlay-scrim.open { opacity: 1; pointer-events: auto; }
@@ -150,8 +150,6 @@
   .sidebar .sidebar-label, .sidebar-brand-row > .brand, .sidebar .sidebar-collapse, .sidebar .getting-started { display: none; }
   .sidebar-brand-row { justify-content: center; padding-inline: 4px; }
   .sidebar-brand-row > .brand { display: flex; }
-  .sidebar-brand-row .brand-wordmark { display: none; }
-  .sidebar-brand-row .brand-mark { display: block; }
   .sidebar .nav-tabs { padding-inline: 6px; }
   .sidebar .sidebar-nav-item { justify-content: center; min-height: 40px; padding-inline: 0; }
   .sidebar-account-trigger { justify-content: center; }

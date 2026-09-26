@@ -21,7 +21,8 @@ import './sheet.css'
 
 const pill = (ruleId: string, count: number) => {
   const label = kindLabel(ruleId)
-  return <span className="bucket-tag issue-tag" style={{ '--hue': bucketHue(ruleId) } as CSSProperties}>{count.toLocaleString()} {titleCase(label)}</span>
+  const text = `${count.toLocaleString()} ${titleCase(label)}`
+  return <span className="bucket-tag issue-tag" title={text} style={{ '--hue': bucketHue(ruleId) } as CSSProperties}>{text}</span>
 }
 // Big totals read better with separators: 24,801h 44m.
 const hours = (minutes: number) => { const whole = Math.round(minutes), m = whole % 60; return `${Math.floor(whole / 60).toLocaleString()}h${m ? ` ${m}m` : ''}` }

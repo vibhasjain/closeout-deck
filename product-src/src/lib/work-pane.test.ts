@@ -65,12 +65,13 @@ describe('D15: the Collect pane shows who was asked', () => {
 
 describe('D17 / D19 layout rules', () => {
   const css = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8')
-  it('keeps the close button clear of the title actions and wraps values and pills at phone width', () => {
+  it('keeps the close button clear of the title actions, wraps values, and keeps group pills on one line at phone width', () => {
     const phone = css('../pages/shift-page.css').match(/@media \(max-width: 800px\) \{[^@]*first-child \.page-title-row[^@]*\}/)![0]
     expect(phone).toMatch(/\.page-title-row \{ padding-right: 3\.5rem; \}/)
     expect(phone).toMatch(/\.kv td:last-child, \.kv-via, \.kv-via > span:last-child \{ white-space: normal; overflow-wrap: anywhere; \}/)
     const narrow = css('../pages/reconcile.css').match(/@container payroll \(max-width: 640px\) \{[\s\S]*?\n\}/)![0]
-    expect(narrow).toMatch(/\.payroll-summary-row \.bucket-tag \{[^}]*white-space: normal;/)
+    // Owner: a pill wrapped onto two lines reads as broken; it stays one line (ellipsis + title for rare overflow).
+    expect(narrow).not.toMatch(/\.bucket-tag \{[^}]*white-space: normal/)
   })
   it('never paints a hovered nav item the same as the current page', () => {
     const shell = css('../components/shell/shell.css')

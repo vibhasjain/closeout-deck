@@ -123,8 +123,7 @@
 @container payroll (max-width: 640px) {
   .payroll-summary-clients :is(th, td):last-child { --table-edge-inset: 1.25rem; }
   .payroll-summary .payroll-summary-row { grid-template-columns: 1.25rem minmax(0, 1fr) auto; row-gap: .5rem; }
-  /* The group pill wraps rather than cutting its name off ("1,007 Weekly Overtim"). */
-  .payroll-summary-row .bucket-tag { height: auto; min-height: 1.375rem; padding-block: .125rem; white-space: normal; text-overflow: clip; }
+  /* A pill stays one line (a wrapped pill reads as broken); the rare overflow ellipsizes, full name in its title. */
   .payroll-summary-row > .num { grid-area: 1 / 3; white-space: nowrap; }
   .payroll-summary-row .decision-line { grid-area: 2 / 1 / 3 / -1; }
   .payroll-summary-row .decision-action { grid-area: 3 / 1 / 4 / -1; }
