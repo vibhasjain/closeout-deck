@@ -4,7 +4,7 @@
 .chat-call-transcript { margin-top: 6px; }
 .chat-call-transcript summary { display: list-item; width: fit-content; min-height: 44px; padding: 12px 4px; cursor: pointer; font-size: 12px; color: var(--muted); }
 .chat-call-transcript summary:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 3px; }
-.chat-call-transcript ol { display: grid; gap: 16px; padding: 10px 0 0; margin: 0; list-style: none; max-height: 360px; overflow-y: auto; overscroll-behavior: contain; }
+.chat-call-transcript ol { display: grid; gap: 16px; padding: 10px 0 0; margin: 0; list-style: none; max-height: 360px; overflow-y: auto; overscroll-behavior: none; }
 .chat-call-speaker { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 11px; font-weight: 600; }
 .chat-call-speaker time { color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
 .chat-call-transcript li p { margin: 4px 0 0; font-size: 13px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }

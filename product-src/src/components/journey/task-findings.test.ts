@@ -560,6 +560,6 @@ describe('findings carousel', () => {
     expect(css).not.toContain('.journey-carousel-viewport')
     expect(css).toContain('overflow-x: auto')
     expect(css).toContain('scroll-snap-type: x mandatory')
-    expect(css).toContain('overscroll-behavior-x: contain')
+    expect(css).toContain('overscroll-behavior-x: none')
   })
 })

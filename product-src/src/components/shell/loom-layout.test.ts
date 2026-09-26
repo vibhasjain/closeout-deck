@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
@@ -58,6 +58,13 @@ describe('Loom layout contracts', () => {
     expect(html).toContain('lucide-map-pin')
     const bucket = css('../../bench.css').match(/\.bucket-tag \{([^}]*)\}/)![1]
     expect(bucket).not.toContain('--hue')
+  })
+
+  it('never bounces at a scroll end: the page and every pane use overscroll-behavior none', () => {
+    expect(css('../../index.css')).toContain('*, html, body { overscroll-behavior: none; }')
+    const root = new URL('../../', import.meta.url)
+    const sheets = (readdirSync(root, { recursive: true }) as string[]).filter(file => file.endsWith('.css'))
+    for (const sheet of sheets) expect(readFileSync(new URL(sheet, root), 'utf8'), sheet).not.toMatch(/overscroll-behavior(-[xy])?: (contain|auto)/)
   })
 
   it('sizes the square HyperTrack mark by height on every width (a wordmark width made it 126px tall on phones)', () => {

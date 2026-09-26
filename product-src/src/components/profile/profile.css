@@ -23,7 +23,7 @@
 .profile-modal-header { flex: none; display: flex; justify-content: space-between; align-items: flex-start; padding: 16px 24px; gap: 16px; border-bottom: .5px solid rgb(0 0 0 / .1); }
 .profile-modal-header h2 { margin: 0 0 8px; font-size: 18px; line-height: 1.25; font-weight: 500; }
 .profile-modal-header p { margin: 0; color: hsl(var(--muted-foreground)); font-size: 13px; line-height: 1.5; }
-.profile-modal-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 24px; }
+.profile-modal-body { min-height: 0; overflow-y: auto; overscroll-behavior: none; padding: 0 24px; }
 .profile-modal-footer { display: flex; justify-content: flex-end; flex: none; padding: 16px 24px; border-top: .5px solid rgb(0 0 0 / .1); }
 .profile-modal-footer .btn { min-width: 80px; }
 .setup-contact-dialog { width: min(92vw, 512px); }
@@ -53,7 +53,7 @@
 .rulebook-rail { display: flex; flex-direction: column; padding: 20px 6px; gap: 2px; border-right: .5px solid rgb(0 0 0 / .1); overflow-y: auto; }
 .rulebook-rail button { display: flex; align-items: center; gap: 12px; text-align: left; font: inherit; color: hsl(var(--muted-foreground)); border: 0; background: transparent; padding: 6px; min-height: 36px; border-radius: 6px; cursor: pointer; }
 .rulebook-rail button:hover, .rulebook-rail button[aria-current] { color: hsl(var(--foreground)); background: hsl(var(--muted)); }
-.rulebook-content { padding: 24px 24px 24px 16px; overflow-y: auto; overscroll-behavior: contain; min-width: 0; }
+.rulebook-content { padding: 24px 24px 24px 16px; overflow-y: auto; overscroll-behavior: none; min-width: 0; }
 .rulebook-jurisdictions section + section { margin-top: 24px; }
 .rulebook-jurisdictions h4 { font-weight: 500; margin: 0 0 12px; }
 .profile-rule-list { list-style: none; padding: 0; margin: 0; }

@@ -130,7 +130,7 @@
   .sidebar .icon-box, .sidebar .icon-btn { min-width: 44px; min-height: 44px; }
   .sidebar .sidebar-nav-item, .sidebar .cluster-row, .getting-started-list a { min-height: 44px; }
   .sidebar-surface { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
-  .sidebar-surface { overflow-y: auto; overscroll-behavior: contain; }
+  .sidebar-surface { overflow-y: auto; overscroll-behavior: none; }
   .agent-fab { position: fixed; display: grid; place-items: center; left: max(16px, env(safe-area-inset-left)); bottom: calc(16px + env(safe-area-inset-bottom)); width: 48px; height: 48px; z-index: 25; border: 1px solid hsl(var(--border)); border-radius: 50%; background: hsl(var(--background)); box-shadow: 0 2px 8px rgb(0 0 0 / .08); }
   .agent-fab[aria-expanded="true"] { visibility: hidden; }
   /* The scrollports reach the viewport bottom. Their own end padding lets the

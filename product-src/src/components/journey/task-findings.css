@@ -33,7 +33,7 @@
 .journey-carousel-controls .icon-btn:hover:not(:disabled) { background: rgba(0,0,0,.04); }
 .journey-carousel-controls .icon-btn:disabled { opacity: .4; cursor: default; }
 /* Each slide keeps its natural height; the track smoothly follows the active one. */
-.journey-carousel-track { display: flex; align-items: flex-start; width: 100%; min-width: 0; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; transition: height 180ms cubic-bezier(.22,1,.36,1); }
+.journey-carousel-track { display: flex; align-items: flex-start; width: 100%; min-width: 0; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: none; scroll-snap-type: x mandatory; scrollbar-width: none; transition: height 180ms cubic-bezier(.22,1,.36,1); }
 .journey-carousel-track::-webkit-scrollbar { display: none; }
 .journey-carousel-track:focus-visible { outline: 2px solid #716f6f; outline-offset: -2px; }
 .journey-finding { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; flex: 0 0 100%; min-width: 0; box-sizing: border-box; padding: 16px; scroll-snap-align: start; scroll-snap-stop: always; overflow-wrap: anywhere; }

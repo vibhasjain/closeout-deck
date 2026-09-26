@@ -9,6 +9,8 @@
 }
 html { background-color: var(--page); }
 body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+/* No rubber-band bounce at a scroll's end, on the page or any pane (owner, Sep 26 2026). */
+*, html, body { overscroll-behavior: none; }
 h1, h2, h3 { text-wrap: balance; }
 p, li { text-wrap: pretty; }
 /* Sheet/dialog utility animations use the same short motion as the shell. */

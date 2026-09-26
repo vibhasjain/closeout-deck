@@ -58,7 +58,7 @@
 .call-bar-text > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .call-bar .call-error { padding: 12px 0 2px; }
 .desk-call { flex: none; min-width: 0; }
-.call-bar .call-captions { width: 100%; min-height: 0; max-height: min(30dvh, 240px); overflow-y: auto; overscroll-behavior: contain; padding: 14px 0 2px; }
+.call-bar .call-captions { width: 100%; min-height: 0; max-height: min(30dvh, 240px); overflow-y: auto; overscroll-behavior: none; padding: 14px 0 2px; }
 .call-bar .call-caption-turn + .call-caption-turn { margin-top: 12px; }
 .call-note, .call-screen .call-note { margin: 8px 0; color: #777774; font-size: 12px; line-height: 1.5; }
 .call-note button { min-height: 44px; min-width: 44px; padding: 0 4px; border: 0; background: transparent; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
@@ -98,7 +98,7 @@
   .desk-call--fullscreen { display: flex; flex: 1; min-height: 0; height: 100%; }
   .call-screen--desk { min-height: 0; height: 100%; padding: 0; background: #fff; overflow: hidden; }
   .call-screen-header { display: flex; flex: none; align-items: center; justify-content: space-between; min-height: 60px; padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) 0 max(24px, env(safe-area-inset-left)); border-bottom: 1px solid #f0f0ec; font-size: 13px; color: #777774; }
-  .call-screen--desk .call-stage { display: block; width: 100%; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 max(24px, env(safe-area-inset-right)) 0 max(24px, env(safe-area-inset-left)); }
+  .call-screen--desk .call-stage { display: block; width: 100%; min-height: 0; overflow-y: auto; overscroll-behavior: none; padding: 0 max(24px, env(safe-area-inset-right)) 0 max(24px, env(safe-area-inset-left)); }
   .call-screen--desk .call-agent { max-width: 520px; margin: 0 auto; padding: clamp(18px, 5dvh, 52px) 0 24px; }
   .call-screen--desk .call-orb { width: clamp(180px, 26dvh, 240px); height: clamp(180px, 26dvh, 240px); }
   .call-screen--desk .call-agent h1 { margin-top: 18px; font-size: 16px; }
