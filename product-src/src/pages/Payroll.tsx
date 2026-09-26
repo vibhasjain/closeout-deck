@@ -117,6 +117,6 @@ export function Payroll() {
       </>}
       </>}
     </section>
-    {!awaitingData && !loadError && <Outlet />}
+    <Outlet />
   </div>
 }

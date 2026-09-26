@@ -15,7 +15,7 @@ import { PageTitle } from '@/components/shell/PageTitle'
 import { Btn, Empty, Lbl, PayDelta, Tag } from '@/components/ui'
 import { discrepancies, effectiveResolutions, kindLabel, provenance, rowResolution, topstats, useDesk, type DeskCycle } from '@/lib/desk'
 import { decide, groupId } from '@/lib/journey'
-import { getDataSnapshot } from '@/lib/data'
+import { getDataSnapshot, invalidate } from '@/lib/data'
 import { journeyShiftPay, shiftRules } from '@/lib/journeyPay'
 import { getOnboarding, useOnboarding } from '@/lib/onboarding'
 import { shiftListHref } from '@/lib/navigation'
@@ -115,21 +115,25 @@ export function ShiftPage() {
   const [params] = useSearchParams()
   const parent = '/payroll' as const
   const navigate = useNavigate()
-  const { current, byId } = useDesk()
+  const { current, byId, loaded, error: dataError, cycleErrors } = useDesk()
   const [state, update] = useOnboarding()
   const action = usePendingAction()
   const [submitted, setSubmitted] = useState<{ label: string; escalating: boolean } | null>(null)
   const saving = action.pending
   const { toast } = useOverlay()
-  const cycle = byId(params.get('cycle') ?? '') ?? current
-  const rs = cycle.run.shifts.find(({ shift }) => shift.id === shiftId)
+  const requestedCycleId = params.get('cycle') ?? ''
+  const requestedCycle = byId(requestedCycleId)
+  const cycle = requestedCycle ?? current
+  const rs = requestedCycleId && !requestedCycle ? undefined : cycle.run.shifts.find(({ shift }) => shift.id === shiftId)
+  const closeCycleId = requestedCycleId || cycle.id
+  const loadError = dataError ?? cycleErrors?.[closeCycleId]
   const flag = params.get('flag') ?? undefined
   const items = discrepancies(cycle, state.resolutions)
   const decisions = effectiveResolutions(cycle, state.resolutions)[cycle.id]
-  const back = shiftListHref(cycle.id, params, parent)
+  const back = shiftListHref(closeCycleId, params, parent)
   // Closing restores the originating table's selected cycle and controls.
   const close = () => navigate(back)
-  const allPayments = shiftListHref(cycle.id, params, '/payroll', true)
+  const allPayments = shiftListHref(closeCycleId, params, '/payroll', true)
   const primaryRuleId = flag ?? items.find((item) => item.shiftId === shiftId)?.ruleId
   const decision = decisions?.[shiftId]
   // N10: the sheet offers the pane's decision for this entry's groups: Approve proposed corrections,
@@ -189,8 +193,24 @@ export function ShiftPage() {
     toast(`Applied · ${rs.shift.worker} · Resolved pay ${money(rs.pay)}`)
   }
 
+  if (!rs && loadError) return <ShiftShell onClose={close}><section className="shift-page-missing scroll">
+    <PageTitle title="Time entry" description="Review the evidence, conversation, and decisions for this time entry." />
+    <div className="shift-page-body" role="alert"><p>This time entry could not be loaded. Please try again.</p><Btn className="primary" onClick={() => void invalidate()}>Retry</Btn></div>
+  </section></ShiftShell>
+
+  if (!rs && loaded === false) return <ShiftShell onClose={close}><div className="shift-page" aria-busy="true" data-shift-pending>
+    <section className="shift-page-column" aria-label="Time entry evidence">
+      <PageTitle title="Time entry" description="Review the evidence, conversation, and decisions for this time entry." />
+      <div className="shift-page-body scroll"><SkeletonRegion variant="profile" /></div>
+    </section>
+    <section className="shift-page-column shift-conversation" aria-label="Time entry conversation">
+      <div className="shift-page-body scroll"><SkeletonRegion variant="conversation" /></div>
+    </section>
+  </div></ShiftShell>
+
+  // An unknown requested cycle names no cycle: the fallback's label would be the wrong one.
   if (!rs) return <ShiftShell onClose={close}><section className="shift-page-missing scroll">
-    <PageTitle title="Not found" label="this time entry" description="Open a time entry from the selected pay run to review its details." sub={`This time entry is not in ${cycle.label}`} />
+    <PageTitle title="Not found" label="this time entry" description="Open a time entry from the selected pay run to review its details." sub={requestedCycle || !requestedCycleId ? `This time entry is not in ${cycle.label}` : undefined} />
     <Empty>This is not in the selected pay cycle <Link className="lnk" to={allPayments}>Back to all payments</Link></Empty>
   </section></ShiftShell>
 

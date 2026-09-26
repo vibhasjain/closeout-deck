@@ -38,8 +38,8 @@
 .shift-modal { position: relative; min-height: 0; overflow: hidden;
   background: hsl(var(--background)); border-radius: var(--radius);
   box-shadow: 0 0 0 1px rgb(0 0 0 / .06), 0 1px 2px -1px rgb(0 0 0 / .06), 0 2px 4px 0 rgb(0 0 0 / .04);
-  visibility: hidden; transform: scale(.98); transition: transform 200ms var(--ease-out); }
-.shift-modal.open { visibility: visible; transform: none; }
+  visibility: hidden; }
+.shift-modal.open { visibility: visible; }
 .shift-modal-close { position: absolute; top: .625rem; right: .625rem; z-index: 2; }
 .shift-modal > .shift-page { border-radius: var(--radius); }
 .shift-modal .shift-page-column:last-child .aux-head { padding-right: 3rem; }
