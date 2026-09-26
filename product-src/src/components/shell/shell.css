@@ -52,7 +52,6 @@
 /* The navigation surface is shared by desktop and the mobile left drawer. */
 .topbar.sidebar { display: block; height: auto; min-width: 0; min-height: 0; padding: 0; }
 .mobile-topbar { display: flex; align-items: center; justify-content: space-between; gap: .625rem; height: calc(48px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left)); }
-.mobile-topbar .brand img { width: 126px; height: auto; }
 .brand { display: flex; align-items: center; gap: .5rem; font-size: 14px; font-weight: 600; }
 .sidebar .icon-box { display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0; flex: 0 0 auto; }
 .sidebar .icon-box[aria-expanded="true"] { background: hsl(var(--muted)); }

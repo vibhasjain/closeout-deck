@@ -59,4 +59,10 @@ describe('Loom layout contracts', () => {
     const bucket = css('../../bench.css').match(/\.bucket-tag \{([^}]*)\}/)![1]
     expect(bucket).not.toContain('--hue')
   })
+
+  it('sizes the square HyperTrack mark by height on every width (a wordmark width made it 126px tall on phones)', () => {
+    const shell = css('./shell.css')
+    expect(shell).toMatch(/\.brand img \{[^}]*height: 26px; width: auto;/)
+    expect(shell).not.toMatch(/\.brand img \{[^}]*width: \d+px/)
+  })
 })
