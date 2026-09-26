@@ -59,32 +59,11 @@
         },
         "capture": "web",
         "_dailyOtMin": 0,
+        "sample": true,
         "prov": {
           "file": "f_iuuunssiefmr",
-          "row": 2,
-          "cols": {
-            "worker": "Candidate",
-            "workerId": "Placement ID",
-            "site": "Client",
-            "role": "Job Title",
-            "date": "Date",
-            "start": "Start",
-            "end": "End",
-            "breakMin": "Break (min)",
-            "hours": "Hours",
-            "payRate": "Pay Rate",
-            "billRate": "Bill Rate",
-            "capture": "Entered Via",
-            "approvedBy": "Approved By",
-            "comment": "Comment"
-          }
-        },
-        "entryIds": [
-          "e_0e4130aed9f81028",
-          "e_375a44bd61183c12",
-          "e_6c7a9b029353d3d4"
-        ],
-        "sample": true
+          "row": 2
+        }
       },
       {
         "id": "s_2630a2ee8c42",
@@ -111,32 +90,11 @@
         },
         "capture": "clock",
         "_dailyOtMin": 0,
+        "sample": true,
         "prov": {
           "file": "f_iuuunssiefmr",
-          "row": 3,
-          "cols": {
-            "worker": "Candidate",
-            "workerId": "Placement ID",
-            "site": "Client",
-            "role": "Job Title",
-            "date": "Date",
-            "start": "Start",
-            "end": "End",
-            "breakMin": "Break (min)",
-            "hours": "Hours",
-            "payRate": "Pay Rate",
-            "billRate": "Bill Rate",
-            "capture": "Entered Via",
-            "approvedBy": "Approved By",
-            "comment": "Comment"
-          }
-        },
-        "entryIds": [
-          "e_8ec37ddc4fbc6b0b",
-          "e_0102e4b2988b2371",
-          "e_e586b990ed0eb1d4"
-        ],
-        "sample": true
+          "row": 3
+        }
       },
       {
         "id": "s_c7d5045c43b0",
@@ -157,31 +115,11 @@
         "mealMin": 30,
         "capture": "manual",
         "_dailyOtMin": 0,
+        "sample": true,
         "prov": {
           "file": "f_iuuunssiefmr",
-          "row": 4,
-          "cols": {
-            "worker": "Candidate",
-            "workerId": "Placement ID",
-            "site": "Client",
-            "role": "Job Title",
-            "date": "Date",
-            "start": "Start",
-            "end": "End",
-            "breakMin": "Break (min)",
-            "hours": "Hours",
-            "payRate": "Pay Rate",
-            "billRate": "Bill Rate",
-            "capture": "Entered Via",
-            "approvedBy": "Approved By",
-            "comment": "Comment"
-          }
-        },
-        "entryIds": [
-          "e_27e8aeaccbe100de",
-          "e_66e4e9d5ca365d21"
-        ],
-        "sample": true
+          "row": 4
+        }
       },
       {
         "id": "s_e6a04930bc5a",
@@ -202,30 +140,11 @@
         "mealMin": 30,
         "capture": "clock",
         "_dailyOtMin": 0,
+        "sample": true,
         "prov": {
           "file": "f_iuuunssiefmr",
-          "row": 6,
-          "cols": {
-            "worker": "Candidate",
-            "workerId": "Placement ID",
-            "site": "Client",
-            "role": "Job Title",
-            "date": "Date",
-            "start": "Start",
-            "end": "End",
-            "breakMin": "Break (min)",
-            "hours": "Hours",
-            "payRate": "Pay Rate",
-            "billRate": "Bill Rate",
-            "capture": "Entered Via",
-            "approvedBy": "Approved By",
-            "comment": "Comment"
-          }
-        },
-        "entryIds": [
-          "e_ae32720ff7758ebd"
-        ],
-        "sample": true
+          "row": 6
+        }
       },
       {
         "id": "s_7322dbca1097",
@@ -246,30 +165,11 @@
         "mealMin": 30,
         "capture": "web",
         "_dailyOtMin": 0,
+        "sample": true,
         "prov": {
           "file": "f_iuuunssiefmr",
-          "row": 7,
-          "cols": {
-            "worker": "Candidate",
-            "workerId": "Placement ID",
-            "site": "Client",
-            "role": "Job Title",
-            "date": "Date",
-            "start": "Start",
-            "end": "End",
-            "breakMin": "Break (min)",
-            "hours": "Hours",
-            "payRate": "Pay Rate",
-            "billRate": "Bill Rate",
-            "capture": "Entered Via",
-            "approvedBy": "Approved By",
-            "comment": "Comment"
-          }
-        },
-        "entryIds": [
-          "e_a9d46d57d60e8dbb"
-        ],
-        "sample": true
+          "row": 7
+        }
       },
       {
         "id": "s_0cdec81881db",
@@ -290,30 +190,11 @@
         "mealMin": 30,
         "capture": "clock",
         "_dailyOtMin": 0,
+        "sample": true,
         "prov": {
           "file": "f_iuuunssiefmr",
-          "row": 8,
-          "cols": {
-            "worker": "Candidate",
-            "workerId": "Placement ID",
-            "site": "Client",
-            "role": "Job Title",
-            "date": "Date",
-            "start": "Start",
-            "end": "End",
-            "breakMin": "Break (min)",
-            "hours": "Hours",
-            "payRate": "Pay Rate",
-            "billRate": "Bill Rate",
-            "capture": "Entered Via",
-            "approvedBy": "Approved By",
-            "comment": "Comment"
-          }
-        },
-        "entryIds": [
-          "e_ca38998fece93450"
-        ],
-        "sample": true
+          "row": 8
+        }
       },
       {
         "id": "s_1cbc5d2c8348",
@@ -334,30 +215,11 @@
         "mealMin": 30,
         "capture": "clock",
         "_dailyOtMin": 0,
+        "sample": true,
         "prov": {
           "file": "f_iuuunssiefmr",
-          "row": 9,
-          "cols": {
-            "worker": "Candidate",
-            "workerId": "Placement ID",
-            "site": "Client",
-            "role": "Job Title",
-            "date": "Date",
-            "start": "Start",
-            "end": "End",
-            "breakMin": "Break (min)",
-            "hours": "Hours",
-            "payRate": "Pay Rate",
-            "billRate": "Bill Rate",
-            "capture": "Entered Via",
-            "approvedBy": "Approved By",
-            "comment": "Comment"
-          }
-        },
-        "entryIds": [
-          "e_f39f99ffe7be6fa6"
-        ],
-        "sample": true
+          "row": 9
+        }
       },
       {
         "id": "s_cc1a55ceed9f",
@@ -378,30 +240,11 @@
         "mealMin": 30,
         "capture": "web",
         "_dailyOtMin": 0,
+        "sample": true,
         "prov": {
           "file": "f_iuuunssiefmr",
-          "row": 10,
-          "cols": {
-            "worker": "Candidate",
-            "workerId": "Placement ID",
-            "site": "Client",
-            "role": "Job Title",
-            "date": "Date",
-            "start": "Start",
-            "end": "End",
-            "breakMin": "Break (min)",
-            "hours": "Hours",
-            "payRate": "Pay Rate",
-            "billRate": "Bill Rate",
-            "capture": "Entered Via",
-            "approvedBy": "Approved By",
-            "comment": "Comment"
-          }
-        },
-        "entryIds": [
-          "e_13ebf0d8cb7748d9"
-        ],
-        "sample": true
+          "row": 10
+        }
       },
       {
         "id": "s_1e3b1f2b1553",
@@ -422,30 +265,11 @@
         "mealMin": 30,
         "capture": "clock",
         "_dailyOtMin": 0,
+        "sample": true,
         "prov": {
           "file": "f_iuuunssiefmr",
-          "row": 11,
-          "cols": {
-            "worker": "Candidate",
-            "workerId": "Placement ID",
-            "site": "Client",
-            "role": "Job Title",
-            "date": "Date",
-            "start": "Start",
-            "end": "End",
-            "breakMin": "Break (min)",
-            "hours": "Hours",
-            "payRate": "Pay Rate",
-            "billRate": "Bill Rate",
-            "capture": "Entered Via",
-            "approvedBy": "Approved By",
-            "comment": "Comment"
-          }
-        },
-        "entryIds": [
-          "e_8ee84ddb3bc3f3bc"
-        ],
-        "sample": true
+          "row": 11
+        }
       },
       {
         "id": "s_5a3fce96dd7b",
@@ -466,30 +290,11 @@
         "mealMin": 30,
         "capture": "web",
         "_dailyOtMin": 0,
+        "sample": true,
         "prov": {
           "file": "f_iuuunssiefmr",
-          "row": 12,
-          "cols": {
-            "worker": "Candidate",
-            "workerId": "Placement ID",
-            "site": "Client",
-            "role": "Job Title",
-            "date": "Date",
-            "start": "Start",
-            "end": "End",
-            "breakMin": "Break (min)",
-            "hours": "Hours",
-            "payRate": "Pay Rate",
-            "billRate": "Bill Rate",
-            "capture": "Entered Via",
-            "approvedBy": "Approved By",
-            "comment": "Comment"
-          }
-        },
-        "entryIds": [
-          "e_bd7f1e1f76b24689"
-        ],
-        "sample": true
+          "row": 12
+        }
       },
       {
         "id": "s_dd032cc92ceb",
@@ -510,116 +315,43 @@
         "mealMin": 30,
         "capture": "clock",
         "_dailyOtMin": 0,
+        "sample": true,
         "prov": {
           "file": "f_iuuunssiefmr",
-          "row": 13,
-          "cols": {
-            "worker": "Candidate",
-            "workerId": "Placement ID",
-            "site": "Client",
-            "role": "Job Title",
-            "date": "Date",
-            "start": "Start",
-            "end": "End",
-            "breakMin": "Break (min)",
-            "hours": "Hours",
-            "payRate": "Pay Rate",
-            "billRate": "Bill Rate",
-            "capture": "Entered Via",
-            "approvedBy": "Approved By",
-            "comment": "Comment"
-          }
-        },
-        "entryIds": [
-          "e_8b9bb2ab1925a2d4"
-        ],
-        "sample": true
+          "row": 13
+        }
       }
     ],
     "results": [
       {
         "rows": [
           {
-            "ruleId": "CS-01",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "1 clock-in found"
-          },
-          {
-            "ruleId": "TS-COMPLETE",
-            "kindDefault": "both",
-            "status": "pass",
-            "note": "Punch pairs complete"
-          },
-          {
-            "ruleId": "CS-16H",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "Span 8.50h within cap"
-          },
-          {
-            "ruleId": "CS-OVLP",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "No overlapping time entry"
-          },
-          {
-            "ruleId": "CS-SPEED",
-            "kindDefault": "det",
-            "status": "na",
-            "note": "No prior cross-site punch"
-          },
-          {
-            "ruleId": "CS-EXACT",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "Duration pattern normal"
-          },
-          {
-            "ruleId": "CS-EDIT",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "No post-approval edits"
-          },
-          {
-            "ruleId": "SRC-VMS-01",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "ATS and client hours agree"
-          },
-          {
             "ruleId": "CA-ROUND-0",
-            "kindDefault": "det",
             "status": "applied",
             "note": "Paid to the exact minute, no rounding"
           },
           {
             "ruleId": "CA-MB-01",
-            "kindDefault": "det",
             "status": "pass",
             "note": "Meal 30 min, started 4.00h in"
           },
           {
             "ruleId": "CA-OT-8",
-            "kindDefault": "det",
             "status": "pass",
             "note": "8.00h ≤ 8h"
           },
           {
             "ruleId": "CA-SS-01",
-            "kindDefault": "det",
             "status": "pass",
             "note": "No split"
           },
           {
             "ruleId": "CA-RT-01",
-            "kindDefault": "det",
             "status": "pass",
             "note": "Worked ≥ half of schedule"
           },
           {
             "ruleId": "FED-OT-40",
-            "kindDefault": "det",
             "status": "pass",
             "note": "Week 8.00h (daily-OT hours excluded: 0.00)"
           }
@@ -636,80 +368,32 @@
       {
         "rows": [
           {
-            "ruleId": "CS-01",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "1 clock-in found"
-          },
-          {
-            "ruleId": "TS-COMPLETE",
-            "kindDefault": "both",
-            "status": "pass",
-            "note": "Punch pairs complete"
-          },
-          {
-            "ruleId": "CS-16H",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "Span 8.50h within cap"
-          },
-          {
-            "ruleId": "CS-OVLP",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "No overlapping time entry"
-          },
-          {
-            "ruleId": "CS-SPEED",
-            "kindDefault": "det",
-            "status": "na",
-            "note": "No prior cross-site punch"
-          },
-          {
-            "ruleId": "CS-EDIT",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "No post-approval edits"
-          },
-          {
-            "ruleId": "SRC-VMS-01",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "ATS and client hours agree"
-          },
-          {
             "ruleId": "CA-ROUND-0",
-            "kindDefault": "det",
             "status": "applied",
             "note": "Paid to the exact minute, no rounding"
           },
           {
             "ruleId": "CA-MB-01",
-            "kindDefault": "det",
             "status": "na",
             "note": "Break length is in the files, not when it started"
           },
           {
             "ruleId": "CA-OT-8",
-            "kindDefault": "det",
             "status": "pass",
             "note": "8.00h ≤ 8h"
           },
           {
             "ruleId": "CA-SS-01",
-            "kindDefault": "det",
             "status": "pass",
             "note": "No split"
           },
           {
             "ruleId": "CA-RT-01",
-            "kindDefault": "det",
             "status": "pass",
             "note": "Worked ≥ half of schedule"
           },
           {
             "ruleId": "FED-OT-40",
-            "kindDefault": "det",
             "status": "pass",
             "note": "Week 8.00h (daily-OT hours excluded: 0.00)"
           }
@@ -726,87 +410,38 @@
       {
         "rows": [
           {
-            "ruleId": "CS-01",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "1 clock-in found"
-          },
-          {
-            "ruleId": "TS-COMPLETE",
-            "kindDefault": "both",
-            "status": "pass",
-            "note": "Punch pairs complete"
-          },
-          {
-            "ruleId": "CS-16H",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "Span 8.50h within cap"
-          },
-          {
-            "ruleId": "CS-OVLP",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "No overlapping time entry"
-          },
-          {
-            "ruleId": "CS-SPEED",
-            "kindDefault": "det",
-            "status": "na",
-            "note": "No prior cross-site punch"
-          },
-          {
-            "ruleId": "CS-EXACT",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "Duration pattern normal"
-          },
-          {
-            "ruleId": "CS-EDIT",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "No post-approval edits"
-          },
-          {
             "ruleId": "CA-ROUND-0",
-            "kindDefault": "det",
             "status": "applied",
             "note": "Paid to the exact minute, no rounding"
           },
           {
             "ruleId": "CA-MB-01",
-            "kindDefault": "det",
             "status": "na",
             "note": "Break length is in the files, not when it started"
           },
           {
             "ruleId": "CA-OT-8",
-            "kindDefault": "det",
             "status": "pass",
             "note": "8.00h ≤ 8h"
           },
           {
             "ruleId": "CA-SS-01",
-            "kindDefault": "det",
             "status": "pass",
             "note": "No split"
           },
           {
             "ruleId": "CA-RT-01",
-            "kindDefault": "det",
             "status": "na",
             "note": "Unscheduled"
           },
           {
             "ruleId": "FED-OT-40",
-            "kindDefault": "det",
             "status": "pass",
             "note": "Week 8.00h (daily-OT hours excluded: 0.00)"
           },
           {
             "ruleId": "CS-01",
             "status": "flag",
-            "kindDefault": "det",
             "note": "Same worker, site, day and times were entered twice; duplicate excluded from payable hours"
           }
         ],
@@ -822,20 +457,12 @@
       {
         "rows": [
           {
-            "ruleId": "CS-01",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "1 clock-in found"
-          },
-          {
             "ruleId": "TS-COMPLETE",
-            "kindDefault": "both",
             "status": "flag",
             "note": "No clock-out on the time entry"
           },
           {
             "ruleId": "TS-COMPLETE",
-            "kindDefault": "both",
             "status": "held",
             "note": "Pay is on hold until the manager confirms the clock-out",
             "effect": {
@@ -843,62 +470,32 @@
             }
           },
           {
-            "ruleId": "CS-16H",
-            "kindDefault": "det",
-            "status": "na",
-            "note": "Unresolved pair"
-          },
-          {
-            "ruleId": "CS-OVLP",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "No overlapping time entry"
-          },
-          {
-            "ruleId": "CS-SPEED",
-            "kindDefault": "det",
-            "status": "na",
-            "note": "No prior cross-site punch"
-          },
-          {
-            "ruleId": "CS-EDIT",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "No post-approval edits"
-          },
-          {
             "ruleId": "CA-ROUND-0",
-            "kindDefault": "det",
             "status": "applied",
             "note": "Paid to the exact minute, no rounding"
           },
           {
             "ruleId": "CA-MB-01",
-            "kindDefault": "det",
             "status": "na",
             "note": "Break length is in the files, not when it started"
           },
           {
             "ruleId": "CA-OT-8",
-            "kindDefault": "det",
             "status": "pass",
             "note": "0.00h ≤ 8h"
           },
           {
             "ruleId": "CA-SS-01",
-            "kindDefault": "det",
             "status": "pass",
             "note": "No split"
           },
           {
             "ruleId": "CA-RT-01",
-            "kindDefault": "det",
             "status": "na",
             "note": "Unscheduled"
           },
           {
             "ruleId": "FED-OT-40",
-            "kindDefault": "det",
             "status": "pass",
             "note": "Week 0.00h (daily-OT hours excluded: 0.00)"
           }
@@ -915,80 +512,32 @@
       {
         "rows": [
           {
-            "ruleId": "CS-01",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "1 clock-in found"
-          },
-          {
-            "ruleId": "TS-COMPLETE",
-            "kindDefault": "both",
-            "status": "pass",
-            "note": "Punch pairs complete"
-          },
-          {
-            "ruleId": "CS-16H",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "Span 8.50h within cap"
-          },
-          {
-            "ruleId": "CS-OVLP",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "No overlapping time entry"
-          },
-          {
-            "ruleId": "CS-SPEED",
-            "kindDefault": "det",
-            "status": "na",
-            "note": "No prior cross-site punch"
-          },
-          {
-            "ruleId": "CS-EXACT",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "Duration pattern normal"
-          },
-          {
-            "ruleId": "CS-EDIT",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "No post-approval edits"
-          },
-          {
             "ruleId": "CA-ROUND-0",
-            "kindDefault": "det",
             "status": "applied",
             "note": "Paid to the exact minute, no rounding"
           },
           {
             "ruleId": "CA-MB-01",
-            "kindDefault": "det",
             "status": "na",
             "note": "Break length is in the files, not when it started"
           },
           {
             "ruleId": "CA-OT-8",
-            "kindDefault": "det",
             "status": "pass",
             "note": "8.00h ≤ 8h"
           },
           {
             "ruleId": "CA-SS-01",
-            "kindDefault": "det",
             "status": "pass",
             "note": "No split"
           },
           {
             "ruleId": "CA-RT-01",
-            "kindDefault": "det",
             "status": "na",
             "note": "Unscheduled"
           },
           {
             "ruleId": "FED-OT-40",
-            "kindDefault": "det",
             "status": "pass",
             "note": "Week 8.00h (daily-OT hours excluded: 0.00)"
           }
@@ -1005,74 +554,32 @@
       {
         "rows": [
           {
-            "ruleId": "CS-01",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "1 clock-in found"
-          },
-          {
-            "ruleId": "TS-COMPLETE",
-            "kindDefault": "both",
-            "status": "pass",
-            "note": "Punch pairs complete"
-          },
-          {
-            "ruleId": "CS-16H",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "Span 8.50h within cap"
-          },
-          {
-            "ruleId": "CS-OVLP",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "No overlapping time entry"
-          },
-          {
-            "ruleId": "CS-SPEED",
-            "kindDefault": "det",
-            "status": "na",
-            "note": "No prior cross-site punch"
-          },
-          {
-            "ruleId": "CS-EDIT",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "No post-approval edits"
-          },
-          {
             "ruleId": "CA-ROUND-0",
-            "kindDefault": "det",
             "status": "applied",
             "note": "Paid to the exact minute, no rounding"
           },
           {
             "ruleId": "CA-MB-01",
-            "kindDefault": "det",
             "status": "na",
             "note": "Break length is in the files, not when it started"
           },
           {
             "ruleId": "CA-OT-8",
-            "kindDefault": "det",
             "status": "pass",
             "note": "8.00h ≤ 8h"
           },
           {
             "ruleId": "CA-SS-01",
-            "kindDefault": "det",
             "status": "pass",
             "note": "No split"
           },
           {
             "ruleId": "CA-RT-01",
-            "kindDefault": "det",
             "status": "na",
             "note": "Unscheduled"
           },
           {
             "ruleId": "FED-OT-40",
-            "kindDefault": "det",
             "status": "pass",
             "note": "Week 8.00h (daily-OT hours excluded: 0.00)"
           }
@@ -1089,74 +596,32 @@
       {
         "rows": [
           {
-            "ruleId": "CS-01",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "1 clock-in found"
-          },
-          {
-            "ruleId": "TS-COMPLETE",
-            "kindDefault": "both",
-            "status": "pass",
-            "note": "Punch pairs complete"
-          },
-          {
-            "ruleId": "CS-16H",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "Span 8.50h within cap"
-          },
-          {
-            "ruleId": "CS-OVLP",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "No overlapping time entry"
-          },
-          {
-            "ruleId": "CS-SPEED",
-            "kindDefault": "det",
-            "status": "na",
-            "note": "No prior cross-site punch"
-          },
-          {
-            "ruleId": "CS-EDIT",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "No post-approval edits"
-          },
-          {
             "ruleId": "CA-ROUND-0",
-            "kindDefault": "det",
             "status": "applied",
             "note": "Paid to the exact minute, no rounding"
           },
           {
             "ruleId": "CA-MB-01",
-            "kindDefault": "det",
             "status": "na",
             "note": "Break length is in the files, not when it started"
           },
           {
             "ruleId": "CA-OT-8",
-            "kindDefault": "det",
             "status": "pass",
             "note": "8.00h ≤ 8h"
           },
           {
             "ruleId": "CA-SS-01",
-            "kindDefault": "det",
             "status": "pass",
             "note": "No split"
           },
           {
             "ruleId": "CA-RT-01",
-            "kindDefault": "det",
             "status": "na",
             "note": "Unscheduled"
           },
           {
             "ruleId": "FED-OT-40",
-            "kindDefault": "det",
             "status": "pass",
             "note": "Week 8.00h (daily-OT hours excluded: 0.00)"
           }
@@ -1173,80 +638,32 @@
       {
         "rows": [
           {
-            "ruleId": "CS-01",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "1 clock-in found"
-          },
-          {
-            "ruleId": "TS-COMPLETE",
-            "kindDefault": "both",
-            "status": "pass",
-            "note": "Punch pairs complete"
-          },
-          {
-            "ruleId": "CS-16H",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "Span 8.50h within cap"
-          },
-          {
-            "ruleId": "CS-OVLP",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "No overlapping time entry"
-          },
-          {
-            "ruleId": "CS-SPEED",
-            "kindDefault": "det",
-            "status": "na",
-            "note": "No prior cross-site punch"
-          },
-          {
-            "ruleId": "CS-EXACT",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "Duration pattern normal"
-          },
-          {
-            "ruleId": "CS-EDIT",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "No post-approval edits"
-          },
-          {
             "ruleId": "CA-ROUND-0",
-            "kindDefault": "det",
             "status": "applied",
             "note": "Paid to the exact minute, no rounding"
           },
           {
             "ruleId": "CA-MB-01",
-            "kindDefault": "det",
             "status": "na",
             "note": "Break length is in the files, not when it started"
           },
           {
             "ruleId": "CA-OT-8",
-            "kindDefault": "det",
             "status": "pass",
             "note": "8.00h ≤ 8h"
           },
           {
             "ruleId": "CA-SS-01",
-            "kindDefault": "det",
             "status": "pass",
             "note": "No split"
           },
           {
             "ruleId": "CA-RT-01",
-            "kindDefault": "det",
             "status": "na",
             "note": "Unscheduled"
           },
           {
             "ruleId": "FED-OT-40",
-            "kindDefault": "det",
             "status": "pass",
             "note": "Week 8.00h (daily-OT hours excluded: 0.00)"
           }
@@ -1263,74 +680,32 @@
       {
         "rows": [
           {
-            "ruleId": "CS-01",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "1 clock-in found"
-          },
-          {
-            "ruleId": "TS-COMPLETE",
-            "kindDefault": "both",
-            "status": "pass",
-            "note": "Punch pairs complete"
-          },
-          {
-            "ruleId": "CS-16H",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "Span 8.50h within cap"
-          },
-          {
-            "ruleId": "CS-OVLP",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "No overlapping time entry"
-          },
-          {
-            "ruleId": "CS-SPEED",
-            "kindDefault": "det",
-            "status": "na",
-            "note": "No prior cross-site punch"
-          },
-          {
-            "ruleId": "CS-EDIT",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "No post-approval edits"
-          },
-          {
             "ruleId": "CA-ROUND-0",
-            "kindDefault": "det",
             "status": "applied",
             "note": "Paid to the exact minute, no rounding"
           },
           {
             "ruleId": "CA-MB-01",
-            "kindDefault": "det",
             "status": "na",
             "note": "Break length is in the files, not when it started"
           },
           {
             "ruleId": "CA-OT-8",
-            "kindDefault": "det",
             "status": "pass",
             "note": "8.00h ≤ 8h"
           },
           {
             "ruleId": "CA-SS-01",
-            "kindDefault": "det",
             "status": "pass",
             "note": "No split"
           },
           {
             "ruleId": "CA-RT-01",
-            "kindDefault": "det",
             "status": "na",
             "note": "Unscheduled"
           },
           {
             "ruleId": "FED-OT-40",
-            "kindDefault": "det",
             "status": "pass",
             "note": "Week 8.00h (daily-OT hours excluded: 0.00)"
           }
@@ -1347,80 +722,32 @@
       {
         "rows": [
           {
-            "ruleId": "CS-01",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "1 clock-in found"
-          },
-          {
-            "ruleId": "TS-COMPLETE",
-            "kindDefault": "both",
-            "status": "pass",
-            "note": "Punch pairs complete"
-          },
-          {
-            "ruleId": "CS-16H",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "Span 8.50h within cap"
-          },
-          {
-            "ruleId": "CS-OVLP",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "No overlapping time entry"
-          },
-          {
-            "ruleId": "CS-SPEED",
-            "kindDefault": "det",
-            "status": "na",
-            "note": "No prior cross-site punch"
-          },
-          {
-            "ruleId": "CS-EXACT",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "Duration pattern normal"
-          },
-          {
-            "ruleId": "CS-EDIT",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "No post-approval edits"
-          },
-          {
             "ruleId": "CA-ROUND-0",
-            "kindDefault": "det",
             "status": "applied",
             "note": "Paid to the exact minute, no rounding"
           },
           {
             "ruleId": "CA-MB-01",
-            "kindDefault": "det",
             "status": "na",
             "note": "Break length is in the files, not when it started"
           },
           {
             "ruleId": "CA-OT-8",
-            "kindDefault": "det",
             "status": "pass",
             "note": "8.00h ≤ 8h"
           },
           {
             "ruleId": "CA-SS-01",
-            "kindDefault": "det",
             "status": "pass",
             "note": "No split"
           },
           {
             "ruleId": "CA-RT-01",
-            "kindDefault": "det",
             "status": "na",
             "note": "Unscheduled"
           },
           {
             "ruleId": "FED-OT-40",
-            "kindDefault": "det",
             "status": "pass",
             "note": "Week 8.00h (daily-OT hours excluded: 0.00)"
           }
@@ -1437,74 +764,32 @@
       {
         "rows": [
           {
-            "ruleId": "CS-01",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "1 clock-in found"
-          },
-          {
-            "ruleId": "TS-COMPLETE",
-            "kindDefault": "both",
-            "status": "pass",
-            "note": "Punch pairs complete"
-          },
-          {
-            "ruleId": "CS-16H",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "Span 8.50h within cap"
-          },
-          {
-            "ruleId": "CS-OVLP",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "No overlapping time entry"
-          },
-          {
-            "ruleId": "CS-SPEED",
-            "kindDefault": "det",
-            "status": "na",
-            "note": "No prior cross-site punch"
-          },
-          {
-            "ruleId": "CS-EDIT",
-            "kindDefault": "det",
-            "status": "pass",
-            "note": "No post-approval edits"
-          },
-          {
             "ruleId": "CA-ROUND-0",
-            "kindDefault": "det",
             "status": "applied",
             "note": "Paid to the exact minute, no rounding"
           },
           {
             "ruleId": "CA-MB-01",
-            "kindDefault": "det",
             "status": "na",
             "note": "Break length is in the files, not when it started"
           },
           {
             "ruleId": "CA-OT-8",
-            "kindDefault": "det",
             "status": "pass",
             "note": "8.00h ≤ 8h"
           },
           {
             "ruleId": "CA-SS-01",
-            "kindDefault": "det",
             "status": "pass",
             "note": "No split"
           },
           {
             "ruleId": "CA-RT-01",
-            "kindDefault": "det",
             "status": "na",
             "note": "Unscheduled"
           },
           {
             "ruleId": "FED-OT-40",
-            "kindDefault": "det",
             "status": "pass",
             "note": "Week 8.00h (daily-OT hours excluded: 0.00)"
           }
@@ -1682,7 +967,8 @@
         "Pacific Cold Storage|Ana Peña|0",
         "Pacific Cold Storage|Ben Smith|0"
       ]
-    }
+    },
+    "rulesChecked": 14
   },
   "files": [
     {

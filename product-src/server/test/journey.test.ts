@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { createTraceMapper, runClaude, type ClaudeEvent } from '../src/claude.ts'
 import {
   buildExport, defaultDestination, draftAsk, nextStep, openGaps, summarize, toCsv, validateAsks, validateDecision, validateDispute,
-  validateMessage, validateResolve, validateSend, CSV_COLUMNS,
+  validateMessage, validateResolve, validateSend, wireCycle, CSV_COLUMNS, RERUN_RULES,
 } from '../src/journey.ts'
 import type { Batch, Decision, Dispute, JourneyCycle, ReviewGroup, Thread } from '../src/journey.ts'
 import { createJourneyStore, createMemoryJourneyStore } from '../src/journeyStore.ts'
@@ -16,7 +16,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { CyclePayload } from '../src/pipeline.ts'
 import { FACILITIES, runEngine, type Shift } from '../../src/bench/engine.js'
-import { effectiveJourneyRun } from '../../src/lib/journeyPay.ts'
+import { effectiveJourneyRun, journeyPayroll } from '../../src/lib/journeyPay.ts'
 
 const email = 'person@hypertrack.io'
 const counts = { set1: 10, set2: 10, set3: 10 }
@@ -169,6 +169,27 @@ test('dismissal recalculates weekly overtime and differential when daily overtim
   assert.equal(last.rows.find(row => row.ruleId === 'FED-OT-40')?.effect?.otPremiumMin, 75)
   assert.equal(last.rows.find(row => row.ruleId === 'FED-RR-01')?.effect?.premiumAmt, 7.5)
   assert.equal(after.reduce((n, r) => n + r.pay, 0), 882.5)
+})
+
+test('the app payload drops pass/na rows, keeps rerun markers, and pays the same for every dismissal', () => {
+  const overtimeWeek = Array.from({ length: 5 }, (_, day) => moneyShift({ id: `s_0000000000a${day}`, day, rate: 20, diff: 2,
+    punches: [{ in: 480, out: 1020 }], mealMin: 30, geo: [475, 1025] }))
+  const cycles = [moneyPayload(overtimeWeek), moneyPayload([moneyShift({ contractMin: true })]),
+    moneyPayload([moneyShift({ orientation: true, punches: [{ in: 480, out: 1020 }], geo: [475, 1025] })])]
+  type Payable = Pick<ReturnType<typeof wireCycle>, 'week' | 'sites' | 'results'>
+  const rows = (p: Pick<Payable, 'results'>) => p.results.flatMap(r => r.rows)
+  const pay = (p: Payable, ruleId: string) => journeyPayroll(p.week.map(s => ({ ...s, fac: p.sites[s.fac] })), p.results, [decision(ruleId, 'dismissed')])
+  for (const cycle of cycles) {
+    const wire = wireCycle(cycle), ruleIds = new Set(rows(cycle).map(row => row.ruleId))
+    assert.equal(wire.rulesChecked, ruleIds.size)
+    assert.ok(rows(wire).length < rows(cycle).length)
+    assert.ok(rows(wire).every(row => !('kindDefault' in row) && (row.effect || (row.status !== 'pass' && row.status !== 'na') || RERUN_RULES.has(row.ruleId))))
+    for (const ruleId of ruleIds) assert.deepEqual(pay(wire, ruleId), pay(cycle, ruleId), ruleId)
+  }
+  // Why the markers stay: dismissing daily overtime moves it to the weekly rule's pass row.
+  const wire = wireCycle(cycles[0]), bare = { ...wire, results: wire.results.map(r => ({ ...r, rows: r.rows.filter(row => row.status !== 'pass' && row.status !== 'na') })) }
+  assert.equal(pay(wire, 'CA-OT-8').gross, 882.5)
+  assert.notEqual(pay(bare, 'CA-OT-8').gross, 882.5)
 })
 
 test('captured complete-workweek context retains outside-cycle hours in dependent overtime', () => {

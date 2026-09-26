@@ -10,7 +10,7 @@ import { effectiveJourneyRun, journeyPayroll, type JourneyPayAdjustment } from '
 import { startPipeline } from '@/lib/pipeline'
 
 /** JSON wire types mirror the data service without importing Node modules into the app. */
-export interface DataProvenance { file: string; sheet?: string; row: number; cols: Partial<Record<string, string>>; hoursOnly?: boolean; fileId?: string; sample?: boolean; system?: string }
+export interface DataProvenance { file: string; sheet?: string; row: number; hoursOnly?: boolean; fileId?: string; sample?: boolean; system?: string }
 export interface DataSite extends Facility { key: string; supervisor?: { name: string; role?: string } }
 export interface DataGap { id: string; kind: string; key: string; count: number; example?: { file: string; row: number }; blocks: string[]; ask: string }
 export interface FindingGroup { id?: number; ruleId: string; tag: string; title: string; summary: string; why: string; hoursLabel: string; amount: number; amountLabel: string; action: string; draft?: string; deadline: 'invoice' | 'payroll' | 'anytime'; sources: string[]; dispute: 'Client dispute' | 'Worker dispute' | 'Margin'; cases: number }
@@ -29,15 +29,19 @@ export interface TimeEntry {
   workDate: string; start: number | null; end: number | null; mealMin: number | null; minutes: number | null
   sched: [number, number] | null; payRate: number | null; billRate: number | null
   capture: 'clock' | 'web' | 'manual' | 'import' | 'location' | null; payCode: string | null; approvedBy: string | null
-  edited: boolean | null; comment: string | null; dupOf: string | null; supersededBy: string | null; flags: string[]; prov: DataProvenance; sample: boolean
+  edited: boolean | null; comment: string | null; dupOf: string | null; supersededBy: string | null; flags: string[]; prov: DataProvenance & { cols: Partial<Record<string, string>> }; sample: boolean
 }
 export interface FactInput { kind: 'site' | 'rate' | 'differential' | 'alias' | 'account'; key: string; value: Record<string, unknown> }
 export interface CycleDates { id: string; start: string; end: string; cutoff: string; deadline: string; payDate: string; status: Cycle['status'] }
 export interface CyclePayload {
   cycle: CycleDates; sample: boolean; runId: string | null; runAt: string | null; sites: DataSite[]
   decisions?: JourneyDecision[]; batch?: JourneyBatch | null; nextStep?: NextStep; adjustments?: JourneyPayAdjustment[]
-  week: (Omit<Shift, 'fac'> & { fac: number; sample?: boolean; prov: DataProvenance; entryIds: string[] })[]
+  /** A shift's time entries, with their column maps, load on demand: getEntries(cycle, { shift }). */
+  week: (Omit<Shift, 'fac'> & { fac: number; sample?: boolean; prov: DataProvenance })[]
+  /** Rows the app reads: flag, held, applied, any with an effect, and the pass/na rows rerunEngine re-prices. */
   results: Omit<RunShift, 'shift'>[]
+  /** Distinct rules the engine checked, counting the pass/na rows the server leaves out. */
+  rulesChecked: number
   totals: { under: number; over: number; flags: number; held: number; gross: number; naive: number; shifts: number; workers: number }
   counts: { set1: number; set2: number; set3: number }; groups: FindingGroup[]; extraGroups: FindingGroup[]; gaps: DataGap[]
   intake: { sources: { id: string; name: string; short: string; set: 1 | 2 | 3; method: string; sample?: boolean; site?: string | null; lastReceived: string | null }[]; expected: { worker: string; client: string; day: number; source: string; onSite?: number }[]; received: string[] }

@@ -44,6 +44,7 @@ function cycleFixture() {
   const rules = ['CON-MARGIN-01', 'SRC-VMS-01', 'CS-01']
   payload.week = payload.week.slice(0, 3)
   payload.results = payload.results.slice(0, 3).map((row, i) => ({ ...row, rows: [{ ruleId: rules[i], status: 'flag', note: `Evidence for ${rules[i]}` }] }))
+  payload.rulesChecked = rules.length
   payload.groups = rules.map((ruleId, i) => ({ ...payload.groups[0], ruleId, id: i + 1, cases: 1, title: `Finding ${ruleId}` }))
   payload.extraGroups = []
   payload.decisions = []
@@ -120,6 +121,17 @@ describe('server-driven task card', () => {
     const choiceTree = FirstCloseoutChoice(choice.props as Parameters<typeof FirstCloseoutChoice>[0])
     button(choiceTree, 'Use sample').props.onClick!()
     expect(onAnswer).toHaveBeenCalledWith('Set 3: Use sample')
+  })
+  it('counts the rules the server checked, including the pass/na rows it leaves out of the payload', () => {
+    const cycle = { ...source.cycle!, rulesChecked: 20 }
+    source.cycle = cycle
+    expect(new Set(cycle.results.flatMap(result => result.rows.map(row => row.ruleId))).size).toBe(3)
+    expect(taskProgress(cycle).rules).toBe(20)
+    const html = renderToStaticMarkup(createElement(TaskCard, { cycleId: cycle.cycle.id }))
+    expect(html).toMatch(/Applying rules<\/span><span class="beautiful-task-amount tabular-nums"><span class="tabular-nums journey-count">20</)
+    expect(html).toMatch(/Rules checked<\/span><span class="tabular-nums"><span class="tabular-nums journey-count">20</)
+    // The recorded server payload carries the count of its full engine run.
+    expect(taskProgress(fixture.payload as CyclePayload).rules).toBe(14)
   })
   it('renders a real no-run list row with its counts, missing choices and live Running status', () => {
     const cycle = source.cycle!

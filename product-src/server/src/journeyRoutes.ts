@@ -12,7 +12,7 @@ import type { CyclePayload } from './pipeline.ts'
 import {
   buildExport, counterpartyFor, defaultDestination, disputeEvidence, draftAsk, journeyCycle, neverContacted, nextStep, openItems,
   simulatedDispute, summarize, toCsv, validateAsks, validateCycleRef, validateDecision, validateDispute, validateMessage,
-  validateResolve, validateSend,
+  validateResolve, validateSend, wireCycle,
 } from './journey.ts'
 import type { Batch, CycleSummary, Decision, Dispute, IntakeGap, Message, Thread } from './journey.ts'
 import type { JourneyStore } from './journeyStore.ts'
@@ -47,38 +47,45 @@ function json(response: ServerResponse, status: number, body: unknown): void {
   response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' })
   response.end(JSON.stringify(body))
 }
-function gzipJson(response: ServerResponse, status: number, body: string): void {
+function gzipJson(response: ServerResponse, status: number, body: string | Buffer): void {
   response.writeHead(status, { 'Content-Type': 'application/json', 'Content-Encoding': 'gzip', 'Cache-Control': 'no-store' })
-  response.end(gzipSync(body))
+  response.end(typeof body === 'string' ? gzipSync(body) : body)
 }
-/** Appends fields to the stored payload JSON without re-serializing ~10 MB of time entries. */
-const withFields = (payload: string, fields: object) => payload.slice(0, payload.lastIndexOf('}')) + ',' + JSON.stringify(fields).slice(1)
+/** Appends fields (a JSON object) to the app's payload JSON without re-serializing its time entries. */
+const withFields = (payload: string, fields: string) => payload.slice(0, payload.lastIndexOf('}')) + ',' + fields.slice(1)
 
-// ponytail: in-process cache keyed by the content-addressed run id; a second machine just recomputes.
-const summaries = new Map<string, CycleSummary>()
-function remember(key: string, summary: CycleSummary) {
-  summaries.set(key, summary)
-  if (summaries.size > 64) summaries.delete(summaries.keys().next().value!)
-  return summary
+// ponytail: in-process caches keyed by the content-addressed run; a second machine just recomputes.
+// Bounded by entry count: the app's payload is ~7 MB for 2,000 workers, its gzip ~0.3 MB.
+const summaries = new Map<string, CycleSummary>(), wires = new Map<string, string>(), gzips = new Map<string, Buffer>()
+function remember<T>(cache: Map<string, T>, key: string, value: T, max = 64) {
+  cache.set(key, value)
+  if (cache.size > max) cache.delete(cache.keys().next().value!)
+  return value
 }
+const runKey = (email: string, run: RunRecord) => `${email}|${run.runId}|${run.runAt}`
 async function runText(store: DataStore, email: string, run: RunRecord): Promise<string> {
   const bytes = await store.getObject(email, run.storagePath)
   if (!bytes) throw new DataError(404, 'not_found')
   return gunzipSync(bytes).toString('utf8')
 }
 async function summaryFor(store: DataStore, email: string, run: RunRecord): Promise<CycleSummary> {
-  return summaries.get(`${email}|${run.runId}`) ?? remember(`${email}|${run.runId}`, summarize(JSON.parse(await runText(store, email, run)) as CyclePayload))
+  const key = runKey(email, run)
+  return summaries.get(key) ?? remember(summaries, key, summarize(JSON.parse(await runText(store, email, run)) as CyclePayload))
 }
 
-async function loadCycle(req: JourneyRequest, cycleId: string, parse: true): Promise<{ text: string; summary: CycleSummary; payload: CyclePayload }>
-async function loadCycle(req: JourneyRequest, cycleId: string, parse?: false): Promise<{ text: string; summary: CycleSummary; payload?: CyclePayload }>
+type Loaded = { key: string; summary: CycleSummary; wire(): Promise<string> }
+async function loadCycle(req: JourneyRequest, cycleId: string, parse: true): Promise<Loaded & { payload: CyclePayload }>
+async function loadCycle(req: JourneyRequest, cycleId: string, parse?: false): Promise<Loaded & { payload?: CyclePayload }>
 async function loadCycle(req: JourneyRequest, cycleId: string, parse = false) {
   await req.service.recompute(req.email, req.doc)
   const run = await req.store.getRun(req.email, cycleId)
   if (!run) throw new DataError(404, 'not_found')
-  const text = await runText(req.store, req.email, run), key = `${req.email}|${run.runId}`
-  const payload = parse || !summaries.has(key) ? JSON.parse(text) as CyclePayload : undefined
-  return { text, payload, summary: summaries.get(key) ?? remember(key, summarize(payload!)) }
+  const key = runKey(req.email, run)
+  const read = async () => JSON.parse(await runText(req.store, req.email, run)) as CyclePayload
+  const payload = parse || !summaries.has(key) ? await read() : undefined
+  return { key, payload, summary: summaries.get(key) ?? remember(summaries, key, summarize(payload!)),
+    /** The app's copy of the run (wireCycle). The stored run is read again only on a cache miss. */
+    wire: async () => wires.get(key) ?? remember(wires, key, JSON.stringify(wireCycle(payload ?? await read())), 8) }
 }
 
 async function journeyState(req: JourneyRequest, summary: CycleSummary) {
@@ -96,7 +103,7 @@ async function journeyOnlyCycle(req: JourneyRequest, cycleId: string): Promise<v
   const dates = cycleDates(cycle), counts = { set1: 0, set2: 0, set3: 0 }
   const state = await journeyState(req, { id: cycleId, start: dates.start, cutoff: dates.cutoff, deadline: dates.deadline, counts, gaps: [], groups: [], supervisors: {} })
   if (!state.adjustments.length && !state.decisions.length && !state.batch && !state.threads.length) throw new DataError(404, 'not_found')
-  json(req.response, 200, { cycle: dates, sample: false, runId: null, runAt: null, sites: [], week: [], results: [],
+  json(req.response, 200, { cycle: dates, sample: false, runId: null, runAt: null, sites: [], week: [], results: [], rulesChecked: 0,
     totals: { under: 0, over: 0, flags: 0, held: 0, gross: 0, naive: 0, shifts: 0, workers: 0 }, counts, groups: [], extraGroups: [], gaps: [],
     intake: { sources: [], expected: [], received: [] }, decisions: state.decisions, batch: state.batch, nextStep: state.nextStep, adjustments: state.adjustments })
 }
@@ -159,14 +166,16 @@ async function handleLockedJourney(req: JourneyRequest): Promise<boolean> {
     const loaded = await loadCycle(req, match[1]).catch((error: unknown) => { if (error instanceof DataError && error.status === 404) return null; throw error })
     if (!loaded) { await journeyOnlyCycle(req, match[1]); return true }
     const { decisions, batch, nextStep, adjustments } = await journeyState(req, loaded.summary)
-    gzipJson(response, 200, withFields(loaded.text, { decisions, batch, nextStep, adjustments }))
+    // Cached per run and journey state: repeat reads (polling, reloads) skip the storage read, trim and gzip.
+    const fields = JSON.stringify({ decisions, batch, nextStep, adjustments }), key = `${loaded.key}|${hash(fields)}`
+    gzipJson(response, 200, gzips.get(key) ?? remember(gzips, key, gzipSync(withFields(await loaded.wire(), fields)), 16))
     return true
   }
   if ((match = /^\/data\/cycles\/(\d{4}-\d{2}-\d{2})\/(decisions|asks|send)$/.exec(path)) && method === 'POST') {
     const [, cycleId, action] = match, now = new Date().toISOString()
     if (action === 'decisions') {
       const input = validateDecision(await req.readBody(262_144))
-      const { text, summary } = await loadCycle(req, cycleId)
+      const { wire, summary } = await loadCycle(req, cycleId)
       const group = summary.groups.find(g => g.id === input.groupId || g.num != null && String(g.num) === input.groupId)
       if (!group) throw new DataError(400, 'unknown_group')
       await journeyState(req, summary)
@@ -175,7 +184,7 @@ async function handleLockedJourney(req: JourneyRequest): Promise<boolean> {
         groupId: group.id, shiftIds, decision: input.decision, reason: input.reason, by: 'user', at: now })
       const state = await journeyState(req, summary)
       await req.sync()
-      gzipJson(response, 200, `{"decision":${JSON.stringify(decision)},"cycle":${withFields(text, { decisions: state.decisions, batch: state.batch, nextStep: state.nextStep, adjustments: state.adjustments })}}`)
+      gzipJson(response, 200, `{"decision":${JSON.stringify(decision)},"cycle":${withFields(await wire(), JSON.stringify({ decisions: state.decisions, batch: state.batch, nextStep: state.nextStep, adjustments: state.adjustments }))}}`)
       return true
     }
     if (action === 'asks') {

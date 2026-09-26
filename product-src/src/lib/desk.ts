@@ -12,7 +12,7 @@ import { viewerSession } from '@/lib/viewerSession'
 import type { JourneyDecision, JourneyBatch, NextStep } from '@/lib/journey'
 import { payTotals } from '@/lib/payroll'
 
-export type DeskShift = Shift & { prov?: DataProvenance; entryIds?: string[]; sample?: boolean }
+export type DeskShift = Shift & { prov?: DataProvenance; sample?: boolean }
 export interface DeskCycle extends Cycle {
   server?: boolean
   sample?: boolean
@@ -422,7 +422,6 @@ export function provenance(c: DeskCycle, s: Shift, index: number): Provenance {
     file: `${(source?.id ?? 'timesheet').replace(/-/g, '_')}_${facilityKey}_${cycleWeeks(c)[0]}.csv`,
     // Row 1 is the export header; use source order, independent of table sorting/filtering.
     row: (sourceIndex >= 0 ? sourceIndex : index) + 2,
-    cols: {},
   }
 }
 

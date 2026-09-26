@@ -23,7 +23,7 @@ export function taskProgress(cycle?: CyclePayload, row?: CycleSummary, empty = f
     sets: [counts.set1, counts.set2, counts.set3],
     missingSets: ([1, 2, 3] as const).filter(set => !counts[`set${set}`]),
     workers: cycle?.totals.workers ?? row?.totals?.workers ?? 0,
-    rules: new Set(cycle?.results.flatMap(result => result.rows.map(row => row.ruleId)) ?? []).size,
+    rules: cycle?.rulesChecked ?? 0,
     differences: cycle ? [...cycle.groups, ...cycle.extraGroups].reduce((n, group) => n + group.cases, 0) : row?.findings ?? 0,
   }
 }

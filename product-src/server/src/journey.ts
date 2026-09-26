@@ -28,6 +28,20 @@ const JUDGMENT = new Set(['CON-MARGIN-01'])
 const SET_NAMES = { 1: 'worker-reported time', 2: 'client-approved time', 3: 'location' } as const
 export const gapId = (e: { client: string; worker: string; day: number }) => `${e.client}|${e.worker}|${e.day}`
 
+/** rerunEngine (src/bench/engine.js) re-prices these rules only on shifts that already carry a row for them, pass and na included. */
+export const RERUN_RULES = new Set(['CA-OT-8', 'CA-MB-01', 'CA-RT-01', 'CON-MIN-4H', 'CA-SS-01', 'FED-OT-40', 'FED-RR-01'])
+/** The app's copy of a stored run (under half the bytes). The stored run keeps everything for exports, disputes and the agent's workspace.
+ * Dropped: pass/na rows the app never reads (rulesChecked keeps their count), kindDefault (RULES has it), provenance column maps and entry ids. */
+export function wireCycle(p: CyclePayload) {
+  const checked = new Set<string>()
+  const results = p.results.map(result => ({ ...result, rows: result.rows.flatMap(({ kindDefault, ...row }) => {
+    void kindDefault; checked.add(row.ruleId)
+    return row.effect || (row.status !== 'pass' && row.status !== 'na') || RERUN_RULES.has(row.ruleId) ? [row] : []
+  }) }))
+  const week = p.week.map(({ entryIds, prov: { cols, ...prov }, ...shift }) => { void entryIds; void cols; return { ...shift, prov } })
+  return { ...p, week, results, rulesChecked: checked.size }
+}
+
 export function summarize(p: CyclePayload): CycleSummary {
   const groups = new Map<string, ReviewGroup>()
   p.results.forEach((result, i) => {
