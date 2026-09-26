@@ -14,7 +14,7 @@ const voice = vi.hoisted(() => ({ snapshot: null as CallSnapshot | null, start: 
 vi.mock('@/lib/useVoiceCall', () => ({ useVoiceCall: () => voice }))
 vi.mock('@/lib/onboarding', async (original) => ({ ...await original<typeof import('@/lib/onboarding')>(), useOnboarding: () => [state.value, vi.fn()] }))
 vi.mock('@/lib/viewerSession', () => ({ viewerSession: () => ({ name: 'Morgan Lee' }) }))
-const primaryCount = (html: string) => (html.match(/class="btn primary(?:\s[^"]*)?"/g) ?? []).length
+const primaryCount = (html: string) => (html.match(/<button\b[^>]*class="[^"]*\bprimary\b[^"]*"/g) ?? []).length
 beforeEach(() => { state.value = structuredClone(DEFAULTS); voice.snapshot = null; vi.stubGlobal('window', { matchMedia: () => ({ matches: true }) }) })
 
 describe('one black next step per setup pane', () => {
@@ -88,7 +88,8 @@ describe('one black next step per setup pane', () => {
     expect(html).toContain('Anyone I should never contact?')
     expect(html).toContain('Remove Alex at Pacific')
     expect(primaryCount(html)).toBe(1)
-    expect(html).toContain('class="btn primary">Save and continue')
+    expect(html).toContain('class="btn action-button primary"')
+    expect(html).toContain('>Save and continue</span>')
   })
   it('never shows a previous call summary for an unconnected call, and shows only this call once it is carded', () => {
     state.value.setupStep = 'intro'

@@ -1,3 +1,5 @@
+import { ActionButton, ActionFeedback } from '@/components/ActionButton'
+import type { PendingAction } from '@/lib/usePendingAction'
 import { type JSX, type ReactNode } from 'react'
 import { ArrowUpRight, FileClock, IdCard, MapPin } from 'lucide-react'
 import { SOURCES } from '@/bench/vendors'
@@ -5,7 +7,7 @@ import { RULES, fmtT, money, type Rule, type RunShift } from '@/bench/engine.js'
 import { PROV } from '@/bench/prov'
 import { Btn, Kv, Lbl, PayDelta, Tag } from '@/components/ui'
 import { useOverlay } from '@/components/shell/Overlay'
-import { effectiveResolutions, provenance, type DeskCycle } from '@/lib/desk'
+import { effectiveResolutions, kindLabel, provenance, type DeskCycle } from '@/lib/desk'
 import { journeyShiftPay } from '@/lib/journeyPay'
 import { useOnboarding } from '@/lib/onboarding'
 import { groupId } from '@/lib/journey'
@@ -40,7 +42,7 @@ export function FiredRule({ row, rule, onOpen }: { row: RunShift['rows'][number]
 export function RuleEvidence({ rule }: { rule: Rule }) {
   const source = PROV[rule.id]
   return <div className="src-entry">
-    <Tag className="mono">{rule.id}</Tag>
+    <Tag>{kindLabel(rule.id)}</Tag>
     <p className="r-sent">{rule.sentence}</p>
     <h6>{source?.doc ?? rule.source.doc}</h6>
     <Lbl>{source?.verbatim ? 'Verbatim · as ingested' : 'Obligation summary · as compiled'}</Lbl>
@@ -66,6 +68,9 @@ interface ShiftDetailProps {
   /** Replaces the "Rule applied" label, e.g. with the finding's bucket tag. */
   ruleHead?: ReactNode
   applyLabel?: string
+  applyAction?: PendingAction
+  applyPendingLabel?: string
+  applySuccessLabel?: string
   onApply?(): void
 }
 
@@ -74,7 +79,7 @@ export function ShiftDetail(props: ShiftDetailProps): JSX.Element {
 }
 
 
-function ShiftEvidence({ cycle, rs, primaryRuleId, showHeading = true, showSourceAction = true, showFired = true, timeOnly = false, ruleHead, applyLabel = 'Approve', onApply }: ShiftDetailProps): JSX.Element {
+function ShiftEvidence({ cycle, rs, primaryRuleId, showHeading = true, showSourceAction = true, showFired = true, timeOnly = false, ruleHead, applyLabel = 'Approve', applyAction, applyPendingLabel = 'Approving…', applySuccessLabel = 'Approved', onApply }: ShiftDetailProps): JSX.Element {
   const { openDrawer } = useOverlay()
   const [state] = useOnboarding()
   const s = rs.shift
@@ -90,8 +95,8 @@ function ShiftEvidence({ cycle, rs, primaryRuleId, showHeading = true, showSourc
   const vendorMark = vendor?.tile ? <img src={vendor.tile} alt="" /> : <FileClock size={13} aria-hidden="true" />
   const pay = journeyShiftPay(rs)
   const delta = pay - rs.naive
-  const canApply = !!onApply && !decision && !(cycle.server && rs.held)
-  const showRule = (rule: Rule) => openDrawer(<RuleEvidence rule={rule} />, rule.id, PROV[rule.id]?.doc ?? rule.source.doc)
+  const canApply = !!onApply && ((!decision && !(cycle.server && rs.held)) || !!applyAction && applyAction.status !== 'idle')
+  const showRule = (rule: Rule) => openDrawer(<RuleEvidence rule={rule} />, kindLabel(rule.id), PROV[rule.id]?.doc ?? rule.source.doc)
   const primaryRule = RULES.find((rule) => rule.id === (primaryRuleId ?? fired[0]?.ruleId))
   const shown = primaryRuleId ? fired.filter((row) => row.ruleId === primaryRuleId) : fired
   const rules = <>
@@ -105,8 +110,8 @@ function ShiftEvidence({ cycle, rs, primaryRuleId, showHeading = true, showSourc
 
   return <div className="shift-evidence">
     <div className="shift-evidence-scroll">
-    {(showHeading || source.sample || cycle.sample) && <div className="flex items-center gap-2">
-      {showHeading && <div className="count">#{s.id} · {cycle.days[s.day]}</div>}
+    {showHeading && <div className="flex items-center gap-2">
+      <div className="count">{cycle.days[s.day]}</div>
       {(source.sample || cycle.sample) && <Tag>Sample</Tag>}
     </div>}
     {timeOnly && rules}
@@ -114,7 +119,7 @@ function ShiftEvidence({ cycle, rs, primaryRuleId, showHeading = true, showSourc
     <Kv rows={[
       ['Worker', <span key="worker">{s.worker} · {s.role}</span>],
       ['Site', <span key="site">{s.fac.name}<span className="block">{s.fac.city}, {s.fac.state}</span></span>],
-      ...(cycle.server ? [['Source', <span key="source">{source.file}{source.sheet ? ` · ${source.sheet}` : ''} · row {source.row}</span>] as [string, ReactNode]] : []),
+      ...(cycle.server ? [['Source', <span key="source">{source.system}</span>] as [string, ReactNode]] : []),
       ['Scheduled', <Via key="sched" mark={vendorMark} title={`From ${vendorName}`}>{s.sched ? `${fmtT(s.sched[0])} to ${fmtT(s.sched[1])}` : null}</Via>],
       [source.hoursOnly ? 'Reported hours' : 'Punched', <Via key="punched" mark={vendorMark} title={`From ${vendorName}`}>{source.hoursOnly ? `${(rs.payableMin / 60).toLocaleString()}h · clock times not supplied` : <span>{s.punches.map((punch, index) => <span className="block num" key={index}>{fmtT(punch.in)} to {punch.out == null ? '—' : fmtT(punch.out)}</span>)}</span>}</Via>],
       ['Geofence', <Via key="geo" mark={<MapPin size={13} aria-hidden="true" />} title="HyperTrack location">{s.geo ? `${fmtT(s.geo[0])} to ${fmtT(s.geo[1])}` : s.fac.geofence ? 'No location evidence' : 'Not used at this site'}</Via>],
@@ -130,7 +135,8 @@ function ShiftEvidence({ cycle, rs, primaryRuleId, showHeading = true, showSourc
     <div className="shift-action-bar">
       <PayDelta current={rs.naive} resolved={pay} size="lg" />
       {(canApply || (showSourceAction && primaryRule)) && <div className="actions">
-        {canApply && <Btn className="primary" onClick={onApply}>{applyLabel}</Btn>}
+        {canApply && (applyAction ? <ActionButton className="primary" action={applyAction} pendingLabel={applyPendingLabel} successLabel={applySuccessLabel} onClick={onApply}>{applyLabel}</ActionButton> : <Btn className="primary" onClick={onApply}>{applyLabel}</Btn>)}
+        {applyAction && <ActionFeedback action={applyAction} />}
         {showSourceAction && primaryRule && <Btn onClick={() => showRule(primaryRule)}>Open Source Document ↗</Btn>}
       </div>}
     </div>

@@ -1,33 +1,36 @@
 import { useState } from 'react'
 import { Trash2 } from 'lucide-react'
-import { SkeletonRegion } from '@/components/Skeleton'
+import { ActionButton, ActionFeedback } from '@/components/ActionButton'
+import { usePendingAction } from '@/lib/usePendingAction'
 import { Btn } from '@/components/ui'
 import { removeFile } from '@/lib/data'
 
 const FAILED = 'The file could not be removed. Try again.'
 
 /** Remove one of the account's own uploads after an inline confirm. Sample files leave only with the whole sample. */
-export function RemoveFile({ file, onRemoved }: { file: { id: string; name: string; sample: boolean }; onRemoved?: () => void }) {
+export function RemoveFile({ file, onRemoved, retain }: { file: { id: string; name: string; sample: boolean }; onRemoved?: () => void; retain?: () => (delay?: number) => void }) {
   const [confirming, setConfirming] = useState(false)
-  const [working, setWorking] = useState(false)
-  const [error, setError] = useState('')
+  const action = usePendingAction(() => FAILED)
   if (file.sample) return null
 
   async function remove() {
-    setWorking(true); setError('')
-    // removeFile refreshes the desk before it resolves, so the row is already gone from the account's files.
-    try { await removeFile(file.id); setConfirming(false); onRemoved?.() }
-    catch { setError(FAILED) }
-    finally { setWorking(false) }
+    await action.run(async () => {
+      const release = retain?.()
+      try {
+        await removeFile(file.id)
+        release?.()
+        if (onRemoved) setTimeout(onRemoved, 900)
+      } catch (cause) { release?.(0); throw cause }
+    })
   }
 
-  if (working) return <SkeletonRegion variant="action" className="remove-file-busy" />
-  if (!confirming) return <Btn className="remove-file" aria-label={`Remove ${file.name}`} title={`Remove ${file.name}`} onClick={() => setConfirming(true)}><Trash2 size={12} aria-hidden="true" />Remove</Btn>
-  return <div className="remove-file-confirm" role="group" aria-label={`Remove ${file.name}`}
-    onKeyDown={(event) => { if (event.key === 'Escape') setConfirming(false) }}>
-    <span>{`Remove ${file.name}? Its time entries leave every pay run.`}</span>
-    <Btn onClick={() => void remove()}>Remove</Btn>
-    <Btn onClick={() => { setConfirming(false); setError('') }}>Cancel</Btn>
-    {error && <p role="alert" className="r-note">{error}</p>}
+  if (action.status === 'success') return <ActionButton action={action} pendingLabel="Removing…" successLabel="Removed">Remove</ActionButton>
+  if (!confirming) return <Btn className="remove-file" aria-label="Remove file" title="Remove file" onClick={() => setConfirming(true)}><Trash2 size={12} aria-hidden="true" />Remove</Btn>
+  return <div className="remove-file-confirm" role="group" aria-label="Remove file"
+    onKeyDown={(event) => { if (event.key === 'Escape' && !action.pending) setConfirming(false) }}>
+    <span>Remove this file? Its time entries leave every pay run.</span>
+    <ActionButton action={action} pendingLabel="Removing…" successLabel="Removed" onClick={() => void remove()}>Remove</ActionButton>
+    <Btn disabled={action.pending} onClick={() => { setConfirming(false); action.reset() }}>Cancel</Btn>
+    <ActionFeedback action={action} />
   </div>
 }

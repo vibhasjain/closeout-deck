@@ -81,7 +81,35 @@ export function askedForGroup(c: DeskCycle, group: ResolutionGroup, threads: Jou
   })?.counterparty.name
 }
 
-export function resolutionGroups(c: DeskCycle, res: Onboarding['resolutions'], undone: readonly string[] = [], threads: JourneyThread[] = [], neverContact: readonly string[] = []): ResolutionGroup[] {
+const emptyThreads: JourneyThread[] = []
+interface GroupCache {
+  resolutions: Onboarding['resolutions'][string] | undefined
+  undone: string
+  groups: ResolutionGroup[]
+  threads?: JourneyThread[]
+  neverContact?: string
+  value?: ResolutionGroup[]
+}
+const groupCache = new WeakMap<DeskCycle, GroupCache>()
+
+export function resolutionGroups(c: DeskCycle, res: Onboarding['resolutions'], undone: readonly string[] = [], threads: JourneyThread[] = emptyThreads, neverContact: readonly string[] = []): ResolutionGroup[] {
+  const resolutions = c.server ? undefined : res[c.id]
+  const undoneKey = c.server ? '' : JSON.stringify(undone)
+  let cached = groupCache.get(c)
+  if (!cached || cached.resolutions !== resolutions || cached.undone !== undoneKey) {
+    cached = { resolutions, undone: undoneKey, groups: buildResolutionGroups(c, res, undone) }
+    groupCache.set(c, cached)
+  }
+  const neverContactKey = JSON.stringify(neverContact)
+  if (cached.value && cached.threads === threads && cached.neverContact === neverContactKey) return cached.value
+  cached.threads = threads
+  cached.neverContact = neverContactKey
+  cached.value = cached.groups.map(group => c.server && group.state === 'waiting'
+    ? { ...group, asked: askedForGroup(c, group, threads, neverContact) } : group)
+  return cached.value
+}
+
+function buildResolutionGroups(c: DeskCycle, res: Onboarding['resolutions'], undone: readonly string[]): ResolutionGroup[] {
   const groups = new Map<string, ResolutionGroup>()
   for (const rs of c.run.shifts) {
     const seen = new Set<string>()
@@ -111,7 +139,5 @@ export function resolutionGroups(c: DeskCycle, res: Onboarding['resolutions'], u
       groups.set(key, group)
     }
   }
-  return [...groups.values()].map(group => c.server && group.state === 'waiting'
-    ? { ...group, asked: askedForGroup(c, group, threads, neverContact) } : group)
-    .sort((a, b) => STATES.indexOf(a.state) - STATES.indexOf(b.state) || b.cases.length - a.cases.length)
+  return [...groups.values()].sort((a, b) => STATES.indexOf(a.state) - STATES.indexOf(b.state) || b.cases.length - a.cases.length)
 }

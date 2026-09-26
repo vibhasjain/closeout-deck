@@ -17,7 +17,7 @@ describe('emailing an issue', () => {
       'Hi,',
       '12 nights of 10h are in Bullhorn twice: once from the ADP clock import and again keyed by staff. That\'s $3,000 overbilled. Clients find these in audits, then question every invoice.',
       'Suggested action: Delete the copies staff keyed by hand before invoicing.',
-      'The time entries are attached (duplicate_time_entries.csv).',
+      'The time entries are attached.',
       'Thanks',
     ])
     const lines = email.csv.split('\r\n')

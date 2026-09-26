@@ -1,3 +1,5 @@
+import { ActionButton, ActionFeedback } from '@/components/ActionButton'
+import { usePendingAction } from '@/lib/usePendingAction'
 import { SkeletonRegion } from '@/components/Skeleton'
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { MessageSquare, Send } from 'lucide-react'
@@ -111,19 +113,16 @@ export function JourneyThreadView({ thread: initial, primary = false }: { thread
   const blocked = blockedCounterparty(thread, state.neverContact ?? [], data.payloads.find(cycle => cycle.cycle.id === thread.cycleId))
   const [text, setText] = useState('')
   const [dir, setDir] = useState<'in' | 'out'>('in')
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const action = usePendingAction(cause => threadErrorText(cause, thread.counterparty.name))
+  const saving = action.pending
   const log = useRef<HTMLDivElement>(null)
   async function save() {
     if (!text.trim() || saving || (dir === 'out' && blocked)) return
-    setSaving(true)
-    setError(null)
-    try {
+    await action.run(async () => {
       await recordMessage(thread.id, { dir, text: text.trim() })
       setText('')
       requestAnimationFrame(() => { if (log.current) log.current.scrollTop = log.current.scrollHeight })
-    } catch (cause) { setError(threadErrorText(cause, thread.counterparty.name)) }
-    finally { setSaving(false) }
+    })
   }
   return <section className="thread journey-thread" aria-label={`Conversation with ${thread.counterparty.name}`}>
     <header className="thread-head"><div className="thread-heading"><span className="thread-name">{thread.counterparty.name}</span><Tag>{titleCase(thread.status)}</Tag></div></header>
@@ -133,17 +132,19 @@ export function JourneyThreadView({ thread: initial, primary = false }: { thread
         <p className="thread-text">{message.text}</p>
         {message.dir === 'out' && <Tag>Not Sent · Demo</Tag>}
       </article>)}
+      {saving && <SkeletonRegion variant="conversation" rows={1} />}
       {!thread.messages.length && <p className="r-note">No messages yet</p>}
     </div>
     {blocked && <p className="journey-thread-error" role="status">{thread.counterparty.name} is on your never-contact list. You can still record a reply.</p>}
-    {(error || loadError) && <p className="journey-thread-error" role="alert">{error ?? threadErrorText(new Error(loadError!), thread.counterparty.name)}</p>}
+    {loadError && <p className="journey-thread-error" role="alert">{threadErrorText(new Error(loadError), thread.counterparty.name)}</p>}
+    <ActionFeedback action={action} className="journey-thread-error" />
     <form className="journey-thread-composer" onSubmit={(event) => { event.preventDefault(); void save() }}>
       <div className="thread-party-switch" role="group" aria-label="Message direction">
         <button type="button" aria-pressed={dir === 'in'} onClick={() => setDir('in')}>Record reply</button>
         <button type="button" aria-pressed={dir === 'out'} onClick={() => setDir('out')}>Outgoing message</button>
       </div>
-      <textarea className="chat-input" rows={2} aria-label={dir === 'in' ? 'Reply text' : 'Outgoing message text'} placeholder={dir === 'in' ? `Record ${thread.counterparty.name}'s reply…` : blocked ? 'Outgoing messages are disabled' : `Message ${thread.counterparty.name}…`} value={text} disabled={saving || (dir === 'out' && blocked)} onChange={(event) => setText(event.target.value)} />
-      <Btn type="submit" className={primary && !blocked ? 'primary' : undefined} disabled={saving || !text.trim() || (dir === 'out' && blocked)}>{saving ? 'Recording…' : dir === 'in' ? 'Record reply' : 'Save message · Demo'}</Btn>
+      <textarea className="chat-input" rows={2} aria-label={dir === 'in' ? 'Reply text' : 'Outgoing message text'} placeholder={dir === 'in' ? `Record ${thread.counterparty.name}'s reply…` : blocked ? 'Outgoing messages are disabled' : `Message ${thread.counterparty.name}…`} value={text} disabled={saving || (dir === 'out' && blocked)} onChange={(event) => { action.reset(); setText(event.target.value) }} />
+      <ActionButton action={action} pendingLabel="Recording…" successLabel="Recorded" type="submit" className={primary && !blocked ? 'primary' : undefined} disabled={saving || !text.trim() || (dir === 'out' && blocked)}>{dir === 'in' ? 'Record reply' : 'Save message · Demo'}</ActionButton>
     </form>
   </section>
 }

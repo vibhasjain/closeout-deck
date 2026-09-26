@@ -1,6 +1,8 @@
 import { Children, isValidElement, type ReactElement, type ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TopNav } from './TopNav'
+import { ActionFeedback } from '@/components/ActionButton'
+import type { PendingAction } from '@/lib/usePendingAction'
 import { StartOver } from '@/components/StartOver'
 import { OnboardingAccount } from '@/components/setup/OnboardingAccount'
 import { startOver } from '@/lib/startOver'
@@ -46,6 +48,7 @@ vi.mock('./GettingStarted', () => ({ GettingStarted: () => null }))
 vi.mock('@/lib/startOver', async (original) => ({ ...await original<typeof import('@/lib/startOver')>(), startOver: vi.fn(async () => 'busy'), startOverInFlight: () => reset.inFlight }))
 
 type Props = {
+  action?: PendingAction
   children?: ReactNode
   className?: string
   role?: string
@@ -67,8 +70,8 @@ type Props = {
   onSubmit?(event: { preventDefault(): void }): Promise<void>
   onChange?(event: { target: { value: string } }): void
 }
-const elements = (node: ReactNode): ReactElement<Props>[] => Children.toArray(node).flatMap(child => isValidElement<Props>(child) ? [child, ...elements(child.props.children)] : [])
-const text = (node: ReactNode): string => Children.toArray(node).map(child => isValidElement<Props>(child) ? text(child.props.children) : String(child)).join('')
+const elements = (node: ReactNode): ReactElement<Props>[] => Children.toArray(node).flatMap(child => isValidElement<Props>(child) ? child.type === ActionFeedback ? elements(ActionFeedback({ action: child.props.action! })) : [child, ...elements(child.props.children)] : [])
+const text = (node: ReactNode): string => Children.toArray(node).map(child => isValidElement<Props>(child) ? text(child.type === ActionFeedback ? ActionFeedback({ action: child.props.action! }) : child.props.children) : String(child)).join('')
 const button = (node: ReactNode, name: string) => elements(node).find(({ type, props }) => type === 'button' && (props['aria-label'] === name || text(props.children) === name))!
 const render = (width: number) => { hooks.cursor = 0; hooks.effects = []; return TopNav({ wide: width >= 1024 }) }
 const renderCorner = () => { hooks.cursor = 0; return OnboardingAccount() }

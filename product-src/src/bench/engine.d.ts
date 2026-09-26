@@ -146,6 +146,7 @@ export const RERUN_RULES: readonly string[]
 export const DAYS: string[]
 export function makeWeek(o?: { seed?: number; scripted?: boolean; start?: string }): Shift[]
 export function runEngine(week: Shift[], overrides?: Record<string, number>): Run
+export function createEngineContext(week: Shift[], overrides?: Record<string, number>): EngineContext
 export function rerunEngine(week: Shift[], snapshots: Omit<RunShift, 'shift'>[], dismissed: (shiftId: string, ruleId: string) => boolean): RunShift[]
 export function backtest(week: Shift[], ruleId: string, overrides?: Record<string, number>): { fires: number; of: number }
 export function fireCount(run: Run, ruleId: string): number

@@ -1,6 +1,6 @@
 /* J&J kit: components.md §§4–5; the app's Inter 13px base stays unchanged. */
 .chat.queue { background: #fbfbfa; color: #100f0f; }
-.chat .chat-header { min-height: 56px; padding-inline: 24px; border-bottom: .5px solid rgb(0 0 0 / .1); }
+.chat .chat-header { height: var(--shell-header-height); min-height: var(--shell-header-height); padding-inline: 24px; border-bottom: 1px solid hsl(var(--border)); }
 .chat .chat-heading { gap: 8px; }
 .chat .chat-heading h2 { font-size: 13px; font-weight: 500; letter-spacing: -.01em; }
 .chat .chat-log { gap: 16px; padding: 12px 24px 20px; overscroll-behavior: contain; scroll-padding-block: 16px; }

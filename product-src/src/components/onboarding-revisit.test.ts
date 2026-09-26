@@ -5,6 +5,7 @@ import { CycleFields } from '@/components/PayrollCalendar'
 import { TopNav } from '@/components/shell/TopNav'
 import { GettingStarted } from '@/components/shell/GettingStarted'
 import { PayRuns } from '@/components/shell/PayRuns'
+import { PaintBoundary } from '@/components/shell/PaintBoundary'
 import { Settings } from '@/pages/Settings'
 import { recentCycles } from '@/lib/cycles'
 import { intakeHref } from '@/lib/intake'
@@ -62,6 +63,7 @@ type ElementProps = {
   className?: string | ((state: { isActive: boolean }) => string)
   to?: string
   disabled?: boolean
+  inert?: boolean
   tabIndex?: number
   onClick?: () => void
   onSubmit?: (event: { preventDefault(): void }) => void
@@ -70,6 +72,7 @@ type ElementProps = {
   'aria-label'?: string
   'aria-disabled'?: boolean
   'aria-expanded'?: boolean
+  'aria-hidden'?: boolean | 'true' | 'false'
 }
 
 function elements(node: ReactNode): ReactElement<ElementProps>[] {
@@ -155,7 +158,14 @@ describe('revisiting onboarding', () => {
   it('reopens setup from Settings without changing completion or saved answers', () => {
     updateOnboarding({ discovery: { ...DEFAULTS.discovery, payroll: 'ADP' }, payDay: 'Thursday' })
     const before = getOnboarding()
-    const reopen = button(mount(Settings)(), 'Onboarding')
+    // Settings paints its frame first; exercise the real content after that boundary resolves.
+    const renderSettings = mount(() => {
+      const frame = Settings() as ReactElement<{ children: ReactElement }>
+      expect(frame.type).toBe(PaintBoundary)
+      const content = frame.props.children
+      return (content.type as () => ReactNode)()
+    })
+    const reopen = button(renderSettings(), 'Onboarding')
     expect(reopen).toBeDefined()
     reopen!.props.onClick!()
     expect(router.navigate).toHaveBeenCalledWith('/setup/agent')
@@ -274,7 +284,11 @@ describe('revisiting onboarding', () => {
     wide = false
     const returned = render()
     expect(button(returned, 'Open sidebar')!.props['aria-expanded']).toBe(false)
-    expect(elements(returned).some(({ props }) => props.className === 'sidebar-scrim')).toBe(false)
+    // The scrim stays mounted so closing can fade. The closed drawer must remain inert.
+    const scrim = elements(returned).find(({ props }) => props.className === 'sidebar-scrim')
+    expect(scrim?.props['aria-hidden']).toBe('true')
+    expect(elements(returned).some(({ props }) => typeof props.className === 'string' && props.className.split(' ').includes('sidebar-open'))).toBe(false)
+    expect(elements(returned).find(({ props }) => props.className === 'sidebar-surface')?.props.inert).toBe(true)
     button(returned, 'Open sidebar')!.props.onClick!()
     expect(button(render(), 'Open sidebar')!.props['aria-expanded']).toBe(true)
   })

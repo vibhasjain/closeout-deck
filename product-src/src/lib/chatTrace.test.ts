@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { appendTrace } from './chat'
+import { appendTrace, traceLabel } from './chat'
 
 describe('read traces', () => {
+  it('keeps file paths in trace data but presents only human source labels', () => {
+    const traces = ['Read data/gaps.md', 'Read handbooks/mediation.md']
+    expect(traces.reduce(appendTrace, [])).toEqual(traces)
+    expect(traces.map(traceLabel)).toEqual(['Read account records', 'Read the rulebook'])
+    expect(traceLabel('Read private_payroll.csv')).toBe('Read the source document')
+    expect(traceLabel('Read the decisions')).toBe('Read the decisions')
+  })
   it('caps only data reads and retains later distinct handbook reads', () => {
     const reads = ['Read data/gaps.md', 'Read data/threads/one.md', 'Read data/cycles/one.md',
       'Read data/four.md', 'Read handbooks/chase-missing-time.md', 'Read handbooks/mediation.md',

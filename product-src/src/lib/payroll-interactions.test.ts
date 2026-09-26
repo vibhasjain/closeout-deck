@@ -1,3 +1,5 @@
+import { renderToStaticMarkup } from 'react-dom/server'
+import { ActionButton, ActionFeedback } from '@/components/ActionButton'
 import { cycleIntake } from '@/lib/intake'
 import { Children, isValidElement, type ReactElement, type ReactNode } from 'react'
 import { Banknote } from 'lucide-react'
@@ -32,6 +34,11 @@ const overlay = vi.hoisted(() => ({ openModal: vi.fn(), close: vi.fn(), toast: v
 
 vi.mock('react', async (importOriginal) => ({
   ...await importOriginal<typeof import('react')>(),
+  useRef: <T,>(initial: T) => {
+    const slot = hooks.cursor++
+    if (!(slot in hooks.slots)) hooks.slots[slot] = { current: initial }
+    return hooks.slots[slot]
+  },
   useState: <T>(initial: T | (() => T)) => {
     const slot = hooks.cursor++
     if (!(slot in hooks.slots)) hooks.slots[slot] = typeof initial === 'function' ? (initial as () => T)() : initial
@@ -75,7 +82,7 @@ function elements(node: ReactNode): ReactElement<ElementProps>[] {
   return Children.toArray(node).flatMap((child) => isValidElement<ElementProps>(child) ? [child, ...elements(child.props.children)] : [])
 }
 function content(node: ReactNode): string {
-  return Children.toArray(node).map((child) => isValidElement<ElementProps>(child) ? content(child.props.children) : String(child)).join('')
+  return Children.toArray(node).map((child) => isValidElement<ElementProps>(child) ? child.type === ActionFeedback ? content(ActionFeedback(child.props as Parameters<typeof ActionFeedback>[0])) : content(child.props.children) : String(child)).join('')
 }
 function component<P>(node: ReactNode, type: (props: P) => ReactNode): ReactElement<P> {
   const found = elements(node).find((element) => element.type === type)
@@ -83,7 +90,7 @@ function component<P>(node: ReactNode, type: (props: P) => ReactNode): ReactElem
   return found as ReactElement<P>
 }
 function button(node: ReactNode, label: string) {
-  const found = elements(node).find((element) => (element.type === 'button' || element.type === Btn) && content(element.props.children) === label)
+  const found = elements(node).find((element) => (element.type === 'button' || element.type === Btn || element.type === ActionButton) && content(element.props.children) === label)
   expect(found, `button ${label}`).toBeDefined()
   return found!
 }
@@ -182,7 +189,7 @@ describe('Payroll review actions', () => {
     expect(component(Payroll(), ShiftTable).props.defaultFilter).toBe('agent-resolved')
   })
 
-  it('approves the whole Approve category from its header, not from the rows', () => {
+  it('approves the whole Approve category and retains its confirmation in the header', async () => {
     const { cycle, groups, render } = atReview()
     const proposed = groups.filter((group) => group.state === 'proposed')
     const total = proposed.reduce((sum, group) => sum + group.cases.length, 0)
@@ -196,8 +203,10 @@ describe('Payroll review actions', () => {
     }
     expect(pendingGroups(cycle).some((group) => group.state === 'proposed')).toBe(false)
     expect(component(Payroll(), CycleKpis).props.stats).toEqual(cycleStats(cycle, getOnboarding().resolutions))
-    // The emptied category disappears.
-    expect(elements(render()).some((element) => element.props.className === 'payroll-summary-head' && content(element).startsWith('Approve'))).toBe(false)
+    await Promise.resolve()
+    // The saved count updates while the same control becomes a quiet confirmation.
+    expect(content(render())).toContain('Approve · 0')
+    expect(component(render(), ActionButton).props.action.status).toBe('success')
     expect(router.params.get('filter')).toBe('needs-review')
   })
 
@@ -214,7 +223,7 @@ describe('Payroll review actions', () => {
   it('keeps bulk review on the summary rows without an individual review action', () => {
     const { render } = atReview()
     const tree = render()
-    const actions = elements(tree).filter((element) => element.type === 'button' || element.type === Btn)
+    const actions = elements(tree).filter((element) => element.type === 'button' || element.type === Btn || element.type === ActionButton)
     expect(actions.some((action) => /^Review \d/.test(content(action.props.children)))).toBe(false)
     expect(router.navigate).not.toHaveBeenCalled()
   })
@@ -419,7 +428,7 @@ describe('persisted Payroll decisions', () => {
     const label = `Approve ${cycle.run.shifts.length}`
     click(render(), label)
     await vi.waitFor(() => expect(content(render())).toContain('The decision could not be saved'))
-    expect(button(render(), label).props.disabled).toBe(false)
+    expect(button(render(), label).props.disabled).not.toBe(true)
     expect(getOnboarding().resolutions).toEqual({})
   })
 
@@ -437,4 +446,31 @@ describe('persisted Payroll decisions', () => {
     await vi.waitFor(() => expect(decide).toHaveBeenCalledWith(cycle.id, { groupId: cycle.groups[0].ruleId, decision: 'approved', shiftIds: cycle.run.shifts.map((item) => item.shift.id) }))
     expect(getOnboarding().resolutions).toEqual({})
   })
+  it('keeps the sheet control in place and reserves Decision and Trail immediately during approval', async () => {
+    vi.useRealTimers()
+    const cycle = serverCycle()
+    let finish!: () => void
+    vi.mocked(decide).mockImplementation(() => new Promise(resolve => { finish = () => resolve({} as Awaited<ReturnType<typeof decide>>) }))
+    vi.spyOn(desk, 'useDesk').mockReturnValue({ cycles: [cycle], current: cycle, byId: () => cycle })
+    router.pathname = `/payroll/${cycle.run.shifts[0].shift.id}`
+    router.params = new URLSearchParams({ cycle: cycle.id })
+    const render = mount(() => ShiftPage(), undefined)
+    const initial = component(render(), ShiftDetail)
+    initial.props.onApply!()
+    const pending = render(), detail = component(pending, ShiftDetail)
+    expect(detail.props.onApply).toBeTypeOf('function')
+    expect(detail.props.applyLabel).toBe(initial.props.applyLabel)
+    expect(detail.props.applyAction?.status).toBe('pending')
+    const trail = elements(pending).find(element => element.props.pending === true)!
+    const Trail = trail.type as (props: typeof trail.props) => ReactNode
+    const html = renderToStaticMarkup(Trail(trail.props))
+    expect(html).toContain('aria-label="Pending decision"')
+    expect(html).toContain('shift-pending-trail')
+    expect(html.match(/data-skeleton=/g)).toHaveLength(2)
+    expect(content(pending)).not.toContain('Saving decisions')
+    finish()
+    await vi.waitFor(() => expect(component(render(), ShiftDetail).props.applyAction?.status).toBe('success'))
+    expect(component(render(), ShiftDetail).props.applyLabel).toBe(initial.props.applyLabel)
+  })
+
 })

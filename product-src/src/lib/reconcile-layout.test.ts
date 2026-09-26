@@ -46,6 +46,10 @@ const firstChunk = (shifts: RunShift[]) => {
 }
 const sentinel = '<tr aria-hidden="true"><td colSpan="7"></td></tr>'
 const cycleIds = (html: string) => [...html.matchAll(/data-cycle="([^"]+)"/g)].map((match) => match[1])
+const buttonLabels = (html: string) => [...html.matchAll(/<button\b[^>]*>([\s\S]*?)<\/button>/g)].map((match) => {
+  const visible = match[1].match(/class="action-button-label" style="visibility:visible"[^>]*>([\s\S]*?)<\/span>/)?.[1] ?? match[1]
+  return visible.replace(/<[^>]+>/g, '')
+})
 const selectedCycles = (html: string) => [...html.matchAll(/<button\b[^>]*>/g)]
   .filter((match) => match[0].includes('aria-pressed="true"'))
   .flatMap((match) => [...match[0].matchAll(/data-cycle="([^"]+)"/g)].map((cycle) => cycle[1]))
@@ -233,7 +237,7 @@ describe('Payroll review composition', () => {
     expect(html).not.toContain('By Client')
     const proposedTotal = groups.filter((group) => group.state === 'proposed').reduce((sum, group) => sum + group.cases.length, 0)
     // The category's action sits in its header, not in the rows.
-    if (proposedTotal) expect(html).toContain(`>Approve ${proposedTotal.toLocaleString()}</button>`)
+    if (proposedTotal) expect(buttonLabels(html)).toContain(`Approve ${proposedTotal.toLocaleString()}`)
     const cards = bucketCards(html)
     expect(cards).toHaveLength(groups.length)
     groups.forEach((group, index) => {
@@ -599,9 +603,9 @@ describe('payroll and settings separation', () => {
     expect(decision).toContain('>Decision</div>')
     expect(decision).toContain('class="tag">Applied</span>')
     expect(modal.replace(decision, '')).not.toContain('class="tag">Applied</span>')
-    expect(modal).not.toMatch(/<button\b[^>]*>Approve<\/button>/)
+    expect(buttonLabels(modal)).not.toContain('Approve')
     const unrelated = render(`/payroll/${unrelatedShift.shift.id}?cycle=${cycle.id}`)
-    expect(unrelated).toMatch(/<button\b[^>]*>Approve<\/button>/)
+    expect(buttonLabels(unrelated)).toContain('Approve')
     const pending = kinds(cycle, {})
     const reviewHtml = render(`/payroll?cycle=${cycle.id}&filter=needs-review`)
     expect(bucketRules(reviewHtml)).toEqual(ruleIds(pending))

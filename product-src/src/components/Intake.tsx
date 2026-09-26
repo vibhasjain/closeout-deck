@@ -5,6 +5,9 @@ import { fmtHM } from '@/bench/engine.js'
 import { VendorTile, vendorMethod } from '@/components/SourcesTable'
 import { useOverlay } from '@/components/shell/Overlay'
 import { Btn, Chip, Tag } from '@/components/ui'
+import { ActionButton, ActionFeedback } from '@/components/ActionButton'
+import { usePendingAction } from '@/lib/usePendingAction'
+import { useActionRetention } from '@/lib/useActionRetention'
 import { titleCase } from '@/lib/utils'
 import type { DeskCycle } from '@/lib/desk'
 import { ago, askedGaps, dayTime, gapKey, initial, usually, type Gap, type Intake as IntakeData, type SourceIntake } from '@/lib/intake'
@@ -23,8 +26,8 @@ const supervisorAt = (cycle: DeskCycle, client: string) => cycle.sites?.find((it
 const threadKey = (cycleId: string, id: string) => `intake:${cycleId}:${id}`
 const day = (key: string) => new Date(`${key}T00:00:00`)
 const fileNote = (file: FileRecord) => file.status === 'normalized' ? `${(file.entryCount ?? 0).toLocaleString()} time entries`
-  : file.status === 'needs_mapping' || file.status === 'received' ? 'Rows awaiting mapping' : 'Needs a CSV or spreadsheet export'
-interface UploadResult { id: string; name: string; rows: number | null; entries: number; status: string; mapping: string; gaps: string[]; sample: boolean }
+  : file.status === 'needs_mapping' || file.status === 'received' ? 'Time entries awaiting mapping' : 'Needs a CSV or spreadsheet export'
+interface UploadResult { id: string; name: string; system: string; rows: number | null; entries: number; status: string; mapping: string; gaps: string[]; sample: boolean }
 
 /** Step 1 of a pay cycle: did the expected time arrive, client by client. */
 export function Intake({ cycle, intake, threads = [] }: { cycle: DeskCycle; intake: IntakeData; threads?: JourneyThread[] }) {
@@ -32,13 +35,15 @@ export function Intake({ cycle, intake, threads = [] }: { cycle: DeskCycle; inta
   const { toast } = useOverlay()
   const [closing, setClosing] = useState<{ id: string; chip: string; text: string } | null>(null)
   const upload = useRef<HTMLInputElement>(null)
-  const [uploading, setUploading] = useState<{ source?: SourceIntake['source']; client?: string } | null>(null)
+  const [uploading, setUploading] = useState<{ source?: SourceIntake['source']; client?: string; key: string } | null>(null)
   const [uploadSet, setUploadSet] = useState<1 | 2>(1)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
+  const action = usePendingAction()
+  const busy = action.pending
   const [results, setResults] = useState<UploadResult[]>([])
   // The account's own uploads for this pay run, and any that never became time entries, so a wrong one can be removed.
-  const uploaded = useData(false).files.filter((file) => !file.sample && !results.some((row) => row.id === file.id)
+  const data = useData(false)
+  const keptFiles = useActionRetention(data.files, file => file.id)
+  const uploaded = keptFiles.items.filter((file) => !file.sample && !results.some((row) => row.id === file.id)
     && (file.status !== 'normalized' || (!!file.firstDate && !!file.lastDate && day(file.firstDate) <= cycle.end && day(file.lastDate) >= cycle.start)))
   const now = new Date()
   const waiting = intake.clients.filter((client) => client.open > 0)
@@ -47,11 +52,16 @@ export function Intake({ cycle, intake, threads = [] }: { cycle: DeskCycle; inta
   const asked = askedGaps(cycle, threads, state.acceptedGaps)
   const askedAt = (client: string) => [...asked.keys()].filter((id) => id.startsWith(`${client}|`)).length
   useEffect(() => {
+    if (action.status !== 'success') return
+    const timer = setTimeout(action.reset, 800)
+    return () => clearTimeout(timer)
+  }, [action.status, action.reset])
+  useEffect(() => {
     const ingest = (event: Event) => {
       const result = (event as CustomEvent<IngestEvent>).detail
       setResults((old) => old.map((file) => file.id !== result.fileId ? file : { ...file, status: result.status,
         rows: result.rows ?? file.rows, entries: result.entries ?? file.entries, mapping: result.status === 'normalized' ? 'Mapped by Closeout Agent' : 'Closeout Agent needs your answer',
-        gaps: [...(result.gaps?.map((gap) => gap.ask) ?? []), ...(result.unparsed ? [`${result.unparsed} rows need a closer look`] : []), ...(result.errors ?? [])] }))
+        gaps: [...(result.gaps?.map((gap) => gap.ask) ?? []), ...(result.unparsed ? ['Some time entries need a closer look'] : []), ...(result.errors ?? [])] }))
     }
     window.addEventListener(INGEST_RESULT_EVENT, ingest)
     return () => window.removeEventListener(INGEST_RESULT_EVENT, ingest)
@@ -85,7 +95,7 @@ export function Intake({ cycle, intake, threads = [] }: { cycle: DeskCycle; inta
     if (cycle.server) return <li key={gap.id} className="intake-gap">
       <div className="intake-gap-text"><span>{initial(gap.worker)} · {md(dayOf(gap.day))}</span><span className="r-note">Client-approved time entry missing</span>
         {asked.has(gap.id) && <span className="intake-agent">Asked {asked.get(gap.id)}</span>}</div>
-      <Btn disabled={busy} onClick={() => pickMissingSet(2, gap.client)}>Upload client-approved</Btn>
+      <ActionButton action={action} actionKey={`gap:${gap.id}`} pendingLabel="Uploading…" successLabel="Uploaded" onClick={() => pickMissingSet(2, gap.client, `gap:${gap.id}`)}>Upload client-approved</ActionButton>
     </li>
     const who = gap.onSite ? supervisorAt(cycle, gap.client) : initial(gap.worker)
     const note = activity(gap.id)
@@ -125,7 +135,7 @@ export function Intake({ cycle, intake, threads = [] }: { cycle: DeskCycle; inta
           {note && <span className="intake-agent">{note}</span>}
         </div>
         <div className="intake-gap-actions">
-          {cycle.server ? <Btn disabled={busy} onClick={() => pickMissingSet(2, client)}>Upload client-approved</Btn> : <Btn onClick={() => { addNote(threadKey(cycle.id, row.source.id), 'agent', 'Asked the site'); toast(`Asked ${client}`) }}>Ask Site</Btn>}
+          {cycle.server ? <ActionButton action={action} actionKey={`source-gap:${client}:${row.source.id}`} pendingLabel="Uploading…" successLabel="Uploaded" onClick={() => pickMissingSet(2, client, `source-gap:${client}:${row.source.id}`)}>Upload client-approved</ActionButton> : <Btn onClick={() => { addNote(threadKey(cycle.id, row.source.id), 'agent', 'Asked the site'); toast(`Asked ${client}`) }}>Ask Site</Btn>}
         </div>
       </li>}
       {row.missing.map(missingRow)}
@@ -136,33 +146,38 @@ export function Intake({ cycle, intake, threads = [] }: { cycle: DeskCycle; inta
     if (!files?.length || !uploading) return
     const incoming = Array.from(files)
     const target = uploading
-    setBusy(true); setError('')
-    try {
+    const completed = new Set<File>()
+    await action.run(async () => {
       for (const file of incoming) {
+        if (completed.has(file)) continue
         const response = await uploadFile(file, { set: target.source?.set === 2 ? 2 : target.source?.set === 1 ? 1 : target.source ? 2 : uploadSet,
           system: target.source?.name ?? 'Spreadsheet', site: target.client })
         const saved = response.file
-        setResults((old) => [...old, { id: saved.id, name: saved.name, rows: saved.rows ?? saved.rowCount, entries: saved.entries ?? saved.entryCount ?? 0,
+        const system = target.source?.short ?? target.source?.name ?? (uploadSet === 2 ? 'Client-approved' : 'Worker-reported')
+        setResults((old) => [...old, { id: saved.id, name: saved.name, system, rows: saved.rows ?? saved.rowCount, entries: saved.entries ?? saved.entryCount ?? 0,
           status: saved.status, sample: saved.sample, mapping: saved.status === 'normalized' ? saved.mappingAuthor === 'library' ? 'Library mapping applied' : saved.mappingAuthor === 'agent' ? 'Closeout Agent mapping applied' : 'Saved mapping applied' : saved.status === 'needs_mapping' ? 'Closeout Agent is reading the layout' : 'Needs a CSV or spreadsheet export',
-          gaps: [...saved.gaps.map((gap) => gap.ask), ...saved.unparsed.map((row) => `Row ${row.row}: ${row.reason}`)] }])
-        const text = `Uploaded ${saved.name}${target.client ? ` for ${target.client}` : ''}`
+          gaps: [...saved.gaps.map((gap) => gap.ask), ...saved.unparsed.map((row) => row.reason)] }])
+        const text = `Uploaded ${system} time entries${target.client ? ` for ${target.client}` : ''}`
         postToChat({ text, mode: saved.status === 'needs_mapping' ? 'ingest' : 'chat',
           context: saved.status === 'needs_mapping' ? { fileIds: [saved.id] } : { page: '/payroll', calendar: {}, selection: { fileIds: [saved.id], cycleId: cycle.id } },
-          contextChip: `${target.client ?? target.source?.name ?? 'Time entries'} · ${saved.sample ? 'Sample · ' : ''}${saved.name}` })
-        toast(`${saved.name} · ${(saved.entries ?? saved.entryCount ?? 0).toLocaleString()} time entries in`)
+          contextChip: `${target.client ?? system}${saved.sample ? ' · Sample' : ''}` })
+        toast(`${system} · ${(saved.entries ?? saved.entryCount ?? 0).toLocaleString()} time entries in`)
+        completed.add(file)
       }
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'The upload failed. Try again.') }
-    finally { setBusy(false); setUploading(null) }
+    }, target.key)
+    setUploading(null)
   }
 
   function pickUpload(source?: SourceIntake['source'], client?: string) {
-    setUploading({ source, client })
+    action.reset()
+    setUploading({ source, client, key: source ? `source:${client}:${source.id}` : 'upload' })
     upload.current?.click()
   }
 
-  function pickMissingSet(set: 1 | 2, client?: string) {
+  function pickMissingSet(set: 1 | 2, client?: string, key = `missing:${client}:${set}`) {
+    action.reset()
     setUploadSet(set)
-    setUploading({ client })
+    setUploading({ client, key })
     upload.current?.click()
   }
 
@@ -172,23 +187,24 @@ export function Intake({ cycle, intake, threads = [] }: { cycle: DeskCycle; inta
         <Chip active={uploadSet === 1} aria-pressed={uploadSet === 1} onClick={() => setUploadSet(1)}>Worker-reported</Chip>
         <Chip active={uploadSet === 2} aria-pressed={uploadSet === 2} onClick={() => setUploadSet(2)}>Client-approved</Chip>
       </div>
-      {busy ? <SkeletonRegion variant="action" /> : <Btn onClick={() => pickUpload()}>Upload</Btn>}
+      <ActionButton action={action} actionKey="upload" pendingLabel="Uploading…" successLabel="Uploaded" onClick={() => pickUpload()}>Upload</ActionButton>
     </div>
-    {error && <p role="alert" className="r-note">{error}</p>}
+    <ActionFeedback action={action} />
+    {busy && <SkeletonRegion />}
     {cycle.server && !cycle.week.length && cycle.nextStep?.kind === 'get_timesheets' && !results.length && <p className="intake-empty r-note" role="status">No time entries yet for {cycle.label}.</p>}
     {results.length > 0 && <ul className="intake-upload-results" aria-label="Upload results" aria-live="polite">{results.map((file) => <li key={file.id}>
-      <div><b>{file.name}</b>{file.sample && <span className="tag">Sample</span>}<RemoveFile file={file} onRemoved={() => setResults((old) => old.filter((row) => row.id !== file.id))} /></div>
-      <p>{file.rows === null ? 'Rows awaiting mapping' : `${file.rows.toLocaleString()} rows in`} · {file.entries.toLocaleString()} time entries · {file.mapping}</p>
+      <div><b>{file.system}</b>{file.sample && !cycle.sample && <span className="tag">Sample</span>}<RemoveFile file={file} onRemoved={() => setResults((old) => old.filter((row) => row.id !== file.id))} /></div>
+      <p>{file.entries.toLocaleString()} time entries · {file.mapping}</p>
       {file.gaps.length ? <ul>{file.gaps.map((gap, index) => <li key={index}>{gap}</li>)}</ul> : file.status === 'normalized' && <p className="r-note">No missing facts</p>}
     </li>)}</ul>}
     {uploaded.length > 0 && <ul className="intake-upload-results" aria-label="Uploaded files">{uploaded.map((file) => <li key={file.id}>
-      <div><b>{file.name}</b><RemoveFile file={file} /></div>
-      <p className="r-note">{fileNote(file)} · Received {ago(new Date(file.receivedAt), now)}</p>
+      <div><b>{data.sources?.find(source => source.id === file.sourceId)?.system ?? (file.setHint === 2 ? 'Client-approved' : 'Worker-reported')}</b><RemoveFile file={file} retain={() => keptFiles.retain(file)} /></div>
+      <p className="r-note">{fileNote(file)}</p>
     </li>)}</ul>}
     {missingSets.length > 0 && <ul className="intake-upload-results" aria-label="Missing time sources">{missingSets.map((gap) => {
       const [siteKey, set] = gap.key.split('|')
       const client = cycle.sites?.find((site) => site.key === siteKey)?.name
-      return <li key={gap.id}><p>{gap.ask}</p><Btn disabled={busy} onClick={() => pickMissingSet(set === '1' ? 1 : 2, client)}>Upload {set === '1' ? 'worker-reported' : 'client-approved'}</Btn></li>
+      return <li key={gap.id}><p>{gap.ask}</p><ActionButton action={action} actionKey={`missing:${client}:${set}`} pendingLabel="Uploading…" successLabel="Uploaded" onClick={() => pickMissingSet(set === '1' ? 1 : 2, client)}>Upload {set === '1' ? 'worker-reported' : 'client-approved'}</ActionButton></li>
     })}</ul>}
     {/* Every client keeps its card; a client with everything in is the same card, ghosted. */}
     <section aria-label="Time exports by client">
@@ -196,14 +212,14 @@ export function Intake({ cycle, intake, threads = [] }: { cycle: DeskCycle; inta
         <div className="intake-client-head"><b>{client.name}</b><span className="num">{(client.expected - client.received).toLocaleString()} {cycle.server ? 'Client-approved pending' : 'Pending'}</span>
           {askedAt(client.name) > 0 && <span className="intake-asked">{askedAt(client.name).toLocaleString()} asked <Tag>Not Sent · Demo</Tag></span>}</div>
         <ul className="intake-sources">{client.sources.filter((row) => row.pending || row.missing.length).map((row) => <li key={row.source.id} className="intake-source">
-          <div className="intake-source-head"><VendorTile vendor={row.source} /><span>{row.source.name}</span>{(row.source.sample || cycle.sample) && <span className="tag">Sample</span>}<span className="r-note">{vendorMethod(row.source.method)}</span>{row.source.set !== 3 && <Btn disabled={busy} onClick={() => pickUpload(row.source, client.name)}>Upload</Btn>}</div>
+          <div className="intake-source-head"><VendorTile vendor={row.source} /><span>{row.source.name}</span>{row.source.sample && !cycle.sample && <span className="tag">Sample</span>}<span className="r-note">{vendorMethod(row.source.method)}</span>{row.source.set !== 3 && <ActionButton action={action} actionKey={`source:${client.name}:${row.source.id}`} pendingLabel="Uploading…" successLabel="Uploaded" onClick={() => pickUpload(row.source, client.name)}>Upload</ActionButton>}</div>
           <ul className="intake-gaps">{sourceRows(client.name, row)}</ul>
         </li>)}</ul>
       </div>)}
       {complete.map((client) => <div key={client.name} className="intake-client intake-client-done">
         <div className="intake-client-head"><b>{client.name}</b><span className="num"><Check size={12} aria-hidden /> {cycle.server ? 'Client-approved in' : 'All In'}</span></div>
         <ul className="intake-sources">{client.sources.map((row) => <li key={row.source.id} className="intake-source">
-          <div className="intake-source-head"><VendorTile vendor={row.source} /><span>{row.source.name}</span>{(row.source.sample || cycle.sample) && <span className="tag">Sample</span>}<span className="r-note">Last Received {dayTime(row.lastReceived)}</span>{row.source.set !== 3 && <Btn disabled={busy} onClick={() => pickUpload(row.source, client.name)}>Upload</Btn>}</div>
+          <div className="intake-source-head"><VendorTile vendor={row.source} /><span>{row.source.name}</span>{row.source.sample && !cycle.sample && <span className="tag">Sample</span>}<span className="r-note">Last Received {dayTime(row.lastReceived)}</span>{row.source.set !== 3 && <ActionButton action={action} actionKey={`source:${client.name}:${row.source.id}`} pendingLabel="Uploading…" successLabel="Uploaded" onClick={() => pickUpload(row.source, client.name)}>Upload</ActionButton>}</div>
         </li>)}</ul>
       </div>)}
     </section>

@@ -57,17 +57,15 @@ export function FindingDetail({ finding, dayLabel }: { finding: FindingEvidence;
           <thead><tr><th scope="col">Source</th><th scope="col" className="num">Clock In</th><th scope="col" className="num">Meal Break</th><th scope="col" className="num">Clock Out</th><th scope="col" className="num">Hours</th></tr></thead>
           <tbody>{item.rows.map((row, i) => {
             const source = findingCopy(row.source).trim()
-            const note = row.note ? findingCopy(row.note).trim() : ''
+            // References remain on the evidence data and in its download, never in the UI.
+            const note = !row.reference && row.note ? findingCopy(row.note).trim() : ''
             if (!source && row.start == null && row.end == null && row.meal == null && row.hours == null && !note) return null
             return <Fragment key={i}>
               <tr>
                 <td data-label="Source">{source}</td><td data-label="Clock In" className="num">{time(row.start)}</td><td data-label="Meal Break" className="num">{row.meal ? `${clock(row.meal[0])} to ${clock(row.meal[1])}` : row.start == null ? '' : 'None'}</td>
                 <td data-label="Clock Out" className="num">{time(row.end)}</td><td data-label="Hours" className="num">{row.hours == null ? row.reference ? 'Not supplied' : note : fmtHM(row.hours * 60)}</td>
               </tr>
-              {row.reference || row.hours != null && note ? <tr className="finding-note"><td colSpan={5}>{row.reference ? <div className="finding-source-reference">
-                <span className="finding-reference-file">{row.reference.file.split(/([_-])/).map((part, index) => <Fragment key={index}>{part}{/^[_-]$/.test(part) && <wbr />}</Fragment>)}</span>
-                <span>{[row.reference.sheet, `row ${row.reference.row}`, row.reference.date].filter(Boolean).join(' · ')}</span>
-              </div> : <>{source}: {note}</>}</td></tr> : null}
+              {row.hours != null && note ? <tr className="finding-note"><td colSpan={5}>{source}: {note}</td></tr> : null}
             </Fragment>
           })}</tbody>
         </table>

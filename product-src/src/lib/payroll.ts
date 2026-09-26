@@ -27,11 +27,15 @@ export interface PayTotals {
 const sum = <T,>(items: T[], value: (item: T) => number): number =>
   items.reduce((total, item) => total + value(item), 0)
 const overtimeMinutes = (row: RunShift) => sum(row.rows, rule => rule.effect?.dailyOtMin ?? (rule.effect?.otPremiumMin ?? 0) * 2)
+const totalsCache = new WeakMap<DeskCycle, PayTotals>()
 
 /** Bench pay-run semantics: held shifts remain visible but never enter outgoing sums. */
 export function payTotals(cycle: DeskCycle): PayTotals {
+  const cached = totalsCache.get(cycle)
+  if (cached) return cached
   // Server cycles are hydrated with the shared effective engine before display.
   const payout = journeyPayroll(cycle.week, cycle.run.shifts, [], new Map(), cycle.adjustments)
+  const payoutByWorker = new Map(payout.lines.map(line => [line.worker, line]))
   const groups = new Map<string, RunShift[]>()
   for (const row of cycle.run.shifts) {
     const rows = groups.get(row.shift.worker) ?? []
@@ -55,12 +59,12 @@ export function payTotals(cycle: DeskCycle): PayTotals {
       reg: Math.max(0, payable - overtime) + sum(adjustments, line => line.regular_hours * 60),
       ot: overtime,
       premiums: sum(approved, (row) => sum(row.rows, (rule) => (rule.effect?.premiumAmt || 0) + (rule.effect?.premiumHours || 0) * row.rate)),
-      gross: cycle.server ? (payout.lines.find(line => line.worker === name)?.gross ?? 0) + sum(adjustments, line => line.gross) : sum(approved, row => row.pay),
+      gross: cycle.server ? (payoutByWorker.get(name)?.gross ?? 0) + sum(adjustments, line => line.gross) : sum(approved, row => row.pay),
     }
   })
   const approved = cycle.run.shifts.filter((row) => !row.held)
   const held = cycle.run.shifts.filter((row) => row.held)
-  return {
+  const totals = {
     workers,
     workerCount: cycle.batch?.workers ?? payout.workers,
     approved,
@@ -71,4 +75,6 @@ export function payTotals(cycle: DeskCycle): PayTotals {
     gross: cycle.batch?.gross ?? (cycle.server ? payout.gross : sum(approved, row => row.pay)),
     naive: sum(approved, (row) => row.naive),
   }
+  totalsCache.set(cycle, totals)
+  return totals
 }

@@ -1,3 +1,4 @@
+import { ActionButton, ActionFeedback } from '@/components/ActionButton'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { Children, isValidElement, type EffectCallback, type ReactElement, type ReactNode } from 'react'
@@ -16,6 +17,11 @@ const store = vi.hoisted(() => ({
 }))
 vi.mock('react', async importOriginal => ({
   ...await importOriginal<typeof import('react')>(),
+  useRef: <T,>(initial: T) => {
+    const slot = hooks.cursor++
+    if (!(slot in hooks.slots)) hooks.slots[slot] = { current: initial }
+    return hooks.slots[slot]
+  },
   useState: <T>(initial: T) => {
     const slot = hooks.cursor++
     if (!(slot in hooks.slots)) hooks.slots[slot] = initial
@@ -34,14 +40,24 @@ vi.mock('@/lib/onboarding', () => ({ getOnboarding: () => ({ chat: store.chat })
 
 const instinct: Instinct = { id: 'i_abcdef0123456789', kind: 'context', text: 'Travis Reed signs off Lonestar.', source: 'chat', status: 'pending', until: null, ruleId: null, at: '2026-09-25T12:00:00Z' }
 const receipt: RememberReceipt = { type: 'remember', kind: 'context', text: instinct.text, memory: { id: instinct.id, state: 'pending' } }
-type Props = { children?: ReactNode; onClick?: () => void; className?: string; disabled?: boolean }
+type Props = { children?: ReactNode; onClick?: () => void; className?: string; disabled?: boolean; action?: Parameters<typeof ActionButton>[0]['action']; actionKey?: string; successLabel?: string; pendingLabel?: string }
 const elements = (node: ReactNode): ReactElement<Props>[] => Children.toArray(node).flatMap(child => isValidElement<Props>(child) ? [child, ...elements(child.props.children)] : [])
-const label = (node: ReactNode): string => Children.toArray(node).map(child => isValidElement<Props>(child) ? label(child.props.children) : String(child)).join('')
+const label = (node: ReactNode): string => Children.toArray(node).map(child => {
+  if (!isValidElement<Props>(child)) return String(child)
+  if (child.type === ActionFeedback) return label(ActionFeedback(child.props as Parameters<typeof ActionFeedback>[0]))
+  if (child.type === ActionButton) {
+    const action = child.props.action!
+    const status = child.props.actionKey === undefined || child.props.actionKey === action.key ? action.status : 'idle'
+    if (status === 'success') return child.props.successLabel ?? 'Saved'
+    if (status === 'pending') return child.props.pendingLabel ?? ''
+  }
+  return label(child.props.children)
+}).join('')
 function render(value = receipt) {
   hooks.cursor = 0; hooks.effects = []
   return RememberLine({ receipt: value, messageId: 'agent-memory', at: 1 })
 }
-function click(tree: ReactNode, text: string) { elements(tree).find(node => node.type === 'button' && label(node.props.children) === text)!.props.onClick!() }
+function click(tree: ReactNode, text: string) { elements(tree).find(node => (node.type === 'button' || node.type === ActionButton) && label(node) === text)!.props.onClick!() }
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -66,7 +82,7 @@ describe('quiet chat memory line', () => {
   it.each([['duplicate', 'Already known', []], ['tombstone', 'You asked me to forget this', ['Remember it again']]] as const)('renders the 409 %s line', (state, copy, buttons) => {
     const tree = render({ ...receipt, memory: { state } })
     expect(label(elements(tree).find(node => node.type === 'span')!.props.children)).toBe(copy)
-    expect(elements(tree).filter(node => node.type === 'button').map(node => label(node.props.children))).toEqual(buttons)
+    expect(elements(tree).filter(node => (node.type === 'button' || node.type === ActionButton)).map(node => label(node))).toEqual(buttons)
     expect(renderToStaticMarkup(tree)).toContain('aria-label="Agent memory"')
   })
 
@@ -104,7 +120,7 @@ describe('quiet chat memory line', () => {
     })
     expect(memoryHistory(store.chat)[0].actions).toEqual([{ ...receipt, memory: { id: instinct.id, state: 'active' } }])
     expect(label(render())).toContain('Kept')
-    expect(elements(render()).filter(node => node.type === 'button').map(node => label(node.props.children))).toEqual(['Forget'])
+    expect(elements(render()).filter(node => (node.type === 'button' || node.type === ActionButton)).map(node => label(node))).toEqual(['Kept', 'Forget'])
   })
 
   it('requires inline confirmation before Forget, supports Cancel and writes the forget route once', async () => {
@@ -121,6 +137,8 @@ describe('quiet chat memory line', () => {
     await vi.waitFor(() => expect(store.update).toHaveBeenCalledTimes(1))
     expect(authedFetch).toHaveBeenCalledExactlyOnceWith(`/memory/instincts/${instinct.id}/forget`, { method: 'POST' })
     expect(memoryHistory(store.chat)[0].actions).toEqual([{ ...receipt, memory: { id: instinct.id, state: 'forgotten' } }])
+    expect(label(render())).toContain('Memory forgotten. Forgotten')
+    click(render(), 'Done')
     expect(label(render())).toBe(`Forgotten: ${instinct.text}`)
     expect(confirm).not.toHaveBeenCalled()
   })
@@ -139,12 +157,12 @@ describe('quiet chat memory line', () => {
     // A read issued before this message cannot know its row yet (another device's correction arriving on focus).
     store.error = null; store.readAt = 0
     expect(label(render(replaced))).toContain("I'll remember:")
-    expect(elements(render(replaced)).filter(node => node.type === 'button').map(node => label(node.props.children))).toEqual(['Keep', 'Forget'])
+    expect(elements(render(replaced)).filter(node => (node.type === 'button' || node.type === ActionButton)).map(node => label(node))).toEqual(['Keep', 'Forget'])
     hooks.effects.forEach(effect => effect())
     // A newer read without the row: consolidation replaced it. That is not a Forget.
     store.readAt = 2
     expect(label(render(replaced))).toBe(`Changed since: ${instinct.text} · see Rules`)
-    expect(elements(render(replaced)).filter(node => node.type === 'button')).toEqual([])
+    expect(elements(render(replaced)).filter(node => (node.type === 'button' || node.type === ActionButton))).toEqual([])
     hooks.effects.forEach(effect => effect())
     expect(store.update).not.toHaveBeenCalled()
     // Forget on Rules is confirmed by the server, so the line records it.
@@ -167,7 +185,7 @@ describe('quiet chat memory line', () => {
     click(render(), 'Keep')
     await vi.waitFor(() => expect(label(render())).toContain('Memory could not be updated. Try again.'))
     expect(store.update).not.toHaveBeenCalled()
-    expect(elements(render()).filter(node => node.type === 'button').map(node => [label(node.props.children), node.props.disabled])).toEqual([['Keep', false], ['Forget', false]])
+    expect(elements(render()).filter(node => (node.type === 'button' || node.type === ActionButton)).map(node => [label(node), !!node.props.disabled])).toEqual([['Keep', false], ['Forget', false]])
   })
 })
 
@@ -175,7 +193,7 @@ describe('memory house rules', () => {
   it('uses outline memory buttons, including inline confirmation, with no black or primary button styles', () => {
     const initial = render()
     click(initial, 'Forget')
-    const controls = [...elements(initial), ...elements(render())].filter(node => node.type === 'button')
+    const controls = [...elements(initial), ...elements(render())].filter(node => (node.type === 'button' || node.type === ActionButton))
     expect(controls.length).toBeGreaterThan(0)
     expect(controls.every(node => node.props.className?.split(' ').includes('memory-button') && !node.props.className?.split(' ').includes('primary'))).toBe(true)
     const css = readFileSync(new URL('./memory.css', import.meta.url), 'utf8')

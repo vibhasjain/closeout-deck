@@ -26,6 +26,8 @@ export function formatRuleText(text: string): string {
 /** Chat sources show the channel and date without naming the internal sender. */
 export function formatRuleSource(source: string): string {
   const [channel, , ...details] = source.split(' · ')
+  if (channel === 'Remembered decision') return 'Remembered decision'
+  if (/\.(?:csv|xlsx?|pdf|docx?|txt|md)\b/i.test(source)) return 'Uploaded document'
   return formatRuleText(channel === 'Slack' && details.length ? `Slack instruction · ${details.join(' · ')}` : source)
 }
 

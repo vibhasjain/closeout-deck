@@ -3,6 +3,8 @@ import { Download, X } from 'lucide-react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { RULES, money, type RunShift } from '@/bench/engine.js'
 import { PROV } from '@/bench/prov'
+import { SkeletonRegion } from '@/components/Skeleton'
+import { usePendingAction } from '@/lib/usePendingAction'
 import { AgentTrace, type TraceEntry } from '@/components/AgentTrace'
 import { FiredRule, RuleEvidence, ShiftDetail } from '@/components/ShiftDetail'
 import { exportShiftRows } from '@/lib/exportShift'
@@ -11,7 +13,7 @@ import { useSetChatContext, useSetChatSuggestions } from '@/components/chat/Chat
 import { useOverlay } from '@/components/shell/Overlay'
 import { PageTitle } from '@/components/shell/PageTitle'
 import { Btn, Empty, Lbl, PayDelta, Tag } from '@/components/ui'
-import { discrepancies, effectiveResolutions, provenance, rowResolution, shortShiftId, topstats, useDesk, type DeskCycle } from '@/lib/desk'
+import { discrepancies, effectiveResolutions, kindLabel, provenance, rowResolution, topstats, useDesk, type DeskCycle } from '@/lib/desk'
 import { decide, groupId } from '@/lib/journey'
 import { getDataSnapshot } from '@/lib/data'
 import { journeyShiftPay, shiftRules } from '@/lib/journeyPay'
@@ -31,7 +33,7 @@ function RecordedTime({ at }: { at?: string }) {
   })}</time>
 }
 
-function ShiftTrail({ cycle, rs, primaryRuleId }: { cycle: DeskCycle; rs: RunShift; primaryRuleId?: string }) {
+function ShiftTrail({ cycle, rs, primaryRuleId, pending = false }: { cycle: DeskCycle; rs: RunShift; primaryRuleId?: string; pending?: boolean }) {
   const [state] = useOnboarding()
   const { openDrawer } = useOverlay()
   const key = `${cycle.id}:${rs.shift.id}`
@@ -52,7 +54,7 @@ function ShiftTrail({ cycle, rs, primaryRuleId }: { cycle: DeskCycle; rs: RunShi
     detail: decision === 'applied' ? 'Payroll adjustment approved' : 'Payment kept at the current amount',
   })
 
-  if (!trail.length && !decision && !rules.length) return null
+  if (!pending && !trail.length && !decision && !rules.length) return null
 
   // One entry per rule: the engine can emit several rows for the same rule on one payment.
   const fired = rs.rows.filter((row, index, all) => (row.status === 'flag' || row.status === 'held' || row.status === 'applied')
@@ -64,8 +66,9 @@ function ShiftTrail({ cycle, rs, primaryRuleId }: { cycle: DeskCycle; rs: RunShi
     {fired.map((row, index) => {
       const rule = rules.find((candidate) => candidate.id === row.ruleId)
       return <FiredRule key={`${row.ruleId}:${index}`} row={row} rule={rule}
-        onOpen={rule ? () => openDrawer(<RuleEvidence rule={rule} />, rule.id, PROV[rule.id]?.doc ?? rule.source.doc) : undefined} />
+        onOpen={rule ? () => openDrawer(<RuleEvidence rule={rule} />, kindLabel(rule.id), PROV[rule.id]?.doc ?? rule.source.doc) : undefined} />
     })}
+    {pending && <section className="shift-audit-section" aria-label="Pending decision"><Lbl>Decision</Lbl><SkeletonRegion rows={2} /></section>}
     {serverDecisions.map((item) => <section key={item.id} className="shift-audit-section" aria-label="Recorded decision">
       <Lbl>Decision</Lbl>
       <Tag>{item.decision === 'approved' ? 'Approved' : item.decision === 'dismissed' ? 'Dismissed' : 'Escalated'}{rs.held ? ' · Still held' : ''}</Tag>
@@ -80,8 +83,9 @@ function ShiftTrail({ cycle, rs, primaryRuleId }: { cycle: DeskCycle; rs: RunShi
         {decision === 'applied' && <PayDelta current={rs.naive} resolved={rs.pay} size="sm" />}
         {decision === 'dismissed' && <p className="r-note">{state.reasons[key] || 'A reason was not recorded with this earlier decision'}</p>}
     </section>}
-    {trail.length > 0 && <section className="shift-audit-section" aria-label="Trail">
+    {(trail.length > 0 || pending) && <section className="shift-audit-section" aria-label="Trail">
       <Lbl>Trail</Lbl>
+      {pending && <SkeletonRegion variant="conversation" rows={1} className="shift-pending-trail" />}
       <AgentTrace entries={trail} />
     </section>}
     </div>
@@ -113,8 +117,9 @@ export function ShiftPage() {
   const navigate = useNavigate()
   const { current, byId } = useDesk()
   const [state, update] = useOnboarding()
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const action = usePendingAction()
+  const [submitted, setSubmitted] = useState<{ label: string; escalating: boolean } | null>(null)
+  const saving = action.pending
   const { toast } = useOverlay()
   const cycle = byId(params.get('cycle') ?? '') ?? current
   const rs = cycle.run.shifts.find(({ shift }) => shift.id === shiftId)
@@ -131,7 +136,7 @@ export function ShiftPage() {
   // Escalate judgment calls, and nothing while a group waits for evidence.
   const triage = cycle.server ? resolutionGroups(cycle, state.resolutions, state.undone[cycle.id]).filter((group) => group.cases.some((item) => item.shiftId === shiftId)) : []
   const proposed = triage.filter((group) => group.state === 'proposed').map((group) => group.ruleId)
-  const escalating = cycle.server && !proposed.length && triage.some((group) => group.state === 'judgment')
+  const escalating = !!cycle.server && !proposed.length && triage.some((group) => group.state === 'judgment')
   const pendingRules = cycle.server ? escalating ? triage.filter((group) => group.state === 'judgment').map((group) => group.ruleId) : proposed
     : [...new Set((rs?.rows ?? []).filter((row) => (row.status === 'flag' || row.status === 'held')
       && !rowResolution(cycle, shiftId, row.ruleId, state.resolutions)).map((row) => row.ruleId))]
@@ -161,9 +166,8 @@ export function ShiftPage() {
     const latest = getOnboarding()
     if (!rs || saving || (cycle.server && rs.held) || effectiveResolutions(cycle, latest.resolutions)[cycle.id]?.[shiftId]) return
     if (cycle.server) {
-      setSaving(true)
-      setError(null)
-      try {
+      setSubmitted({ label: `${escalating ? 'Escalate' : 'Approve'} ${approvalCount.toLocaleString()} issues`, escalating })
+      await action.run(async () => {
         let approved = 0
         for (const ruleId of pendingRules) {
           const current = getDataSnapshot().payloads.find(item => item.cycle.id === cycle.id)
@@ -174,8 +178,7 @@ export function ShiftPage() {
           approved += groupCases(ruleId).length
         }
         toast(approved ? `${escalating ? 'Escalated' : 'Approved'} ${approved.toLocaleString()} issues` : 'Already decided; no changes applied')
-      } catch (cause) { setError(cause instanceof Error ? cause.message : 'The decision could not be saved.') }
-      finally { setSaving(false) }
+      })
       return
     }
     const key = `${cycle.id}:${shiftId}`
@@ -183,11 +186,11 @@ export function ShiftPage() {
       resolutions: { ...latest.resolutions, [cycle.id]: { ...latest.resolutions[cycle.id], [shiftId]: 'applied' } },
       decisionTimes: { ...latest.decisionTimes, [key]: new Date().toISOString() },
     })
-    toast(`Applied · #${shortShiftId(shiftId)} · Resolved pay ${money(rs.pay)}`)
+    toast(`Applied · ${rs.shift.worker} · Resolved pay ${money(rs.pay)}`)
   }
 
   if (!rs) return <ShiftShell onClose={close}><section className="shift-page-missing scroll">
-    <PageTitle title="Not found" label="this time entry" description="Open a time entry from the selected pay run to review its details." sub={`#${shortShiftId(shiftId)} is not in ${cycle.label}`} />
+    <PageTitle title="Not found" label="this time entry" description="Open a time entry from the selected pay run to review its details." sub={`This time entry is not in ${cycle.label}`} />
     <Empty>This is not in the selected pay cycle <Link className="lnk" to={allPayments}>Back to all payments</Link></Empty>
   </section></ShiftShell>
 
@@ -202,17 +205,17 @@ export function ShiftPage() {
             title="Export these rows" onClick={() => exportShiftRows(cycle, rs)}><Download size={14} aria-hidden="true" /></Btn>
         </>} />
       <div className="shift-page-body scroll">
-        {error && <p role="alert">{error}</p>}
-        {saving && <p className="r-note" role="status">Saving decisions…</p>}
         <ShiftDetail cycle={cycle} rs={rs} primaryRuleId={primaryRuleId} showHeading={false} showSourceAction={false} showFired={false}
-          applyLabel={cycle.server ? `${escalating ? 'Escalate' : 'Approve'} ${approvalCount.toLocaleString()} issues` : undefined}
-          onApply={canDecide && !saving ? () => void approve() : undefined}
+          applyLabel={submitted?.label ?? (cycle.server ? `${escalating ? 'Escalate' : 'Approve'} ${approvalCount.toLocaleString()} issues` : undefined)}
+          applyAction={action} applyPendingLabel={(submitted?.escalating ?? escalating) ? 'Escalating…' : 'Approving…'}
+          applySuccessLabel={submitted?.escalating ? 'Escalated' : 'Approved'}
+          onApply={canDecide || action.status !== 'idle' ? () => void approve() : undefined}
  />
       </div>
     </section>
     <section className="shift-page-column shift-conversation" aria-label="Time entry conversation">
       <Thread cycle={cycle} rs={rs} />
     </section>
-    <ShiftTrail cycle={cycle} rs={rs} primaryRuleId={primaryRuleId} />
+    <ShiftTrail cycle={cycle} rs={rs} primaryRuleId={primaryRuleId} pending={saving} />
   </div></ShiftShell>
 }

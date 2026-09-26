@@ -63,6 +63,7 @@
 .profile-contract-drop { display: flex; width: 100%; min-height: 150px; flex-direction: column; justify-content: center; align-items: center; gap: 9px; border: 1px dashed hsl(var(--border)); border-radius: 5px; background: hsl(var(--background)); color: inherit; font: inherit; cursor: pointer; padding: 20px; }
 .profile-contract-drop:hover, .profile-contract-drop.dragging { background: hsl(var(--muted)); border-color: hsl(var(--muted-foreground)); }
 .profile-contract-drop:disabled { opacity: .55; cursor: wait; }
+.profile-contract-drop .action-button-label:first-child { flex-direction: column; gap: 9px; white-space: normal; }
 .profile-proposal-list { margin-top: 18px; }
 .profile-proposal-list .tag { margin-bottom: 8px; }
 .profile-proposal-actions { display: flex; gap: 8px; margin-top: 12px; }

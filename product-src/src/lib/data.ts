@@ -1,5 +1,5 @@
 import { useEffect, useSyncExternalStore } from 'react'
-import { dayLabels, money, runEngine, type Effect, type Facility, type RunShift, type Shift } from '@/bench/engine.js'
+import { createEngineContext, dayLabels, money, runEngine, type Effect, type Facility, type RunShift, type Shift } from '@/bench/engine.js'
 import { authedFetch } from '@/lib/api'
 import { cycleLabel, cycleWeeks, recentCycles, type Cycle } from '@/lib/cycles'
 import type { DeskCycle } from '@/lib/desk'
@@ -125,14 +125,16 @@ const daysOf = (cycle: Cycle) => cycleWeeks(cycle).flatMap(dayLabels).slice(0, M
 export function hydrate(payload: CyclePayload, cal: Onboarding, files: FileRecord[] = []): DeskCycle {
   if (payload.results.length !== payload.week.length) throw new Error('The time-entry results are incomplete.')
   const cycle = restoreDates(payload.cycle)
+  const fileById = new Map(files.map(file => [file.id, file]))
+  const sourceById = new Map(payload.intake.sources.map(source => [source.id, source]))
   const week = payload.week.map(shift => {
     const fac = payload.sites[shift.fac]
     if (!fac) throw new Error('The time-entry site could not be read.')
-    const file = files.find(file => file.id === shift.prov.file)
-    const source = payload.intake.sources.find(source => source.id === file?.sourceId)
+    const file = fileById.get(shift.prov.file)
+    const source = file?.sourceId ? sourceById.get(file.sourceId) : undefined
     return { ...shift, fac, prov: { ...shift.prov, ...(file ? { fileId: file.id, file: file.name, sample: file.sample, system: source?.short ?? source?.name } : {}) } }
   })
-  const ctx = runEngine(week).ctx
+  const ctx = createEngineContext(week)
   const aliases = new Map([...payload.groups, ...payload.extraGroups].filter(group => group.id != null).map(group => [String(group.id), group.ruleId]))
   const shifts = effectiveJourneyRun(week, payload.results, (payload.decisions ?? []).filter(decision => decision.cycleId === cycle.id), aliases)
   const totals = {
@@ -141,7 +143,7 @@ export function hydrate(payload: CyclePayload, cal: Onboarding, files: FileRecor
       under: shifts.reduce((total, row) => total + (row.held ? 0 : row.deltaUnder), 0), over: shifts.reduce((total, row) => total + (row.held ? 0 : row.deltaOver), 0),
       held: shifts.filter(row => row.held).length, flags: shifts.filter(row => row.flagged).length,
     } : {}),
-    gross: journeyPayroll(week, payload.results, (payload.decisions ?? []).filter(decision => decision.cycleId === cycle.id), aliases, payload.adjustments).gross,
+    gross: journeyPayroll(week, shifts, [], new Map(), payload.adjustments).gross,
   }
   return { ...cycle, week, run: { shifts, totals, ctx },
     days: daysOf(cycle), scripted: false, label: cycleLabel(cycle), statusTag: payload.batch ? 'Paid' : cycle.status === 'in-progress' ? 'In Progress' : 'Pending', rememberedRuleIds: remembered(cycle, cal),
@@ -288,19 +290,47 @@ export function useData(enabled = true): DataSnapshot {
   useEffect(() => { if (enabled && (snapshot.owner !== account || (!snapshot.loaded && !snapshot.error))) void loadData() }, [enabled, account])
   return value.owner && value.owner !== account ? initial(account) : value
 }
-let cycleCache: { owner: string; snapshot: DataSnapshot; cal: Onboarding; cycles: DeskCycle[] } | undefined
+// Payloads are immutable snapshots. Chat, sidebar, route, and loading-state updates must
+// not hydrate thousands of entries again. A new payload/files array invalidates the run;
+// calendar and remembered-rule changes only replace its inexpensive display metadata.
+const hydratedCycles = new WeakMap<CyclePayload, { files: FileRecord[]; base: DeskCycle; status: Cycle['status']; rules: string; value: DeskCycle }>()
+function cachedHydrate(payload: CyclePayload, cal: Onboarding, files: FileRecord[], status: Cycle['status']): DeskCycle {
+  let cached = hydratedCycles.get(payload)
+  if (!cached || cached.files !== files) {
+    const base = hydrate(payload, cal, files)
+    cached = { files, base, status: payload.cycle.status, rules: JSON.stringify(base.rememberedRuleIds), value: base }
+    hydratedCycles.set(payload, cached)
+  }
+  const rememberedRuleIds = remembered({ ...cached.base, status }, cal)
+  const rules = JSON.stringify(rememberedRuleIds)
+  if (cached.status !== status || cached.rules !== rules) {
+    cached.status = status
+    cached.rules = rules
+    cached.value = { ...cached.base, status, rememberedRuleIds,
+      statusTag: payload.batch ? 'Paid' : status === 'in-progress' ? 'In Progress' : 'Pending' }
+  }
+  return cached.value
+}
+let cycleCache: { owner: string; snapshot: DataSnapshot; calendar: string; cycles: DeskCycle[] } | undefined
 export function serverCycles(cal: Onboarding): DeskCycle[] {
-  if (cycleCache?.owner === owner() && cycleCache.snapshot === snapshot && cycleCache.cal === cal) return cycleCache.cycles
-  const available = snapshot.owner === owner() ? snapshot : initial()
+  const account = owner()
+  const calendar = JSON.stringify([cal.frequency, cal.periodEndDay, cal.payDay, cal.payDatesOfMonth, cal.cutoffDays, cal.deadlineDays,
+    cal.customRules.filter(rule => rule.autoApply && !rule.draft && rule.sourceRuleId).map(rule => [rule.sourceRuleId, rule.effectiveCycleStart]),
+    // Empty accounts still roll into the next period without an unrelated store update.
+    new Date().toDateString()])
+  if (cycleCache?.owner === account && cycleCache.snapshot === snapshot && cycleCache.calendar === calendar) return cycleCache.cycles
+  const available = snapshot.owner === account ? snapshot : initial()
   // A detail read can publish before the list loads; one published row is not the account's periods.
   const periods = available.loaded && available.list.length ? available.list.map(restoreDates) : recentCycles(cal, 26)
   const payloads = new Map(available.payloads.map(payload => [payload.cycle.id, payload]))
   const cycles = periods.filter(cycle => payloads.has(cycle.id) || cycle.status !== 'reviewed').map(cycle => {
     const payload = payloads.get(cycle.id)
-    return payload ? hydrate({ ...payload, cycle: { ...payload.cycle, status: cycle.status } }, cal, available.files)
+    return payload ? cachedHydrate(payload, cal, available.files, cycle.status)
       : emptyCycle(cycle, !available.loaded || !!available.error || !!available.cycleErrors[cycle.id] || !!available.list.find(row => row.id === cycle.id)?.runAt)
   })
   if (!cycles.length) cycles.push(emptyCycle(recentCycles(cal, 1)[0], !available.loaded || !!available.error))
-  cycleCache = { owner: owner(), snapshot, cal, cycles }
-  return cycles
+  const stable = cycleCache?.owner === account && cycles.length === cycleCache.cycles.length
+    && cycles.every((cycle, index) => cycle === cycleCache!.cycles[index]) ? cycleCache.cycles : cycles
+  cycleCache = { owner: account, snapshot, calendar, cycles: stable }
+  return stable
 }

@@ -34,7 +34,7 @@
   .app-setup .agent-panel[hidden] { display: none; }
 }
 @media (min-width: 1280px) {
-  .app { grid-template-columns: 224px 400px minmax(0, 1fr); }
+  .app { grid-template-columns: 224px 400px minmax(0, 1fr); transition: grid-template-columns 200ms ease-out; }
   .app[data-sidebar="rail"] { grid-template-columns: 56px 400px minmax(0, 1fr); }
   .app.app-setup { grid-template-columns: minmax(0, 1fr); }
 }
@@ -57,10 +57,11 @@
 .sidebar .icon-box { display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0; flex: 0 0 auto; }
 .sidebar .icon-box[aria-expanded="true"] { background: hsl(var(--muted)); }
 .sidebar button:disabled { opacity: .45; pointer-events: none; }
-.sidebar-surface { position: fixed; inset: 0 auto 0 0; display: flex; flex-direction: column; width: min(288px, calc(100vw - 48px)); min-height: 0; z-index: 45; background: var(--page, #fbfbfa); border-right: 1px solid hsl(var(--border)); transform: translateX(-100%); visibility: hidden; transition: transform 180ms var(--ease-out), visibility 180ms var(--ease-out); }
-.sidebar-open .sidebar-surface { transform: none; visibility: visible; }
-.sidebar-scrim { position: fixed; inset: 0; z-index: 40; background: rgb(0 0 0 / .2); }
-.sidebar-brand-row { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: .25rem; min-height: 56px; padding: .5rem .75rem; }
+.sidebar-surface { position: fixed; inset: 0 auto 0 0; display: flex; flex-direction: column; width: min(288px, calc(100vw - 48px)); min-height: 0; z-index: 45; background: var(--page, #fbfbfa); border-right: 1px solid hsl(var(--border)); transform: translateX(-100%); visibility: hidden; transition: transform 200ms ease-out, visibility 0s linear 200ms; }
+.sidebar-open .sidebar-surface { transform: none; visibility: visible; transition-delay: 0s; }
+.sidebar-scrim { position: fixed; inset: 0; z-index: 40; background: rgb(0 0 0 / .2); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 200ms ease-out, visibility 0s linear 200ms; }
+.sidebar-open .sidebar-scrim { opacity: 1; visibility: visible; pointer-events: auto; transition-delay: 0s; }
+.sidebar-brand-row { display: flex; flex: 0 0 var(--shell-header-height); align-items: center; justify-content: space-between; gap: .25rem; height: var(--shell-header-height); min-height: var(--shell-header-height); padding: .5rem .75rem; border-bottom: 1px solid hsl(var(--border)); }
 .sidebar-close { margin-left: auto; }
 .sidebar .sidebar-collapse { display: none; }
 .sidebar .nav-tabs { display: flex; flex: 0 0 auto; flex-direction: column; align-items: stretch; gap: 2px; padding: .25rem .5rem .75rem; border: 0; border-radius: 0; background: none; }
@@ -164,13 +165,17 @@
   .sidebar-pay-runs.pay-runs-open > .pay-runs-content { display: flex; }
 }
 @media (min-width: 1280px) {
-  .sidebar[data-sidebar="rail"] .sidebar-label, .sidebar[data-sidebar="rail"] .sidebar-brand-row > .brand, .sidebar[data-sidebar="rail"] .getting-started { display: none; }
+  .sidebar .sidebar-label, .sidebar-brand-row > .brand { max-width: 180px; opacity: 1; overflow: hidden; transition: opacity 140ms ease-out, max-width 200ms ease-out, visibility 0s; }
+  .sidebar .nav-tabs, .sidebar .sidebar-nav-item, .sidebar-brand-row, .sidebar-account-trigger { transition: padding 200ms ease-out, gap 200ms ease-out; }
+  .sidebar .sidebar-nav-item, .sidebar-account-trigger { overflow: hidden; }
+  .sidebar[data-sidebar="rail"] .sidebar-label, .sidebar[data-sidebar="rail"] .sidebar-brand-row > .brand { max-width: 0; opacity: 0; visibility: hidden; transition: opacity 120ms ease-out, max-width 200ms ease-out, visibility 0s linear 200ms; }
+  .sidebar[data-sidebar="rail"] .getting-started { display: none; }
   .sidebar[data-sidebar="rail"] .sidebar-brand-row { justify-content: center; padding-inline: 4px; }
   .sidebar[data-sidebar="rail"] .sidebar-collapse svg { display: none; }
   .sidebar[data-sidebar="rail"] .sidebar-expand-mark { display: block; width: 26px; height: 26px; filter: grayscale(1); }
   .sidebar[data-sidebar="rail"] .nav-tabs { padding-inline: 6px; }
-  .sidebar[data-sidebar="rail"] .sidebar-nav-item { justify-content: center; min-height: 40px; padding-inline: 0; }
-  .sidebar[data-sidebar="rail"] .sidebar-account-trigger { justify-content: center; }
+  .sidebar[data-sidebar="rail"] .sidebar-nav-item { gap: 0; min-height: 40px; padding-inline: 14px; }
+  .sidebar[data-sidebar="rail"] .sidebar-account-trigger { gap: 0; }
   .sidebar[data-sidebar="rail"] .sidebar-account-menu { right: auto; }
   .sidebar[data-sidebar="rail"] .sidebar-pay-runs { flex: 0 0 auto; min-height: 0; padding: 0 6px; }
   .sidebar[data-sidebar="rail"] .pay-runs-toggle { display: inline-grid; place-items: center; width: 44px; height: 40px; border-radius: .375rem; color: hsl(var(--muted-foreground)); }

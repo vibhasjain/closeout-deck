@@ -118,6 +118,13 @@ export interface ChatEvent { text?: string; trace?: string; done?: boolean; sess
 
 /** Persist only the server's bounded read traces, never synthesized steps: handbook reads, plus at most 3 data reads
  * per turn ("Read the dispute from Abel Alvarez", or older saved "Read data/…" lines). */
+/** Human activity labels hide file paths while the stored trace keeps exact provenance. */
+export function traceLabel(trace: string): string {
+  if (trace.startsWith('Read handbooks/')) return 'Read the rulebook'
+  if (trace.startsWith('Read data/')) return 'Read account records'
+  return /\.(?:csv|xlsx?|pdf|docx?|txt|md)\b/i.test(trace) ? 'Read the source document' : trace
+}
+
 export function appendTrace(traces: string[], value: unknown): string[] {
   if (typeof value !== 'string' || !/^Read [^\r\n]+$/.test(value) || value.length > 240 || traces.includes(value)) return traces
   const data = (trace: string) => !trace.startsWith('Read handbooks/')

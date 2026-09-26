@@ -3,7 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate, useNa
 import { OnboardingLayout } from '@/components/OnboardingLayout'
 import { RailLayout } from '@/components/shell/RailLayout'
 import { Agent } from '@/pages/setup/Agent'
-import { Payroll } from '@/pages/Payroll'
+import { PayrollRoute as Payroll } from '@/pages/Payroll'
 import { ShiftPage } from '@/pages/ShiftPage'
 import { Rules } from '@/pages/Rules'
 import { Profile } from '@/pages/Profile'

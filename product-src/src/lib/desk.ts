@@ -118,13 +118,43 @@ export function buildCycles(cal: Onboarding, today?: Date): DeskCycle[] {
   return cycles
 }
 
+interface DecisionIndex {
+  shifts: RunShift[]
+  groups: DeskCycle['groups']
+  extras: DeskCycle['extraGroups']
+  decisions: DeskCycle['decisions']
+  size: number
+  byShift: Map<string, RunShift>
+  latest: Map<string, JourneyDecision>
+}
+const decisionIndexes = new WeakMap<DeskCycle, DecisionIndex>()
+/** Index immutable cycle evidence once, instead of scanning every time entry per rule row. */
+function decisionIndex(c: DeskCycle): DecisionIndex {
+  const size = c.run.shifts.length + (c.groups?.length ?? 0) + (c.extraGroups?.length ?? 0) + (c.decisions?.length ?? 0)
+  const cached = decisionIndexes.get(c)
+  if (cached?.shifts === c.run.shifts && cached.groups === c.groups && cached.extras === c.extraGroups
+    && cached.decisions === c.decisions && cached.size === size) return cached
+  const aliases = new Map<string, string>()
+  for (const group of [...(c.groups ?? []), ...(c.extraGroups ?? [])]) if (group.id != null) aliases.set(String(group.id), group.ruleId)
+  const latest = new Map<string, JourneyDecision>()
+  for (const decision of c.decisions ?? []) {
+    if (decision.cycleId !== c.id) continue
+    const key = aliases.get(decision.groupId) ?? decision.groupId
+    const previous = latest.get(key)
+    if (!previous || decision.at.localeCompare(previous.at) > 0 || decision.at === previous.at && decision.id.localeCompare(previous.id) > 0) latest.set(key, decision)
+  }
+  const value = { shifts: c.run.shifts, groups: c.groups, extras: c.extraGroups, decisions: c.decisions, size,
+    byShift: new Map(c.run.shifts.map(shift => [shift.shift.id, shift])), latest }
+  decisionIndexes.set(c, value)
+  return value
+}
+
 /** Holds stay pending; otherwise explicit decisions win over remembered rules. */
 export function rowResolution(c: DeskCycle, shiftId: string, ruleId: string, res: Onboarding['resolutions']) {
   if (c.server) {
-    if (c.run.shifts.find(item => item.shift.id === shiftId)?.held) return undefined
-    const group = [...(c.groups ?? []), ...(c.extraGroups ?? [])].find(item => item.ruleId === ruleId)
-    const decision = c.decisions?.filter(item => item.cycleId === c.id && (item.groupId === ruleId || item.groupId === String(group?.id ?? ruleId)))
-      .sort((a, b) => b.at.localeCompare(a.at) || b.id.localeCompare(a.id))[0]
+    const index = decisionIndex(c)
+    if (index.byShift.get(shiftId)?.held) return undefined
+    const decision = index.latest.get(ruleId)
     return decision?.decision === 'approved' ? 'applied' as const : decision?.decision
   }
   return res[c.id]?.[shiftId] ?? (c.rememberedRuleIds?.includes(ruleId) ? 'applied' as const : undefined)

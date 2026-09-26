@@ -11,6 +11,7 @@ import { NextStepRow } from '@/components/journey/NextStepRow'
 import { ShiftTable } from '@/components/ShiftTable'
 import { useSetChatContext, useSetChatSuggestions } from '@/components/chat/ChatPane'
 import { PageTitle } from '@/components/shell/PageTitle'
+import { PaintBoundary } from '@/components/shell/PaintBoundary'
 import { invalidate, pendingAdjustments } from '@/lib/data'
 import { Btn, Tag } from '@/components/ui'
 import { shortDate } from '@/lib/cycles'
@@ -26,6 +27,18 @@ import './reconcile.css'
 import './payroll.css'
 
 const destinations = DESTS.filter((destination) => destination.group !== 'Billing')
+
+export function PayrollRoute() {
+  const [params] = useSearchParams()
+  // Opening a time entry and selecting a destination keep the parent pane on screen.
+  const routeKey = ['cycle', 'step', 'filter', 'view'].map(key => params.get(key) ?? '').join('|')
+  return <PaintBoundary routeKey={routeKey} fallback={<div className="reconcile-layout payroll-layout">
+    <section className="detail reconcile-payments" aria-label="Payroll">
+      <PageTitle title="Payroll" description="Collect time entries, resolve discrepancies, and prepare each pay run." />
+      <SkeletonRegion variant="next-step" className="journey-next-step" /><SkeletonRegion variant="kpis" /><SkeletonRegion variant="review" />
+    </section>
+  </div>}><Payroll /></PaintBoundary>
+}
 
 export function Payroll() {
   const { cycles, current, byId, loaded, error, cycleErrors } = useDesk()

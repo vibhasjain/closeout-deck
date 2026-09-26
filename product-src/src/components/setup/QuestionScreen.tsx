@@ -1,3 +1,5 @@
+import { ActionButton, ActionFeedback } from '@/components/ActionButton'
+import { usePendingAction } from '@/lib/usePendingAction'
 import { SkeletonRegion } from '@/components/Skeleton'
 import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronLeft, Mic, Phone, Square, Upload } from 'lucide-react'
@@ -47,10 +49,14 @@ export function QuestionScreen({ question, card, initialAnswer = '', busy = fals
   const [files, setFiles] = useState<string[]>([])
   const [calendarReady, setCalendarReady] = useState(false)
   const [typing, setTyping] = useState(() => !initialAnswer && !reducedMotion())
-  const [uploading, setUploading] = useState(false)
-  const [uploadError, setUploadError] = useState('')
+  const action = usePendingAction()
+  const uploading = action.pending
+  useEffect(() => {
+    if (action.status !== 'success') return
+    const timer = setTimeout(action.reset, 900)
+    return () => clearTimeout(timer)
+  }, [action.status, action.reset])
   const picker = useRef<HTMLInputElement>(null)
-  const pendingFiles = useRef<File[]>([])
   const locked = busy || typing || uploading || dictation.finishing
   const answered = !!(draft.trim() || selected.length || files.length || calendarReady)
 
@@ -74,18 +80,17 @@ export function QuestionScreen({ question, card, initialAnswer = '', busy = fals
 
   async function upload(incoming: File[]) {
     if (!incoming.length || locked) return
-    pendingFiles.current = incoming
-    setUploading(true); setUploadError('')
-    try { const names = await uploadOnboardingFiles(incoming, undefined, card.topics.includes('workerHours') ? 1 : card.topics.includes('clientHours') ? 2 : undefined); setFiles((old) => [...new Set([...old, ...names])]) }
-    catch (error) { setUploadError(error instanceof Error ? error.message : 'The upload failed. Try again.') }
-    finally { setUploading(false) }
+    await action.run(async () => {
+      const names = await uploadOnboardingFiles(incoming, undefined, card.topics.includes('workerHours') ? 1 : card.topics.includes('clientHours') ? 2 : undefined)
+      setFiles((old) => [...new Set([...old, ...names])])
+    }, 'upload')
   }
 
   function submit(dictated?: string) {
     if ((!answered && !dictated?.trim()) || locked) return
     const state = getOnboarding()
     const calendar = calendarReady ? `Pay calendar: ${JSON.stringify({ frequency: state.frequency, periodEndDay: state.periodEndDay, payDay: state.payDay, payDatesOfMonth: state.payDatesOfMonth, cutoffDays: state.cutoffDays, deadlineDays: state.deadlineDays })}` : ''
-    onAnswer([...selected, files.length ? `Files: ${files.join(', ')}` : '', calendar, (dictated ?? draft).trim()].filter(Boolean).join('\n'))
+    onAnswer([...selected, files.length ? `${files.length} ${files.length === 1 ? 'source' : 'sources'} attached` : '', calendar, (dictated ?? draft).trim()].filter(Boolean).join('\n'))
   }
 
   function submitAnswer() {
@@ -106,10 +111,11 @@ export function QuestionScreen({ question, card, initialAnswer = '', busy = fals
         </div>}
         {card.input === 'files' && <div className="setup-files">
           <input ref={picker} type="file" multiple hidden aria-label="Choose files" onChange={(event) => { void upload(Array.from(event.target.files ?? [])); event.target.value = '' }} />
-          {uploading ? <SkeletonRegion /> : <button className="setup-drop" type="button" onClick={() => picker.current?.click()} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void upload(Array.from(event.dataTransfer.files)) }}>
+          <ActionButton action={action} pendingLabel="Uploading…" successLabel="Uploaded" className="setup-drop" onClick={() => picker.current?.click()} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void upload(Array.from(event.dataTransfer.files)) }}>
             <Upload size={18} aria-hidden /> {card.placeholder || 'Drop files here, or choose files'}
-          </button>}
-          {files.length > 0 && <ul className="setup-file-list">{files.map((file) => <li key={file}><Check size={13} aria-hidden />{file}</li>)}</ul>}
+          </ActionButton>
+          {uploading && <SkeletonRegion />}
+          {files.length > 0 && <ul className="setup-file-list">{files.map((file, index) => <li key={file}><Check size={13} aria-hidden />Attached source {index + 1}</li>)}</ul>}
         </div>}
         <div className="setup-textarea">
           <textarea aria-label="Your answer" placeholder={card.placeholder || 'Answer in your own words…'} value={draft} rows={3} readOnly={dictation.active || dictation.finishing} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => {
@@ -124,7 +130,7 @@ export function QuestionScreen({ question, card, initialAnswer = '', busy = fals
       </fieldset>
       {dictation.status && <p className="setup-dictate-status" role="status">{dictation.status}</p>}
       {dictation.error && <div className="setup-error" role="alert"><p>{dictation.error}</p><Btn onClick={dictation.start}>Retry</Btn><Btn onClick={dictation.dismiss}>Keep typing</Btn></div>}
-      {uploadError && <div className="setup-error" role="alert"><p>{uploadError}</p><Btn onClick={() => void upload(pendingFiles.current)}>Retry</Btn></div>}
+      <ActionFeedback action={action} className="setup-error" />
       <footer className="setup-controls">
         <Btn className="ghost" disabled={!canBack || locked} onClick={onBack}><ChevronLeft size={14} aria-hidden />Back</Btn>
         <span />

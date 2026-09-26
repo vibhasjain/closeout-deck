@@ -1,10 +1,12 @@
+import { ActionButton, ActionFeedback } from '@/components/ActionButton'
+import { usePendingAction } from '@/lib/usePendingAction'
 import { SkeletonRegion } from '@/components/Skeleton'
 /* eslint-disable react-refresh/only-export-components -- Pure form derivations are shared with contract tests. */
 import { useEffect, useState, type ChangeEvent } from 'react'
 import type { Source } from '@/bench/vendors'
 import { ConnectMethod } from '@/components/ConnectMethod'
 import { JourneyThreadView } from '@/components/Thread'
-import { Btn, Chip, Tag } from '@/components/ui'
+import { Chip, Tag } from '@/components/ui'
 import { postToChat } from '@/lib/chatBus'
 import { cycleLabel } from '@/lib/cycles'
 import { hydrate, type CyclePayload, type CycleSummary } from '@/lib/data'
@@ -152,8 +154,8 @@ export function GapsForm({ cycle, prefill, live = true }: FormProps) {
   const [state] = useOnboarding()
   const { threads, loaded, loading, error: threadError } = useJourneyThreads(cycle.cycle.id)
   const [selection, setSelection] = useState<string[] | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
+  const action = usePendingAction()
+  const busy = action.pending
   const [result, setResult] = useState<AskResult | null>(null)
   const rows = gapRows(cycle, [...(state.neverContact ?? []), ...(result?.skipped ?? [])], state.acceptedGaps, [...threads, ...(result?.threads ?? [])])
   const available = rows.filter(row => !row.blocked)
@@ -170,16 +172,18 @@ export function GapsForm({ cycle, prefill, live = true }: FormProps) {
   const nobody = !available.length ? (rows.length ? 'Everyone left to ask is on your never-contact list.' : 'No time entries are missing client-approved hours, so there is nobody to ask.')
     : !unasked.length ? 'Everyone with missing time has been asked. Replies land in each conversation.' : ''
   const current = !cycle.nextStep || cycle.nextStep.kind === 'chase_missing'
+  useEffect(() => {
+    if (action.status !== 'success' || !eligible.length) return
+    const timer = setTimeout(action.reset, 900)
+    return () => clearTimeout(timer)
+  }, [action, eligible.length])
   async function submit() {
     if (busy || !loaded || loading || threadError || !eligible.length || eligible.length > 200) return
-    setBusy(true); setError('')
-    try {
+    await action.run(async () => {
       const next = await askGaps(cycle.cycle.id, { gapIds: eligible.map(row => row.id), ...(text(prefill?.message) ? { message: text(prefill?.message) } : {}) })
       setResult(previous => ({ threads: [...new Map([...(previous?.threads ?? []), ...next.threads].map(thread => [thread.id, thread])).values()], skipped: [...new Set([...(previous?.skipped ?? []), ...next.skipped])] }))
       setSelection(null)
-    }
-    catch (cause) { setError(errorText(cause)) }
-    finally { setBusy(false) }
+    })
   }
   if (!loaded && !threadError) return <section className="journey-form" aria-label="Chase missing time"><FormHeader title="Chase missing time" sample={cycle.sample} /><SkeletonRegion /></section>
   return <section className="journey-form" aria-label="Chase missing time">
@@ -187,7 +191,7 @@ export function GapsForm({ cycle, prefill, live = true }: FormProps) {
     <div className="journey-gap-list">
       {rows.map(row => <label className={`journey-gap-row${row.blocked ? ' is-disabled' : ''}`} key={row.id}>
         <input type="checkbox" aria-label={`Ask ${row.name} about ${row.worker} · ${row.site} · Day ${row.day + 1}`} disabled={row.blocked || busy || (!selectedIds.has(row.id) && eligible.length >= 200)}
-          checked={!row.blocked && selectedIds.has(row.id)} onChange={event => setSelection(event.target.checked ? [...eligible.map(item => item.id), row.id] : eligible.filter(item => item.id !== row.id).map(item => item.id))} />
+          checked={!row.blocked && selectedIds.has(row.id)} onChange={event => { action.reset(); setSelection(event.target.checked ? [...eligible.map(item => item.id), row.id] : eligible.filter(item => item.id !== row.id).map(item => item.id)) }} />
         <span><strong>{row.worker}</strong><span className="r-note">{row.site} · Day {row.day + 1}</span><span className="r-note">Ask {row.name}</span></span>
         {row.blocked && <Tag>Never Contact</Tag>}
         {row.asked && <Tag>Asked · Still missing</Tag>}
@@ -195,17 +199,19 @@ export function GapsForm({ cycle, prefill, live = true }: FormProps) {
     </div>
     {nobody && <p className="r-note" role="status">{nobody}</p>}
     {unasked.length > 200 && <p className="r-note" role="status">Ask about up to 200 time entries at a time. {unasked.length - eligible.length} more remain.</p>}
+    {busy && <SkeletonRegion variant="conversation" rows={2} />}
     {(asked.length > 0 || !!result?.skipped.length) && <div className="journey-form-result" role="status">
       {asked.length > 0 && <p>{asked.length} {asked.length === 1 ? 'conversation' : 'conversations'} created <Tag>Not Sent · Demo</Tag></p>}
       {asked.slice(0, 5).map(thread => <p className="r-note" key={thread.id}>Asked {thread.counterparty.name}</p>)}
       {asked.length > 5 && <p className="r-note">and {(asked.length - 5).toLocaleString()} more</p>}
       {!!result?.skipped.length && <p className="r-note">Skipped: {result.skipped.join(', ')} <Tag>Never Contact</Tag></p>}
     </div>}
-    {(unasked.length > 0 || eligible.length > 0) && <>
+    {(unasked.length > 0 || eligible.length > 0 || action.status !== 'idle') && <>
       <StaleNote live={live} current={current} cycle={cycle} />
-      <Btn className={live && current ? 'primary' : undefined} disabled={busy || !loaded || loading || !!threadError || !eligible.length} onClick={() => void submit()}>{busy ? 'Creating asks…' : `Ask ${people} ${people === 1 ? 'person' : 'people'}`}</Btn>
+      <ActionButton action={action} pendingLabel="Asking…" successLabel="Asked" className={live && current ? 'primary' : undefined} disabled={busy || !loaded || loading || !!threadError || !eligible.length} onClick={() => void submit()}>{`Ask ${people} ${people === 1 ? 'person' : 'people'}`}</ActionButton>
     </>}
-    {(error || threadError) && <p className="r-note" role="alert">{error || threadError}{threadError && <> <button type="button" className="lnk" onClick={() => void refreshThreads(cycle.cycle.id)}>Retry conversations</button></>}</p>}
+    <ActionFeedback action={action} />
+    {threadError && <p className="r-note" role="alert">{threadError}{threadError && <> <button type="button" className="lnk" onClick={() => void refreshThreads(cycle.cycle.id)}>Retry conversations</button></>}</p>}
   </section>
 }
 
@@ -220,7 +226,9 @@ export function waitingPaidAsReported(cycle: CyclePayload, state: Onboarding): n
 export function SendForm({ cycle, prefill, live = true }: FormProps) {
   const [state] = useOnboarding()
   const [destination, setDestination] = useState(text(prefill?.destination))
-  const [busy, setBusy] = useState(false)
+  const action = usePendingAction()
+  const [downloading, setDownloading] = useState(false)
+  const busy = action.pending || downloading
   const [error, setError] = useState('')
   const [result, setResult] = useState<SendResult | null>(null)
   const [submittedCycle, setSubmittedCycle] = useState<string | null>(null)
@@ -247,17 +255,19 @@ export function SendForm({ cycle, prefill, live = true }: FormProps) {
   const waiting = batch ? 0 : waitingPaidAsReported(cycle, state)
   async function submit() {
     if (busy || batch || !previewReady || previewError) return
-    setBusy(true); setError(''); setSubmittedCycle(cycle.cycle.id)
-    try { setResult(await sendPayroll(cycle.cycle.id, destination.trim() ? { destination: destination.trim() } : {})) }
-    catch (cause) { setError(errorText(cause)) }
-    finally { setBusy(false) }
+    setSubmittedCycle(cycle.cycle.id)
+    await action.run(async () => {
+      const next = await sendPayroll(cycle.cycle.id, destination.trim() ? { destination: destination.trim() } : {})
+      setResult(next)
+      if (next.status === 422) throw new Error(next.reason)
+    })
   }
   async function download() {
     if (!batch) return
-    setBusy(true); setError('')
+    setDownloading(true); setError('')
     try { await downloadBatch(batch.id, csvUrl) }
     catch (cause) { setError(errorText(cause)) }
-    finally { setBusy(false) }
+    finally { setDownloading(false) }
   }
   return <section className="journey-form" aria-label="Send to Payroll">
     <FormHeader title="Send to Payroll" sample={cycle.sample} />
@@ -266,6 +276,7 @@ export function SendForm({ cycle, prefill, live = true }: FormProps) {
       <div><dt>Gross</dt><dd className="mono tabular-nums">{batch || previewReady ? money(preview.gross) : previewError ? '—' : <SkeletonRegion variant="number" /> }</dd></div>
       <div><dt>Held entries excluded</dt><dd className="mono tabular-nums">{preview.held}</dd></div>
     </dl>
+    {action.pending && <SkeletonRegion rows={2} />}
     {batch ? <div className="journey-form-result" role="status">
       {result?.status === 409 && <p>This batch already exists.</p>}
       <p>Sent to {batch.destination} · <Tag>Demo</Tag></p>
@@ -276,8 +287,10 @@ export function SendForm({ cycle, prefill, live = true }: FormProps) {
       {!cycle.nextStep && <p className="r-note">Waiting for the cycle's next step.</p>}
       {waiting > 0 && <p className="r-note journey-send-waiting">{waiting.toLocaleString()} time {waiting === 1 ? 'entry' : 'entries'} still waiting for evidence {waiting === 1 ? 'is' : 'are'} paid as reported; any correction lands as an adjustment next pay run.</p>}
       {canSend && !live && <StaleNote live={live} current cycle={cycle} />}
-      <Btn className={canSend && live ? 'primary' : undefined} disabled={busy || !previewReady || !!previewError} onClick={() => void submit()}>{busy ? 'Creating payroll export…' : 'Send to Payroll'}</Btn>
+
     </>}
+    {(!batch || action.status !== 'idle') && <ActionButton action={action} pendingLabel="Sending…" successLabel="Sent to Payroll" className={canSend && live ? 'primary' : undefined} disabled={!previewReady || !!previewError} onClick={() => void submit()}>Send to Payroll</ActionButton>}
+    {(result?.status !== 422 || rejection) && <ActionFeedback action={action} />}
     {!batch && previewError && <p className="r-note" role="alert">{previewError} <button type="button" className="lnk" onClick={() => setRetry(value => value + 1)}>Retry preview</button></p>}
     {error && <p className="r-note" role="alert">{error}</p>}
   </section>
@@ -306,7 +319,9 @@ export function DisputeForm({ cycle, prefill, live = true }: FormProps) {
   const [hours, setHours] = useState(recommendation.hours)
   const [amount, setAmount] = useState(recommendation.amount)
   const [note, setNote] = useState(recommendation.note)
-  const [busy, setBusy] = useState(false)
+  const action = usePendingAction()
+  const [uploading, setUploading] = useState(false)
+  const busy = action.pending || uploading
   const [error, setError] = useState('')
   const [loadFailure, setLoadFailure] = useState<{ key: string; message: string } | null>(null)
   const [retry, setRetry] = useState(0)
@@ -337,8 +352,7 @@ export function DisputeForm({ cycle, prefill, live = true }: FormProps) {
   }, [cycleId, batchId, requestedWorker, requestedDescription, requestedDispute, requestedHours, requestedAmount, requestedNote, lookupKey, retry])
   async function start(simulated: boolean) {
     if (!cycle.batch || !loaded || loadError || dispute || busy || (!simulated && (!worker.trim() || !description.trim()))) return
-    setBusy(true); setError('')
-    try {
+    await action.run(async () => {
       const result = simulated ? await simulateDispute(cycle.cycle.id)
         : await createDispute({ cycleId: cycle.cycle.id, worker: worker.trim(), description: description.trim(), source })
       setRecord(previous => previous?.key === lookupKey ? { key: lookupKey, dispute: result.dispute, thread: result.thread } : previous)
@@ -347,30 +361,27 @@ export function DisputeForm({ cycle, prefill, live = true }: FormProps) {
       postToChat({ text: `Dispute from ${result.dispute.worker} for ${label}: recommend adjust or reject`, contextChip: `Dispute from ${result.dispute.worker} · ${label}`,
         context: { page: '/payroll', calendar: { frequency: calendar.frequency, periodEndDay: calendar.periodEndDay, payDay: calendar.payDay, payDatesOfMonth: calendar.payDatesOfMonth, cutoffDays: calendar.cutoffDays, deadlineDays: calendar.deadlineDays },
           cycle: { id: cycle.cycle.id, label, stats: 'Sent to Payroll' }, selection: { disputeId: result.dispute.id, threadId: result.thread.id, worker: result.dispute.worker } } })
-    } catch (cause) { setError(errorText(cause)) }
-    finally { setBusy(false) }
+    }, simulated ? 'simulate' : 'open')
   }
   async function upload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     if (!file) return
     if (file.size > 8_000) { setError('Use a text source of 2,000 characters or fewer, or paste the relevant passage.'); return }
-    setBusy(true); setError('')
+    setUploading(true); setError('')
     try {
       const contents = await file.text()
       if (!contents.trim() || contents.includes('\u0000')) throw new Error('Use a readable text file, or paste the relevant passage.')
       if (contents.length > 2000) throw new Error('Use a text source of 2,000 characters or fewer, or paste the relevant passage.')
       setDescription(contents); setFileName(file.name); setSource('upload')
     } catch (cause) { setError(errorText(cause)) }
-    finally { setBusy(false) }
+    finally { setUploading(false) }
   }
   async function resolve(decision: 'adjust' | 'reject') {
     if (!loaded || loadError || !dispute || busy || !note.trim() || (decision === 'adjust' && !validAdjustment)) return
-    setBusy(true); setError('')
-    try {
+    await action.run(async () => {
       const result = await resolveDispute(dispute.id, { decision, ...(decision === 'adjust' ? { ...(hours.trim() ? { hours: Number(hours) } : {}), ...(amount.trim() ? { amount: Number(amount) } : {}) } : {}), note: note.trim() })
       setRecord(previous => previous?.key === lookupKey ? { ...previous, dispute: result.dispute, thread: result.thread ?? previous.thread } : previous)
-    } catch (cause) { setError(errorText(cause)) }
-    finally { setBusy(false) }
+    }, decision)
   }
   const validAdjustment = (Number(hours) > 0 || Number(amount) !== 0) && (!hours.trim() || (Number.isFinite(Number(hours)) && Number(hours) >= 0 && Number(hours) <= 100))
     && (!amount.trim() || (Number.isFinite(Number(amount)) && Number(amount) >= -10_000 && Number(amount) <= 10_000))
@@ -383,22 +394,25 @@ export function DisputeForm({ cycle, prefill, live = true }: FormProps) {
       <textarea className="journey-form-input" aria-label="Dispute description" placeholder="Paste the dispute or describe what happened…" value={description} maxLength={2000} rows={3} disabled={busy}
         onChange={event => { setDescription(event.target.value); setSource('paste'); setFileName('') }} />
       <div className="journey-dispute-source"><label className="journey-upload btn">Upload text<input type="file" accept="text/plain,text/markdown,text/csv,.txt,.md,.csv" aria-label="Upload dispute source" disabled={busy} onChange={event => void upload(event)} /></label>
-        <span className="r-note">{fileName || 'Paste or upload a text source'}</span></div>
+        <span className="r-note">{fileName ? 'Text source attached' : 'Paste or upload a text source'}</span></div>
       <div className="journey-form-actions">
-        <Btn className={live && worker.trim() && description.trim() ? 'primary' : undefined} disabled={busy || !worker.trim() || !description.trim()} onClick={() => void start(false)}>Open dispute</Btn>
-        <Btn className={live && !(worker.trim() && description.trim()) ? 'primary' : undefined} disabled={busy} onClick={() => void start(true)}>Simulate a dispute</Btn>
+        <ActionButton action={action} actionKey="open" pendingLabel="Opening…" successLabel="Opened" className={live && worker.trim() && description.trim() ? 'primary' : undefined} disabled={busy || !worker.trim() || !description.trim()} onClick={() => void start(false)}>Open dispute</ActionButton>
+        <ActionButton action={action} actionKey="simulate" pendingLabel="Creating…" successLabel="Created" className={live && !(worker.trim() && description.trim()) ? 'primary' : undefined} disabled={busy} onClick={() => void start(true)}>Simulate a dispute</ActionButton>
         <Tag>Demo</Tag>
       </div>
     </> : <>
       <div className="journey-form-result"><strong>{dispute.worker}</strong><p>{dispute.description}</p><Tag>{dispute.status === 'open' ? 'Open' : dispute.status === 'adjusted' ? 'Adjusted' : 'Rejected'}</Tag></div>
       {thread && <div className="journey-dispute-thread"><JourneyThreadView thread={thread} /></div>}
-      {dispute.status === 'open' ? <>
+      {(dispute.status === 'open' || action.key === 'adjust' || action.key === 'reject') ? <>
         <div className="journey-adjustment"><input className="journey-form-input mono" type="number" min={0} max={100} step="any" aria-label="Adjustment hours" placeholder="Hours" value={hours} disabled={busy} onChange={event => setHours(event.target.value)} />
           <input className="journey-form-input mono" type="number" min={-10000} max={10000} step="any" aria-label="Adjustment amount" placeholder="Amount" value={amount} disabled={busy} onChange={event => setAmount(event.target.value)} /></div>
         <input className="journey-form-input" aria-label="Resolution note" placeholder="Resolution note (required)" value={note} maxLength={2000} disabled={busy} onChange={event => setNote(event.target.value)} />
-        <div className="journey-form-actions"><Btn className={live ? 'primary' : undefined} disabled={busy || !validAdjustment || !note.trim()} onClick={() => void resolve('adjust')}>Adjust</Btn><Btn disabled={busy || !note.trim()} onClick={() => void resolve('reject')}>Reject</Btn></div>
-      </> : <p className="r-note" role="status">{dispute.status === 'adjusted' ? 'Adjustment recorded for the next cycle’s export.' : 'Dispute rejected.'}</p>}
+        <div className="journey-form-actions"><ActionButton action={action} actionKey="adjust" pendingLabel="Adjusting…" successLabel="Adjusted" className={live && dispute.status === 'open' ? 'primary' : undefined} disabled={busy || dispute.status !== 'open' || !validAdjustment || !note.trim()} onClick={() => void resolve('adjust')}>Adjust</ActionButton><ActionButton action={action} actionKey="reject" pendingLabel="Rejecting…" successLabel="Rejected" disabled={busy || dispute.status !== 'open' || !note.trim()} onClick={() => void resolve('reject')}>Reject</ActionButton></div>
+      </> : null}
+      {dispute.status !== 'open' && <p className="r-note" role="status">{dispute.status === 'adjusted' ? 'Adjustment recorded for the next cycle’s export.' : 'Dispute rejected.'}</p>}
     </>}
+    {action.pending && <SkeletonRegion variant="conversation" rows={1} />}
+    <ActionFeedback action={action} />
     {error && <p className="r-note" role="alert">{error}</p>}
   </section>
 }

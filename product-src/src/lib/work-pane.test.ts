@@ -25,7 +25,11 @@ function render(url: string, kind: NextStep['kind']) {
   return renderToStaticMarkup(h(MemoryRouter, { initialEntries: [url] }, h(OverlayProvider, null, h(AuxProvider, null,
     h(Routes, null, h(Route, { path: '/payroll', element: h(Payroll) }))))))
 }
-const primaries = (html: string) => [...html.matchAll(/<button\b[^>]*class="[^"]*\bprimary\b[^"]*"[^>]*>([\s\S]*?)<\/button>/g)].map((match) => match[1].replace(/<[^>]+>/g, ''))
+const primaries = (html: string) => [...html.matchAll(/<button\b[^>]*class="[^"]*\bprimary\b[^"]*"[^>]*>([\s\S]*?)<\/button>/g)].map((match) => {
+  // Action buttons reserve all three label widths; only the visible label is the action.
+  const visible = match[1].match(/class="action-button-label" style="visibility:visible"[^>]*>([\s\S]*?)<\/span>/)?.[1] ?? match[1]
+  return visible.replace(/<[^>]+>/g, '')
+})
 afterEach(() => { vi.restoreAllMocks() })
 
 describe('H3: one black button per work pane, and it is the next step', () => {

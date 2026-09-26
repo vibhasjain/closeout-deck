@@ -1,3 +1,4 @@
+import { ActionFeedback } from '@/components/ActionButton'
 import { Children, isValidElement, type ReactElement, type ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { JourneyThreadView } from '@/components/Thread'
@@ -11,7 +12,7 @@ vi.mock('react', async (original) => ({
     if (!(slot in hooks.slots)) hooks.slots[slot] = initial
     return [hooks.slots[slot], (value: T) => { hooks.slots[slot] = value }]
   },
-  useRef: () => ({ current: null }),
+  useRef: (initial: unknown) => { const slot = hooks.cursor++; if (!(slot in hooks.slots)) hooks.slots[slot] = { current: initial }; return hooks.slots[slot] },
 }))
 vi.mock('@/lib/journey', async (original) => ({
   ...await original<typeof import('@/lib/journey')>(),
@@ -28,7 +29,7 @@ const thread: JourneyThread = { id: 'thread-1', cycleId: '2026-09-14', counterpa
   messages: [{ id: 'message-1', threadId: 'thread-1', dir: 'out', text: 'Please confirm your time entries.', status: 'not_sent_demo', at: '2026-09-21T11:00:00Z' }] }
 type Props = { children?: ReactNode; className?: string; 'aria-label'?: string; onClick?: () => void; onChange?: (event: { target: { value: string } }) => void; onSubmit?: (event: { preventDefault(): void }) => void }
 const elements = (node: ReactNode): ReactElement<Props>[] => Children.toArray(node).flatMap((child) => isValidElement<Props>(child) ? [child, ...elements(child.props.children)] : [])
-const text = (node: ReactNode): string => Children.toArray(node).map((child) => isValidElement<Props>(child) ? text(child.props.children) : String(child)).join('')
+const text = (node: ReactNode): string => Children.toArray(node).map((child) => isValidElement<Props>(child) ? child.type === ActionFeedback ? text(ActionFeedback(child.props as Parameters<typeof ActionFeedback>[0])) : text(child.props.children) : String(child)).join('')
 const render = () => { hooks.cursor = 0; return JourneyThreadView({ thread }) }
 beforeEach(() => {
   hooks.slots = []

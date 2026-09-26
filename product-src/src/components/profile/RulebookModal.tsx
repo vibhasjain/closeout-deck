@@ -1,10 +1,12 @@
 import { SkeletonRegion } from '@/components/Skeleton'
+import { ActionButton, ActionFeedback } from '@/components/ActionButton'
+import { usePendingAction } from '@/lib/usePendingAction'
 import { useEffect, useRef, useState } from 'react'
 import { Check, Circle, Plus, Upload, X } from 'lucide-react'
 import { RULES } from '@/bench/engine.js'
 import { effectiveAuthority, getOnboarding, useOnboarding, type Onboarding } from '@/lib/onboarding'
 import { acceptProposal, compileRule, propose } from '@/lib/ruleIntake'
-import { formatRuleText } from '@/lib/rules'
+import { formatRuleSource, formatRuleText } from '@/lib/rules'
 import { NeverContactInput } from './NeverContactInput'
 import { ProfileDialog } from './ProfileDialog'
 
@@ -31,7 +33,7 @@ function JurisdictionRules({ states }: { states: string[] }) {
   return <div className="rulebook-jurisdictions">
     {states.length === 0 && <p className="profile-muted">Add the states where your team works to your Payroll profile.</p>}
     {groups.map(({ title, rules }) => <section key={title}><h4>{title}</h4>
-      {rules.length ? <ul className="profile-rule-list">{rules.map((rule) => <li key={rule.id}><p>{formatRuleText(rule.sentence)}</p><span>{rule.source.doc}{rule.source.cite ? ` · ${rule.source.cite}` : ''}</span></li>)}</ul>
+      {rules.length ? <ul className="profile-rule-list">{rules.map((rule) => <li key={rule.id}><p>{formatRuleText(rule.sentence)}</p><span>{formatRuleSource(rule.source.doc)}{rule.source.cite ? ` · ${rule.source.cite}` : ''}</span></li>)}</ul>
         : <p className="profile-muted">No state-specific rules in the current Rulebook.</p>}
     </section>)}
   </div>
@@ -65,34 +67,39 @@ export function AuthorityEditor() {
   </div>
 }
 
-function ContractsEditor() {
+export function ContractsEditor() {
   const [state, update] = useOnboarding()
   const fileInput = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const action = usePendingAction(() => 'Those contracts could not be read. Try adding them again.')
+  const loading = action.pending
+  useEffect(() => {
+    if (action.status !== 'success') return
+    const timer = setTimeout(action.reset, 900)
+    return () => clearTimeout(timer)
+  }, [action.status, action.reset])
   async function ingest(files: FileList | null) {
     if (!files?.length) return
-    setLoading(true); setError('')
-    try {
-      const documents = await Promise.all(Array.from(files, async (file) => ({ name: file.name, text: file.type.startsWith('text/') || /\.(txt|md|csv)$/i.test(file.name) ? await file.text() : undefined })))
+    const incoming = Array.from(files)
+    await action.run(async () => {
+      const documents = await Promise.all(incoming.map(async (file) => ({ name: file.name, text: file.type.startsWith('text/') || /\.(txt|md|csv)$/i.test(file.name) ? await file.text() : undefined })))
       update({ proposals: propose(getOnboarding(), documents).proposals })
-    } catch { setError('Those contracts could not be read. Try adding them again.') }
-    finally { setLoading(false) }
+    }, 'contracts')
   }
   return <div className="profile-contracts">
     <input ref={fileInput} type="file" hidden multiple aria-label="Choose contracts, CBAs or handbooks" onChange={(event) => { void ingest(event.target.files); event.target.value = '' }} />
-    {loading ? <SkeletonRegion /> : <button type="button" className={`profile-contract-drop${dragging ? ' dragging' : ''}`} disabled={loading} onClick={() => fileInput.current?.click()} onDragOver={(event) => { event.preventDefault(); setDragging(true) }} onDragLeave={() => setDragging(false)} onDrop={(event) => { event.preventDefault(); setDragging(false); void ingest(event.dataTransfer.files) }}>
+    <ActionButton action={action} actionKey="contracts" pendingLabel="Reading…" successLabel="Added" className={`profile-contract-drop${dragging ? ' dragging' : ''}`} onClick={() => { action.reset(); fileInput.current?.click() }} onDragOver={(event) => { event.preventDefault(); setDragging(true) }} onDragLeave={() => setDragging(false)} onDrop={(event) => { event.preventDefault(); setDragging(false); void ingest(event.dataTransfer.files) }}>
       <Upload size={20} /><span>Drop contracts, CBAs or handbooks</span><span className="profile-muted">or choose files</span>
-    </button>}
-    {error && <p role="alert">{error}</p>}
+    </ActionButton>
+    <ActionFeedback action={action} />
+    {loading && <SkeletonRegion />}
     {state.proposals.length > 0 && <ul className="profile-rule-list profile-proposal-list">{state.proposals.map((proposal) => <li key={proposal.id}>
-      <span className="tag">Proposed</span><p>{formatRuleText(proposal.text)}</p><span>{proposal.source}{proposal.cite ? ` · ${proposal.cite}` : ''}</span>
+      <span className="tag">Proposed</span><p>{formatRuleText(proposal.text)}</p><span>{formatRuleSource(proposal.source)}{proposal.cite ? ` · ${proposal.cite}` : ''}</span>
       {proposal.conflict && <p>{proposal.conflict}</p>}
       <div className="profile-proposal-actions"><button type="button" className="btn" onClick={() => update(acceptProposal(getOnboarding(), proposal))}>Accept</button>
         <button type="button" className="btn" onClick={() => update({ proposals: getOnboarding().proposals.filter((item) => item.id !== proposal.id) })}>Skip</button></div>
     </li>)}</ul>}
-    {state.rules.length > 0 && <ul className="profile-rule-list">{state.rules.map((rule) => <li key={rule.id}><p>{formatRuleText(rule.text)}</p><span>{rule.source}</span></li>)}</ul>}
+    {state.rules.length > 0 && <ul className="profile-rule-list">{state.rules.map((rule) => <li key={rule.id}><p>{formatRuleText(rule.text)}</p><span>{formatRuleSource(rule.source)}</span></li>)}</ul>}
   </div>
 }
 

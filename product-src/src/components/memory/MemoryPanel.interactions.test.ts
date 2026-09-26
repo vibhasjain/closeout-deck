@@ -1,3 +1,4 @@
+import { ActionButton } from '@/components/ActionButton'
 import { Children, isValidElement, type ReactElement, type ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AddMemory, MemoryRow, MemorySuggestion } from './MemoryPanel'
@@ -27,7 +28,7 @@ vi.mock('@/lib/memory', async original => ({ ...await original<typeof import('@/
 const row: Instinct = { id: 'i_0123456789abcdef', kind: 'context', text: 'Travis Reed signs off Lonestar', source: 'chat', status: 'pending', until: null, ruleId: null, at: '2026-09-25T16:00:00Z' }
 type Props = { children?: ReactNode; 'aria-label'?: string; onClick?: () => Promise<void> | void; onBlur?: () => Promise<void> | void; onChange?: (event: { target: { value: string } }) => void; onSubmit?: (event: { preventDefault(): void }) => Promise<void> }
 const elements = (node: ReactNode): ReactElement<Props>[] => Children.toArray(node).flatMap(child => isValidElement<Props>(child) ? [child, ...elements(child.props.children)] : [])
-const button = (node: ReactNode, text: string) => elements(node).find(element => element.type === Btn && Children.toArray(element.props.children).includes(text))!
+const button = (node: ReactNode, text: string) => elements(node).find(element => (element.type === Btn || element.type === ActionButton) && Children.toArray(element.props.children).includes(text))!
 const input = (node: ReactNode) => elements(node).find(element => element.type === 'input' || element.type === 'textarea')!
 const render = <T,>(component: () => T): T => { hooks.index = 0; return component() }
 afterEach(() => { hooks.slots = []; hooks.index = 0; vi.clearAllMocks() })

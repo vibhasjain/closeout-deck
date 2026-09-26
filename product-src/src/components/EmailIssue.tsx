@@ -34,7 +34,7 @@ export function EmailIssue({ email, open: controlled, onOpenChange }: { email: I
     setOwn(false)
   }
 
-  if (sent.length) return <p className="email-issue-sent" role="status"><Check size={14} aria-hidden />Sent to {sent.join(', ')} with {email.file}
+  if (sent.length) return <p className="email-issue-sent" role="status"><Check size={14} aria-hidden />Sent to {sent.join(', ')} with time entries attached
     <button type="button" className="lnk" onClick={() => { setSent([]); setTo(''); setOpen(true) }}>Send to Someone Else</button></p>
   if (!open) return controlled === undefined ? <Btn className="email-issue-open" onClick={() => setOpen(true)}><Mail aria-hidden />Email This Issue</Btn> : null
 
@@ -58,7 +58,7 @@ export function EmailIssue({ email, open: controlled, onOpenChange }: { email: I
     </label>
     <div className="email-issue-attachment">
       <FileSpreadsheet size={16} aria-hidden />
-      <span className="email-issue-file"><b>{email.file}</b><span>{email.rows.toLocaleString()} {email.rows === 1 ? 'row' : 'rows'}</span></span>
+      <span className="email-issue-file"><b>Time entries</b><span>{email.rows.toLocaleString()} {email.rows === 1 ? 'entry' : 'entries'}</span></span>
       <button type="button" className="lnk" onClick={() => download(email)}>Download</button>
     </div>
     <div className="email-issue-actions">

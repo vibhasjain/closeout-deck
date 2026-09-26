@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import { Check, Lock, Phone, ScrollText } from 'lucide-react'
 import { AgentAvatar } from '@/components/chat/AgentAvatar'
 import { Btn } from '@/components/ui'
+import { ActionButton, ActionFeedback } from '@/components/ActionButton'
+import { usePendingAction } from '@/lib/usePendingAction'
 import { QuestionScreen } from '@/components/setup/QuestionScreen'
 import { ProfileCard } from '@/components/profile/ProfileCard'
 import { writingRows } from '@/components/profile/profileSummary'
@@ -50,6 +52,10 @@ export function Agent() {
   const [historyIndex, setHistoryIndex] = useState(() => Math.max(0, state.setupHistory.length - 1))
   const [modal, setModal] = useState<'profile' | 'rulebook' | null>(null)
   const [names, setNames] = useState(state.neverContact ?? [])
+  const finishAction = usePendingAction()
+  const finishTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const finishing = finishAction.pending || finishAction.status === 'success'
+  useEffect(() => () => { if (finishTimer.current) clearTimeout(finishTimer.current) }, [])
   const voice = useVoiceCall('onboard')
   const thisCall = voice.snapshot?.callId ? state.chat.find(message => message.id === `call-${voice.snapshot?.callId}`) : undefined
   const showCallSummary = voice.snapshot?.status === 'ended' && !!thisCall
@@ -132,15 +138,22 @@ export function Agent() {
     void ask(message)
   }
 
-  async function finish(contacts = names) {
-    setBusy(true); setError('')
-    try { await finishOnboarding(contacts); await flushOnboarding(); navigate('/payroll?agent=1') }
-    catch (cause) { updateOnboarding({ setupStep: 'never-contact' }); setError(cause instanceof Error ? cause.message : 'Your profile could not be saved. Try again.') }
-    finally { setBusy(false) }
+  async function finish(contacts = names, key = 'save') {
+    setError('')
+    await finishAction.run(async () => {
+      try {
+        await finishOnboarding(contacts)
+        await flushOnboarding()
+        finishTimer.current = setTimeout(() => navigate('/payroll?agent=1'), 900)
+      } catch (cause) {
+        updateOnboarding({ setupStep: 'never-contact' })
+        throw cause instanceof Error ? cause : new Error('Your profile could not be saved. Try again.')
+      }
+    }, key)
   }
 
   const firmReady = !!firmChoice && (firmChoice === 'sample' || !!domain.trim()) && !busy
-  const neverContactOpen = step === 'never-contact' || (step === 'ready' && busy)
+  const neverContactOpen = step === 'never-contact' || (step === 'ready' && finishing)
   // A modal over the page leaves everything behind it inert, the account corner included.
   const covered = modal !== null || neverContactOpen
   const ready = <section className="setup-split setup-ready">
@@ -149,7 +162,7 @@ export function Agent() {
       <h1>Your Payroll profile is ready</h1>
       {state.setupClosing && <p className="setup-closing">{state.setupClosing}</p>}
       <div className="setup-review-actions"><Btn onClick={() => openModal('profile')}>Check out your Payroll profile</Btn><Btn onClick={() => openModal('rulebook')}>View your Rulebook</Btn></div>
-      <Btn className={!modal && step === 'ready' && !busy ? 'primary setup-bottom' : 'setup-bottom'} data-setup-finish onClick={() => { modalOpener.current = document.activeElement as HTMLElement | null; setNames(getOnboarding().neverContact ?? []); go('never-contact') }}>Finish →</Btn>
+      <Btn className={!modal && step === 'ready' && !busy && !finishing ? 'primary setup-bottom' : 'setup-bottom'} data-setup-finish onClick={() => { modalOpener.current = document.activeElement as HTMLElement | null; setNames(getOnboarding().neverContact ?? []); go('never-contact') }}>Finish →</Btn>
     </div>
     <div className="setup-documents-pane"><div className="setup-profile-stack"><button type="button" className="setup-rulebook-cover" onClick={() => openModal('rulebook')} aria-label="Open your Rulebook"><ScrollText size={24} aria-hidden /><span>{state.firm?.name || 'Your firm'}'s Rulebook</span><small>Confidential</small></button><button type="button" className="setup-profile-cover" onClick={() => openModal('profile')} aria-label="Open your Payroll profile"><ProfileCard state={state} compact className="setup-tilted-profile" /></button></div></div>
   </section>
@@ -189,10 +202,10 @@ export function Agent() {
       {(step === 'ready' || step === 'never-contact') && ready}
       </>}
     </div>
-    {neverContactOpen && <ProfileDialog title="Anyone I should never contact?" description="Add anyone the Closeout Agent should never contact. All outreach requires your permission; this list can be changed any time." className="setup-contact-dialog" closeDisabled={busy} onClose={() => {
-      go('ready'); window.requestAnimationFrame(() => (modalOpener.current ?? document.querySelector<HTMLElement>('[data-setup-finish]'))?.focus())
-    }} footer={<><Btn className={busy ? '' : 'primary'} disabled={busy} onClick={() => void finish()}>{busy ? 'Saving…' : 'Save and continue'}</Btn><Btn disabled={busy} onClick={() => void finish(getOnboarding().neverContact ?? [])}>Skip for now</Btn></>}>
-      <div className="profile-modal-body"><NeverContactInput value={names} onChange={setNames} disabled={busy} />{error && <div className="setup-error" role="alert"><p>{error}</p><Btn onClick={() => void finish()}>Retry</Btn></div>}</div>
+    {neverContactOpen && <ProfileDialog title="Anyone I should never contact?" description="Add anyone the Closeout Agent should never contact. All outreach requires your permission; this list can be changed any time." className="setup-contact-dialog" closeDisabled={finishing} onClose={() => {
+      finishAction.reset(); go('ready'); window.requestAnimationFrame(() => (modalOpener.current ?? document.querySelector<HTMLElement>('[data-setup-finish]'))?.focus())
+    }} footer={<><ActionButton action={finishAction} actionKey="save" pendingLabel="Saving…" successLabel="Saved" className={finishing && finishAction.key === 'skip' ? '' : 'primary'} disabled={finishing} onClick={() => void finish()}>Save and continue</ActionButton><ActionButton action={finishAction} actionKey="skip" pendingLabel="Saving…" successLabel="Saved" disabled={finishing} onClick={() => void finish(getOnboarding().neverContact ?? [], 'skip')}>Skip for now</ActionButton></>}>
+      <div className="profile-modal-body"><NeverContactInput value={names} onChange={setNames} disabled={finishing} /><ActionFeedback action={finishAction} className="setup-error" /></div>
     </ProfileDialog>}
     {modal === 'profile' && <ProfileModal onClose={closeModal} />}
     {modal === 'rulebook' && <RulebookModal onClose={closeModal} />}

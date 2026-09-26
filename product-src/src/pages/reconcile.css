@@ -107,18 +107,14 @@
 .shift-evidence .shift-action-bar > .pay-amounts { flex: 1; text-align: left; }
 .shift-page > aside.shift-page-column > .shift-page-body { overflow-y: auto; overflow-x: hidden; }
 
-/* Narrow payroll pane (the cycle list takes its share): stats wrap, decision rows stack. */
+/* All five cycle totals share one row, even beside the docked agent on an iPad. */
 .reconcile-payments { container: payroll / inline-size; }
-@container payroll (max-width: 820px) {
-  .reconcile-payments .result-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .reconcile-payments .result-summary > .stat:nth-child(3n + 1) { border-left: 0; }
-  .reconcile-payments .result-summary > .stat:nth-child(n + 4) { border-top: 1px solid hsl(var(--border)); }
-}
-@container payroll (max-width: 380px) {
-  .reconcile-payments .result-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .reconcile-payments .result-summary > .stat:nth-child(n) { border-left: 1px solid hsl(var(--border)); }
-  .reconcile-payments .result-summary > .stat:nth-child(odd) { border-left: 0; }
-  .reconcile-payments .result-summary > .stat:nth-child(n + 3) { border-top: 1px solid hsl(var(--border)); }
+.reconcile-payments .result-summary { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: stretch; overflow-x: auto; }
+.reconcile-payments .result-summary > .stat { padding: .75rem .625rem; }
+.reconcile-payments .result-summary .lbl { white-space: nowrap; }
+@media (max-width: 767.98px) {
+  /* A touch-scrollable strip preserves legible labels without ever becoming 3 + 2. */
+  .reconcile-payments .result-summary { grid-template-columns: repeat(5, minmax(104px, 1fr)); }
 }
 @container payroll (max-width: 640px) {
   .payroll-summary-clients :is(th, td):last-child { --table-edge-inset: 1.25rem; }

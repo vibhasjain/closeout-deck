@@ -11,7 +11,7 @@ import { OverlayProvider } from '@/components/shell/Overlay'
 import { bucketHue, buildCycles, kindLabel, type DeskCycle } from '@/lib/desk'
 import { titleCase } from '@/lib/utils'
 import { DEFAULTS, useOnboarding, type CustomDeskRule, type Onboarding } from '@/lib/onboarding'
-import { formatRuleDate, formatRuleText, getRuleActivity } from '@/lib/rules'
+import { formatRuleDate, formatRuleSource, formatRuleText, getRuleActivity } from '@/lib/rules'
 import { acceptProposal, compileRule, propose } from '@/lib/ruleIntake'
 import { Rules } from '@/pages/Rules'
 
@@ -193,6 +193,11 @@ describe('rule detail', () => {
 })
 
 describe('rule activity and display', () => {
+  it('keeps remembered-rule ids and uploaded filenames out of source labels', () => {
+    expect(formatRuleSource('Remembered decision · CA-OT-8')).toBe('Remembered decision')
+    expect(formatRuleSource('pacific_cold_storage_09-20-2026.csv')).toBe('Uploaded document')
+    expect(formatRuleSource('Pacific Cold Storage Handbook')).toBe('Pacific Cold Storage Handbook')
+  })
   it('keeps creation dates stable and formats calendar dates without timezone drift', () => {
     const custom = compileRule('pay a $2 Payroll differential.')
     const created = getRuleActivity(custom.id, [], { ...state, customRules: [custom] })

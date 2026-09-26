@@ -6,6 +6,8 @@ import { DEFAULTS, type Onboarding } from '@/lib/onboarding'
 import type { CallSnapshot } from '@/lib/live'
 import { CallScreen } from '@/components/voice/CallScreen'
 import { Message } from '@/components/chat/Message'
+import { ActionFeedback } from '@/components/ActionButton'
+import type { PendingAction } from '@/lib/usePendingAction'
 
 const hooks = vi.hoisted(() => ({ cursor: 0, slots: [] as unknown[] }))
 const store = vi.hoisted(() => ({ state: null as Onboarding | null }))
@@ -35,8 +37,8 @@ vi.mock('@/lib/onboarding', async (original) => ({
 vi.mock('@/lib/onboardingFlow', () => flow)
 vi.mock('@/lib/viewerSession', () => ({ viewerSession: () => ({ name: 'Morgan Lee' }) }))
 
-type Props = { children?: ReactNode; footer?: ReactNode; className?: string; 'aria-label'?: string; onClick?(): void; onChange?(event: { target: { value: string } }): void; onSubmit?(event: { preventDefault(): void }): void; question?: string; onBack?(): void; onForward?(): void; onAnswer?(answer: string): void; onKeepTyping?(): void; onRetry?(): void; message?: Onboarding['chat'][number] }
-const elements = (tree: ReactNode): ReactElement<Props>[] => Children.toArray(tree).flatMap((node) => isValidElement<Props>(node) ? [node, ...elements(node.props.children), ...elements(node.props.footer)] : [])
+type Props = { children?: ReactNode; footer?: ReactNode; className?: string; 'aria-label'?: string; action?: PendingAction; actionKey?: string; onClick?(): void; onChange?(event: { target: { value: string } }): void; onSubmit?(event: { preventDefault(): void }): void; question?: string; onBack?(): void; onForward?(): void; onAnswer?(answer: string): void; onKeepTyping?(): void; onRetry?(): void; message?: Onboarding['chat'][number] }
+const elements = (tree: ReactNode): ReactElement<Props>[] => Children.toArray(tree).flatMap((node) => isValidElement<Props>(node) ? node.type === ActionFeedback ? elements(ActionFeedback({ action: node.props.action! })) : [node, ...elements(node.props.children), ...elements(node.props.footer)] : [])
 const render = () => { hooks.cursor = 0; return Agent() }
 const text = (tree: ReactNode, label: string) => elements(tree).find(({ props }) => props.children === label)!
 const question = () => elements(render()).find((node) => node.type === QuestionScreen)!
@@ -59,7 +61,7 @@ beforeEach(() => {
   flow.requestOnboarding.mockResolvedValue({})
   flow.finishOnboarding.mockResolvedValue(undefined)
 })
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers() })
 
 describe('onboarding navigation', () => {
   it('leaves the call view immediately on Keep typing and sends the typing continuation independently', () => {
@@ -146,12 +148,41 @@ describe('onboarding navigation', () => {
     expect(question().props.onAnswer).toBeTypeOf('function')
   })
   it('waits for the real finish turn and opens the agent sheet after Finish', async () => {
+    vi.useFakeTimers()
     store.state!.setupStep = 'never-contact'
     let resolve = () => {}
     flow.finishOnboarding.mockReturnValue(new Promise<void>((yes) => { resolve = yes }))
     text(render(), 'Save and continue').props.onClick!()
+    expect(text(render(), 'Save and continue').props.action).toMatchObject({ status: 'pending', key: 'save', pending: true })
     expect(navigate).not.toHaveBeenCalled()
+    // Persistence can move the store to ready before the request resolves; the dialog still owns the next step.
+    store.state!.setupStep = 'ready'
+    expect(text(render(), 'Save and continue').props.action?.pending).toBe(true)
+    expect(text(render(), 'Finish →').props.className).not.toContain('primary')
     resolve()
-    await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith('/payroll?agent=1'))
+    for (let i = 0; i < 8; i++) await Promise.resolve()
+    expect(text(render(), 'Save and continue').props.action?.status).toBe('success')
+    await vi.advanceTimersByTimeAsync(899)
+    expect(navigate).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(1)
+    expect(navigate).toHaveBeenCalledWith('/payroll?agent=1')
+  })
+  it('retries the original Skip choice inline without replacing it with the current contact draft', async () => {
+    vi.useFakeTimers()
+    store.state!.setupStep = 'never-contact'
+    store.state!.neverContact = ['Original contact']
+    flow.finishOnboarding.mockRejectedValueOnce(new Error('Connection interrupted'))
+    text(render(), 'Skip for now').props.onClick!()
+    expect(text(render(), 'Skip for now').props.action).toMatchObject({ pending: true, key: 'skip' })
+    for (let i = 0; i < 8; i++) await Promise.resolve()
+    expect(text(render(), 'Skip for now').props.action?.error).toBe('Connection interrupted')
+    expect(navigate).not.toHaveBeenCalled()
+    store.state!.neverContact = ['A later change']
+    text(render(), 'Retry').props.onClick!()
+    for (let i = 0; i < 8; i++) await Promise.resolve()
+    expect(flow.finishOnboarding).toHaveBeenLastCalledWith(['Original contact'])
+    expect(text(render(), 'Skip for now').props.action?.status).toBe('success')
+    await vi.advanceTimersByTimeAsync(900)
+    expect(navigate).toHaveBeenCalledWith('/payroll?agent=1')
   })
 })

@@ -1,5 +1,7 @@
 import { useId, useState, type FormEvent } from 'react'
 import { Btn } from '@/components/ui'
+import { ActionButton, ActionFeedback } from '@/components/ActionButton'
+import { usePendingAction } from '@/lib/usePendingAction'
 import { confirmed, startOver, startOverAllowed } from '@/lib/startOver'
 import './start-over.css'
 
@@ -14,23 +16,21 @@ const FAILED = 'Start over did not finish. Try again in a moment.'
 export function StartOver({ onClose }: { onClose?(): void }) {
   const [open, setOpen] = useState(!!onClose)
   const [typed, setTyped] = useState('')
-  const [working, setWorking] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const action = usePendingAction()
+  const working = action.pending || action.status === 'success'
   const id = useId()
   if (!startOverAllowed()) return null
 
-  const cancel = () => { setOpen(false); setTyped(''); setError(null); onClose?.() }
+  const cancel = () => { setOpen(false); setTyped(''); action.reset(); onClose?.() }
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (!confirmed(typed) || working) return
-    setWorking(true)
-    setError(null)
-    const result = await startOver(typed)
-    if (result === 'ok') return
-    setWorking(false)
-    // A 403 flips the shared gate, so this section and every menu item disappear.
-    if (result === 'not_internal') cancel()
-    else setError(result === 'busy' ? BUSY : FAILED)
+    await action.run(async () => {
+      const result = await startOver(typed)
+      // A 403 flips the shared gate, so this section and every menu item disappear.
+      if (result === 'not_internal') { cancel(); return }
+      if (result !== 'ok') throw new Error(result === 'busy' ? BUSY : FAILED)
+    })
   }
 
   return (
@@ -41,14 +41,14 @@ export function StartOver({ onClose }: { onClose?(): void }) {
         <form onSubmit={submit}>
           <label htmlFor={`${id}-confirm`}>Type “start over” to confirm</label>
           <input id={`${id}-confirm`} className="q-input" autoFocus autoComplete="off" spellCheck={false} value={typed}
-            disabled={working} onChange={(event) => setTyped(event.target.value)} />
+            disabled={working} onChange={(event) => { action.reset(); setTyped(event.target.value) }} />
           <div className="start-over-actions">
-            <Btn type="submit" disabled={!confirmed(typed) || working}>{working ? 'Starting over…' : 'Wipe and start over'}</Btn>
+            <ActionButton type="submit" action={action} pendingLabel="Starting over…" successLabel="Started over" disabled={!confirmed(typed) || working}>Wipe and start over</ActionButton>
             <Btn disabled={working} onClick={cancel}>Cancel</Btn>
           </div>
         </form>
       ) : <Btn onClick={() => setOpen(true)}>Start over</Btn>}
-      {error && <p className="start-over-error" role="alert">{error}</p>}
+      <ActionFeedback action={action} className="start-over-error" />
     </section>
   )
 }

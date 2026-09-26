@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Banknote, ClipboardList, Ellipsis, ListChecks, LogOut, Menu, PanelLeft, RotateCcw, Settings, UserRound, X } from 'lucide-react'
 import { flushSync } from 'react-dom'
 import { NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -19,6 +19,10 @@ const tabs = [
   { to: '/profile', label: 'Payroll profile', icon: UserRound },
 ]
 const focusableSelector = 'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]'
+// NavLink updates its current-page state on every route; its static SVG and label do not.
+const NavigationLabel = memo(function NavigationLabel({ icon: Icon, label }: { icon: typeof Banknote; label: string }) {
+  return <><Icon size={16} aria-hidden="true" /><span className="sidebar-label">{label}</span></>
+})
 
 export function TopNav({ wide = true }: { wide?: boolean } = {}) {
   const { pathname } = useLocation()
@@ -132,7 +136,7 @@ export function TopNav({ wide = true }: { wide?: boolean } = {}) {
       }}><Menu size={18} aria-hidden="true" /></button>
       <div className="brand"><img className="brand-logo" src={import.meta.env.BASE_URL + 'logo-small.svg'} alt="HyperTrack" width="28" height="28" /></div>
     </div>
-    {!wide && drawerOpen && <div className="sidebar-scrim" aria-hidden="true" onClick={closeDrawer} />}
+    {!wide && <div className="sidebar-scrim" aria-hidden="true" onClick={closeDrawer} />}
     <div id={sidebarId} ref={drawer} className="sidebar-surface" role={!wide && drawerOpen ? 'dialog' : undefined} aria-modal={!wide && drawerOpen ? true : undefined} aria-label={!wide && drawerOpen ? 'Navigation' : undefined} tabIndex={!wide && drawerOpen ? -1 : undefined} inert={!wide && !drawerOpen}>
       <div className="sidebar-brand-row">
         <div className="brand"><img className="brand-logo" src={import.meta.env.BASE_URL + 'logo-small.svg'} alt="HyperTrack" width="28" height="28" /></div>
@@ -143,11 +147,11 @@ export function TopNav({ wide = true }: { wide?: boolean } = {}) {
         {tabs.map(({ to, label, icon: Icon }, index) => {
           const active = pathname.startsWith(to) && (to !== '/payroll' || !intakeActive)
           return <span className="sidebar-nav-group" key={to}>
-            <NavLink to={`${to}${agentOpen ? '?agent=1' : ''}`} className={() => `sidebar-nav-item${active ? ' active' : ''}`} aria-label={label} title={label} aria-current={active ? 'page' : false} aria-disabled={setupLocked || undefined} tabIndex={setupLocked ? -1 : undefined} onClick={(event) => { if (setupLocked) event.preventDefault(); else closeDrawer() }}><Icon size={16} aria-hidden="true" /><span className="sidebar-label">{label}</span></NavLink>
-            {index === 0 && <NavLink to={`${pendingHref}${agentOpen ? '&agent=1' : ''}`} className={() => `sidebar-nav-item${intakeActive ? ' active' : ''}`} aria-label="Timesheets" title="Timesheets" aria-current={intakeActive ? 'page' : false} aria-disabled={setupLocked || undefined} tabIndex={setupLocked ? -1 : undefined} onClick={(event) => { if (setupLocked) event.preventDefault(); else closeDrawer() }}><ClipboardList size={16} aria-hidden="true" /><span className="sidebar-label">Timesheets</span></NavLink>}
+            <NavLink to={`${to}${agentOpen ? '?agent=1' : ''}`} className={() => `sidebar-nav-item${active ? ' active' : ''}`} aria-label={label} title={label} aria-current={active ? 'page' : false} aria-disabled={setupLocked || undefined} tabIndex={setupLocked ? -1 : undefined} onClick={(event) => { if (setupLocked) event.preventDefault(); else closeDrawer() }}><NavigationLabel icon={Icon} label={label} /></NavLink>
+            {index === 0 && <NavLink to={`${pendingHref}${agentOpen ? '&agent=1' : ''}`} className={() => `sidebar-nav-item${intakeActive ? ' active' : ''}`} aria-label="Timesheets" title="Timesheets" aria-current={intakeActive ? 'page' : false} aria-disabled={setupLocked || undefined} tabIndex={setupLocked ? -1 : undefined} onClick={(event) => { if (setupLocked) event.preventDefault(); else closeDrawer() }}><NavigationLabel icon={ClipboardList} label="Timesheets" /></NavLink>}
           </span>
         })}
-        <button type="button" className={`sidebar-nav-item${pathname === '/settings' ? ' active' : ''}`} aria-label="Settings" title="Settings" aria-current={pathname === '/settings' ? 'page' : undefined} disabled={setupLocked} onClick={() => navigateTo(`/settings${agentOpen ? '?agent=1' : ''}`)}><Settings size={16} aria-hidden="true" /><span className="sidebar-label">Settings</span></button>
+        <button type="button" className={`sidebar-nav-item${pathname === '/settings' ? ' active' : ''}`} aria-label="Settings" title="Settings" aria-current={pathname === '/settings' ? 'page' : undefined} disabled={setupLocked} onClick={() => navigateTo(`/settings${agentOpen ? '?agent=1' : ''}`)}><NavigationLabel icon={Settings} label="Settings" /></button>
       </nav>
       <PayRuns onNavigate={closeDrawer} />
       <GettingStarted onNavigate={closeDrawer} />

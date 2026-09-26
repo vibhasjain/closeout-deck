@@ -495,7 +495,8 @@ const RULES = [
 ];
 
 // ---------- engine ----------
-function runEngine(week, paramOverrides) {
+// Hydrated server runs need the same evidence helpers, not a second evaluation of every rule.
+function createEngineContext(week, paramOverrides) {
   const overrides = paramOverrides || {};
   const P = (rid, key) => {
     const o = overrides[rid + '.' + key];
@@ -503,7 +504,12 @@ function runEngine(week, paramOverrides) {
     const r = RULES.find(x => x.id === rid);
     return r.params[key].v;
   };
-  const ctx = makeCtx(week, P);
+  return makeCtx(week, P);
+}
+
+function runEngine(week, paramOverrides) {
+  const ctx = createEngineContext(week, paramOverrides);
+  const P = ctx.params;
   // pass 1: daily rules (need _dailyOtMin before weekly)
   const results = new Map();
   for (const s of week) {
@@ -846,7 +852,7 @@ function makeWeek({ seed = 20260824, scripted = true, start } = {}) {
 }
 
 // ---------- exports / self-check ----------
-export { FACILITIES, FEATURES, RULES, RERUN_RULES, makeWeek, runEngine, rerunEngine, backtest, fireCount, dayLabels, fmtT, fmtH, fmtHM, money, DAYS, MIN, H };
+export { FACILITIES, FEATURES, RULES, RERUN_RULES, makeWeek, createEngineContext, runEngine, rerunEngine, backtest, fireCount, dayLabels, fmtT, fmtH, fmtHM, money, DAYS, MIN, H };
 
 export function selfCheck() {
   const week = makeWeek();

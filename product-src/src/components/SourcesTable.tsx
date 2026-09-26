@@ -1,5 +1,7 @@
+import { ActionButton } from '@/components/ActionButton'
+import { usePendingAction } from '@/lib/usePendingAction'
 /* eslint-disable react-refresh/only-export-components -- Vendor metadata helpers are shared by the table, detail and modal. */
-import { Fragment, useEffect, useRef, useState, type JSX } from 'react'
+import { Fragment, useEffect, useRef, type JSX } from 'react'
 import { Camera, Clock3, MapPin, QrCode, Upload } from 'lucide-react'
 import { DESTS, SOURCES, type Destination, type Source } from '@/bench/vendors'
 import type { Shift } from '@/bench/engine.js'
@@ -32,7 +34,8 @@ export function vendorRows(vendor: Vendor, cycle: DeskCycle): Shift[] {
 }
 
 export function VendorTile({ vendor, large = false }: { vendor: Vendor; large?: boolean }): JSX.Element {
-  const mark = 'mark' in vendor ? vendor.mark : undefined
+  // The HyperTrack mark belongs only in the shell header; location evidence uses a map pin.
+  const mark = 'mark' in vendor && !vendor.builtin ? vendor.mark : undefined
   const icon = 'icon' in vendor ? vendor.icon : undefined
   const Icon = icon === 'camera' ? Camera : icon === 'clock' ? Clock3 : icon === 'qr' ? QrCode : icon === 'upload' ? Upload : MapPin
   return <Tile className={large ? 'lg' : undefined}>
@@ -57,7 +60,12 @@ export function SourcesTable({ group, selected, onSelect, onConnect, vendors: su
   const [state, update] = useOnboarding()
   const { current } = useDesk()
   const { toast } = useOverlay()
-  const [syncing, setSyncing] = useState<string[]>([])
+  const syncAction = usePendingAction()
+  useEffect(() => {
+    if (syncAction.status !== 'success') return
+    const timer = setTimeout(syncAction.reset, 900)
+    return () => clearTimeout(timer)
+  }, [syncAction])
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>())
   const latest = useRef(state)
   useEffect(() => { latest.current = state }, [state])
@@ -71,16 +79,17 @@ export function SourcesTable({ group, selected, onSelect, onConnect, vendors: su
   function sync(vendor: Vendor) {
     const key = vendorKey(vendor)
     if (timers.current.has(key)) return
-    setSyncing((keys) => [...keys, key])
+    void syncAction.run(() => new Promise<void>(resolve => {
     timers.current.set(key, setTimeout(() => {
       timers.current.delete(key)
       const connections = latest.current.connections
       const next = { ...connections, [key]: { ...connections[key], status: 'connected' as const, lastSync: new Date().toISOString() } }
       latest.current = { ...latest.current, connections: next }
       update({ connections: next })
-      setSyncing((keys) => keys.filter((item) => item !== key))
+      resolve()
       toast(`${vendor.name} synced · ${vendorRows(vendor, current).length} records`)
     }, 1200))
+    }), key)
   }
 
   return <div className="sources-table-wrap scroll">
@@ -94,7 +103,7 @@ export function SourcesTable({ group, selected, onSelect, onConnect, vendors: su
         {vendors.filter((vendor) => vendor.group === name).map((vendor) => {
           const key = vendorKey(vendor)
           const active = selected === key || selected === vendor.id
-          const busy = syncing.includes(key)
+          const busy = syncAction.pending && syncAction.key === key
           const action = actionFor?.(vendor)
           const lastSync = vendor.lastSync?.includes('T') ? new Date(vendor.lastSync).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : vendor.lastSync
           return <tr key={key} data-source={key} className={active ? 'sel' : undefined} tabIndex={0} aria-selected={active}
@@ -108,13 +117,13 @@ export function SourcesTable({ group, selected, onSelect, onConnect, vendors: su
             <td className="mono num" title={vendor.lastSync?.includes('T') ? new Date(vendor.lastSync).toLocaleString('en-US', { hour12: true }) : lastSync ?? undefined}>{lastSync}</td>
             <td className="mono num">{vendorRows(vendor, current).length}</td>
             <td><Tag tone={busy ? 'blue' : undefined}>{busy ? 'Syncing' : vendor.status === 'connected' ? 'Connected' : 'Available'}</Tag></td>
-            <td><Btn disabled={busy || action?.disabled} onClick={(event) => {
+            <td>{vendor.status === 'connected' && !action ? <ActionButton action={syncAction} actionKey={key} pendingLabel="Syncing…" successLabel="Synced" onClick={event => { event.stopPropagation(); onSelect(key); sync(vendor) }}>Sync Now</ActionButton> : <Btn disabled={busy || action?.disabled} onClick={(event) => {
               event.stopPropagation()
               onSelect(key)
               if (action) action.onClick()
               else if (vendor.status === 'connected') sync(vendor)
               else onConnect(key)
-            }}>{action?.label ?? (vendor.status === 'connected' ? 'Sync Now' : 'Connect')}</Btn></td>
+            }}>{action?.label ?? (vendor.status === 'connected' ? 'Sync Now' : 'Connect')}</Btn>}</td>
           </tr>
         })}
       </Fragment>)}{vendors.length === 0 && <tr><td colSpan={8}><span className="r-note">No systems match this search</span></td></tr>}</tbody>

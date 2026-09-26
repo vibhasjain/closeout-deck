@@ -136,6 +136,9 @@
 /* Phone width (D17): the close button sits over the first column's title, and values wrap instead of running off the sheet. */
 @media (max-width: 800px) {
   .shift-modal .shift-page-column:first-child .page-title-row { padding-right: 3.5rem; }
+  /* A sheet title can wrap beside Sample, download and close. Its own surface grows,
+     while routed page headers retain the shell's shared divider height. */
+  .shift-modal .shift-page-column:first-child > .page-title-row { height: auto; flex-basis: auto; }
   .shift-page .kv th.k, .shift-page .kv td.k { padding-right: 1rem; }
   .shift-page .kv td:last-child, .kv-via, .kv-via > span:last-child { white-space: normal; overflow-wrap: anywhere; }
 }

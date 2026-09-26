@@ -1,10 +1,13 @@
+import { ActionButton, ActionFeedback } from '@/components/ActionButton'
+import { SkeletonRegion } from '@/components/Skeleton'
+import { usePendingAction } from '@/lib/usePendingAction'
 import { useEffect, useRef, useState, type JSX } from 'react'
 import { Check, ChevronLeft, ChevronRight, Lock, X } from 'lucide-react'
 import type { Source, Destination } from '@/bench/vendors'
 import { useDesk } from '@/lib/desk'
 import { useOnboarding } from '@/lib/onboarding'
 import { connectSource } from '@/lib/data'
-import { Btn, Spinner, Tag } from '@/components/ui'
+import { Spinner, Tag } from '@/components/ui'
 import { VendorTile, vendorKey } from '@/components/SourcesTable'
 import { useOverlay } from '@/components/shell/Overlay'
 
@@ -16,7 +19,7 @@ export function ConnectModal({ vendor, onDone, loadSample = false, cycleId }: { 
   const { close, toast } = useOverlay()
   const [phase, setPhase] = useState<'login' | 'syncing' | 'done'>('login')
   const [step, setStep] = useState(0)
-  const [error, setError] = useState('')
+  const action = usePendingAction()
   const [loaded, setLoaded] = useState<number | null>(null)
   const closeButton = useRef<HTMLButtonElement>(null)
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
@@ -46,10 +49,8 @@ export function ConnectModal({ vendor, onDone, loadSample = false, cycleId }: { 
 
   function connect() {
     if (phase !== 'login' || timers.current.length) return
-    // Keep keyboard focus in the overlay when the sign-in button disappears.
-    closeButton.current?.focus()
-    setPhase('syncing')
-    setError('')
+    void action.run(() => new Promise<void>((resolve, reject) => {
+    setPhase('syncing'); setStep(0)
     for (let next = 1; next < steps.length; next++) {
       timers.current.push(setTimeout(() => setStep(next), next * 800))
     }
@@ -59,19 +60,21 @@ export function ConnectModal({ vendor, onDone, loadSample = false, cycleId }: { 
           const result = await connectSource({ set: vendor.set ?? 2, system: vendor.name, site: vendor.sites[0] })
           if (mounted.current) setLoaded((result?.files ?? []).reduce((total, file) => total + (file.entryCount ?? 0), 0))
         }
-        catch (cause) { if (mounted.current) { setError(cause instanceof Error ? cause.message : 'The sample connection could not be loaded. Try again.'); setPhase('login'); timers.current = [] } return }
+        catch (cause) { if (mounted.current) { setPhase('login'); timers.current = [] }; reject(cause); return }
       }
       if (!mounted.current) return
       const connections = { ...latest.current.connections, [vendorKey(vendor)]: { status: 'connected' as const, method: 'browser' as const, lastSync: new Date().toISOString(), ...(loadSample ? { sample: true } : {}) } }
       latest.current = { ...latest.current, connections }
       update({ connections })
       setPhase('done')
+      resolve()
       timers.current.push(setTimeout(() => {
         close()
         toast(`${vendor.name} connected${loadSample ? ' · Sample' : ''}`)
         onDone()
       }, 700))
     }, steps.length * 800))
+    }))
   }
 
   return <div className="connect-modal">
@@ -87,7 +90,7 @@ export function ConnectModal({ vendor, onDone, loadSample = false, cycleId }: { 
           <Tag>{loadSample ? 'Sample' : 'Demo'}</Tag>
         </div>
         <div className="vbrowser-page">
-          {phase === 'login' ? <div className="vbrowser-login">
+          <div className="vbrowser-login">
             <VendorTile vendor={vendor} large />
             <h4>Sign in to {vendor.name}</h4>
             <div className="vbrowser-account">
@@ -97,10 +100,11 @@ export function ConnectModal({ vendor, onDone, loadSample = false, cycleId }: { 
                 <div><dt>Password</dt><dd className="mono">••••••••</dd></div>
               </dl>
             </div>
-            <Btn className="primary" onClick={connect}>Sign In</Btn>
+            <ActionButton action={action} pendingLabel="Connecting…" successLabel="Connected" className="primary" onClick={connect}>Sign In</ActionButton>
             <p className="r-note">{loadSample ? 'Simulated connector · loads Sample time entries' : 'Demo connection · use placeholder credentials'}</p>
-            {error && <p className="r-note" role="alert">{error}</p>}
-          </div> : <div className="vbrowser-progress">
+            <ActionFeedback action={action} />
+          </div>
+          {phase !== 'login' && <div className="vbrowser-progress">
             <div className="vbrowser-progress-heading">
               <div className="vendor-title"><VendorTile vendor={vendor} large /><h4>{vendor.name}</h4></div>
               <div role="status"><Tag tone={phase === 'syncing' ? 'blue' : undefined}>{phase === 'syncing' ? 'Syncing' : 'Connected'}</Tag></div>
@@ -111,6 +115,7 @@ export function ConnectModal({ vendor, onDone, loadSample = false, cycleId }: { 
                 <span>{label}</span>
               </li>)}
             </ol>
+            {phase === 'syncing' && <SkeletonRegion rows={2} />}
             {phase === 'done' && <>
               <p className="vbrowser-result" role="status">Connected · <span className="mono">{sites}</span> {sites === 1 ? 'site' : 'sites'} · {destination
                 ? <><span className="mono">{approved.length}</span> approved payments previewed</>

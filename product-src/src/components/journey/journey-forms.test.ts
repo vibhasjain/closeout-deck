@@ -12,6 +12,11 @@ const store = vi.hoisted(() => ({ state: undefined as Onboarding | undefined, th
 const api = vi.hoisted(() => ({ askGaps: vi.fn(), sendPayroll: vi.fn(), downloadBatch: vi.fn(), getDisputes: vi.fn(), getThreads: vi.fn(), createDispute: vi.fn(), simulateDispute: vi.fn(), resolveDispute: vi.fn(), useJourneyCycle: vi.fn() }))
 vi.mock('react', async importOriginal => ({
   ...await importOriginal<typeof import('react')>(),
+  useRef: <T,>(initial: T) => {
+    const slot = hooks.cursor++
+    if (!(slot in hooks.slots)) hooks.slots[slot] = { current: initial }
+    return hooks.slots[slot]
+  },
   useState: <T,>(initial: T | (() => T)) => {
     const slot = hooks.cursor++
     if (!(slot in hooks.slots)) hooks.slots[slot] = typeof initial === 'function' ? (initial as () => T)() : initial
@@ -77,7 +82,7 @@ function mount(render: () => ReactNode) {
     fields: () => elements(tree),
   }
 }
-const primaryCount = (html: string) => (html.match(/class="btn primary"/g) ?? []).length
+const primaryCount = (html: string) => (html.match(/class="btn [^"]*\bprimary\b[^"]*"/g) ?? []).length
 
 beforeEach(() => {
   vi.clearAllMocks(); hooks.cursor = 0; hooks.slots = []; hooks.pending = []
@@ -226,14 +231,15 @@ describe('journey send form', () => {
     expect(api.downloadBatch).toHaveBeenCalledWith(batch.id, '/data/batches/batch-1/csv')
   })
 
-  it('shows the existing batch on 409 and removes the send action', async () => {
+  it('shows the existing batch on 409 and retains the quiet sent confirmation', async () => {
     api.sendPayroll.mockResolvedValueOnce({ status: 409, batch })
     const form = mount(() => SendForm({ cycle: payload() }))
     const html = await form.click('Send to Payroll')
     expect(html).toContain('This batch already exists.')
     expect(html).toContain('Sent to ADP')
     expect(html).toContain('Download CSV')
-    expect(form.fields().some(element => element.props.children === 'Send to Payroll' && element.props.onClick)).toBe(false)
+    expect(html).toContain('data-action-state="success"')
+    expect(primaryCount(html)).toBe(0)
     expect(api.sendPayroll).toHaveBeenCalledTimes(1)
   })
 

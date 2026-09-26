@@ -213,13 +213,13 @@ describe('permanent Closeout Agent conversation', () => {
     expect(button(render(), 'Call your Closeout Agent').props.disabled).toBe(false)
   })
 
-  it('posts selected file names without discarding a draft or session', () => {
+  it('acknowledges attachments without exposing file names or discarding a draft or session', () => {
     updateOnboarding({ chatSessionId: 'saved-session' })
     type('Keep my draft')
     const input = elements(render()).find((element) => element.type === 'input')!
     const target = { value: 'upload', files: [{ name: 'client.csv' }, { name: 'hours.pdf' }] as unknown as FileList }
     input.props.onChange!({ target })
-    expect(getOnboarding().chat.at(-1)).toMatchObject({ role: 'user', text: 'Attached client.csv, hours.pdf' })
+    expect(getOnboarding().chat.at(-1)).toMatchObject({ role: 'user', text: 'Attached 2 documents' })
     expect(textarea(render()).props.value).toBe('Keep my draft')
     expect(getOnboarding().chatSessionId).toBe('saved-session')
     expect(target.value).toBe('')

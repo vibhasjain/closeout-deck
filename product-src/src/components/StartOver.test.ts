@@ -67,7 +67,9 @@ describe('Start over', () => {
     const html = renderToStaticMarkup(createElement(StartOver, { onClose() {} }))
     expect(html).toContain('Wipes your onboarding')
     expect(html).toContain('Type “start over” to confirm')
-    expect(html).toMatch(/<button type="submit" disabled="" class="btn">Wipe and start over<\/button>/)
+    expect(html).toMatch(/<button[^>]*type="submit"[^>]*disabled=""/)
+    expect(html).toContain('data-action-state="idle"')
+    expect(html).toContain('Wipe and start over')
     expect(html).toMatch(/<button type="button" class="btn">Cancel<\/button>/)
     expect(html).not.toContain('primary')
     session.email = 'ops@acme.com'

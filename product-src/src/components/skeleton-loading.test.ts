@@ -24,7 +24,7 @@ import { DEFAULTS, type Onboarding } from '@/lib/onboarding'
 import * as desk from '@/lib/desk'
 import recorded from '@/lib/fixtures/server-cycle.json'
 
-const state = vi.hoisted(() => ({ forceBusy: false, profile: null as Onboarding | null }))
+const state = vi.hoisted(() => ({ forceBusy: false, pendingActionKey: null as string | null, profile: null as Onboarding | null }))
 vi.mock('react', async original => {
   const react = await original<typeof import('react')>()
   return { ...react, useState: (initial: unknown) => react.useState(state.forceBusy && initial === false ? true : initial) }
@@ -39,14 +39,36 @@ vi.mock('@/lib/journey', async original => ({ ...await original<typeof import('@
 }))
 vi.mock('@/lib/useDictation', () => ({ useDictation: () => ({ active: false, finishing: false, state: 'idle' }) }))
 vi.mock('@/lib/useVoiceCall', () => ({ useVoiceCall: () => ({ snapshot: null }) }))
+vi.mock('@/lib/usePendingAction', async original => {
+  const actual = await original<typeof import('@/lib/usePendingAction')>()
+  return { ...actual, usePendingAction: (...args: Parameters<typeof actual.usePendingAction>) => {
+    const action = actual.usePendingAction(...args)
+    return state.pendingActionKey === null ? action : { ...action, status: 'pending', pending: true, key: state.pendingActionKey }
+  } }
+})
 
 const payload = recorded.payload as unknown as CyclePayload
 const cycle = hydrate(payload, DEFAULTS)
 const render = (node: ReactElement) => renderToStaticMarkup(h(MemoryRouter, { initialEntries: ['/payroll'] }, h(OverlayProvider, null, node)))
-/** Grep the rendered text, except the explicitly hidden screen-reader announcement. */
+/** Ignore complete hidden subtrees, including nested reserved button labels and the screen-reader announcement. */
+function visibleText(html: string) {
+  const stack: boolean[] = []
+  const text: string[] = []
+  const voidTags = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'])
+  for (const [token] of html.matchAll(/<[^>]+>|[^<]+/g)) {
+    if (token.startsWith('</')) { stack.pop(); continue }
+    if (token.startsWith('<')) {
+      const tag = token.match(/^<([\w-]+)/)?.[1]
+      if (!tag || voidTags.has(tag) || token.endsWith('/>')) continue
+      const hidden = !!stack.at(-1) || /\baria-hidden="true"|\shidden(?:="[^"]*")?(?=[\s>])|\bstyle="[^"]*(?:visibility:\s*hidden|display:\s*none)|\bclass="[^"]*\bsr-only\b/.test(token)
+      stack.push(hidden)
+    } else if (!stack.at(-1)) text.push(token)
+  }
+  return text.join(' ').replace(/\s+/g, ' ').trim()
+}
+
 function assertSkeleton(html: string) {
-  const visible = html.replace(/<span class="[^"]*\bsr-only\b[^"]*">[^<]*<\/span>/g, '').replace(/<[^>]*>/g, ' ')
-  expect(visible).not.toMatch(/loading|reading your|fetching/i)
+  expect(visibleText(html)).not.toMatch(/\bloading\b|\breading your\b|\bfetching\b/i)
   expect(html).toMatch(/aria-busy="true"[^>]*data-skeleton=/)
   expect(html).toContain('class="sr-only skeleton-label">Loading</span>')
   expect(html).toMatch(/class="skeleton [^"]*" aria-hidden="true"/)
@@ -54,6 +76,7 @@ function assertSkeleton(html: string) {
 
 beforeEach(() => {
   state.forceBusy = false
+  state.pendingActionKey = null
   state.profile = { ...DEFAULTS, setupStep: 'conversation' }
   vi.spyOn(desk, 'useDesk').mockReturnValue({ cycles: [cycle], current: cycle, byId: () => cycle, loaded: false, loading: true, error: null })
 })
@@ -84,15 +107,39 @@ describe('content loading is ghosted, with no visible loading copy', () => {
   })
   it.each(['transcript', 'contracts'])('%s fetch', name => {
     state.forceBusy = true
-    assertSkeleton(render(name === 'transcript'
+    if (name === 'contracts') state.pendingActionKey = 'contracts'
+    const html = render(name === 'transcript'
       ? h(CallCard, { card: { kind: 'call', callId: 'saved-call', seconds: 15 } })
-      : h(RulebookModal, { onClose() {}, initialSection: 'contracts' })))
+      : h(RulebookModal, { onClose() {}, initialSection: 'contracts' }))
+    assertSkeleton(html)
+    if (name === 'contracts') {
+      const buttons = [...html.matchAll(/<button\b[^>]*data-action-state="pending"[^>]*>[\s\S]*?<\/button>/g)]
+      expect(buttons).toHaveLength(1)
+      expect(visibleText(buttons[0][0])).toBe('Reading…')
+      expect(buttons[0][0]).toContain('disabled=""')
+    }
   })
   it.each(['time entries', 'chat files', 'setup files'])('%s upload', name => {
     state.forceBusy = true
-    assertSkeleton(render(name === 'time entries' ? h(Intake, { cycle, intake: cycleIntake(cycle, DEFAULTS) })
+    state.pendingActionKey = 'upload'
+    const html = render(name === 'time entries' ? h(Intake, { cycle, intake: cycleIntake(cycle, DEFAULTS) })
       : name === 'chat files' ? h(FactQuestion, { card: { kind: 'question', input: 'files', topics: [] }, onAnswer() {} })
-        : h(QuestionScreen, { question: 'Add your files', card: { kind: 'question', input: 'files', topics: [] }, busy: false, canBack: false, canForward: false, onBack() {}, onForward() {}, onAnswer() {} })))
+        : h(QuestionScreen, { question: 'Add your files', card: { kind: 'question', input: 'files', topics: [] }, busy: false, canBack: false, canForward: false, onBack() {}, onForward() {}, onAnswer() {} }))
+    assertSkeleton(html)
+    {
+      const buttons = [...html.matchAll(/<button\b[^>]*data-action-state="pending"[^>]*>[\s\S]*?<\/button>/g)]
+      expect(buttons).toHaveLength(1)
+      expect(visibleText(buttons[0][0])).toBe('Uploading…')
+      expect(buttons[0][0]).toContain('disabled=""')
+      expect(buttons[0][0]).toContain('aria-busy="true"')
+    }
+  })
+  it('ignores hidden reserved labels but still rejects standalone visible Loading copy', () => {
+    const skeleton = render(h(SkeletonRegion))
+    const reserved = '<span style="visibility:hidden" aria-hidden="true"><span>Loading</span></span>'
+    expect(visibleText(`${reserved}<button>Uploading…</button>`)).toBe('Uploading…')
+    expect(() => assertSkeleton(`${skeleton}${reserved}<button>Uploading…</button>`)).not.toThrow()
+    expect(() => assertSkeleton(`${skeleton}<p>Loading…</p>`)).toThrow()
   })
   it('has a bar and pill, five number tiles, five review rows and three rail rows without buttons', () => {
     const next = render(h(SkeletonRegion, { variant: 'next-step' }))

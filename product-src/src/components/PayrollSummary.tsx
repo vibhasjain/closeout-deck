@@ -1,4 +1,7 @@
-import { useState, type CSSProperties } from 'react'
+import { ActionButton, ActionFeedback } from '@/components/ActionButton'
+import { SkeletonRegion } from '@/components/Skeleton'
+import { usePendingAction } from '@/lib/usePendingAction'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { RULES } from '@/bench/engine.js'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronDown, ChevronRight, Mail } from 'lucide-react'
@@ -50,8 +53,14 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
   const [emailing, setEmailing] = useState<ResolutionGroup | null>(null)
   // The group just approved asks once whether to do it every cycle.
   const [learning, setLearning] = useState<{ cycleId: string; ruleId: string; count: number } | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const pendingAction = usePendingAction()
+  const [submittedCount, setSubmittedCount] = useState(0)
+  const saving = pendingAction.pending
+  useEffect(() => {
+    if (pendingAction.status !== 'success') return
+    const timer = setTimeout(pendingAction.reset, 900)
+    return () => clearTimeout(timer)
+  }, [pendingAction])
   const undone = state.undone[cycle.id] ?? []
   const { threads } = useJourneyThreads(cycle.server ? cycle.id : '')
   const groups = resolutionGroups(cycle, state.resolutions, undone, threads, state.neverContact ?? [])
@@ -75,9 +84,8 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
 
   async function resolve(items: ResolutionGroup[], decision: 'approved' | 'escalated') {
     if (saving) return
-    setSaving(true)
-    setError(null)
-    try {
+    setSubmittedCount(items.reduce((total, group) => total + group.cases.length, 0))
+    await pendingAction.run(async () => {
       let count = 0
       for (const group of items) {
         if (cycle.server) {
@@ -100,9 +108,7 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
       }
       if (items.length > 1) setLearning(null)
       toast(count ? `${decision === 'approved' ? 'Approved' : 'Escalated'} ${count.toLocaleString()}` : 'Already decided; no changes applied')
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'The decision could not be saved.')
-    } finally { setSaving(false) }
+    }, decision === 'approved' ? 'proposed' : 'judgment')
   }
 
   function undo(group: ResolutionGroup) {
@@ -113,14 +119,14 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
 
   /** A category's one action, shown in its header: it acts on every group in the category. */
   function action(resolution: ResolutionState, items: ResolutionGroup[], count: number) {
-    if (!items.length) return null
+    if (!items.length && pendingAction.key !== resolution) return null
     // Approving is the pane's black button only when review is the next step.
-    if (resolution === 'proposed') return <Btn className={!cycle.nextStep || cycle.nextStep.kind === 'review' ? 'primary' : undefined} disabled={saving} onClick={() => void resolve(items, 'approved')}>Approve {count.toLocaleString()}</Btn>
+    if (resolution === 'proposed') return <ActionButton action={pendingAction} actionKey="proposed" pendingLabel="Approving…" successLabel="Approved" className={!cycle.nextStep || cycle.nextStep.kind === 'review' ? 'primary' : undefined} onClick={() => void resolve(items, 'approved')}>Approve {(pendingAction.key === resolution && pendingAction.status !== 'idle' ? submittedCount : count).toLocaleString()}</ActionButton>
     if (resolution === 'fixed') {
       const undoable = items.filter((group) => !group.approved)
       return cycle.server || closed || !undoable.length ? null : <Btn onClick={() => undoable.forEach(undo)}>Undo All</Btn>
     }
-    if (resolution === 'judgment') return <Btn disabled={saving} onClick={() => void resolve(items, 'escalated')}>Escalate</Btn>
+    if (resolution === 'judgment') return <ActionButton action={pendingAction} actionKey="judgment" pendingLabel="Escalating…" successLabel="Escalated" onClick={() => void resolve(items, 'escalated')}>Escalate</ActionButton>
     return null
   }
 
@@ -151,7 +157,7 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
   const learned = learning?.cycleId === cycle.id ? learning : null
 
   return <div id="payroll-review-list" className="payroll-summary scroll" role="region" tabIndex={-1} aria-label="Review issues">
-    {error && <p role="alert">{error}</p>}
+    <ActionFeedback action={pendingAction} />
     {/* Email all: the catch-all send of an issue's time entries, in a panel that slides out on the right. Single cases open the shift view's conversation. */}
     <Sheet open={!!emailing} onOpenChange={(next) => { if (!next) setEmailing(null) }}>
       <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
@@ -163,7 +169,7 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
       const items = groups.filter((group) => group.state === resolution)
       const count = items.reduce((total, group) => total + group.cases.length, 0)
       // An empty category needs no attention, so it isn't shown at all.
-      if (!items.length) return null
+      if (!items.length && pendingAction.key !== resolution) return null
       return <section key={resolution} aria-labelledby={`summary-${resolution}`}>
         <div className="payroll-summary-head">
           <h3 id={`summary-${resolution}`}>{HEADINGS[resolution].title} · {count.toLocaleString()}</h3>
@@ -172,6 +178,7 @@ export function PayrollSummary({ cycle, review = false }: { cycle: DeskCycle; re
             {action(resolution, items, count)}
           </span>
         </div>
+        {saving && pendingAction.key === resolution && <SkeletonRegion rows={2} />}
         {resolution === 'proposed' && learned && <AutoApproveOffer ruleId={learned.ruleId} count={learned.count}
           onAccept={() => { rememberKind(learned.ruleId); setLearning(null); toast(`Decision remembered for ${kindLabel(learned.ruleId)}`) }}
           onDismiss={() => setLearning(null)} />}

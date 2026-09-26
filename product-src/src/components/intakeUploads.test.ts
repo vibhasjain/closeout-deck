@@ -4,6 +4,9 @@ import { Intake } from './Intake'
 import { ConnectMethod } from './ConnectMethod'
 import { FirstCloseoutChoice } from './chat/FirstCloseoutChoice'
 import { FactQuestion } from './chat/FactQuestion'
+import { ActionButton, ActionFeedback } from './ActionButton'
+import { SkeletonRegion } from './Skeleton'
+import type { PendingAction } from '@/lib/usePendingAction'
 import { SOURCES } from '@/bench/vendors'
 import { DEFAULTS, getOnboarding, updateOnboarding } from '@/lib/onboarding'
 import { buildCycles, type DeskCycle } from '@/lib/desk'
@@ -43,8 +46,9 @@ vi.mock('@/components/shell/Overlay', () => ({ useOverlay: () => overlay }))
 vi.mock('@/lib/data', () => ({ uploadFile: vi.fn(), seedSample: vi.fn(), connectSource: vi.fn(), invalidate: vi.fn(), removeFile: vi.fn(), useData: () => ({ files: data.files }) }))
 vi.mock('@/lib/chatBus', () => ({ postToChat: vi.fn(), INGEST_RESULT_EVENT: 'closeout:ingest-result' }))
 
-type Props = { children?: ReactNode; 'aria-label'?: string; onClick?: () => void; onChange?: (event: { target: { files: FileList; value: string } }) => void }
+type Props = { children?: ReactNode; 'aria-label'?: string; action?: PendingAction; actionKey?: string; onClick?: () => void; onChange?: (event: { target: { files: FileList; value: string } }) => void }
 const elements = (tree: ReactNode): ReactElement<Props>[] => Children.toArray(tree).flatMap((child) => isValidElement<Props>(child) ? [child, ...elements(child.props.children)] : [])
+const visibleText = (tree: ReactNode): string => Children.toArray(tree).map((child) => isValidElement<Props>(child) ? visibleText(child.props.children) : String(child)).join(' ')
 const findText = (tree: ReactNode, text: string) => elements(tree).find(({ props }) => Children.toArray(props.children).filter((child) => typeof child === 'string').join('') === text)!
 const source = { ...SOURCES[0], set: 2 as const }
 let cycle: DeskCycle
@@ -63,6 +67,44 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('real intake actions', () => {
+  it('keeps upload progress on its initiating control with immediate results skeletons and retryable input', async () => {
+    let fail!: (error: Error) => void
+    vi.mocked(uploadFile).mockImplementationOnce(() => new Promise((_resolve, reject) => { fail = reject }))
+    elements(renderIntake()).filter(({ props }) => props.children === 'Upload').at(-1)!.props.onClick!()
+    const file = new File(['Person,Start\nJo,8:00 AM'], 'private_export.csv')
+    elements(renderIntake()).find(({ props }) => props['aria-label'] === 'Upload a time export')!.props.onChange!({ target: { files: [file] as unknown as FileList, value: '' } })
+    const pending = renderIntake()
+    const control = elements(pending).find(({ type, props }) => type === ActionButton && props.actionKey?.startsWith('source:'))!
+    expect(control.props.action).toMatchObject({ pending: true, status: 'pending', key: control.props.actionKey })
+    expect(control.props.children).toBe('Upload')
+    expect(elements(pending).some(({ type }) => type === SkeletonRegion)).toBe(true)
+    fail(new Error('Connection interrupted'))
+    await vi.waitFor(() => expect(elements(renderIntake()).find(({ type }) => type === ActionFeedback)!.props.action?.error).toBe('Connection interrupted'))
+    vi.mocked(uploadFile).mockResolvedValueOnce({ file: { id: 'f_retry', name: file.name, status: 'normalized', sample: false, rows: 1, entries: 1, gaps: [], unparsed: [] } } as unknown as Awaited<ReturnType<typeof uploadFile>>)
+    await elements(renderIntake()).find(({ type }) => type === ActionFeedback)!.props.action!.retry()
+    expect(uploadFile).toHaveBeenCalledTimes(2)
+    expect(uploadFile).toHaveBeenLastCalledWith(file, { set: 2, system: 'UKG', site: 'Pacific Cold Storage' })
+    expect(elements(renderIntake()).find(({ type, props }) => type === ActionButton && props.actionKey?.startsWith('source:'))!.props.action?.status).toBe('success')
+  })
+
+  it('keeps the agent file-card control while uploading and retries its retained file after failure', async () => {
+    let fail!: (cause: Error) => void
+    vi.mocked(uploadFile).mockImplementationOnce(() => new Promise((_resolve, reject) => { fail = reject }))
+    const draw = () => { hooks.cursor = 0; return FactQuestion({ card: { kind: 'question', input: 'files', topics: ['clientHours'], placeholder: 'Upload client-approved time entries' }, onAnswer: vi.fn() }) }
+    const file = new File(['Worker,Hours\nJo,8'], 'private-hours.csv')
+    elements(draw()).find(({ props }) => props['aria-label'] === 'Upload time entries')!.props.onChange!({ target: { files: [file] as unknown as FileList, value: '' } })
+    const pending = draw()
+    expect(elements(pending).find(({ type }) => type === ActionButton)!.props.action?.status).toBe('pending')
+    expect(elements(pending).some(({ type }) => type === SkeletonRegion)).toBe(true)
+    fail(new Error('Connection interrupted'))
+    await vi.waitFor(() => expect(elements(draw()).find(({ type }) => type === ActionFeedback)!.props.action?.error).toBe('Connection interrupted'))
+    vi.mocked(uploadFile).mockResolvedValueOnce({ file: { id: 'f_retry', name: file.name, status: 'normalized', sample: false } } as Awaited<ReturnType<typeof uploadFile>>)
+    await elements(draw()).find(({ type }) => type === ActionFeedback)!.props.action!.retry()
+    expect(uploadFile).toHaveBeenLastCalledWith(file, { set: 2, system: 'Spreadsheet' })
+    expect(elements(draw()).find(({ type }) => type === ActionButton)!.props.action?.status).toBe('success')
+    expect(visibleText(draw())).not.toContain(file.name)
+  })
+
   it('uploads from an agent files card using the requested source set and follows up in chat', async () => {
     vi.mocked(uploadFile).mockResolvedValue({ file: { id: 'f_card', name: 'approved.csv', status: 'needs_mapping', sample: false } } as Awaited<ReturnType<typeof uploadFile>>)
     const tree = FactQuestion({ card: { kind: 'question', input: 'files', topics: ['clientHours'], placeholder: 'Upload client-approved time entries' }, onAnswer: vi.fn() })
@@ -70,9 +112,9 @@ describe('real intake actions', () => {
     elements(tree).find(({ props }) => props['aria-label'] === 'Upload time entries')!.props.onChange!({ target: { files: [file] as unknown as FileList, value: '' } })
     await vi.waitFor(() => expect(postToChat).toHaveBeenCalled())
     expect(uploadFile).toHaveBeenCalledWith(file, { set: 2, system: 'Spreadsheet' })
-    expect(postToChat).toHaveBeenCalledWith({ text: 'Uploaded approved.csv', contextChip: 'approved.csv', mode: 'ingest', context: { fileIds: ['f_card'] } })
+    expect(postToChat).toHaveBeenCalledWith({ text: 'Uploaded Client-approved time entries', contextChip: 'Client-approved', mode: 'ingest', context: { fileIds: ['f_card'] } })
   })
-  it('uploads the selected source/set and starts an ingest turn with a context chip and real row counts', async () => {
+  it('uploads the selected source/set and presents system names while retaining file provenance in data', async () => {
     vi.mocked(uploadFile).mockResolvedValue({ file: { id: 'f_csv', name: 'ukg_export.csv', status: 'needs_mapping', rows: 3, entries: 0, sample: false,
       rowCount: 3, entryCount: 0, unparsed: [], gaps: [{ ask: 'Which state is this site in?' }], cycles: [] } } as unknown as Awaited<ReturnType<typeof uploadFile>>)
     const buttons = elements(renderIntake()).filter(({ props }) => props.children === 'Upload')
@@ -81,9 +123,10 @@ describe('real intake actions', () => {
     elements(renderIntake()).find(({ props }) => props['aria-label'] === 'Upload a time export')!.props.onChange!({ target: { files: [file] as unknown as FileList, value: '' } })
     await vi.waitFor(() => expect(postToChat).toHaveBeenCalled())
     expect(uploadFile).toHaveBeenCalledWith(file, { set: 2, system: 'UKG', site: 'Pacific Cold Storage' })
-    expect(postToChat).toHaveBeenCalledWith({ text: 'Uploaded ukg_export.csv for Pacific Cold Storage', mode: 'ingest', context: { fileIds: ['f_csv'] }, contextChip: 'Pacific Cold Storage · ukg_export.csv' })
+    expect(postToChat).toHaveBeenCalledWith({ text: 'Uploaded UKG time entries for Pacific Cold Storage', mode: 'ingest', context: { fileIds: ['f_csv'] }, contextChip: 'Pacific Cold Storage' })
     const text = JSON.stringify(renderIntake())
     expect(text).toContain('3')
+    expect(visibleText(renderIntake())).not.toMatch(/\.csv|\brow \d+/i)
     expect(text).toContain('Closeout Agent is reading the layout')
     expect(text).toContain('Which state is this site in?')
     expect(getOnboarding().uploads).toEqual({})
@@ -146,7 +189,8 @@ describe('removing an uploaded file', () => {
     const tree = renderIntake()
     const text = JSON.stringify(tree)
     expect(removers(tree).map((props) => props.file.id)).toEqual(['f_mine', 'f_failed'])
-    expect(text).toContain('f_mine.csv'); expect(text).toContain('3 time entries'); expect(text).toContain('Rows awaiting mapping')
+    expect(visibleText(tree)).not.toMatch(/\.csv|\brow \d+|Received/i)
+    expect(text).toContain('3 time entries'); expect(text).toContain('Time entries awaiting mapping')
     expect(text).not.toContain('f_old.csv'); expect(text).not.toContain('f_sample.csv')
 
     // A file uploaded here is listed once, in its upload result, and Remove takes that row away.
@@ -167,11 +211,11 @@ describe('removing an uploaded file', () => {
     expect(renderRemove({ file: { id: 'f_sample', name: 'sample.csv', sample: true } })).toBeNull()
     const onRemoved = vi.fn(), file = { id: 'f_wrong', name: 'wrong week.csv', sample: false }
     const button = elements(renderRemove({ file, onRemoved }))[0]
-    expect(button.props['aria-label']).toBe('Remove wrong week.csv')
+    expect(button.props['aria-label']).toBe('Remove file')
     expect(JSON.stringify(button)).not.toContain('primary')
     button.props.onClick!()
     let prompt = renderRemove({ file, onRemoved })
-    expect(JSON.stringify(prompt)).toContain('Remove wrong week.csv? Its time entries leave every pay run.')
+    expect(JSON.stringify(prompt)).toContain('Remove this file? Its time entries leave every pay run.')
     findText(prompt, 'Cancel').props.onClick!()
     expect(findText(renderRemove({ file, onRemoved }), 'Remove')).toBeDefined()
     expect(removeFile).not.toHaveBeenCalled()

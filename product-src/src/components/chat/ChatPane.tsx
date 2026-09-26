@@ -357,9 +357,8 @@ export function ChatPane({ scope: explicitScope, headerAction, onCallingChange }
 
   function attach(files: FileList | null) {
     if (!files?.length) return
-    const names = Array.from(files, (file) => file.name).join(', ')
     update((current) => ({ chat: [...current.chat, {
-      id: crypto.randomUUID(), role: 'user', text: `Attached ${names}`, at: Date.now(), scope,
+      id: crypto.randomUUID(), role: 'user', text: `Attached ${files.length === 1 ? 'a document' : `${files.length} documents`}`, at: Date.now(), scope,
     }] }))
   }
 

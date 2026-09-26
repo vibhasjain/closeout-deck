@@ -9,7 +9,7 @@ import fixture from '@/lib/fixtures/server-cycle.json'
 
 const payload = fixture.payload as unknown as CyclePayload
 const files = fixture.files as FileRecord[]
-const render = (index: number, hoursOnly = false) => {
+const render = (index: number, hoursOnly = false, showHeading = true) => {
   const cycle = hydrate(structuredClone(payload), DEFAULTS, files)
   const rs = cycle.run.shifts[index]
   if (hoursOnly) {
@@ -19,17 +19,25 @@ const render = (index: number, hoursOnly = false) => {
     rs.shift.meal = null
     delete rs.shift.mealMin
   }
-  return renderToStaticMarkup(createElement(OverlayProvider, null, createElement(ShiftDetail, { cycle, rs })))
+  return renderToStaticMarkup(createElement(OverlayProvider, null, createElement(ShiftDetail, { cycle, rs, showHeading })))
 }
 
 describe('server time-entry evidence', () => {
-  it('shows the original file and row, Sample tag and reported break length', () => {
+  it('shows the source system without file provenance, with one Sample tag and the reported break length', () => {
     const html = render(1)
-    expect(html).toContain('bullhorn_2026-09-20.csv')
+    expect(html).toContain('>Bullhorn</span>')
     expect(html).toContain('From Bullhorn')
-    expect(html).toContain('row 3')
-    expect(html).toContain('>Sample<')
+    expect(html).not.toMatch(/\.csv|\brow \d+/i)
+    expect(html.match(/>Sample</g)).toHaveLength(1)
     expect(html).toContain('30 min · break times not supplied')
+  })
+
+  it('leaves Sample to the sheet header when its own heading is suppressed', () => {
+    const html = render(1, false, false)
+    expect(html).not.toContain('>Sample<')
+    expect(html).not.toMatch(/\.csv|\brow \d+/i)
+    const cycle = hydrate(structuredClone(payload), DEFAULTS, files)
+    expect(cycle.week[1].prov).toMatchObject({ file: 'bullhorn_2026-09-20.csv', row: 3 })
   })
 
   it('shows hours-only records without the engine placeholder clock times', () => {

@@ -1,4 +1,4 @@
-.page-title-row { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: .75rem; min-height: 3.25rem; padding: .5rem 1.25rem; border-bottom: 1px solid hsl(var(--border)); }
+.page-title-row { display: flex; flex: 0 0 var(--shell-header-height); align-items: center; justify-content: space-between; gap: .75rem; height: var(--shell-header-height); min-height: var(--shell-header-height); padding: .5rem 1.25rem; border-bottom: 1px solid hsl(var(--border)); }
 .page-title-text { min-width: 0; }
 .page-title-heading { display: flex; align-items: center; gap: .25rem; min-width: 0; }
 .page-title-heading h2 { margin: 0; min-width: 0; font-size: 14.5px; font-weight: 600; line-height: 1.4; }

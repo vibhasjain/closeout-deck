@@ -2,6 +2,8 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { FindingDetail } from '@/components/SampleResult'
+import { EmailIssue } from '@/components/EmailIssue'
+import { findingEmail } from '@/lib/issueEmail'
 import { buildSample, findings, type EvidenceRow } from '@/lib/sample'
 
 const dayLabel = (day: number) => `Day ${day + 1}`
@@ -45,15 +47,24 @@ describe('Finding evidence presentation', () => {
     expect(body).toContain('ADP: Confirmed by supervisor')
   })
 
-  it('keeps the exact source filename with natural wrap opportunities and row/date outside the hours cell', () => {
+  it('shows just the system name and hours while keeping source file, row and file date out of the surface', () => {
     const file = 'bullhorn_time_pacific_cold_storage_09-20-2026.csv'
     const html = renderToStaticMarkup(createElement(FindingDetail, {
       finding: { ...finding, cases: [{ worker: 'Abel Brooks', day: 1, rows: [{ source: 'Bullhorn', start: 356, end: null, meal: null, hours: null,
         note: `${file} · row 17 · Sep 15, 2026`, reference: { file, row: 17, date: 'Sep 15, 2026' } }] }] }, dayLabel,
     }))
-    expect(html).toContain('bullhorn_<wbr/>time_<wbr/>pacific_<wbr/>cold_<wbr/>storage_<wbr/>09-<wbr/>20-<wbr/>2026.csv')
-    expect(html).not.toContain('Bullhorn_time')
-    expect(html).toContain('<span>row 17 · Sep 15, 2026</span>')
+    expect(html).toContain('<td data-label="Source">Bullhorn</td>')
+    expect(html).not.toMatch(/\.csv|\brow \d+|Sep 15, 2026/i)
+    expect(html).not.toContain('finding-source-reference')
     expect(html).toContain('data-label="Hours" class="num">Not supplied</td>')
+  })
+
+  it('labels the downloadable attachment as time entries without exposing its filename in the email surface', () => {
+    const email = findingEmail(finding, dayLabel)
+    const html = renderToStaticMarkup(createElement(EmailIssue, { email, open: true }))
+    expect(email.file).toMatch(/\.csv$/)
+    expect(html).toContain('<b>Time entries</b>')
+    expect(html).toContain('>Download</button>')
+    expect(html).not.toMatch(/\.csv|\brow \d+/i)
   })
 })

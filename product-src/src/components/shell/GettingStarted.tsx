@@ -1,11 +1,13 @@
 import { Check, ChevronRight, X } from 'lucide-react'
+import { memo } from 'react'
 import { Link } from 'react-router-dom'
 import { checklist } from '@/lib/checklist'
 import { useDesk } from '@/lib/desk'
 import { useOnboarding } from '@/lib/onboarding'
 import { useTweened } from '@/lib/useTweened'
 
-export function GettingStarted({ onNavigate }: { onNavigate?: () => void } = {}) {
+// Route changes do not change onboarding progress. Store subscriptions still refresh it.
+export const GettingStarted = memo(function GettingStarted({ onNavigate }: { onNavigate?: () => void } = {}) {
   const [state, update] = useOnboarding()
   const { cycles } = useDesk()
   const progress = checklist(state, new Date(), cycles)
@@ -27,4 +29,4 @@ export function GettingStarted({ onNavigate }: { onNavigate?: () => void } = {})
       </li>)}
     </ol>
   </section>
-}
+})

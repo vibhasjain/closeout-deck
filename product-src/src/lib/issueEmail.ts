@@ -14,7 +14,7 @@ const toCsv = (rows: (string | number)[][]) => rows.map((row) => row.map(quote).
 const slug = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
 const sentence = (text: string) => text.trim().replace(/[.]?$/, '.')
 const entries = (n: number) => `${n.toLocaleString()} time ${n === 1 ? 'entry' : 'entries'}`
-const letter = (lines: string[], file: string) => ['Hi,', ...lines, `The time entries are attached (${file}).`, 'Thanks'].join('\n\n')
+const letter = (lines: string[]) => ['Hi,', ...lines, 'The time entries are attached.', 'Thanks'].join('\n\n')
 
 /** From the setup demo's evidence: every source row for every case, side by side. */
 export function findingEmail(finding: FindingEvidence, dayLabel: (day: number) => string): IssueEmail {
@@ -25,7 +25,7 @@ export function findingEmail(finding: FindingEvidence, dayLabel: (day: number) =
   return {
     subject: `${finding.title} · ${entries(finding.cases.length)}`,
     body: letter([`${sentence(finding.summary)}${finding.amountLabel ? ` That's ${finding.amountLabel}.` : ''} ${sentence(finding.why)}`,
-      `Suggested action: ${sentence(finding.action)}`], file),
+      `Suggested action: ${sentence(finding.action)}`]),
     file, rows: rows.length,
     csv: toCsv([['Worker', 'Date', 'Source', 'Clock in', 'Meal start', 'Meal end', 'Clock out', 'Hours', 'Note'], ...rows]),
   }
@@ -40,7 +40,7 @@ export function groupEmail(group: ResolutionGroup, cycle: DeskCycle): IssueEmail
   return {
     subject: `${label} · ${entries(group.cases.length)} · ${cycle.label}`,
     body: letter([`${entries(group.cases.length)} in the ${cycle.label} pay cycle ${group.cases.length === 1 ? 'is' : 'are'} flagged ${label}. ${sentence(group.cases[0].note)}`,
-      `Pay is ${money(group.current)} today and ${money(group.resolved)} after the fix. ${fix}`], file),
+      `Pay is ${money(group.current)} today and ${money(group.resolved)} after the fix. ${fix}`]),
     file, rows: group.cases.length,
     csv: toCsv([['Time entry ID', 'Worker', 'Date', 'Site', 'Issue', 'Current pay', 'Resolved pay'],
       ...group.cases.map((item) => [item.shiftId, item.worker, item.day, item.site, item.note, item.before.toFixed(2), item.after.toFixed(2)])]),
