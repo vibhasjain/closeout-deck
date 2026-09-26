@@ -140,9 +140,14 @@ export class DataService {
   }
 
   async renormalizeOriginals(email: string, doc: Record<string, unknown> = {}, now = new Date(), pending: string[] = []): Promise<void> {
+    await this.publishReplay(email, await this.prepareReplay(email, doc, pending), now)
+  }
+
+  /** Read and re-normalize every original without writing, so an unreadable one refuses before anything changes. */
+  private async prepareReplay(email: string, doc: Record<string, unknown>, pending: string[] = [], without?: string) {
     const [files, mappings, facts, sources] = await Promise.all([this.store.listFiles(email), this.store.listMappings(email), this.store.listFacts(email), this.store.listSources(email)])
     const ordered = []
-    for (const file of files.filter(f => f.status === 'normalized' || pending.includes(f.id)).sort((a, b) => a.receivedAt.localeCompare(b.receivedAt))) {
+    for (const file of files.filter(f => f.id !== without && (f.status === 'normalized' || pending.includes(f.id))).sort((a, b) => a.receivedAt.localeCompare(b.receivedAt))) {
       const mapping = mappings.find(m => m.id === file.mappingId)
       const bytes = await this.store.getObject(email, file.storagePath)
       if (!mapping || !bytes || hash(bytes) !== file.sha256) throw new DataError(500, 'original_unavailable')
@@ -152,6 +157,10 @@ export class DataService {
       ordered.push({ file, result, fileId: file.id, entries: result.entries })
     }
     applyEntryVersions(ordered)
+    return ordered
+  }
+
+  private async publishReplay(email: string, ordered: Awaited<ReturnType<DataService['prepareReplay']>>, now: Date) {
     for (const { file, result } of ordered) {
       await this.store.replaceEntries(email, file.id, result.entries)
       const dates = result.entries.map(e => e.workDate).sort()
@@ -166,11 +175,13 @@ export class DataService {
     const file = await this.store.getFile(email, id)
     if (!file) throw new DataError(404, 'not_found')
     if (file.sample) throw new DataError(409, 'sample_file')
-    const owned = await this.store.countEntries(email, id)
+    // A normalized file may have superseded an older export, taken over its deterministic ids (even all of them, so it
+    // owns no rows), or marked others as duplicates: replaying the remaining originals makes each whole again. They are
+    // read before the delete, so an unreadable original refuses the removal instead of stranding what it took over.
+    // ponytail: a full replay, as sample removal does.
+    const replay = file.status === 'normalized' || await this.store.countEntries(email, id) ? await this.prepareReplay(email, doc, [], id) : null
     await this.store.deleteFile(email, id)
-    // Its entries may have taken over deterministic ids from an older export, or marked others as duplicates:
-    // replaying the remaining originals makes each whole again. ponytail: a full replay, as sample removal does.
-    if (owned) await this.renormalizeOriginals(email, doc, now)
+    if (replay) await this.publishReplay(email, replay, now)
     return { ok: true, cycles: await this.recompute(email, doc, now) }
   }
 

@@ -364,3 +364,35 @@ test('removing an upload restores ids it took over, drops a source no file uses,
   assert.deepEqual((await store.listSources(email)).map(s => s.id), [location.sourceId], 'a source no file uses goes with its last file')
   assert.equal(await store.getRun(email, '2026-09-20'), null, 'a week left with no time entries has no pay run')
 })
+
+test('removing an export a later one fully took over leaves only the newest export, never the oldest beside it', async () => {
+  const { store, service } = setup(), later = (s: number) => new Date(now.getTime() + s * 1000)
+  const sheet = (...rows: [string, string, string][]) => Buffer.from([header, ...rows.map(([worker, start, end]) =>
+    [worker, worker.slice(0, 3), 'Pacific Cold Storage', 'Picker', '09/14/2026', start, end, '0', '8', '20', '30', 'Clock import', 'Approved', 'Supervisor', 'note'])]
+    .map(row => row.join(',')).join('\r\n') + '\r\n')
+  const oldest = await service.ingestFile(email, { name: 'bullhorn_09-20-2026.csv', bytes: sheet(['Ana Pena', '6:00 AM', '2:00 PM'], ['Ben Ruiz', '6:00 AM', '2:00 PM']), set: 1 }, {}, now)
+  const middle = await service.ingestFile(email, { name: 'bullhorn_09-20-2026 (2).csv', bytes: sheet(['Ana Pena', '7:00 AM', '3:00 PM'], ['Ben Ruiz', '6:00 AM', '2:00 PM']), set: 1 }, {}, later(1))
+  const newest = await service.ingestFile(email, { name: 'bullhorn_09-20-2026 (3).csv', bytes: sheet(['Ana Pena', '7:00 AM', '3:00 PM'], ['Ben Ruiz', '6:00 AM', '2:00 PM'], ['Cal Ortiz', '6:00 AM', '2:00 PM']), set: 1 }, {}, later(2))
+  assert.equal(await store.countEntries(email, middle.id), 0, 'the newest export took over every id the middle one had')
+
+  await service.removeFile(email, middle.id, {}, later(3))
+  const active = await store.listEntries(email)
+  assert.deepEqual(active.map(e => e.fileId), [newest.id, newest.id, newest.id])
+  assert.equal((await store.listEntries(email, { fileId: oldest.id, includeSuperseded: true })).every(e => e.supersededBy === newest.id), true)
+  const payload = await store.getRunPayload(email, '2026-09-20')
+  assert.equal(payload?.week.length, 3)
+  assert.ok(payload?.week.every(shift => shift.entryIds.length === 1), 'no worker-day is paid twice')
+})
+
+test('an original that cannot be replayed refuses the removal before anything is deleted', async () => {
+  const store = createMemoryDataStore(), later = (s: number) => new Date(now.getTime() + s * 1000)
+  let missing = ''
+  const service = new DataService({ ...store, getObject: (account, path) => path === missing ? Promise.resolve(null) : store.getObject(account, path) })
+  const original = await service.ingestFile(email, { name: 'bullhorn_09-20-2026.csv', bytes: csv(), set: 1 }, {}, now)
+  const wrong = await service.ingestFile(email, { name: 'bullhorn_09-20-2026 (2).csv', bytes: csv({ start: '7:00 AM', end: '3:00 PM' }), set: 1 }, {}, later(1))
+  const before = await store.listEntries(email, { includeSuperseded: true })
+  missing = original.storagePath
+  await assert.rejects(service.removeFile(email, wrong.id, {}, later(2)), (error: DataError) => error.message === 'original_unavailable')
+  assert.ok(await store.getFile(email, wrong.id), 'still listed, so Remove can run again')
+  assert.deepEqual(await store.listEntries(email, { includeSuperseded: true }), before)
+})

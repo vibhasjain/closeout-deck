@@ -573,16 +573,20 @@ export function createDataStore(client: SupabaseClient): DataStore {
         const { error } = await step()
         if (error) throw dataFailure('data_file_delete_failed', error)
       }
-      if (file.sourceId) {
-        const { data, error } = await table('files').select('id').eq('email', email).eq('source_id', file.sourceId).limit(1)
+      // Once the row is gone the caller must still replay, so the rest is best-effort: an orphan source or object is harmless.
+      const bestEffort = (work: () => Promise<void>) => work().catch((error: unknown) => console.warn('File cleanup skipped:', error instanceof Error ? error.message : 'Error'))
+      const sourceId = file.sourceId
+      if (sourceId) await bestEffort(async () => {
+        const { data, error } = await table('files').select('id').eq('email', email).eq('source_id', sourceId).limit(1)
         if (error) throw dataFailure('data_files_read_failed', error)
-        if (!data.length) {
-          const { error: sourceError } = await table('sources').delete().eq('email', email).eq('id', file.sourceId)
-          if (sourceError) throw dataFailure('data_file_delete_failed', sourceError)
-        }
-      }
-      const { error } = await bucket.remove([checkedPath(email, file.storagePath)])
-      if (error) throw dataFailure('data_object_cleanup_failed', error)
+        if (data.length) return
+        const { error: sourceError } = await table('sources').delete().eq('email', email).eq('id', sourceId)
+        if (sourceError) throw dataFailure('data_file_delete_failed', sourceError)
+      })
+      await bestEffort(async () => {
+        const { error } = await bucket.remove([checkedPath(email, file.storagePath)])
+        if (error) throw dataFailure('data_object_cleanup_failed', error)
+      })
     },
     async listChat(email) {
       const { data, error } = await table('chat').select('id,role,text,at,scope,cards,context').eq('email', email)

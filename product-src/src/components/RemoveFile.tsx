@@ -16,7 +16,7 @@ export function RemoveFile({ file, onRemoved }: { file: { id: string; name: stri
   async function remove() {
     setWorking(true); setError('')
     // removeFile refreshes the desk before it resolves, so the row is already gone from the account's files.
-    try { await removeFile(file.id); onRemoved?.() }
+    try { await removeFile(file.id); setConfirming(false); onRemoved?.() }
     catch { setError(FAILED) }
     finally { setWorking(false) }
   }

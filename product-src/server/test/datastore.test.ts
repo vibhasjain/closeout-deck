@@ -338,6 +338,20 @@ test('Supabase file removal is scoped to the account and file, restores what it 
   }
 })
 
+test('Supabase file removal resolves once the row is gone even if the source or Storage cleanup fails, so the replay still runs', async () => {
+  const target = file('f_wrong'), failed = () => new Response(JSON.stringify({ message: 'unavailable' }), { status: 500, headers: { 'Content-Type': 'application/json' } })
+  const { store, requests } = mockStore((url, method) => {
+    if (url.pathname.includes('/storage/v1/object/') || (method === 'DELETE' && url.pathname.endsWith('/closeout_sources'))) return failed()
+    if (method !== 'GET' || !url.pathname.endsWith('/closeout_files')) return []
+    return url.searchParams.has('source_id') ? [] : [{ ...target, email, source_id: target.sourceId, storage_path: target.storagePath }]
+  })
+  const warn = console.warn; console.warn = () => {}
+  try { await store.deleteFile(email, target.id) } finally { console.warn = warn }
+  assert.ok(requests.some(r => r.method === 'DELETE' && r.url.pathname.endsWith('/closeout_files')))
+  assert.ok(requests.some(r => r.method === 'DELETE' && r.url.pathname.endsWith('/closeout_sources')))
+  assert.ok(requests.some(r => r.method === 'DELETE' && r.url.pathname.includes('/storage/v1/object/')), 'a failed source cleanup does not skip the object')
+})
+
 test('Supabase call rows upsert after the account row and read back scoped to the account', async () => {
   const call = { id: '0f9c2b1e-5d7a-4c3b-9e8f-1a2b3c4d5e6f', startedAt: '2026-09-25T12:00:00.000Z', seconds: 276, transcript: [{ role: 'user' as const, text: 'Weekly', startMs: 1_000 }], summary: null }
   const { store, requests } = mockStore((url, method) => method === 'GET' && url.pathname.endsWith('/closeout_calls')

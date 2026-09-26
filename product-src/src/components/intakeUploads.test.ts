@@ -187,6 +187,8 @@ describe('removing an uploaded file', () => {
     findText(prompt, 'Remove').props.onClick!()
     await vi.waitFor(() => expect(onRemoved).toHaveBeenCalledOnce())
     expect(removeFile).toHaveBeenLastCalledWith('f_wrong')
+    // If the desk refresh failed and the row lingers, it never re-asks about a file that is already gone.
+    expect(JSON.stringify(renderRemove({ file, onRemoved }))).not.toContain('Its time entries leave every pay run.')
     expect(confirm).not.toHaveBeenCalled()
   })
 })

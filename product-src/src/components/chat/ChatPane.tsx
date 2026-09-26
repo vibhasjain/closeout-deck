@@ -15,7 +15,7 @@ import { dayDivider } from '@/components/chat/dayDivider'
 import { appendTrace, limitCards, parseActions, parseCards, stream } from '@/lib/chat'
 import type { ChatContext } from '@/lib/chat'
 import { CHAT_POST_EVENT, reportIngest, type ChatPost } from '@/lib/chatBus'
-import { invalidate } from '@/lib/data'
+import { getDataSnapshot, invalidate } from '@/lib/data'
 import { FREQUENCIES, WEEKDAYS, effectiveAuthority, inboxAddress, flushOnboarding, getOnboarding, useOnboarding } from '@/lib/onboarding'
 import type { ChatMessage } from '@/lib/onboarding'
 import { viewerSession } from '@/lib/viewerSession'
@@ -197,8 +197,11 @@ export function ChatPane({ scope: explicitScope, headerAction, onCallingChange }
     const previous = memoryHistory(latest.current.chat).at(-1)
     // Only a typed answer to the agent's mapping question continues an ingest turn; any other send is a chat turn.
     const answersMapping = !options && previous?.role === 'agent' && previous.cards?.some(card => card.kind === 'question')
+    // A file removed or mapped since the question no longer awaits a mapping; with none left the answer is a chat turn.
+    const data = getDataSnapshot()
+    const awaiting = (id: string) => !data.loaded || data.files.some(file => file.id === id && file.status === 'needs_mapping')
     const fileIds = options?.mode === 'ingest' && options.context && 'fileIds' in options.context
-      ? [...options.context.fileIds] : answersMapping ? [...(previous?.ingestFileIds ?? [])] : []
+      ? [...options.context.fileIds] : answersMapping ? (previous?.ingestFileIds ?? []).filter(awaiting) : []
     const mode = options?.mode ?? (fileIds.length ? 'ingest' : 'chat')
     const turnContext = options?.context ?? (mode === 'ingest' ? { fileIds } : context)
     const requestId = ++request.current

@@ -41,7 +41,8 @@ vi.mock('@/lib/onboarding', async (importOriginal) => {
 vi.mock('@/lib/chat', async (importOriginal) => ({
   ...await importOriginal<typeof import('@/lib/chat')>(), stream: vi.fn(),
 }))
-vi.mock('@/lib/data', () => ({ invalidate: vi.fn(async () => {}) }))
+const data = vi.hoisted(() => ({ snapshot: { loaded: false, files: [] as { id: string; status: string }[] } }))
+vi.mock('@/lib/data', () => ({ invalidate: vi.fn(async () => {}), getDataSnapshot: () => data.snapshot }))
 vi.mock('@/lib/journey', async (importOriginal) => ({
   ...await importOriginal<typeof import('@/lib/journey')>(), decide: vi.fn(),
 }))
@@ -74,6 +75,7 @@ beforeEach(() => {
   vi.stubGlobal('localStorage', { getItem: () => null, setItem: vi.fn() })
   vi.stubGlobal('window', { setTimeout, clearTimeout, addEventListener: vi.fn(), removeEventListener: vi.fn(), cancelAnimationFrame: vi.fn() })
   updateOnboarding(structuredClone(DEFAULTS))
+  data.snapshot = { loaded: false, files: [] }
 })
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals() })
 
@@ -88,6 +90,26 @@ describe('chat conversation lifetime', () => {
     await vi.waitFor(() => expect(stream).toHaveBeenCalled())
     expect(vi.mocked(stream).mock.calls[0][1]).toEqual({ fileIds: ['f_csv'] })
     expect(vi.mocked(stream).mock.calls[0][2]).toBe('ingest')
+  })
+  it('answers a mapping question as a chat turn once its file was removed, and keeps a file still awaiting mapping', async () => {
+    const question = { id: 'question', role: 'agent' as const, text: 'Are these actual clock times?', at: 1, ingestFileIds: ['f_gone', 'f_left'], cards: [{ kind: 'question' as const, input: 'chips' as const, chips: ['Actual', 'Scheduled'], topics: [] }] }
+    updateOnboarding({ chat: [question] })
+    data.snapshot = { loaded: true, files: [{ id: 'f_left', status: 'needs_mapping' }] }
+    vi.mocked(stream).mockImplementation(async function* () { yield { done: true, final: 'Saved.' } })
+    send('Actual')
+    await vi.waitFor(() => expect(stream).toHaveBeenCalledTimes(1))
+    expect(vi.mocked(stream).mock.calls[0][1]).toEqual({ fileIds: ['f_left'] })
+    expect(vi.mocked(stream).mock.calls[0][2]).toBe('ingest')
+
+    await vi.waitFor(() => expect(getOnboarding().chat).toHaveLength(3))
+    updateOnboarding({ chat: [question] })
+    data.snapshot = { loaded: true, files: [] }
+    send('Actual')
+    await vi.waitFor(() => expect(stream).toHaveBeenCalledTimes(2))
+    expect(vi.mocked(stream).mock.calls[1][2]).toBe('chat')
+    expect(vi.mocked(stream).mock.calls[1][1]).not.toHaveProperty('fileIds')
+    await vi.waitFor(() => expect(getOnboarding().chat).toHaveLength(3))
+    expect(getOnboarding().chat[1].ingestFileIds).toBeUndefined()
   })
   it('posts an upload chip, preserves ingest mode for one question, then refreshes before the completed reply', async () => {
     const target = new EventTarget()
