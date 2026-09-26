@@ -80,6 +80,8 @@ export interface DataStore {
   putObject(email: string, path: string, bytes: Uint8Array, mime?: string): Promise<void>
   getObject(email: string, path: string): Promise<Buffer | null>
   deleteSample(email: string): Promise<void>
+  /** One upload: its entries, its row and its Storage original; entries it superseded come back, and its source goes once no file uses it. Mappings stay. */
+  deleteFile(email: string, id: string): Promise<void>
   /** The latest CHAT_HISTORY_LIMIT lines, oldest first. */
   listChat(email: string): Promise<ChatRecord[]>
   /** Idempotent by id: a replayed line is ignored. */
@@ -259,6 +261,15 @@ export function createMemoryDataStore(): DataStore {
       for (const [id, row] of state.runs) if (row.sample) { state.runs.delete(id); state.findings.delete(row.runId); state.objects.delete(row.storagePath) }
       // Mappings are reusable layout knowledge; only data tagged sample is removed.
       for (const row of state.entries.values()) if (row.supersededBy && !state.files.has(row.supersededBy)) row.supersededBy = null
+    },
+    async deleteFile(email, id) {
+      const state = account(email), file = state.files.get(id)
+      if (!file) return
+      for (const [key, row] of state.entries) if (row.fileId === id) state.entries.delete(key)
+      for (const row of state.entries.values()) if (row.supersededBy === id) row.supersededBy = null
+      state.files.delete(id)
+      state.objects.delete(file.storagePath)
+      if (file.sourceId && ![...state.files.values()].some(row => row.sourceId === file.sourceId)) state.sources.delete(file.sourceId)
     },
     async listChat(email) { return clone([...account(email).chat.values()].sort((a, b) => a.at - b.at).slice(-CHAT_HISTORY_LIMIT)) },
     async appendChat(email, messages) {
@@ -548,6 +559,30 @@ export function createDataStore(client: SupabaseClient): DataStore {
         const { error } = await bucket.remove(paths.slice(offset, offset + 1000).map(path => checkedPath(email, path)))
         if (error) throw dataFailure('data_object_cleanup_failed', error)
       }
+    },
+    async deleteFile(email, id) {
+      const file = await store.getFile(email, id)
+      if (!file) return
+      // Entries first, the row last: a failure part way leaves the file listed, so Remove can run again.
+      const steps = [
+        () => table('entries').delete().eq('email', email).eq('file_id', id),
+        () => table('entries').update({ superseded_by: null }).eq('email', email).eq('superseded_by', id),
+        () => table('files').delete().eq('email', email).eq('id', id),
+      ]
+      for (const step of steps) {
+        const { error } = await step()
+        if (error) throw dataFailure('data_file_delete_failed', error)
+      }
+      if (file.sourceId) {
+        const { data, error } = await table('files').select('id').eq('email', email).eq('source_id', file.sourceId).limit(1)
+        if (error) throw dataFailure('data_files_read_failed', error)
+        if (!data.length) {
+          const { error: sourceError } = await table('sources').delete().eq('email', email).eq('id', file.sourceId)
+          if (sourceError) throw dataFailure('data_file_delete_failed', sourceError)
+        }
+      }
+      const { error } = await bucket.remove([checkedPath(email, file.storagePath)])
+      if (error) throw dataFailure('data_object_cleanup_failed', error)
     },
     async listChat(email) {
       const { data, error } = await table('chat').select('id,role,text,at,scope,cards,context').eq('email', email)

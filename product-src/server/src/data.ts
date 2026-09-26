@@ -161,6 +161,19 @@ export class DataService {
     }
   }
 
+  /** Remove one of the account's own uploads: its time entries leave every pay run. Sample files go only with the whole sample. */
+  async removeFile(email: string, id: string, doc: Record<string, unknown> = {}, now = new Date()) {
+    const file = await this.store.getFile(email, id)
+    if (!file) throw new DataError(404, 'not_found')
+    if (file.sample) throw new DataError(409, 'sample_file')
+    const owned = await this.store.countEntries(email, id)
+    await this.store.deleteFile(email, id)
+    // Its entries may have taken over deterministic ids from an older export, or marked others as duplicates:
+    // replaying the remaining originals makes each whole again. ponytail: a full replay, as sample removal does.
+    if (owned) await this.renormalizeOriginals(email, doc, now)
+    return { ok: true, cycles: await this.recompute(email, doc, now) }
+  }
+
   /** Compile once, validate every affected original before publishing, and replay re-exports in order. */
   async applyAgentMapping(email: string, fileId: string, raw: unknown, doc: Record<string, unknown> = {}, now = new Date()) {
     const target = await this.store.getFile(email, fileId)

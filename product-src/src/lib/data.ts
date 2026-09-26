@@ -106,6 +106,9 @@ async function mutated<T>(work: () => Promise<T>, pipeline = false): Promise<T> 
 export const seedSample = () => mutated(() => request<SampleResult>('/data/sample', { method: 'POST' }), true)
 export const setFact = (fact: FactInput) => mutated(() => request<{ ok: true; cycles: string[] }>('/data/facts', json(fact)))
 export const connectSource = (source: { set: 1 | 2 | 3; system?: string; site?: string }) => mutated(() => request<{ files: FileRecord[]; cycles: string[] }>('/data/connect', json(source)), true)
+/** A file another tab already removed is gone all the same: the refresh drops its row. */
+export const removeFile = (id: string) => mutated(() => request<{ ok: true; cycles: string[] }>(`/files/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  .catch((cause: unknown) => { if (cause instanceof DataError && cause.status === 404) return { ok: true as const, cycles: [] }; throw cause }))
 export function uploadFile(file: File, options: { set: 1 | 2; system?: string; site?: string; sourceId?: string }) {
   const headers = new Headers({ 'Content-Type': file.type || 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name), 'X-Set': String(options.set) })
   if (options.system) headers.set('X-System', encodeURIComponent(options.system))

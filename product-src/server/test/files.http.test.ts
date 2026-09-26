@@ -9,6 +9,7 @@ import { Buffer } from 'node:buffer'
 import { createServer } from '../src/index.ts'
 import { gunzipSync } from 'node:zlib'
 import { createMemoryDataStore } from '../src/datastore.ts'
+import { DataService } from '../src/data.ts'
 import { signSession } from '../src/auth.ts'
 import type { CyclePayload } from '../src/pipeline.ts'
 import { RERUN_RULES } from '../../src/bench/engine.js'
@@ -34,6 +35,7 @@ test('file and data endpoints reject a signed-out caller', async t => {
   for (const path of ['/files', '/files/foreign/raw', '/data/cycles', '/data/sample']) {
     const response = await fetch(url + path, path === '/data/sample' ? post({}) : {})
     assert.equal(response.status, 401)
+    assert.equal((await fetch(url + path, { method: 'DELETE' })).status, 401)
   }
 })
 
@@ -154,6 +156,41 @@ test('pure reads do not wait behind a data write; cycle reads still do', async t
     open()
     assert.equal((await write).status, 200); assert.equal((await cycles).status, 200)
   } finally { open() }
+})
+
+test('DELETE /files/:id removes an own upload under the data lock; sample, unknown and foreign files are refused', async t => {
+  const memory = createMemoryDataStore(), email = baseEnv.CLOSEOUT_DEV_EMAIL
+  let open = () => {}, gate = Promise.resolve()
+  const { url } = await serve(t, false, { ...memory, upsertFact: async (...args) => { await gate; return memory.upsertFact(...args) } })
+  const { file } = await (await fetch(url + '/files', upload(bullhorn()))).json() as { file: { id: string } }
+  const sample = await new DataService(memory).ingestFile(email, { name: 'sample.csv', bytes: bullhorn('Sample Worker'), set: 1, sample: true, method: 'simulated' })
+  const remove = (id: string, init: RequestInit = {}) => fetch(`${url}/files/${id}`, { ...init, method: 'DELETE' })
+
+  const { sessionToken } = await signSession({ sub: 'other', email: 'other@hypertrack.io', name: 'Other', picture: '' }, baseEnv.SESSION_SECRET)
+  assert.equal((await remove(file.id, { headers: { Authorization: `Bearer ${sessionToken}` } })).status, 404)
+  assert.equal((await remove('f_unknown')).status, 404)
+  assert.equal((await remove(`${file.id}/raw`)).status, 404)
+  const refused = await remove(sample.id)
+  assert.equal(refused.status, 409); assert.deepEqual(await refused.json(), { error: 'sample_file' })
+  assert.equal((await memory.listFiles(email)).length, 2)
+
+  gate = new Promise<void>(resolve => { open = resolve })
+  try {
+    const write = fetch(url + '/data/facts', post({ kind: 'account', key: 'burden', value: { value: 0.3 } }))
+    await new Promise(resolve => setTimeout(resolve, 50))
+    const removal = remove(file.id)
+    assert.equal(await within(removal, 200), 'pending', 'a removal waits for the account data lock')
+    open()
+    assert.equal((await write).status, 200)
+    const response = await removal
+    assert.equal(response.status, 200)
+    const body = await response.json() as { ok: boolean; cycles: string[] }
+    assert.equal(body.ok, true); assert.ok(body.cycles.includes('2026-09-27'))
+  } finally { open() }
+  assert.deepEqual((await memory.listFiles(email)).map(f => f.id), [sample.id])
+  assert.deepEqual((await memory.listEntries(email)).map(e => e.worker), ['Sample Worker'])
+  assert.deepEqual((await memory.getRunPayload(email, '2026-09-27'))?.week.map(s => s.worker), ['Sample Worker'])
+  assert.equal((await remove(file.id)).status, 404)
 })
 
 test('the workspace rebuild after a write does not hold the data lock', async t => {

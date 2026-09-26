@@ -11,7 +11,8 @@ import { ago, askedGaps, dayTime, gapKey, initial, usually, type Gap, type Intak
 import type { JourneyThread } from '@/lib/journey'
 import { addNote, useOnboarding } from '@/lib/onboarding'
 import { CLIENTS } from '@/lib/sample'
-import { uploadFile } from '@/lib/data'
+import { uploadFile, useData, type FileRecord } from '@/lib/data'
+import { RemoveFile } from '@/components/RemoveFile'
 import { INGEST_RESULT_EVENT, postToChat } from '@/lib/chatBus'
 import type { IngestEvent } from '@/lib/chat'
 import './intake.css'
@@ -20,6 +21,9 @@ const REASONS = ['No-show', 'Cancelled', 'Other']
 const md = (d: Date) => `${d.toLocaleDateString('en-US', { weekday: 'short' })} ${d.getMonth() + 1}/${d.getDate()}`
 const supervisorAt = (cycle: DeskCycle, client: string) => cycle.sites?.find((item) => item.name === client)?.supervisor?.name ?? Object.values(CLIENTS).find((item) => item.name === client)?.supervisor ?? 'the site supervisor'
 const threadKey = (cycleId: string, id: string) => `intake:${cycleId}:${id}`
+const day = (key: string) => new Date(`${key}T00:00:00`)
+const fileNote = (file: FileRecord) => file.status === 'normalized' ? `${(file.entryCount ?? 0).toLocaleString()} time entries`
+  : file.status === 'needs_mapping' || file.status === 'received' ? 'Rows awaiting mapping' : 'Needs a CSV or spreadsheet export'
 interface UploadResult { id: string; name: string; rows: number | null; entries: number; status: string; mapping: string; gaps: string[]; sample: boolean }
 
 /** Step 1 of a pay cycle: did the expected time arrive, client by client. */
@@ -33,6 +37,9 @@ export function Intake({ cycle, intake, threads = [] }: { cycle: DeskCycle; inta
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [results, setResults] = useState<UploadResult[]>([])
+  // The account's own uploads for this pay run, and any that never became time entries, so a wrong one can be removed.
+  const uploaded = useData(false).files.filter((file) => !file.sample && !results.some((row) => row.id === file.id)
+    && (file.status !== 'normalized' || (!!file.firstDate && !!file.lastDate && day(file.firstDate) <= cycle.end && day(file.lastDate) >= cycle.start)))
   const now = new Date()
   const waiting = intake.clients.filter((client) => client.open > 0)
   const complete = intake.clients.filter((client) => client.open === 0)
@@ -170,9 +177,13 @@ export function Intake({ cycle, intake, threads = [] }: { cycle: DeskCycle; inta
     {error && <p role="alert" className="r-note">{error}</p>}
     {cycle.server && !cycle.week.length && cycle.nextStep?.kind === 'get_timesheets' && !results.length && <p className="intake-empty r-note" role="status">No time entries yet for {cycle.label}.</p>}
     {results.length > 0 && <ul className="intake-upload-results" aria-label="Upload results" aria-live="polite">{results.map((file) => <li key={file.id}>
-      <div><b>{file.name}</b>{file.sample && <span className="tag">Sample</span>}</div>
+      <div><b>{file.name}</b>{file.sample && <span className="tag">Sample</span>}<RemoveFile file={file} onRemoved={() => setResults((old) => old.filter((row) => row.id !== file.id))} /></div>
       <p>{file.rows === null ? 'Rows awaiting mapping' : `${file.rows.toLocaleString()} rows in`} · {file.entries.toLocaleString()} time entries · {file.mapping}</p>
       {file.gaps.length ? <ul>{file.gaps.map((gap, index) => <li key={index}>{gap}</li>)}</ul> : file.status === 'normalized' && <p className="r-note">No missing facts</p>}
+    </li>)}</ul>}
+    {uploaded.length > 0 && <ul className="intake-upload-results" aria-label="Uploaded files">{uploaded.map((file) => <li key={file.id}>
+      <div><b>{file.name}</b><RemoveFile file={file} /></div>
+      <p className="r-note">{fileNote(file)} · Received {ago(new Date(file.receivedAt), now)}</p>
     </li>)}</ul>}
     {missingSets.length > 0 && <ul className="intake-upload-results" aria-label="Missing time sources">{missingSets.map((gap) => {
       const [siteKey, set] = gap.key.split('|')

@@ -373,6 +373,10 @@ export function createServer(options: ServerOptions = {}) {
           json(response, 200, { files: await store.listFiles(user.email) }); return
         }
         const filePath = /^\/files\/([^/]+)(\/raw)?$/.exec(path)
+        if (filePath && !filePath[2] && request.method === 'DELETE') {
+          const result = await service.removeFile(user.email, filePath[1], doc)
+          await sync(); json(response, 200, result); return
+        }
         if (filePath && request.method === 'GET') {
           const file = await store.getFile(user.email, filePath[1])
           if (!file) { json(response, 404, { error: 'not_found' }); return }

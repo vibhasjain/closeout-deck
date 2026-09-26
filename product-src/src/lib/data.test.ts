@@ -16,7 +16,7 @@ import { activeCycles, applyKind, cycleStats, discrepancies, kinds, provenance, 
 import { cycleIntake } from '@/lib/intake'
 import { payTotals } from '@/lib/payroll'
 import { resolutionGroups } from '@/lib/resolution'
-import { getCycle, getEntries, getFindings, getDataSnapshot, hydrate, invalidate, publishCycle, refreshCycle, seedSample, serverCycles, setFact, uploadFile, type CyclePayload, type FileRecord, type SourceRecord } from '@/lib/data'
+import { getCycle, getEntries, getFindings, getDataSnapshot, hydrate, invalidate, publishCycle, refreshCycle, removeFile, seedSample, serverCycles, setFact, uploadFile, type CyclePayload, type FileRecord, type SourceRecord } from '@/lib/data'
 import recorded from '@/lib/fixtures/server-cycle.json'
 
 const payload = recorded.payload as unknown as CyclePayload
@@ -316,6 +316,31 @@ describe('typed data requests', () => {
     await setFact({ kind: 'site', key: 'pacific cold storage', value: { state: 'CA' } })
     expect(api.authedFetch).toHaveBeenCalledWith('/data/facts', expect.objectContaining({ method: 'POST', body: JSON.stringify({ kind: 'site', key: 'pacific cold storage', value: { state: 'CA' } }) }))
     expect(state.dataSource).toBe('server')
+  })
+  it('removes a file with DELETE and refreshes the desk before it resolves; a file already gone refreshes too; a failure refreshes nothing', async () => {
+    let listed = [...files, { ...files[0], id: 'f_wrong', name: 'wrong.csv', sample: false }]
+    const calls: string[] = []
+    vi.mocked(api.authedFetch).mockImplementation((path, init) => {
+      calls.push(`${init?.method ?? 'GET'} ${path}`)
+      if (init?.method !== 'DELETE') return path === '/files' ? Promise.resolve(response({ files: listed })) : request(path)
+      if (path !== '/files/f_wrong') return Promise.resolve(new Response(JSON.stringify({ error: 'not_found' }), { status: 404 }))
+      listed = listed.filter(file => file.id !== 'f_wrong')
+      return Promise.resolve(response({ ok: true, cycles: [payload.cycle.id] }))
+    })
+    await invalidate()
+    expect(getDataSnapshot().files.map(file => file.id)).toContain('f_wrong')
+    calls.length = 0
+    expect(await removeFile('f_wrong')).toEqual({ ok: true, cycles: [payload.cycle.id] })
+    expect(api.authedFetch).toHaveBeenCalledWith('/files/f_wrong', { method: 'DELETE' })
+    expect(calls.indexOf('GET /files')).toBeGreaterThan(calls.indexOf('DELETE /files/f_wrong'))
+    expect(getDataSnapshot().files.map(file => file.id)).not.toContain('f_wrong')
+    calls.length = 0
+    expect(await removeFile('f_other_tab')).toEqual({ ok: true, cycles: [] })
+    expect(calls).toContain('GET /files')
+    calls.length = 0
+    vi.mocked(api.authedFetch).mockImplementation((path, init) => { calls.push(`${init?.method ?? 'GET'} ${path}`); return Promise.resolve(new Response(JSON.stringify({ error: 'internal_error' }), { status: 500 })) })
+    await expect(removeFile('f_x')).rejects.toThrow()
+    expect(calls).toEqual(['DELETE /files/f_x'])
   })
   it('reports duplicate uploads without activating or replacing data', async () => {
     vi.mocked(api.authedFetch).mockResolvedValue(new Response(JSON.stringify({ error: 'duplicate_file' }), { status: 409 }))

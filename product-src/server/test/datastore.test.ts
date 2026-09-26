@@ -317,6 +317,27 @@ test('Supabase sample removal limits deletes to sample rows and removes only the
   assert.ok(!(storageDelete.body as { prefixes: string[] }).prefixes.includes(realFile.storagePath))
 })
 
+test('Supabase file removal is scoped to the account and file, restores what it superseded, and drops only that original', async () => {
+  const target = file('f_wrong')
+  for (const others of [[], [{ id: 'f_one' }]]) {
+    const { store, requests } = mockStore((url, method) => {
+      if (method !== 'GET' || !url.pathname.endsWith('/closeout_files')) return []
+      return url.searchParams.has('source_id') ? others : [{ ...target, email, source_id: target.sourceId, storage_path: target.storagePath }]
+    })
+    await store.deleteFile(email, target.id)
+    const writes = requests.filter(r => r.method !== 'GET' && r.url.pathname.startsWith('/rest/v1/'))
+    assert.deepEqual(writes.map(r => [r.method, r.url.pathname.split('/').at(-1)]), [
+      ['DELETE', 'closeout_entries'], ['PATCH', 'closeout_entries'], ['DELETE', 'closeout_files'], ...others.length ? [] : [['DELETE', 'closeout_sources']]])
+    for (const request of requests.filter(r => r.url.pathname.startsWith('/rest/v1/'))) assert.equal(request.url.searchParams.get('email'), `eq.${email}`)
+    assert.equal(writes[0].url.searchParams.get('file_id'), `eq.${target.id}`)
+    assert.equal(writes[1].url.searchParams.get('superseded_by'), `eq.${target.id}`); assert.deepEqual(writes[1].body, { superseded_by: null })
+    assert.equal(writes[2].url.searchParams.get('id'), `eq.${target.id}`)
+    if (!others.length) assert.equal(writes[3].url.searchParams.get('id'), `eq.${source.id}`)
+    const storageDelete = requests.filter(r => r.method === 'DELETE' && r.url.pathname.includes('/storage/v1/object/'))
+    assert.deepEqual(storageDelete.map(r => (r.body as { prefixes: string[] }).prefixes), [[target.storagePath]])
+  }
+})
+
 test('Supabase call rows upsert after the account row and read back scoped to the account', async () => {
   const call = { id: '0f9c2b1e-5d7a-4c3b-9e8f-1a2b3c4d5e6f', startedAt: '2026-09-25T12:00:00.000Z', seconds: 276, transcript: [{ role: 'user' as const, text: 'Weekly', startMs: 1_000 }], summary: null }
   const { store, requests } = mockStore((url, method) => method === 'GET' && url.pathname.endsWith('/closeout_calls')
