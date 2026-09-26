@@ -14,7 +14,7 @@ NODE_ENV=development ALLOWED_DOMAINS=hypertrack.io SESSION_SECRET="$(openssl ran
 
 In a second terminal, run `npm run dev` and visit <http://localhost:9000/product/>. Vite proxies `/api/*` to the Node server on port 8787, removing `/api`. Development renders the app without a session; the server's email bypass requires explicit `NODE_ENV=development`, a loopback connection, and an allowed email domain. Outside production the server listens only on `127.0.0.1`.
 
-Optional server settings go in `server/.env`. Production requires `SESSION_SECRET`, `GOOGLE_CLIENT_ID`, `ALLOWED_DOMAINS`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` and `CLAUDE_CODE_OAUTH_TOKEN`. Startup requires a `SESSION_SECRET` of at least 32 UTF-8 bytes in every environment. `/job/config.js` supplies the public Google client ID. Google sign-in requires a matching, allowed hosted-domain claim and stores a 7-day session under `closeout:session:v1`; `/job` and `/answers` keep their existing session. The server rechecks allowed domains on every authenticated request.
+Optional server settings go in `server/.env`. Production requires `SESSION_SECRET`, `GOOGLE_CLIENT_ID`, `ALLOWED_DOMAINS`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` and `CLAUDE_CODE_OAUTH_TOKEN`. Startup requires a `SESSION_SECRET` of at least 32 UTF-8 bytes in every environment. `/job/config.js` supplies the public Google client ID. Google sign-in requires a matching, allowed hosted-domain claim and stores a 7-day session under `closeout:session:v1`; `/job` and `/answers` keep their existing session. The server rechecks allowed domains on every authenticated request. `INTERNAL_DOMAINS` (comma-separated, default `hypertrack.io`) names the accounts that may Start over (`POST /account/reset`) from Settings.
 
 ## Chat and state
 

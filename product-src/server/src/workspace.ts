@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { copyFile, mkdir, readFile, readdir, rename, writeFile, rm, stat, lstat } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, readdir, realpath, rename, writeFile, rm, stat, lstat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -244,6 +244,21 @@ export async function materialize(...args: Parameters<typeof materializeNow>): P
 export async function materializeTurn(...args: Parameters<typeof materializeNow>): Promise<{ cwd: string; memory: string }> {
   const release = await materializing.acquire(args[0].email)
   try { return await materializeNow(...args) } finally { release() }
+}
+/**
+ * Start over: both workspaces go (session.json with them, so the next chat is a fresh Claude session), after any rebuild
+ * in flight, and so do the CLI's own transcripts of their sessions, kept under HOME/.claude/projects by working directory.
+ */
+// ponytail: mirrors the CLI's folder naming (every non-alphanumeric becomes '-'); a path past 200 characters, which the CLI hashes, keeps its transcripts.
+export async function removeWorkspaces(email: string, env: NodeJS.ProcessEnv = process.env): Promise<void> {
+  const release = await materializing.acquire(email)
+  try {
+    for (const variant of [undefined, 'memory'] as const) {
+      const cwd = workspacePath(email, env, variant), real = await realpath(cwd).catch(() => cwd)
+      await rm(cwd, { recursive: true, force: true })
+      if (env.HOME) await rm(join(env.HOME, '.claude', 'projects', real.replace(/[^a-zA-Z0-9]/g, '-')), { recursive: true, force: true })
+    }
+  } finally { release() }
 }
 async function materializeNow(
   user: WorkspaceUser, env: NodeJS.ProcessEnv = process.env, store?: DataStore,

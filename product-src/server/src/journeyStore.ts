@@ -24,6 +24,8 @@ export interface JourneyStore {
   upsertDispute(email: string, dispute: Dispute): Promise<void>
   /** Removing Sample data removes the journey records of its cycles. */
   deleteCycles(email: string, cycleIds: string[]): Promise<void>
+  /** Start over: every journey record of the account. */
+  deleteAccount(email: string): Promise<void>
 }
 
 const clone = <T>(value: T): T => structuredClone(value)
@@ -101,6 +103,7 @@ export function createMemoryJourneyStore(): JourneyStore {
       a.messages = a.messages.filter(m => !threads.has(m.threadId)); a.batches = a.batches.filter(b => !gone.has(b.cycleId))
       a.disputes = a.disputes.filter(d => !gone.has(d.cycleId))
     },
+    async deleteAccount(email) { accounts.delete(email) },
   }
 }
 
@@ -196,6 +199,12 @@ export function createJourneyStore(client: SupabaseClient): JourneyStore {
       // Messages cascade with their threads.
       for (const name of ['decisions', 'threads', 'batches', 'disputes']) {
         const { error } = await table(name).delete().eq('email', email).in('cycle_id', cycleIds)
+        if (error) throw dataFailure(`journey_${name}_delete_failed`, error)
+      }
+    },
+    async deleteAccount(email) {
+      for (const name of ['messages', 'threads', 'decisions', 'batches', 'disputes']) {
+        const { error } = await table(name).delete().eq('email', email)
         if (error) throw dataFailure(`journey_${name}_delete_failed`, error)
       }
     },

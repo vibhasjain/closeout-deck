@@ -64,7 +64,7 @@ const consumesChat = (trigger: Trigger) => trigger === 'chat' || trigger === 'se
  * session), one run per account is in flight, and later triggers collapse into one follow-up run.
  */
 export function createMemory(deps: MemoryDeps) {
-  const accounts = new Map<string, { next: Item[]; done: Promise<void> }>()
+  const accounts = new Map<string, { next: Item[]; done: Promise<void>; abort: AbortController }>()
   const lastChat = new Map<string, number>()
 
   /** Fire-and-forget: never throws; the promise settles when this account's runs are done (tests, live proofs). */
@@ -82,10 +82,10 @@ export function createMemory(deps: MemoryDeps) {
       if (!busy.next.some(other => other.trigger === trigger && other.ref === ref)) busy.next.push(item)
       return busy.done
     }
-    const state = { next: [item], done: Promise.resolve() }
+    const state = { next: [item], done: Promise.resolve(), abort: new AbortController() }
     accounts.set(key, state)
     state.done = (async () => {
-      try { while (state.next.length) await runOnce(email, state.next.splice(0, MAX_BATCH)) }
+      try { while (state.next.length) await runOnce(email, state.next.splice(0, MAX_BATCH), state.abort.signal) }
       finally { accounts.delete(key) }
     })()
     return state.done
@@ -118,7 +118,7 @@ export function createMemory(deps: MemoryDeps) {
     return sections.length ? sections.join('\n\n') : null
   }
 
-  async function runOnce(email: string, batch: Item[]): Promise<void> {
+  async function runOnce(email: string, batch: Item[], signal: AbortSignal): Promise<void> {
     // A chat-reading trigger goes first, so the recorded trigger marks every run that consumed the chat (the cursor below).
     const items = [...batch].sort((a, b) => Number(consumesChat(b.trigger)) - Number(consumesChat(a.trigger)))
     const sources = [...new Set(items.map(item => item.trigger))] as Source[]
@@ -144,15 +144,16 @@ export function createMemory(deps: MemoryDeps) {
         ...(current.length ? capped(current.map(row => `- ${row.id} · ${row.kind} · ${row.status} · ${row.source} · ${row.at.slice(0, 10)}${row.until ? ` · until ${row.until}` : ''}: ${row.text}`), 'memory/instincts.md') : ['None yet.']), '',
         '## Forgotten (the user asked to forget these; never add them back)', ...(gone.length ? capped(gone.map(row => `- ${row.text}`), 'memory/forgotten.md') : ['None.']), '', text].join('\n')
       let reply = '', failed = false
-      const releaseCapacity = await deps.capacity.acquire()
+      const releaseCapacity = await deps.capacity.acquire(signal)
       try {
-        await deps.runAgent({ cwd, message, prompt: memoryConsolidationPrompt(sources), fresh: true, env: deps.env,
+        await deps.runAgent({ cwd, message, prompt: memoryConsolidationPrompt(sources), fresh: true, env: deps.env, signal,
           model: deps.env.CLOSEOUT_AGENT_MODEL ?? 'opus', timeoutMs: deps.timeoutMs ?? MEMORY_TIMEOUT_MS,
           onEvent(event) {
             if ('text' in event) reply += event.text
             else if ('done' in event) { if (event.error) failed = true; else if (event.final !== undefined) reply = event.final }
           } })
       } finally { releaseCapacity() }
+      if (signal.aborted) { run.error = 'cancelled'; return }
       if (failed) { run.error = 'agent_failed'; return }
       const blocks = [...reply.matchAll(/```memory\s*\n?([\s\S]*?)```/g)]
       let parsed: unknown
@@ -191,7 +192,17 @@ export function createMemory(deps: MemoryDeps) {
     while (accounts.size) await Promise.all([...accounts.values()].map(state => state.done))
   }
 
-  return { consolidateMemory, settled }
+  /** Start over: drop the account's queued triggers and stop its running consolidation; settles once that run has recorded. */
+  async function cancel(email: string): Promise<void> {
+    const key = email.trim().toLowerCase(), state = accounts.get(key)
+    lastChat.delete(key)
+    if (!state) return
+    state.next.length = 0
+    state.abort.abort()
+    await state.done
+  }
+
+  return { consolidateMemory, settled, cancel }
 }
 
 export type Consolidate = ReturnType<typeof createMemory>['consolidateMemory']

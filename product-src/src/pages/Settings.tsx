@@ -3,10 +3,11 @@ import { ConnectorGrid } from '@/components/ConnectorGrid'
 import { PayCycles } from '@/components/PayCycles'
 import { PayrollCalendar } from '@/components/PayrollCalendar'
 import { PageTitle } from '@/components/shell/PageTitle'
+import { StartOver } from '@/components/StartOver'
 import { Btn } from '@/components/ui'
 import './settings.css'
 
-/** Settings is your connectors, with the payroll calendar beside them. Nothing else. */
+/** Settings is your connectors, with the payroll calendar beside them. HyperTrack accounts also get Start over, last. */
 export function Settings() {
   const navigate = useNavigate()
 
@@ -26,6 +27,7 @@ export function Settings() {
           <PayrollCalendar />
           <h4 className="settings-cycle-head">Other Pay Cycles</h4>
           <PayCycles />
+          <StartOver />
         </aside>
       </div>
     </div>

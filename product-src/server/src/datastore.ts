@@ -86,6 +86,8 @@ export interface DataStore {
   appendChat(email: string, messages: ChatRecord[]): Promise<void>
   putCall(email: string, call: CallRecord): Promise<void>
   getCall(email: string, id: string): Promise<CallRecord | null>
+  /** Start over: every data row of the account, its Storage prefix, and last its closeout_state row. */
+  deleteAccount(email: string): Promise<void>
 }
 
 /** Error text safe for logs: quoted values (row data, JSON snippets, file paths) and emails are redacted;
@@ -265,6 +267,7 @@ export function createMemoryDataStore(): DataStore {
     },
     async putCall(email, call) { account(email).calls.set(call.id, clone(call)) },
     async getCall(email, id) { return clone(account(email).calls.get(id) ?? null) },
+    async deleteAccount(email) { accounts.delete(email) },
   }
   return store
 }
@@ -316,6 +319,16 @@ export function createDataStore(client: SupabaseClient): DataStore {
     const { data, error } = await table(name).select('*').eq('email', email).eq(column, value).maybeSingle()
     if (error) throw dataFailure(`data_${name}_read_failed`, error)
     return data ? decode<T>(data as Row) : null
+  }
+  /** Every object key under a folder: list() is one level deep, so folders (null id) recurse. */
+  async function objectsUnder(folder: string): Promise<string[]> {
+    const paths: string[] = []
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await bucket.list(folder, { limit: 1000, offset })
+      if (error) throw dataFailure('data_object_list_failed', error)
+      for (const item of data) paths.push(...item.id === null ? await objectsUnder(`${folder}/${item.name}`) : [`${folder}/${item.name}`])
+      if (data.length < 1000) return paths
+    }
   }
   async function write(name: string, email: string, value: { id: string }) {
     await store.ensureAccount(email)
@@ -568,6 +581,20 @@ export function createDataStore(client: SupabaseClient): DataStore {
       const row = data as Row
       return { id: String(row.id), startedAt: new Date(String(row.started_at)).toISOString(), seconds: Number(row.seconds ?? 0),
         transcript: Array.isArray(row.transcript) ? row.transcript as CallRecord['transcript'] : [], summary: typeof row.summary === 'string' ? row.summary : null }
+    },
+    async deleteAccount(email) {
+      // Children before parents; closeout_state goes last, so its cascade is a backstop rather than the plan.
+      for (const name of ['findings', 'runs', 'empty_cycles', 'entries', 'files', 'mappings', 'sources', 'facts', 'chat', 'calls']) {
+        const { error } = await table(name).delete().eq('email', email)
+        if (error) throw dataFailure(`data_${name}_delete_failed`, error)
+      }
+      const paths = await objectsUnder(accountHash(email))
+      for (let offset = 0; offset < paths.length; offset += 1000) {
+        const { error } = await bucket.remove(paths.slice(offset, offset + 1000).map(path => checkedPath(email, path)))
+        if (error) throw dataFailure('data_object_cleanup_failed', error)
+      }
+      const { error } = await table('state').delete().eq('email', email)
+      if (error) throw dataFailure('data_state_delete_failed', error)
     },
   }
   return store

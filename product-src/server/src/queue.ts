@@ -22,6 +22,15 @@ export class UserQueue {
     return this.reserve(email, signal)
   }
 
+  /** The slot now, or null while a turn holds it. Never waits (Start over answers busy instead). */
+  tryAcquire(email: string): Release | null {
+    const key = email.trim().toLowerCase()
+    if (this.slots.has(key)) return null
+    const slot: Slot = {}
+    this.slots.set(key, slot)
+    return this.releaseFor(key, slot)
+  }
+
   /** Reserve synchronously so overload can be rejected before sending SSE headers. */
   reserve(email: string, signal?: AbortSignal): Promise<Release> {
     if (signal?.aborted) throw new DOMException('Request aborted', 'AbortError')

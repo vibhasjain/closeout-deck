@@ -14,12 +14,12 @@ import { stateStoreFromEnv } from './state.ts'
 import type { StateStore } from './state.ts'
 import { CALL_ID, chatMessage, isPlainObject, MAX_DOC_BYTES, validateChatBody, validateChatHistory, validateStateBody, ValidationError } from './validation.ts'
 import type { ChatMode } from './validation.ts'
-import { prepareWorkspace, materialize, materializeTurn, writeCallFile } from './workspace.ts'
-import { DataError, DataService, cycleDates, dateKey, localToday } from './data.ts'
+import { prepareWorkspace, materialize, materializeTurn, removeWorkspaces, writeCallFile } from './workspace.ts'
+import { DataError, DataService, cycleDates, dateKey, emptyCycles, localToday } from './data.ts'
 import { handleJourney } from './journeyRoutes.ts'
 import { createMemoryJourneyStore, journeyStoreFromEnv } from './journeyStore.ts'
 import type { JourneyStore } from './journeyStore.ts'
-import { dataStoreFromEnv, DuplicateFileError, createMemoryDataStore, safeMessage } from './datastore.ts'
+import { accountHash, dataStoreFromEnv, DuplicateFileError, createMemoryDataStore, safeMessage } from './datastore.ts'
 import type { DataStore } from './datastore.ts'
 import { calendarFrom, engineSha } from './pipeline.ts'
 import { createMemory, handleMemory, MEMORY_TIMEOUT_MS } from './memory.ts'
@@ -299,6 +299,29 @@ export function createServer(options: ServerOptions = {}) {
         const result = await stateStore.put(user.email, body.doc, body.base_updated_at)
         json(response, result.status, result.row ?? { doc: null })
       }
+      return
+    }
+    // Start over, for internal accounts only: everything of this one email goes, so onboarding and the agent begin again.
+    if (request.method === 'POST' && path === '/account/reset') {
+      if (!isAllowedEmail(user.email, env.INTERNAL_DOMAINS ?? 'hypertrack.io')) { json(response, 403, { error: 'not_internal' }); return }
+      const body = await readJson(request, 1024)
+      if (!isPlainObject(body) || body.confirm !== 'start over') throw new ValidationError()
+      // No chat turn or data write runs during a reset, and a reset never waits behind a turn.
+      const releaseTurn = queue.tryAcquire(user.email)
+      if (!releaseTurn) { json(response, 409, { error: 'busy' }); return }
+      const unlock = await dataLocks.acquire(user.email)
+      try {
+        const call = live.get(user.email)
+        if (call) live.release(user.email, call.id)
+        await memory.cancel(user.email)
+        await getMemoryStore().deleteAccount(user.email)
+        await getJourneyStore().deleteAccount(user.email)
+        await getDataStore().deleteAccount(user.email)
+        await removeWorkspaces(user.email, env)
+        for (const key of emptyCycles.keys()) if (key.startsWith(`${user.email}|`)) emptyCycles.delete(key)
+      } finally { unlock(); releaseTurn() }
+      console.log('Account reset:', accountHash(user.email))
+      json(response, 200, { ok: true })
       return
     }
     // The transcript lives in closeout_chat, never in the state document.

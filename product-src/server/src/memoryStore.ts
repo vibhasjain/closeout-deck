@@ -184,6 +184,8 @@ export interface MemoryStore {
   saveRun(email: string, run: MemoryRun): Promise<void>
   /** The most recent runs, newest first; optionally only runs whose recorded trigger is one of `triggers`. */
   listRuns(email: string, limit?: number, triggers?: Trigger[]): Promise<MemoryRun[]>
+  /** Start over: every instinct (tombstones too) and memory run of the account. */
+  deleteAccount(email: string): Promise<void>
 }
 
 const clone = <T>(value: T): T => structuredClone(value)
@@ -220,6 +222,7 @@ export function createMemoryMemoryStore(): MemoryStore {
     async listRuns(email, limit = 10, triggers) {
       return clone([...runs.get(email) ?? []].filter(run => !triggers || triggers.includes(run.trigger)).sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, limit))
     },
+    async deleteAccount(email) { instincts.delete(email); runs.delete(email) },
   }
 }
 
@@ -272,6 +275,12 @@ export function createMemoryStore(client: SupabaseClient): MemoryStore {
       return (data as Row[]).map(row => ({ id: String(row.id), trigger: row.trigger as Trigger, ref: row.ref == null ? null : String(row.ref),
         startedAt: iso(row.started_at)!, finishedAt: iso(row.finished_at), ops: Array.isArray(row.ops) ? row.ops : [],
         dropped: Array.isArray(row.dropped) ? row.dropped as Dropped[] : [], error: row.error == null ? null : String(row.error) }))
+    },
+    async deleteAccount(email) {
+      for (const table of [instincts, runs]) {
+        const { error } = await table().delete().eq('email', email)
+        if (error) throw dataFailure('memory_delete_failed', error)
+      }
     },
   }
 }

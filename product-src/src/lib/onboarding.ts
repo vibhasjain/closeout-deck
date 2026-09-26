@@ -323,6 +323,13 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
 }
 /** Await this before chat/ingestion or leaving setup so the agent reads the latest profile. */
 export const flushOnboarding = canonical.flush
+/** Start over: forget this account's local profile, sync base, unsent edits and unsent chat. The sign-in stays. */
+export function clearLocalAccount() {
+  cache = structuredClone(DEFAULTS)
+  for (const key of [KEY, 'closeout-onboarding-owner', pendingKey(), baseKey(), chatPendingKey()]) {
+    try { localStorage.removeItem(key) } catch { /* Storage may be disabled. */ }
+  }
+}
 export function useOnboardingSyncStatus() {
   return useSyncExternalStore((listener) => { syncListeners.add(listener); return () => syncListeners.delete(listener) }, () => syncStatus, () => syncStatus)
 }
