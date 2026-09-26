@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { Children, isValidElement, type DependencyList, type EffectCallback, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -252,5 +253,13 @@ describe('simulated browser connection', () => {
     expect(overlay.toast).not.toHaveBeenCalled()
     expect(modal.onDone).not.toHaveBeenCalled()
     expect(vi.getTimerCount()).toBe(0)
+  })
+})
+
+describe('connect option rows', () => {
+  it('keep their natural height and full-size icon inside the shared action button (never clipped to a 2rem button)', () => {
+    const css = readFileSync(new URL('./action-button.css', import.meta.url), 'utf8')
+    expect(css).toMatch(/\.btn\.connect-method-option\.action-button \{[^}]*height: auto;/)
+    expect(css).toMatch(/\.btn\.connect-method-option \.action-button-label:first-child > svg \{ width: 1\.125rem; height: 1\.125rem; \}/)
   })
 })

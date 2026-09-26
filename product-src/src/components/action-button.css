@@ -8,7 +8,9 @@
 .action-feedback .btn { min-height: 26px; padding: 3px 8px; }
 @media (prefers-reduced-motion: reduce) { .btn.action-button { transition: none; } .action-button .spinner { animation: none; } }
 
-.connect-method-option.action-button { display: block; text-align: left; }
+/* A connect option is a two-line row (icon, name, hint), never a 2rem button: it keeps its natural height and 18px icon. */
+.btn.connect-method-option.action-button { display: block; height: auto; padding: .75rem .875rem; text-align: left; }
+.btn.connect-method-option .action-button-label:first-child > svg { width: 1.125rem; height: 1.125rem; }
 .connect-method-option .action-button-labels { width: 100%; }
 .connect-method-option .action-button-label:first-child { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr); grid-template-rows: auto auto; column-gap: .625rem; justify-items: start; white-space: normal; width: 100%; }
 .connect-method-option .action-button-label:first-child > svg { grid-row: 1 / 3; }
