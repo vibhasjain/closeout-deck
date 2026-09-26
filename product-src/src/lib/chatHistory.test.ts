@@ -9,6 +9,32 @@ function harness(local: ChatMessage[] = [], saved: ChatMessage[] = []) {
   return { history, request, chat: () => chat, pending: () => pending }
 }
 describe('separate append-only chat history', () => {
+  it('hydrates one finalized card when a live snapshot and final history row have different ids', async () => {
+    const callId = '6b7fef17-4651-40b3-9d88-58621a81b4ca'
+    const snapshot: ChatMessage = { ...line('legacy-live'), callSaving: true, callLive: true, cards: [{ kind: 'call', callId, seconds: 11 }] }
+    const complete: ChatMessage = { ...line(`call-${callId}`), callSaving: false, callLive: false, cards: [{ kind: 'call', callId, seconds: 43 }] }
+    const h = harness([snapshot, complete])
+    h.request.mockResolvedValueOnce(Response.json({ messages: [snapshot, complete] }))
+    await h.history.load()
+    expect(h.chat()).toEqual([complete])
+  })
+  it('does not revive a live label from local state when the server final omits client flags', async () => {
+    const callId = '6b7fef17-4651-40b3-9d88-58621a81b4ca'
+    const complete: ChatMessage = { ...line(`call-${callId}`), cards: [{ kind: 'call', callId, seconds: 43 }] }
+    const snapshot: ChatMessage = { ...complete, callLive: true, callSaving: true }
+    const h = harness([snapshot])
+    h.request.mockResolvedValueOnce(Response.json({ messages: [complete] }))
+    await h.history.load()
+    expect(h.chat()).toHaveLength(1)
+    expect(h.chat()[0].callLive).toBe(false)
+  })
+  it('keeps full transcripts locally while posting only the history card and audit', async () => {
+    const message: ChatMessage = { ...line('long-call'), callLive: false, callTranscript: Array.from({ length: 200 }, (_, index) => ({ role: 'agent', text: '界'.repeat(4000), startMs: index })) }
+    const h = harness([message], [message])
+    await h.history.flush()
+    expect(h.request).toHaveBeenCalledExactlyOnceWith('POST', { messages: [line('long-call')] })
+    expect(h.chat()[0].callTranscript).toEqual(message.callTranscript)
+  })
   it('durably saves pending actions before execution and appends only their settled audit row', async () => {
     const action = { type: 'approve', cycleId: '2026-09-20', groupId: 'CS-01' }
     const pending = { ...line('decision'), actions: [], pendingActions: [action] }

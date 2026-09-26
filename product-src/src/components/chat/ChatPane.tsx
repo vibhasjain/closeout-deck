@@ -7,7 +7,7 @@ import { AgentAvatar } from '@/components/chat/AgentAvatar'
 import { Chip } from '@/components/ui'
 import { Message } from '@/components/chat/Message'
 import { memoryHistory } from '@/components/memory/chatMemory'
-import { CallBar } from '@/components/voice/CallBar'
+import { DeskCall } from '@/components/voice/DeskCall'
 import { useVoiceCall } from '@/lib/useVoiceCall'
 import { useDictation } from '@/lib/useDictation'
 import { VOICE_ENABLED } from '@/lib/flags'
@@ -383,7 +383,7 @@ export function ChatPane({ scope: explicitScope, headerAction, onCallingChange }
         </div>
         {headerAction && <div className="chat-header-actions">{headerAction}</div>}
       </header>
-      {calling && voice.snapshot && <CallBar snapshot={voice.snapshot} onMute={voice.mute} onEnd={() => { void voice.end().catch(() => {}) }} onRetry={() => { if (voice.snapshot?.errorKind === 'save') void voice.retrySave().catch(() => {}); else startDeskCall() }} onRetryTurn={voice.retryTurn} onKeepTyping={() => { voice.dismiss(); composer.current?.focus() }} />}
+      {calling && voice.snapshot && <DeskCall snapshot={voice.snapshot} onMute={voice.mute} onEnd={() => { void voice.end().catch(() => {}) }} onRetry={() => { if (voice.snapshot?.errorKind === 'save') void voice.retrySave().catch(() => {}); else startDeskCall() }} onRetryTurn={voice.retryTurn} onKeepTyping={() => { voice.dismiss(); window.requestAnimationFrame(() => composer.current?.focus()) }} />}
       <div ref={scrollRef} className="chat-log" role="log" aria-live="polite" aria-label="Conversation with Closeout Agent">
         {scope && (
           <div className="flex shrink-0 items-center justify-between gap-2">

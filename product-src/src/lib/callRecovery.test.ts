@@ -116,7 +116,8 @@ describe('durable live-call recovery', () => {
     persistLiveCall(email, { ...call, transcript: Array.from({ length: 260 }, (_, index) => ({ role: index % 2 ? 'user' : 'agent', text: `turn ${index} ` + '界'.repeat(600), startMs: index * 1000 })) })
     expect(localStorage.setItem).toHaveBeenCalledTimes(1)
     const rows = readStoredCall(email)!.transcript
-    expect(rows.length).toBeLessThanOrEqual(200); expect(rows.every(row => row.text.length <= 400)).toBe(true)
+    expect(rows.length).toBeLessThanOrEqual(200); expect(rows.every(row => row.text.length <= 4000)).toBe(true)
+    expect(rows.at(-1)?.text).toBe('turn 259 ' + '界'.repeat(600))
     expect(rows.at(-1)?.startMs).toBe(259000)
     persistLiveCall(email, { ...call, seconds: 49 }); persistLiveCall(email, { ...call, seconds: 50 })
     expect(localStorage.setItem).toHaveBeenCalledTimes(1)
@@ -131,5 +132,16 @@ describe('durable live-call recovery', () => {
     vi.mocked(localStorage.setItem).mockImplementation(() => { throw new Error('disabled') })
     expect(() => persistLiveCall(email, record())).not.toThrow()
     expect(readStoredCall(email)).toBeNull()
+  })
+  it('flushes the last complete turn synchronously for pagehide recovery', async () => {
+    const call = record()
+    persistLiveCall(email, call, true)
+    persistLiveCall(email, { ...call, seconds: 49 })
+    const transcript = [{ role: 'agent' as const, text: '界'.repeat(4000), startMs: 48000 }]
+    persistLiveCall(email, { ...call, seconds: 50, transcript }, true)
+    expect(readStoredCall(email)).toMatchObject({ seconds: 50, transcript })
+    expect(localStorage.setItem).toHaveBeenCalledTimes(2)
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(localStorage.setItem).toHaveBeenCalledTimes(2)
   })
 })

@@ -7,7 +7,7 @@ import { FormCard, gapRows } from '@/components/journey/FormCard'
 import { useOverlay } from '@/components/shell/Overlay'
 import { Btn, PayDelta, Tag } from '@/components/ui'
 import { money } from '@/bench/engine.js'
-import { hydrate, type CyclePayload, type FindingGroup } from '@/lib/data'
+import { getDataSnapshot, hydrate, type CyclePayload, type FileRecord, type FindingGroup } from '@/lib/data'
 import { kindLabel } from '@/lib/desk'
 import { shiftHref } from '@/lib/navigation'
 import { decide, groupId, useJourneyCycle, useJourneyThreads, type JourneyThread } from '@/lib/journey'
@@ -72,15 +72,23 @@ function CarouselPosition({ current, total }: { current: number; total: number }
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
-export function findingEvidence(payload: CyclePayload, item: CarouselFinding): FindingEvidence {
+export function findingEvidence(payload: CyclePayload, item: CarouselFinding, files: readonly FileRecord[] = []): FindingEvidence {
   const cases = item.resolution.cases.flatMap(entry => {
     const shift = payload.week.find(shift => shift.id === entry.shiftId)
     if (!shift) return []
+    const file = files.find(file => file.id === (shift.prov.fileId ?? shift.prov.file))
+    const source = payload.intake.sources.find(source => source.id === file?.sourceId)
+    // Wire provenance contains a file id; only the file catalogue can turn it into a human reference.
+    const fileName = file?.name ?? (/^(?:f|file)_[a-z0-9]+$/i.test(shift.prov.file) ? 'Source file unavailable' : shift.prov.file)
+    const date = new Date(`${payload.cycle.start}T00:00:00`)
+    date.setDate(date.getDate() + shift.day)
+    const reference = { file: fileName, sheet: shift.prov.sheet, row: shift.prov.row, date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }
+    const note = [reference.file, reference.sheet, `row ${reference.row}`, reference.date].filter(Boolean).join(' · ')
     const rows: EvidenceRow[] = shift.punches.map(punch => {
       const meal = shift.meal && punch.out != null ? Math.max(0, Math.min(punch.out, shift.meal[1]) - Math.max(punch.in, shift.meal[0])) : shift.mealMin ?? 0
       const hours = punch.out == null || !shift.meal && !!shift.mealMin && shift.punches.length > 1 ? null : Math.max(0, punch.out - punch.in - meal) / 60
-      return { source: shift.prov.system ?? 'Time entry', start: shift.prov.hoursOnly ? null : punch.in, end: shift.prov.hoursOnly ? null : punch.out,
-        meal: shift.meal, hours, note: `${shift.prov.file} · row ${shift.prov.row}` }
+      return { source: source?.short ?? source?.name ?? shift.prov.system ?? 'Time entry', start: shift.prov.hoursOnly ? null : punch.in, end: shift.prov.hoursOnly ? null : punch.out,
+        meal: shift.meal, hours, note, reference }
     })
     if (shift.vms) rows.push({ source: 'Client-approved', start: null, end: null, meal: null, hours: shift.vms.min / 60 })
     if (shift.geo) rows.push({ source: 'HyperTrack location', start: shift.geo[0], end: shift.geo[1], meal: null, hours: (shift.geo[1] - shift.geo[0]) / 60 })
@@ -136,13 +144,13 @@ export function FindingsCard({ cycleId, live = true }: { cycleId: string; live?:
           if (first) setPosition(Math.round(node.scrollLeft / (first.offsetWidth + 12)))
         }}>
           {items.map((item, at) => <ApprovalCard className="journey-finding" key={`${groupId(item.group)}:${item.resolution.state}`} role="listitem" data-state={item.resolution.state} data-active={at === index} inert={at !== index} footer={<div className="journey-finding-actions">
-              {/* N6: only askable missing time uses the gaps form; other waiting entries keep their conversation. */}
+              {/* Only missing time uses the gaps form. Other entries open evidence, without promising an ask. */}
               {item.resolution.state === 'waiting' && !item.asked && (askable.has(item)
                 ? <Btn onClick={() => openDrawer(<FormCard form="gaps" cycleId={cycleId} />, 'Missing time entries')}>Review gaps</Btn>
-                : <Btn onClick={() => navigate(shiftHref(cycleId, item.resolution.cases[0].shiftId))}>Ask from an entry</Btn>)}
+                : <Btn onClick={() => navigate(shiftHref(cycleId, item.resolution.cases[0].shiftId))}>View time entry</Btn>)}
               {item.resolution.state === 'proposed' && <Btn className={primary && at === index ? 'primary' : undefined} disabled={pending !== null} onClick={() => void act(item, 'approved')}>{pending === groupId(item.group) ? 'Approving…' : `Approve ${item.resolution.cases.length.toLocaleString()}`}</Btn>}
               {item.resolution.state === 'judgment' && <Btn disabled={pending !== null} onClick={() => void act(item, 'escalated')}>{pending === groupId(item.group) ? 'Escalating…' : 'Escalate'}</Btn>}
-              <Btn onClick={() => openDrawer(<FindingDetail finding={findingEvidence(cycle, item)} dayLabel={day => days[day] ?? ''} />, 'Evidence', cycle.sample ? 'Sample' : undefined)}>Evidence</Btn>
+              <Btn onClick={() => openDrawer(<FindingDetail finding={findingEvidence(cycle, item, getDataSnapshot().files)} dayLabel={day => days[day] ?? ''} />, 'Evidence', cycle.sample ? 'Sample' : undefined)}>Evidence</Btn>
             </div>}>
             <Tag>{item.resolution.state === 'proposed' ? 'Proposed' : item.resolution.state === 'waiting' ? 'Waiting' : item.resolution.state === 'escalated' ? `Escalated · ${item.resolution.owner}` : 'Needs Judgment'}</Tag>
             <h4>{item.group.title}</h4><p>{item.group.summary}</p>

@@ -1,7 +1,7 @@
 import { Children, createElement, isValidElement, type DependencyList, type EffectCallback, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { batchPreview, ConnectForm, connectTarget, DisputeForm, FormCard, gapRows, GapsForm, SendForm, waitingPaidAsReported } from './FormCard'
+import { batchPreview, ConnectForm, connectTarget, DisputeForm, disputePrefill, FormCard, gapRows, GapsForm, SendForm, waitingPaidAsReported } from './FormCard'
 import { DEFAULTS, type Onboarding } from '@/lib/onboarding'
 import type { CyclePayload, CycleSummary } from '@/lib/data'
 import type { JourneyDispute, JourneyThread } from '@/lib/journey'
@@ -504,6 +504,40 @@ describe('journey dispute form', () => {
     expect(html).not.toContain('Simulate a dispute')
     await form.click('Retry disputes')
     expect(await form.ready()).toContain('Simulate a dispute')
+  })
+
+  it('keeps the agent recommendation after history loads and submits its minutes as hours with the note', async () => {
+    const cycle = { ...payload(), batch }
+    api.getDisputes.mockResolvedValue({ disputes: [dispute] })
+    api.getThreads.mockResolvedValue({ threads: [{ ...thread, disputeId: dispute.id }] })
+    api.resolveDispute.mockResolvedValue({ dispute: { ...dispute, status: 'adjusted' }, thread })
+    const form = mount(() => DisputeForm({ cycle, prefill: { disputeId: dispute.id, worker: dispute.worker, minutes: 6, note: 'Six minutes supported by the clock-out.' } }))
+    const html = await form.ready()
+    expect(html).toContain('value="0.1"')
+    expect(html).toContain('value="Six minutes supported by the clock-out."')
+    await form.click('Adjust')
+    expect(api.resolveDispute).toHaveBeenCalledWith(dispute.id, { decision: 'adjust', hours: 0.1, note: 'Six minutes supported by the clock-out.' })
+  })
+
+  it('updates a later recommendation without resetting edits during ordinary rerenders', async () => {
+    const cycle = { ...payload(), batch }
+    api.getDisputes.mockResolvedValue({ disputes: [dispute] })
+    let prefill = { worker: dispute.worker, minutes: 6, note: 'Six supported minutes.' }
+    const form = mount(() => DisputeForm({ cycle, prefill }))
+    await form.ready()
+    form.change('Resolution note', 'Reviewed the original source.')
+    expect(await form.ready()).toContain('value="Reviewed the original source."')
+    prefill = { ...prefill, minutes: 12, note: 'Twelve supported minutes.' }
+    form.draw()
+    const html = await form.ready()
+    expect(html).toContain('value="0.2"')
+    expect(html).toContain('value="Twelve supported minutes."')
+  })
+
+  it('ignores invalid or out-of-range adjustment prefills', () => {
+    expect(disputePrefill({ minutes: '6', amount: '2', note: 'Evidence checked.' })).toEqual({ hours: '0.1', amount: '2', note: 'Evidence checked.' })
+    expect(disputePrefill({ hours: Infinity, minutes: -1, amount: 10001, note: null })).toEqual({ hours: '', amount: '', note: '' })
+    expect(disputePrefill({ hours: 0.5, minutes: 6 }).hours).toBe('0.5')
   })
 
   it('blocks stale creation controls when the cycle or prefilled worker changes during history loading', async () => {

@@ -144,7 +144,7 @@ describe('journey transport', () => {
   })
   it('surfaces failed mutations without claiming a decision was saved', async () => {
     fetchMock.mockResolvedValueOnce(response({ error: 'invalid_input' }, 400))
-    await expect(decide(payload.cycle.id, { groupId: 'CS-01', decision: 'dismissed' })).rejects.toThrow('invalid_input')
+    await expect(decide(payload.cycle.id, { groupId: 'CS-01', decision: 'dismissed' })).rejects.toMatchObject({ code: 'invalid_input', message: 'The request could not be completed. Try again.' })
     expect(invalidate).not.toHaveBeenCalled()
   })
   it('downloads CSV through the bearer route rather than navigating an unauthenticated URL', async () => {

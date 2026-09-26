@@ -18,6 +18,11 @@ vi.mock('@/lib/journey', async (original) => ({
   useJourneyThreads: () => ({ threads: [], loading: false, error: null }),
   recordMessage: vi.fn(),
 }))
+vi.mock('@/lib/onboarding', async original => {
+  const actual = await original<typeof import('@/lib/onboarding')>()
+  return { ...actual, useOnboarding: () => [actual.DEFAULTS, vi.fn()] }
+})
+vi.mock('@/lib/data', async original => ({ ...await original<typeof import('@/lib/data')>(), useData: () => ({ payloads: [] }) }))
 
 const thread: JourneyThread = { id: 'thread-1', cycleId: '2026-09-14', counterparty: { kind: 'worker', name: 'Jo Chen' }, status: 'waiting', createdAt: '2026-09-21T11:00:00Z',
   messages: [{ id: 'message-1', threadId: 'thread-1', dir: 'out', text: 'Please confirm your time entries.', status: 'not_sent_demo', at: '2026-09-21T11:00:00Z' }] }

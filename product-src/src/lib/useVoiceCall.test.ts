@@ -41,6 +41,36 @@ beforeEach(() => {
 afterEach(() => { const call = readStoredCall(email); if (call) clearStoredCall(email, call.sessionId); vi.unstubAllGlobals() })
 
 describe('voice hook lifecycle and real action integration', () => {
+  it('journals one live card, updates its clock, and finalizes that same card at hang-up', async () => {
+    await useTestCall('desk').start()
+    const id = snapshot.callId!, record = { sessionId: id, purpose: 'desk' as const, startedAt: 1000, seconds: 0, transcript: [] }
+    options.onPersist!(record, false)
+    expect(getOnboarding().chat).toHaveLength(0)
+    options.onEvent({ type: 'state', snapshot })
+    options.onPersist!(record, false)
+    expect(getOnboarding().chat).toHaveLength(1)
+    expect(getOnboarding().chat[0]).toMatchObject({ id: `call-${id}`, callLive: true, callSaving: true, cards: [{ seconds: 0 }] })
+    options.onPersist!({ ...record, seconds: 11 }, false)
+    options.onPersist!({ ...record, seconds: 42 }, false)
+    expect(getOnboarding().chat).toHaveLength(1)
+    expect(getOnboarding().chat[0].cards).toEqual([{ kind: 'call', callId: id, seconds: 42 }])
+    options.onPersist!({ ...record, seconds: 43 }, true)
+    options.onEvent({ type: 'completed', callId: id, seconds: 43, transcript: [], final: 'Saved.' })
+    expect(getOnboarding().chat).toHaveLength(1)
+    expect(getOnboarding().chat[0]).toMatchObject({ id: `call-${id}`, at: 1000, callLive: false, callSaving: false, text: 'Saved.', cards: [{ seconds: 43 }] })
+  })
+  it('boot recovery replaces legacy duplicate call cards by session identity', async () => {
+    const id = crypto.randomUUID(), card = { kind: 'call' as const, callId: id, seconds: 11 }
+    updateOnboarding({ chat: [
+      { id: 'old-snapshot', role: 'agent', text: '', at: 1, callSaving: true, cards: [card] },
+      { id: `call-${id}`, role: 'agent', text: '', at: 1, callSaving: true, cards: [card] },
+    ] })
+    storage.set(liveCallKey(email), JSON.stringify({ sessionId: id, purpose: 'desk', startedAt: 1, seconds: 43, transcript: [] }))
+    await recoverVoiceCall(navigation, new URLSearchParams())
+    expect(getOnboarding().chat).toHaveLength(1)
+    expect(getOnboarding().chat[0]).toMatchObject({ id: `call-${id}`, callSaving: false, callLive: false, cards: [{ seconds: 43 }] })
+    expect(startCall).not.toHaveBeenCalled()
+  })
   it('Retry saving calls only the save method and never opens a new microphone session', async () => {
     await useTestCall().start(); await useTestCall().retrySave()
     expect(handle.retrySave).toHaveBeenCalledTimes(1); expect(startCall).toHaveBeenCalledTimes(1)

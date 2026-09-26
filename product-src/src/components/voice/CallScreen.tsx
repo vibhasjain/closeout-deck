@@ -1,21 +1,28 @@
 import { useState } from 'react'
-import { Captions, Mic, MicOff, PhoneOff } from 'lucide-react'
+import { Captions, ChevronDown, Mic, MicOff, PhoneOff } from 'lucide-react'
 import { VoiceBeam } from 'voice-glow'
 import type { Onboarding } from '@/lib/onboarding'
 import { CallOrb } from './CallOrb'
 import { CallChecklist } from './CallChecklist'
 import { CallLevelBars } from './CallLevelBars'
 import { CallError } from './CallError'
+import { CallCaptions } from './CallCaptions'
 import { callStatus, callTime, type CallControlsProps } from './callPresentation'
 import './voice.css'
 
-/** The setup page owns the section navigation; this is the call within its current section. */
-export function CallScreen({ snapshot, onboarding, onMute, onEnd, onRetry, onRetryTurn, onKeepTyping }: CallControlsProps & { onboarding: Onboarding }) {
+type CallScreenProps = CallControlsProps & (
+  | { purpose?: 'onboard'; onboarding: Onboarding; onMinimize?: never }
+  | { purpose: 'desk'; onboarding?: never; onMinimize(): void }
+)
+
+/** Shared call controls; only setup calls have a coverage checklist. */
+export function CallScreen({ snapshot, purpose = 'onboard', onboarding, onMute, onEnd, onRetry, onRetryTurn, onKeepTyping, onMinimize }: CallScreenProps) {
   const [captions, setCaptions] = useState(true)
   const finishing = snapshot.status === 'ending' || snapshot.status === 'ended'
   const failed = snapshot.status === 'error'
   const status = callStatus(snapshot)
-  return <section className="call-screen" aria-label="Call with your Closeout Agent" data-call-status={snapshot.status}>
+  return <section className={`call-screen${purpose === 'desk' ? ' call-screen--desk' : ''}`} aria-label="Call with your Closeout Agent" data-call-status={snapshot.status}>
+    {purpose === 'desk' && <header className="call-screen-header"><span>Payroll call</span><button type="button" className="call-control" aria-label="Minimize call" onClick={onMinimize}><ChevronDown size={22} aria-hidden /></button></header>}
     <div className="call-stage">
       <div className="call-agent">
         <CallOrb state={snapshot.orb} level={snapshot.level} levelSource={snapshot.levelSource} />
@@ -24,9 +31,9 @@ export function CallScreen({ snapshot, onboarding, onMute, onEnd, onRetry, onRet
         <time className="call-time" aria-label={`Call duration ${callTime(snapshot.seconds)}`}>{callTime(snapshot.seconds)}</time>
         {failed && <CallError error={snapshot.error || 'The call could not connect. Try again.'} errorKind={snapshot.errorKind} onRetry={onRetry} onKeepTyping={onKeepTyping} />}
         {!failed && snapshot.note && <p className="call-note" role="status">{snapshot.note} {onRetryTurn && <button type="button" onClick={onRetryTurn}>Retry</button>}</p>}
-        {!failed && <div className="call-caption" aria-live={captions ? 'polite' : 'off'} aria-atomic="true">{captions && snapshot.caption}</div>}
+        {!failed && <CallCaptions snapshot={snapshot} enabled={captions} />}
       </div>
-      <CallChecklist onboarding={onboarding} />
+      {purpose === 'onboard' && onboarding && <CallChecklist onboarding={onboarding} />}
     </div>
     {!failed && <footer className="call-footer">
       <div className="call-controls" aria-label="Call controls">

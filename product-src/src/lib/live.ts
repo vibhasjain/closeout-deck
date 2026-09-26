@@ -46,7 +46,7 @@ export interface CallOptions {
   getContext?: () => LiveContext
   onActions?: (actions: Action[]) => void | CallActionError | Promise<void | CallActionError>
   onSkipped?: (skipped: string[]) => void
-  onPersist?: (record: { sessionId: string; purpose: CallPurpose; startedAt: number; seconds: number; transcript: TranscriptTurn[] }, final?: boolean) => void
+  onPersist?: (record: { sessionId: string; purpose: CallPurpose; startedAt: number; seconds: number; transcript: TranscriptTurn[] }, ended?: boolean) => void
   onSaved?: (sessionId: string) => void
   onEvent: (event: LiveEvent) => void
 }
@@ -107,24 +107,40 @@ export function stitchTranscript(fragments: readonly TranscriptTurn[]): Transcri
   return turns.map(turn => ({ ...turn, text: turn.text.trim() })).filter(turn => turn.text)
 }
 
-/** Keep every saved row inside the server's 400-character / 200-row contract. */
+export const CALL_TURN_CHARACTERS = 4000
+const CALL_KEEPALIVE_BYTES = 60_000
+
+/** Preserve turn boundaries; only split speech that exceeds the server's per-item cap. */
 export function callEndTranscript(turns: readonly TranscriptTurn[]) {
-  const merged: { role: 'user' | 'agent'; text: string; startMs: number }[] = []
-  for (const turn of turns) {
-    const previous = merged.at(-1)
-    if (previous?.role === turn.role) previous.text += ` ${turn.text}`
-    else merged.push({ role: turn.role, text: turn.text, startMs: turn.startMs })
-  }
-  const rows = merged.flatMap(turn => {
+  const groups = turns.map(turn => {
     const pieces: { role: 'user' | 'agent'; text: string; startMs: number }[] = []
-    for (let offset = 0; offset < turn.text.length; offset += 400) pieces.push({ role: turn.role, text: turn.text.slice(offset, offset + 400), startMs: turn.startMs })
+    for (let offset = 0; offset < turn.text.length;) {
+      let end = Math.min(turn.text.length, offset + CALL_TURN_CHARACTERS)
+      // Do not sever a surrogate pair at the item boundary.
+      if (end < turn.text.length && /[\uD800-\uDBFF]/.test(turn.text[end - 1])) end--
+      pieces.push({ role: turn.role, text: turn.text.slice(offset, end), startMs: turn.startMs })
+      offset = end
+    }
     return pieces
-  }).slice(-200)
-  // Keep the authenticated end request below the browser's 64 KiB keepalive quota,
-  // including non-ASCII speech, so navigating away still releases the server lock.
+  }).filter(group => group.length)
+  while (groups.length > 1 && groups.reduce((count, group) => count + group.length, 0) > 200) groups.shift()
+  return groups.flat().slice(-200)
+}
+
+/** Unload alone needs the browser's byte budget; ordinary saves retain the full bounded transcript. */
+export function callEndBody(seconds: number, turns: readonly TranscriptTurn[], keepalive = false) {
+  const transcript = callEndTranscript(turns)
+  const body = () => JSON.stringify({ seconds, transcript })
+  if (!keepalive) return body()
   const encoder = new TextEncoder()
-  while (rows.length && encoder.encode(JSON.stringify(rows)).byteLength > 60_000) rows.shift()
-  return rows
+  while (transcript.length && encoder.encode(body()).byteLength > CALL_KEEPALIVE_BYTES) {
+    const oldest = transcript[0]
+    let count = 1
+    while (count < transcript.length && transcript[count].role === oldest.role && transcript[count].startMs === oldest.startMs) count++
+    // Keep the tail only when one enormous turn cannot fit by itself.
+    transcript.splice(0, count === transcript.length ? 1 : count)
+  }
+  return body()
 }
 
 let activeCall: CallHandle | null = null
@@ -169,18 +185,17 @@ export function startCall(options: CallOptions): CallHandle {
     retryTurn = retry
     state = { ...state, note: voiceError(error) }; emit()
   }
-  const persistLocal = (final = false) => {
-    if (sessionId) options.onPersist?.({ sessionId, purpose: options.purpose, startedAt: startedAt || Date.now(), seconds: state.seconds, transcript: state.transcript }, final)
+  const persistLocal = () => {
+    if (sessionId) options.onPersist?.({ sessionId, purpose: options.purpose, startedAt: startedAt || Date.now(), seconds: state.seconds, transcript: state.transcript }, stopped)
   }
   const updateSeconds = () => {
     if (startedAt) state = { ...state, seconds: Math.min(3600, Math.max(state.seconds, Math.floor((Date.now() - startedAt) / 1000))) }
   }
-  const endBody = () => JSON.stringify({ seconds: state.seconds, transcript: callEndTranscript(state.transcript) })
   const persistEnd = async () => {
     if (!sessionId || saved) return
     if (endPromise) return endPromise
     endPromise = (async () => {
-      const response = await authedFetch(`/live-session/${encodeURIComponent(sessionId!)}/end`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {}) }, body: endBody(), keepalive: true })
+      const response = await authedFetch(`/live-session/${encodeURIComponent(sessionId!)}/end`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {}) }, body: callEndBody(state.seconds, state.transcript, unloading), keepalive: unloading })
       if (!response.ok && response.status !== 404) throw await responseError(response, 'The call ended, but its notes could not be saved. Retry saving to finish saving them.')
       serverSaved = response.status !== 404
       saved = true
@@ -215,7 +230,7 @@ export function startCall(options: CallOptions): CallHandle {
   }
   const stopMedia = () => {
     if (stopped) return
-    stopped = true; updateSeconds(); persistLocal(true)
+    stopped = true; updateSeconds(); persistLocal()
     closeResolve?.()
     clearTimeout(scribeTimer); clearTimeout(speakingTimer); clearTimeout(connectTimer)
     clearInterval(clockTimer); clearInterval(levelTimer)
@@ -316,7 +331,7 @@ export function startCall(options: CallOptions): CallHandle {
       if (started) return
       started = true; startedAt = Date.now(); clearTimeout(connectTimer)
       state = { ...state, status: 'active' }; orb()
-      persistLocal(true)
+      persistLocal()
       send('session.commentary.append', { delegation_id: null, content: CALL_OPENER })
       if (state.muted) send('session.input_audio.mute')
       clockTimer = setInterval(() => { updateSeconds(); persistLocal(); emit(); if (state.seconds >= 30 * 60) void handle.hangup().catch(() => {}) }, 1000)
@@ -327,14 +342,14 @@ export function startCall(options: CallOptions): CallHandle {
       fragments.push(fragment)
       state = { ...state, transcript: stitchTranscript(fragments) }
       state.caption = state.transcript.filter(turn => turn.role === role).at(-1)?.text ?? ''
-      spokenRole = role; clearTimeout(speakingTimer); speakingTimer = setTimeout(() => { spokenRole = null; if (!stopped) { persistLocal(true); orb() } }, 1500)
+      spokenRole = role; clearTimeout(speakingTimer); speakingTimer = setTimeout(() => { spokenRole = null; if (!stopped) { persistLocal(); orb() } }, 1500)
       if (role === 'user') {
         pendingInput.push(fragment); clearTimeout(scribeTimer)
-        scribeTimer = setTimeout(() => { persistLocal(true); queuedInput.push(...pendingInput); pendingInput = []; void runScribe() }, 1200)
+        scribeTimer = setTimeout(() => { persistLocal(); queuedInput.push(...pendingInput); pendingInput = []; void runScribe() }, 1200)
       }
       orb()
     } else if (event.type === 'session.input_transcript.done' || event.type === 'session.output_transcript.done' || event.type === 'session.input_transcript.final' || event.type === 'session.output_transcript.final') {
-      persistLocal(true)
+      persistLocal()
     } else if (event.type === 'session.delegation.created') {
       const delegation = event.delegation as { id?: unknown } | undefined
       if (typeof delegation?.id === 'string') delegate(delegation.id, typeof event.offset_ms === 'number' ? event.offset_ms : Infinity)
@@ -404,7 +419,7 @@ export function startCall(options: CallOptions): CallHandle {
       if (!response.ok) throw await responseError(response, 'The Closeout Agent could not start the call. Try again in a moment.')
       const answer = await response.json() as { sdp?: string; sessionId?: string }
       sessionId = answer.sessionId ?? null
-      if (sessionId) { startedAt = Date.now(); state = { ...state, callId: sessionId }; persistLocal(true); emit() }
+      if (sessionId) { startedAt = Date.now(); state = { ...state, callId: sessionId }; persistLocal(); emit() }
       resolvePendingSession?.()
       if (stopped) { await persistEnd(); if (!started) options.onSaved?.(sessionId!); return }
       if (!sessionId || !answer.sdp) throw new Error('The call returned an invalid connection. Try again.')

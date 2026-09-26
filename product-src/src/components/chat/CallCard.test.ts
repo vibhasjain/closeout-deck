@@ -54,6 +54,19 @@ const transcript: CallTranscriptTurn[] = [
 ]
 
 describe('call card rendering', () => {
+  it('labels the active journal as a live call and keeps expansion offline until it ends', () => {
+    const props = { card: { ...card, seconds: 0 }, live: true }
+    expect(renderToStaticMarkup(renderCard(props))).toContain('On a call with the Closeout Agent · 0:00')
+    toggle(renderCard(props))
+    expect(authedFetch).not.toHaveBeenCalled()
+    expect(renderToStaticMarkup(renderCard({ ...props, live: false, card: { ...card, seconds: 43 } }))).toContain('You had a call with the Closeout Agent · 0:43')
+  })
+  it('loads and renders a full 4000-character server turn', async () => {
+    const text = 'A'.repeat(3989) + 'END-OF-LINE'
+    vi.mocked(authedFetch).mockResolvedValueOnce(Response.json({ call: { id: card.callId, transcript: [{ role: 'agent', text, startMs: 0 }] } }))
+    toggle(renderCard({ card })); await flush()
+    expect(renderToStaticMarkup(renderCard({ card }))).toContain(text)
+  })
   it('renders the exact title and a collapsed, accessible transcript in chat', () => {
     const html = renderToStaticMarkup(createElement(Message, { message: { id: 'call-message', role: 'agent', text: '', at: 1, cards: [card], callTranscript: transcript } }))
     expect(html).toContain('You had a call with the Closeout Agent · 4:36')
@@ -114,7 +127,7 @@ describe('call card rendering', () => {
   it.each([
     { id: 'another-call', transcript },
     { id: card.callId, transcript: [{ role: 'system', text: 'Unexpected data', startMs: 0 }] },
-    { id: card.callId, transcript: [{ role: 'user', text: 'x'.repeat(401), startMs: 0 }] },
+    { id: card.callId, transcript: [{ role: 'user', text: 'x'.repeat(4001), startMs: 0 }] },
     { id: card.callId, transcript: [{ role: 'user', text: 'Unexpected data', startMs: -1 }] },
   ])('rejects malformed or mismatched server transcript data', async call => {
     vi.mocked(authedFetch).mockResolvedValueOnce(new Response(JSON.stringify({ call })))

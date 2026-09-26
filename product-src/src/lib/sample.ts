@@ -119,7 +119,10 @@ export function buildSample() {
 
 export type Sample = ReturnType<typeof buildSample>
 
-export interface EvidenceRow { source: string; start: number | null; end: number | null; meal: [number, number] | null; hours: number | null; note?: string }
+export interface EvidenceRow {
+  source: string; start: number | null; end: number | null; meal: [number, number] | null; hours: number | null; note?: string
+  reference?: { file: string; sheet?: string; row: number; date: string }
+}
 /**
  * `day` is null for cases about the whole week. `target` is the time entry the case lands on in Payroll,
  * `note` its one-line finding there, and `delta` the pay correction it implies.

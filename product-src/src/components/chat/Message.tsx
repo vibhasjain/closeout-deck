@@ -25,7 +25,7 @@ export function Message({ message, onAnswer, liveCard = -1 }: { message: ChatMes
         {!!message.traces?.length && <div className="chat-traces" role="group" aria-label="Agent trace">{message.traces.map((trace, index) => <div key={index}><Check size={12} aria-hidden /><span>{trace}</span></div>)}</div>}
         {message.text && <div className="chat-text">{message.id === 'streaming' ? <StreamText text={message.text} /> : message.text}</div>}
         {message.cards?.map((card, index) => {
-          if (card.kind === 'call') return <CallCard key={card.callId} card={card} transcript={message.callTranscript} saveError={message.callSaveError} onRetrySave={() => { void retryCallSave(card.callId).catch(() => {}) }} />
+          if (card.kind === 'call') return <CallCard key={card.callId} card={card} live={message.callLive} transcript={message.callTranscript} saveError={message.callSaveError} onRetrySave={() => { void retryCallSave(card.callId).catch(() => {}) }} />
           if (card.kind === 'task') return <TaskCard key={index} cycleId={card.cycleId} messageId={message.id} onAnswer={onAnswer} />
           if (card.kind === 'findings') return <FindingsCard key={index} cycleId={card.cycleId} live={index === liveCard} />
           if (card.kind === 'form') return <FormCard key={index} {...card} live={index === liveCard} />

@@ -7,6 +7,8 @@ import type { CallSnapshot } from '@/lib/live'
 import { CallChecklist } from './CallChecklist'
 import { CallScreen } from './CallScreen'
 import { CallBar } from './CallBar'
+import { CallCaptions } from './CallCaptions'
+import { callCaptions } from './callPresentation'
 
 const snapshot: CallSnapshot = { status: 'active', orb: 'listening', stream: null, remoteStream: null, muted: false, seconds: 276, caption: 'When does your pay period end?', transcript: [], level: 0 }
 const callbacks = { onMute: vi.fn(), onEnd: vi.fn(), onRetry: vi.fn(), onKeepTyping: vi.fn() }
@@ -80,5 +82,43 @@ describe('call coverage and controls', () => {
     expect(html).toContain('Call duration 4:36')
     expect(html).toContain('aria-label="Unmute microphone" aria-pressed="true"')
     expect(html).toContain('aria-label="End call"')
+  })
+
+  it('keeps the last line from each speaker when live captions change speaker', () => {
+    const conversation: CallSnapshot = { ...snapshot, caption: 'Please review the exceptions.', transcript: [
+      { role: 'agent', text: 'What do you need on Payroll?', startMs: 0, endMs: 1000 },
+      { role: 'user', text: 'Give me an overview.', startMs: 2000, endMs: 3000 },
+      { role: 'agent', text: 'There are 2,047 time entries in this pay run.', startMs: 4000, endMs: 6000 },
+      { role: 'user', text: 'Please review the exceptions.', startMs: 7000, endMs: 8000 },
+    ] }
+    expect(callCaptions(conversation)).toEqual({ agent: 'There are 2,047 time entries in this pay run.', user: 'Please review the exceptions.' })
+    for (const Component of [CallScreen, CallBar]) {
+      const html = renderToStaticMarkup(createElement(Component, { ...callbacks, onboarding: DEFAULTS, snapshot: conversation }))
+      expect(html).toContain('class="call-caption-turn call-caption-turn--agent"')
+      expect(html).toContain('There are 2,047 time entries in this pay run.')
+      expect(html).toContain('class="call-caption-turn call-caption-turn--user"')
+      expect(html).toContain('Please review the exceptions.')
+      expect(html).not.toContain('Give me an overview.')
+    }
+  })
+
+  it('opens the desk call with the large orb, caption controls and minimize but no setup checklist', () => {
+    const html = renderToStaticMarkup(createElement(CallScreen, { ...callbacks, purpose: 'desk', onMinimize: vi.fn(), snapshot }))
+    expect(html).toContain('call-screen--desk')
+    expect(html).toContain('aria-label="Minimize call"')
+    expect(html).toContain('aria-label="Hide live captions"')
+    expect(html).toContain('>Keep typing</button>')
+    expect(html).toContain('aria-label="End call"')
+    expect(html).not.toContain('call-orb--compact')
+    expect(html).not.toContain('call-checklist')
+    expect(html).not.toContain("What we’re covering")
+  })
+
+  it('hides both speakers with captions off and does not label a user-only line as the agent', () => {
+    const userOnly = { ...snapshot, caption: 'Can you hear me?', transcript: [{ role: 'user' as const, text: 'Can you hear me?', startMs: 0, endMs: 1000 }] }
+    expect(callCaptions(userOnly)).toEqual({ user: 'Can you hear me?' })
+    const html = renderToStaticMarkup(createElement(CallCaptions, { snapshot: userOnly, enabled: false }))
+    expect(html).toContain('aria-live="off"')
+    expect(html).not.toContain('Can you hear me?')
   })
 })

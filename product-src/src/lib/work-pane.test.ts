@@ -138,3 +138,14 @@ describe('N10: a judgment call is escalated from the time-entry sheet, never app
     expect(html).not.toMatch(/>Approve \d+ issues</)
   })
 })
+
+
+describe('Payroll waits for the account data', () => {
+  it.each(['loading', 'failed', 'detail-failed'] as const)('does not render an empty pane or missing-set CTA while %s', phase => {
+    const cycle = server('get_timesheets')
+    vi.spyOn(desk, 'useDesk').mockReturnValue({ cycles: [cycle], current: cycle, byId: () => cycle, loaded: phase === 'detail-failed', loading: phase === 'loading', error: phase === 'failed' ? 'Unavailable' : null, cycleErrors: phase === 'detail-failed' ? { [cycle.id]: 'Unavailable' } : {} })
+    const html = renderToStaticMarkup(h(MemoryRouter, { initialEntries: ['/payroll'] }, h(OverlayProvider, null, h(AuxProvider, null, h(Payroll)))))
+    expect(html).not.toMatch(/Get timesheets|No time entries|missing sets|intake-upload-bar/)
+    expect(html).toContain(phase === 'loading' ? 'Loading your pay runs…' : 'Retry')
+  })
+})

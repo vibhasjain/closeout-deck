@@ -27,7 +27,7 @@ import './payroll.css'
 const destinations = DESTS.filter((destination) => destination.group !== 'Billing')
 
 export function Payroll() {
-  const { cycles, current, byId, loading, error } = useDesk()
+  const { cycles, current, byId, loaded, error, cycleErrors } = useDesk()
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const shiftOpen = useLocation().pathname !== '/payroll'
@@ -49,11 +49,13 @@ export function Payroll() {
 
   // A direct visit or stale cycle bookmark always resolves to an explicit cycle URL.
   useEffect(() => {
-    if (params.get('cycle') === cycle.id) return
+    if (loaded === false || error || params.get('cycle') === cycle.id) return
     setParams((previous) => { const next = new URLSearchParams(previous); next.set('cycle', cycle.id); return next }, { replace: true })
-  }, [cycle.id, params, setParams])
+  }, [cycle.id, params, setParams, loaded, error])
 
   const view = payrollView(params)
+  const loadError = error ?? cycleErrors?.[cycle.id]
+  const awaitingData = loaded === false
 
   function showStep(next: Step) {
     setParams((previous) => { const params = new URLSearchParams(previous); params.set('step', next); return params })
@@ -62,11 +64,15 @@ export function Payroll() {
   useSetChatSuggestions(['What needs my review?', 'Why does gross differ from the spreadsheet?', 'Which payments are on hold?'], !shiftOpen)
   useSetChatContext({ page: '/payroll', step: 'sheet', cycle: { id: cycle.id, label: cycle.label, stats: `${cycle.statusTag} · ${totals.workerCount} workers · ${money(totals.gross)} gross` },
     selection: { vendorId: destination.id, name: destination.name, workers: totals.workerCount, gross: totals.gross, held: cycle.batch?.held ?? totals.held.length },
-    connections: state.connections }, !shiftOpen)
+    connections: state.connections }, !shiftOpen && !awaitingData && !loadError)
 
   return <div className="reconcile-layout payroll-layout">
     <section className="detail reconcile-payments" aria-label="Payroll">
       <PageTitle title="Payroll" description="Collect time entries, resolve discrepancies, and prepare each pay run." />
+      {awaitingData || loadError ? <>
+        <div className="journey-next-step" role="region" aria-label="Next step"><span className="r-note">{loadError ? 'Pay runs could not be loaded.' : 'Loading your pay runs…'}</span></div>
+        <div className="payroll-load-state" role={loadError ? 'alert' : 'status'}>{loadError ? <><p>Pay runs could not be loaded. Please try again.</p><Btn onClick={() => void invalidate()}>Retry</Btn></> : <p>Loading your pay runs…</p>}</div>
+      </> : <>
       {/* One black button per pane: the next step's, unless the visible Review list carries its own Approve. */}
       {cycle.nextStep && <NextStepRow nextStep={cycle.nextStep} cycle={cycle} findingCounts={findingCounts(resolutionGroups(cycle, state.resolutions, state.undone[cycle.id], threads, state.neverContact ?? []))} primary={cycle.nextStep.kind !== 'done' && !(cycle.nextStep.kind === 'review' && step === 'review')} onReview={() => {
         setParams((previous) => { const next = new URLSearchParams(previous); next.set('step', 'review'); next.set('filter', 'needs-review'); return next })
@@ -87,8 +93,6 @@ export function Payroll() {
             <span className="payroll-date" role="img" title={`Pay date ${payDate}`} aria-label={`Pay date ${payDate}`}><Banknote size={14} aria-hidden="true" />{payDate}</span>
           </>}</span>
       </div>
-      {error && <div role="alert"><p>{error}</p><Btn onClick={() => void invalidate()}>Retry</Btn></div>}
-      {loading && cycle.server && !cycle.week.length && <p role="status" className="r-note">Loading time entries…</p>}
       {!cycle.batch && pendingAdjustments(cycle.adjustments) && <p role="status" className="r-note payroll-adjustments">{pendingAdjustments(cycle.adjustments)} · lands on this Payroll export</p>}
       {step === 'intake' ? <Intake cycle={cycle} intake={intake} threads={threads} /> : <>
         <CycleKpis cycle={cycle} stats={stats} />
@@ -96,7 +100,8 @@ export function Payroll() {
           ? <ShiftTable key={view} cycle={cycle} filterMode="discrepancies" defaultFilter={view} onSelect={(id) => navigate(shiftHref(cycle.id, id, params, '/payroll'))} />
           : <PayrollSummary cycle={cycle} review={view === 'needs-review'} />}
       </>}
+      </>}
     </section>
-    <Outlet />
+    {!awaitingData && !loadError && <Outlet />}
   </div>
 }

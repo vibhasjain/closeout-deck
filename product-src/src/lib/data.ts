@@ -144,9 +144,9 @@ export function hydrate(payload: CyclePayload, cal: Onboarding, files: FileRecor
 /** Before any time entries arrive, the next step is getting them: no run, no findings, no invented rows. */
 export const NO_DATA_STEP: NextStep = { kind: 'get_timesheets', label: 'Get timesheets', detail: 'No time entries yet', counts: { missingSets: 3, gaps: 0, openGroups: 0 } }
 /** A listed run whose detail has not loaded yet is not "no data": it gets no next step until it loads. */
-function emptyCycle(cycle: Cycle, hasRun = false): DeskCycle {
+function emptyCycle(cycle: Cycle, pending = false): DeskCycle {
   return { ...cycle, week: [], run: runEngine([]), days: daysOf(cycle), scripted: false, label: cycleLabel(cycle), statusTag: cycle.status === 'in-progress' ? 'In Progress' : 'Pending',
-    server: true, sample: false, sites: [], groups: [], extraGroups: [], gaps: [], intake: { sources: [], expected: [], received: [] }, ...(hasRun ? {} : { nextStep: NO_DATA_STEP }) }
+    server: true, sample: false, sites: [], groups: [], extraGroups: [], gaps: [], intake: { sources: [], expected: [], received: [] }, ...(pending ? {} : { nextStep: NO_DATA_STEP }) }
 }
 
 /** "1 adjustment pending · +$2.00": dispute money that lands on this cycle's export. */
@@ -290,9 +290,9 @@ export function serverCycles(cal: Onboarding): DeskCycle[] {
   const cycles = periods.filter(cycle => payloads.has(cycle.id) || cycle.status !== 'reviewed').map(cycle => {
     const payload = payloads.get(cycle.id)
     return payload ? hydrate({ ...payload, cycle: { ...payload.cycle, status: cycle.status } }, cal, available.files)
-      : emptyCycle(cycle, !!available.list.find(row => row.id === cycle.id)?.runAt)
+      : emptyCycle(cycle, !available.loaded || !!available.error || !!available.cycleErrors[cycle.id] || !!available.list.find(row => row.id === cycle.id)?.runAt)
   })
-  if (!cycles.length) cycles.push(emptyCycle(recentCycles(cal, 1)[0]))
+  if (!cycles.length) cycles.push(emptyCycle(recentCycles(cal, 1)[0], !available.loaded || !!available.error))
   cycleCache = { owner: owner(), snapshot, cal, cycles }
   return cycles
 }

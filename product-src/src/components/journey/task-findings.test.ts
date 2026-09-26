@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import fixture from '@/lib/fixtures/server-cycle.json'
 import { DEFAULTS } from '@/lib/onboarding'
-import { getDataSnapshot, hydrate, refreshCycleList, serverCycles, type CyclePayload, type CycleSummary } from '@/lib/data'
+import { getDataSnapshot, hydrate, refreshCycleList, serverCycles, type CyclePayload, type CycleSummary, type FileRecord } from '@/lib/data'
 import { resolutionGroups } from '@/lib/resolution'
 import type { JourneyThread } from '@/lib/journey'
 import { FirstCloseoutChoice } from '@/components/chat/FirstCloseoutChoice'
@@ -169,7 +169,7 @@ describe('findings carousel', () => {
     const cycle = source.cycle!
     const renderBoth = () => {
       const counts = findingCounts(carouselFindings(source.cycle!, DEFAULTS).map(item => item.resolution))
-      const row = renderToStaticMarkup(createElement(NextStepRow, { cycle: { id: cycle.cycle.id, label: 'Sep 14–20' }, nextStep: { kind: 'review', label: 'Review issues', detail: '3 open groups', counts: { missingSets: 0, gaps: 0, openGroups: 2 } }, findingCounts: counts }))
+      const row = renderToStaticMarkup(createElement(NextStepRow, { cycle: { id: cycle.cycle.id, label: 'Sep 14–20' }, nextStep: { kind: 'review', label: 'Review issues', detail: '3 open groups', counts: { missingSets: 0, gaps: 0, openGroups: counts.toDecide } }, findingCounts: counts }))
       const carousel = renderToStaticMarkup(createElement(FindingsCard, { cycleId: cycle.cycle.id }))
       return { row, carousel }
     }
@@ -224,14 +224,15 @@ describe('findings carousel', () => {
       expect(findingEvidence(cycle, item).amountLabel).toBe(payChange(same))
     }
   })
-  it('N6: a waiting group with no missing time is asked from an entry, never through an empty chase form', () => {
+  it('R4-3: a waiting group with no missing time opens the labelled time-entry view without promising an ask', () => {
     const cycle = source.cycle!
     const waiting = carouselFindings(cycle, DEFAULTS).find(item => item.resolution.state === 'waiting')!
     const shift = cycle.week.find(entry => entry.id === waiting.resolution.cases[0].shiftId)!
     cycle.intake = { ...cycle.intake, expected: [], received: [] }
     let tree = FindingsCard({ cycleId: cycle.cycle.id })
     expect(elements(tree).some(item => textOf(item.props.children) === 'Review gaps')).toBe(false)
-    button(tree, 'Ask from an entry').props.onClick!()
+    expect(textOf(tree)).not.toContain('Ask from an entry')
+    button(tree, 'View time entry').props.onClick!()
     expect(actions.navigate).toHaveBeenCalledWith(expect.stringContaining(`/payroll/${encodeURIComponent(shift.id)}?`))
     cycle.intake = { ...cycle.intake, expected: [{ worker: shift.worker, client: cycle.sites[shift.fac].name, day: shift.day, source: cycle.intake.sources[0]?.id ?? '' }], received: [] }
     expect(hasAskableGaps(cycle, waiting.resolution, DEFAULTS)).toBe(true)
@@ -268,11 +269,22 @@ describe('findings carousel', () => {
     const cycle = source.cycle!, waiting = carouselFindings(cycle, DEFAULTS)[1]
     source.threads = [{ id: 'thread-1', cycleId: cycle.cycle.id, shiftId: waiting.resolution.cases[0].shiftId, counterparty: { kind: 'site', name: 'Maria Castillo' }, status: 'waiting', createdAt: '', messages: [{ id: 'message-1', threadId: 'thread-1', dir: 'out', text: 'Please confirm.', status: 'not_sent_demo', at: '' }] }]
     expect(renderToStaticMarkup(createElement(FindingsCard, { cycleId: cycle.cycle.id }))).toContain('Asked Maria Castillo')
-    const evidence = findingEvidence(cycle, waiting)
+    const evidence = findingEvidence(cycle, waiting, fixture.files as FileRecord[])
     expect(evidence.cases[0].worker).toBe(cycle.week[1].worker)
-    expect(evidence.cases[0].rows[0].note).toContain(cycle.week[1].prov.file)
+    expect(evidence.cases[0].rows[0].source).toBe('Bullhorn')
+    expect(evidence.cases[0].rows[0].note).toContain('bullhorn_2026-09-20.csv · row 3 · Sep 14, 2026')
+    expect(evidence.cases[0].rows[0].note).not.toContain(cycle.week[1].prov.file)
+    expect(evidence.cases[0].rows[0].start).toBe(cycle.week[1].punches[0].in)
+    expect(evidence.cases[0].rows[0].end).toBe(cycle.week[1].punches[0].out)
     button(FindingsCard({ cycleId: cycle.cycle.id }), 'Evidence').props.onClick!()
     expect(actions.openDrawer).toHaveBeenCalledWith(expect.anything(), 'Evidence', 'Sample')
+  })
+  it('does not expose an internal file id when the file catalogue is unavailable', () => {
+    const cycle = source.cycle!, item = carouselFindings(cycle, DEFAULTS)[1]
+    cycle.week[1].prov.file = 'F_33mzm6i2e4ll'
+    const note = findingEvidence(cycle, item).cases[0].rows[0].note
+    expect(note).toContain('Source file unavailable · row 3')
+    expect(note).not.toContain('F_33mzm6i2e4ll')
   })
   it('matches the server ask thread by gapIds when it has no shiftId and does not invent a contact', () => {
     const cycle = source.cycle!, waiting = carouselFindings(cycle, DEFAULTS)[1]

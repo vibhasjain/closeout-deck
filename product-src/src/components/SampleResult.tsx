@@ -61,10 +61,13 @@ export function FindingDetail({ finding, dayLabel }: { finding: FindingEvidence;
             if (!source && row.start == null && row.end == null && row.meal == null && row.hours == null && !note) return null
             return <Fragment key={i}>
               <tr>
-                <td>{source}</td><td className="num">{time(row.start)}</td><td className="num">{row.meal ? `${clock(row.meal[0])} to ${clock(row.meal[1])}` : row.start == null ? '' : 'None'}</td>
-                <td className="num">{time(row.end)}</td><td className="num">{row.hours == null ? note : fmtHM(row.hours * 60)}</td>
+                <td data-label="Source">{source}</td><td data-label="Clock In" className="num">{time(row.start)}</td><td data-label="Meal Break" className="num">{row.meal ? `${clock(row.meal[0])} to ${clock(row.meal[1])}` : row.start == null ? '' : 'None'}</td>
+                <td data-label="Clock Out" className="num">{time(row.end)}</td><td data-label="Hours" className="num">{row.hours == null ? row.reference ? 'Not supplied' : note : fmtHM(row.hours * 60)}</td>
               </tr>
-              {row.hours != null && note ? <tr className="finding-note"><td colSpan={5}>{source}: {note}</td></tr> : null}
+              {row.reference || row.hours != null && note ? <tr className="finding-note"><td colSpan={5}>{row.reference ? <div className="finding-source-reference">
+                <span className="finding-reference-file">{row.reference.file.split(/([_-])/).map((part, index) => <Fragment key={index}>{part}{/^[_-]$/.test(part) && <wbr />}</Fragment>)}</span>
+                <span>{[row.reference.sheet, `row ${row.reference.row}`, row.reference.date].filter(Boolean).join(' · ')}</span>
+              </div> : <>{source}: {note}</>}</td></tr> : null}
             </Fragment>
           })}</tbody>
         </table>

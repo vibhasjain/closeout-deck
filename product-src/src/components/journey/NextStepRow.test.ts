@@ -26,7 +26,7 @@ describe('Payroll next step', () => {
       expect(html).toContain('4 to decide · 0 waiting on evidence')
     } else {
       expect(html).toContain('Cycle detail from the server')
-      expect(html).toContain('1 missing set · 2 gaps')
+      expect(html).toContain(kind === 'send' || kind === 'done' ? '4 to decide · 0 waiting on evidence' : '1 missing set · 2 gaps')
     }
     expect(html).toContain('role="region" aria-label="Next step"')
     expect(html.match(/<button\b/g)).toHaveLength(1)
@@ -43,5 +43,19 @@ describe('Payroll next step', () => {
     expect(postToChat).toHaveBeenCalledWith(expect.objectContaining({ text: `${action} for Sep 14–20`, contextChip: `${action} · Sep 14–20`,
       context: expect.objectContaining({ page: '/payroll', cycle: { ...cycle, stats: nextStep.detail }, selection: { nextStep } }) }))
     expect(onReview).toHaveBeenCalledTimes(kind === 'review' ? 1 : 0)
+  })
+})
+
+
+describe('decisions use the server next step', () => {
+  it.each(['send', 'done'] as const)('does not count escalated findings as decisions when %s', kind => {
+    const nextStep = { ...next(kind, kind === 'done' ? 'Done' : 'Send to Payroll'), counts: { missingSets: 0, gaps: 0, openGroups: 0 } }
+    const html = renderToStaticMarkup(h(NextStepRow, { cycle, nextStep, findingCounts: { toDecide: 1, waiting: 1, total: 2 } }))
+    expect(html).toContain('All decided · 1 waiting on evidence')
+    expect(html).not.toContain('to decide')
+  })
+  it('uses openGroups even while client findings still include an escalated group', () => {
+    const html = renderToStaticMarkup(h(NextStepRow, { cycle, nextStep: { ...next('review', 'Review 2 issues'), counts: { missingSets: 0, gaps: 0, openGroups: 2 } }, findingCounts: { toDecide: 3, waiting: 1, total: 4 } }))
+    expect(html).toContain('2 to decide · 1 waiting on evidence')
   })
 })

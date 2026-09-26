@@ -24,7 +24,7 @@ export interface JourneyMessage {
 }
 export interface JourneyThread {
   id: string; cycleId: string; shiftId?: string | null; disputeId?: string | null
-  counterparty: { kind: 'worker' | 'site'; name: string; contact?: string; gapIds?: string[] }
+  counterparty: { kind: 'worker' | 'site'; name: string; contact?: string; gapIds?: string[]; siteNames?: string[] }
   status: 'open' | 'waiting' | 'resolved'; createdAt: string; messages: JourneyMessage[]
 }
 export interface JourneyDispute {
@@ -40,11 +40,16 @@ const cyclePath = (id: string) => `/data/cycles/${encodeURIComponent(id)}`
 const json = (body: unknown): RequestInit => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
 export class JourneyError extends Error {
   status: number
-  constructor(status: number, message: string) { super(message); this.status = status }
+  code?: string
+  constructor(status: number, message: string, code?: string) {
+    const copy = message === 'never_contact' ? 'This person is on your never-contact list.'
+      : /^[a-z][a-z0-9_]*$/.test(message) ? 'The request could not be completed. Try again.' : message
+    super(copy); this.status = status; this.code = code ?? (copy !== message ? message : undefined)
+  }
 }
 async function read<T>(response: Response): Promise<T> {
   const body = await response.json() as T & { reason?: string; error?: string }
-  if (!response.ok) throw new JourneyError(response.status, body.reason ?? body.error ?? `The request could not be completed (${response.status}).`)
+  if (!response.ok) throw new JourneyError(response.status, body.reason ?? body.error ?? `The request could not be completed (${response.status}).`, body.error)
   return body
 }
 async function transport(path: string, body?: unknown) {

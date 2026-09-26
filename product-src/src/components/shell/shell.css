@@ -121,8 +121,10 @@
 
 @media (max-width: 1023.98px) {
   .sidebar-surface { overflow-y: auto; overscroll-behavior: contain; }
-  /* 48px floating orb + 16px bottom offset + 16px clearance, inside each work scroll area. */
-  .app:not(.app-setup) .main :is(.payroll-summary, .sheet-wrap, .intake, .detail-body, .sources-table-wrap, .settings-columns, .payroll-profile-page-content, .shift-page) { padding-bottom: calc(80px + env(safe-area-inset-bottom)); scroll-padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+  /* Reserve the orb footprint outside the scrollports. Content-only bottom padding
+     clears the last row but still lets every other row scroll behind the orb. */
+  .app:not(.app-setup) .main { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+  .app:not(.app-setup) .main .scroll { scroll-padding-bottom: 16px; }
 }
 @media (min-width: 1024px) {
   .topbar.sidebar { border: 0; border-right: 1px solid hsl(var(--border)); }
@@ -161,3 +163,6 @@
   .mobile-topbar .sidebar-agent-toggle { display: none; }
   .sidebar-surface { padding-bottom: env(safe-area-inset-bottom); }
 }
+
+.pay-runs-load-state { padding: .75rem 1rem; color: hsl(var(--muted-foreground)); font: 13px/1.5 var(--sans); }
+.pay-runs-load-state .btn { min-height: 44px; margin-top: .5rem; }

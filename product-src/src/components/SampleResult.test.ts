@@ -19,7 +19,8 @@ describe('Finding evidence presentation', () => {
     for (const source of finding.sources) expect(tags).not.toContain(source)
     expect(html).toContain('>Clock In</th>')
     expect(html).toContain('>Clock Out</th>')
-    expect(html).toContain('<td>Bullhorn</td>')
+    expect(html).toContain('<td data-label="Source">Bullhorn</td>')
+    for (const label of ['Source', 'Clock In', 'Meal Break', 'Clock Out', 'Hours']) expect(html).toContain(`data-label="${label}"`)
     expect(html).toContain('>No entry</td>')
   })
 
@@ -42,5 +43,17 @@ describe('Finding evidence presentation', () => {
     expect(body).toContain('>0m</td>')
     expect(body).toContain('>No entry</td>')
     expect(body).toContain('ADP: Confirmed by supervisor')
+  })
+
+  it('keeps the exact source filename with natural wrap opportunities and row/date outside the hours cell', () => {
+    const file = 'bullhorn_time_pacific_cold_storage_09-20-2026.csv'
+    const html = renderToStaticMarkup(createElement(FindingDetail, {
+      finding: { ...finding, cases: [{ worker: 'Abel Brooks', day: 1, rows: [{ source: 'Bullhorn', start: 356, end: null, meal: null, hours: null,
+        note: `${file} · row 17 · Sep 15, 2026`, reference: { file, row: 17, date: 'Sep 15, 2026' } }] }] }, dayLabel,
+    }))
+    expect(html).toContain('bullhorn_<wbr/>time_<wbr/>pacific_<wbr/>cold_<wbr/>storage_<wbr/>09-<wbr/>20-<wbr/>2026.csv')
+    expect(html).not.toContain('Bullhorn_time')
+    expect(html).toContain('<span>row 17 · Sep 15, 2026</span>')
+    expect(html).toContain('data-label="Hours" class="num">Not supplied</td>')
   })
 })

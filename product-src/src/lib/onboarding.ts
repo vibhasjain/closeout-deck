@@ -60,6 +60,8 @@ export interface ChatMessage {
   callServerSaved?: boolean
   /** Keep the provisional row local until consolidation and its action audit finish. */
   callSaving?: boolean
+  /** This journal row is still a live call; final saving clears it in place. */
+  callLive?: boolean
   callPurpose?: 'onboard' | 'desk'
   scope?: string
   contextChip?: string

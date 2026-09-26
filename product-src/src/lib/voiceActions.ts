@@ -48,6 +48,7 @@ function auditChunks(audit: VoiceAudit) {
 export function recordVoiceCall(call: SavedCall, audit: VoiceAudit, scope?: string, at = Date.now()) {
   const state = getOnboarding(), id = `call-${call.callId}`
   const previous = state.chat.find(message => message.id === id)
+    ?? state.chat.find(message => message.cards?.some(card => card.kind === 'call' && card.callId === call.callId))
   const text = safeModelText(parseCards(parseActions(call.final).text).text, state.firm)
   const chunks = auditChunks(audit)
   const messages: ChatMessage[] = chunks.map((chunk, index) => ({
@@ -55,10 +56,13 @@ export function recordVoiceCall(call: SavedCall, audit: VoiceAudit, scope?: stri
     text: index ? 'More actions from your call.' : text || previous?.text || '',
     actions: chunk.actions, skipped: chunk.skipped,
     ...(index ? {} : { cards: [{ kind: 'call' as const, callId: call.callId, seconds: call.seconds }], callTranscript: callEndTranscript(call.transcript.map(turn => ({ ...turn, endMs: turn.startMs }))) }),
-    callSaveError: call.saveError, callServerSaved: call.serverSaved, callSaving: !!call.saveError || !!call.saving, callPurpose: call.purpose ?? previous?.callPurpose,
+    callSaveError: call.saveError, callServerSaved: call.serverSaved, callSaving: !!call.saveError || !!call.saving, callLive: !!call.live, callPurpose: call.purpose ?? previous?.callPurpose,
   }))
   const replacements = new Map(messages.map(message => [message.id, message]))
-  updateOnboarding({ chat: [...state.chat.map(message => replacements.get(message.id) ?? message), ...messages.filter(message => !state.chat.some(old => old.id === message.id))] })
+  // A recovered/history row may have an older message id. The session, not the row id,
+  // owns the one card, so replace all representations of this call in one store write.
+  const chat = state.chat.filter(message => message.id === id || !message.cards?.some(card => card.kind === 'call' && card.callId === call.callId))
+  updateOnboarding({ chat: [...chat.map(message => replacements.get(message.id) ?? message), ...messages.filter(message => !chat.some(old => old.id === message.id))] })
 }
 
 export function restoreVoiceAudit(callId: string): VoiceAudit {

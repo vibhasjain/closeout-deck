@@ -12,3 +12,7 @@
   .payroll-head { grid-template-columns: minmax(0, 1fr) auto; }
   .payroll-dates { grid-column: 1 / -1; justify-self: start; justify-content: flex-start; }
 }
+
+.payroll-load-state { padding: 1.25rem; color: hsl(var(--muted-foreground)); font: 13px/1.5 var(--sans); }
+.payroll-load-state .btn { margin-top: .75rem; min-height: 44px; }
+.payroll-adjustments { padding: .5rem 1.25rem; margin: 0; }

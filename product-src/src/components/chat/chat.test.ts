@@ -8,6 +8,7 @@ import { startDictation, type DictationOptions } from '@/lib/dictate'
 import { DEFAULTS, getOnboarding, updateOnboarding, type Onboarding } from '@/lib/onboarding'
 import { CHAT_POST_EVENT } from '@/lib/chatBus'
 import { Chip } from '@/components/ui'
+import { DeskCall } from '@/components/voice/DeskCall'
 import { Loader2, Square } from 'lucide-react'
 
 const hooks = vi.hoisted(() => ({ cursor: 0, slots: [] as unknown[], suggestions: [] as string[], effects: [] as { effect: () => void; dependencies?: unknown[] }[] }))
@@ -106,6 +107,7 @@ describe('permanent Closeout Agent conversation', () => {
     await vi.waitFor(() => expect(startCall).toHaveBeenCalledWith(expect.objectContaining({ purpose: 'desk' })))
     expect(vi.mocked(startCall).mock.calls[0][0].getContext?.()).toMatchObject({ page: '/payroll', calendar: expect.any(Object) })
     expect(transport.stream).not.toHaveBeenCalled()
+    expect(elements(render()).some(element => element.type === DeskCall)).toBe(true)
     // A fresh composer has Send when there is a draft, then Stop during its reply.
     hooks.slots = []
     type('Review this Payroll')

@@ -280,15 +280,29 @@ export function SendForm({ cycle, prefill, live = true }: FormProps) {
   </section>
 }
 
+/** Cards may express the recommendation in minutes; the form and API use hours. */
+export function disputePrefill(prefill?: Prefill) {
+  const numeric = (value: unknown, min: number, max: number) => {
+    if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim())) return undefined
+    const number = Number(value)
+    return Number.isFinite(number) && number >= min && number <= max ? number : undefined
+  }
+  const minutes = numeric(prefill?.minutes, 0, 6000)
+  const hours = numeric(prefill?.hours, 0, 100) ?? (minutes === undefined ? undefined : minutes / 60)
+  const amount = numeric(prefill?.amount, -10_000, 10_000)
+  return { hours: hours === undefined ? '' : String(hours), amount: amount === undefined ? '' : String(amount), note: text(prefill?.note).slice(0, 2000) }
+}
+
 export function DisputeForm({ cycle, prefill, live = true }: FormProps) {
+  const recommendation = disputePrefill(prefill)
   const [worker, setWorker] = useState(text(prefill?.worker))
   const [description, setDescription] = useState(text(prefill?.description))
   const [source, setSource] = useState<'paste' | 'upload'>('paste')
   const [fileName, setFileName] = useState('')
   const [record, setRecord] = useState<{ key: string; dispute: JourneyDispute | null; thread: JourneyThread | null } | null>(null)
-  const [hours, setHours] = useState('')
-  const [amount, setAmount] = useState('')
-  const [note, setNote] = useState('')
+  const [hours, setHours] = useState(recommendation.hours)
+  const [amount, setAmount] = useState(recommendation.amount)
+  const [note, setNote] = useState(recommendation.note)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [loadFailure, setLoadFailure] = useState<{ key: string; message: string } | null>(null)
@@ -297,7 +311,9 @@ export function DisputeForm({ cycle, prefill, live = true }: FormProps) {
   const batchId = cycle.batch?.id
   const requestedWorker = text(prefill?.worker).trim()
   const requestedDescription = text(prefill?.description)
-  const lookupKey = JSON.stringify([cycleId, batchId, requestedWorker, requestedDescription])
+  const requestedDispute = text(prefill?.disputeId)
+  const requestedHours = recommendation.hours, requestedAmount = recommendation.amount, requestedNote = recommendation.note
+  const lookupKey = JSON.stringify([cycleId, batchId, requestedWorker, requestedDescription, requestedDispute, requestedHours, requestedAmount, requestedNote])
   const loaded = record?.key === lookupKey
   const dispute = loaded ? record.dispute : null
   const thread = loaded ? record.thread : null
@@ -307,15 +323,15 @@ export function DisputeForm({ cycle, prefill, live = true }: FormProps) {
     let active = true
     void Promise.all([getDisputes(), getThreads(cycleId)]).then(([history, conversations]) => {
       if (!active) return
-      const existing = history.disputes.filter(item => item.cycleId === cycleId && (!requestedWorker || item.worker === requestedWorker))
+      const existing = history.disputes.filter(item => item.cycleId === cycleId && (!requestedDispute || item.id === requestedDispute) && (!requestedWorker || item.worker === requestedWorker))
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))[0]
       setRecord({ key: lookupKey, dispute: existing ?? null, thread: existing ? conversations.threads.find(item => item.disputeId === existing.id) ?? null : null })
       setWorker(requestedWorker); setDescription(requestedDescription)
-      setHours(''); setAmount(''); setNote('')
+      setHours(requestedHours); setAmount(requestedAmount); setNote(requestedNote)
       setLoadFailure(null)
     }).catch(cause => { if (active) setLoadFailure({ key: lookupKey, message: errorText(cause) }) })
     return () => { active = false }
-  }, [cycleId, batchId, requestedWorker, requestedDescription, lookupKey, retry])
+  }, [cycleId, batchId, requestedWorker, requestedDescription, requestedDispute, requestedHours, requestedAmount, requestedNote, lookupKey, retry])
   async function start(simulated: boolean) {
     if (!cycle.batch || !loaded || loadError || dispute || busy || (!simulated && (!worker.trim() || !description.trim()))) return
     setBusy(true); setError('')

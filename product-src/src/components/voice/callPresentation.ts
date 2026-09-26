@@ -9,6 +9,19 @@ export interface CallControlsProps {
   onKeepTyping(): void
 }
 
+/** The single transport caption changes speaker; keep each side's latest turn visible. */
+export function callCaptions(snapshot: CallSnapshot) {
+  const latest: { agent?: string; user?: string } = {}
+  for (let index = snapshot.transcript.length - 1; index >= 0; index--) {
+    const turn = snapshot.transcript[index]
+    if (turn.text.trim() && !latest[turn.role]) latest[turn.role] = turn.text
+    if (latest.agent && latest.user) break
+  }
+  // A connecting transport or an older restored snapshot may only have a caption.
+  if (!snapshot.transcript.length && snapshot.caption.trim()) latest.agent = snapshot.caption
+  return latest
+}
+
 export function callTime(seconds: number) {
   const whole = Math.max(0, Math.floor(seconds))
   return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`

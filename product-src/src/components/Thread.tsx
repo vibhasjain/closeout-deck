@@ -6,6 +6,8 @@ import { useOverlay } from '@/components/shell/Overlay'
 import { Btn, Tag } from '@/components/ui'
 import { titleCase } from '@/lib/utils'
 import type { DeskCycle } from '@/lib/desk'
+import { useData } from '@/lib/data'
+import { blockedCounterparty, threadErrorText } from '@/lib/contactPolicy'
 import { recordMessage, useJourneyThreads, type JourneyThread } from '@/lib/journey'
 import { getOnboarding, useOnboarding } from '@/lib/onboarding'
 import { defaultThreadParty, readThreadInput, recordThreadAction, recordThreadInput, threadFor, type Draft, type ThreadAction, type ThreadEntry, type ThreadParty } from '@/lib/threads'
@@ -102,20 +104,23 @@ function ServerPaymentThread({ cycle, rs }: { cycle: DeskCycle; rs?: RunShift })
 export function JourneyThreadView({ thread: initial, primary = false }: { thread: JourneyThread; primary?: boolean }) {
   const { threads, error: loadError } = useJourneyThreads(initial.cycleId)
   const thread = threads.find((item) => item.id === initial.id) ?? initial
+  const [state] = useOnboarding()
+  const data = useData(false)
+  const blocked = blockedCounterparty(thread, state.neverContact ?? [], data.payloads.find(cycle => cycle.cycle.id === thread.cycleId))
   const [text, setText] = useState('')
   const [dir, setDir] = useState<'in' | 'out'>('in')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const log = useRef<HTMLDivElement>(null)
   async function save() {
-    if (!text.trim() || saving) return
+    if (!text.trim() || saving || (dir === 'out' && blocked)) return
     setSaving(true)
     setError(null)
     try {
       await recordMessage(thread.id, { dir, text: text.trim() })
       setText('')
       requestAnimationFrame(() => { if (log.current) log.current.scrollTop = log.current.scrollHeight })
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'The message could not be recorded.') }
+    } catch (cause) { setError(threadErrorText(cause, thread.counterparty.name)) }
     finally { setSaving(false) }
   }
   return <section className="thread journey-thread" aria-label={`Conversation with ${thread.counterparty.name}`}>
@@ -128,14 +133,15 @@ export function JourneyThreadView({ thread: initial, primary = false }: { thread
       </article>)}
       {!thread.messages.length && <p className="r-note">No messages yet</p>}
     </div>
-    {(error || loadError) && <p className="journey-thread-error" role="alert">{error ?? loadError}</p>}
+    {blocked && <p className="journey-thread-error" role="status">{thread.counterparty.name} is on your never-contact list. You can still record a reply.</p>}
+    {(error || loadError) && <p className="journey-thread-error" role="alert">{error ?? threadErrorText(new Error(loadError!), thread.counterparty.name)}</p>}
     <form className="journey-thread-composer" onSubmit={(event) => { event.preventDefault(); void save() }}>
       <div className="thread-party-switch" role="group" aria-label="Message direction">
         <button type="button" aria-pressed={dir === 'in'} onClick={() => setDir('in')}>Record reply</button>
         <button type="button" aria-pressed={dir === 'out'} onClick={() => setDir('out')}>Outgoing message</button>
       </div>
-      <textarea className="chat-input" rows={2} aria-label={dir === 'in' ? 'Reply text' : 'Outgoing message text'} placeholder={dir === 'in' ? `Record ${thread.counterparty.name}'s reply…` : `Message ${thread.counterparty.name}…`} value={text} onChange={(event) => setText(event.target.value)} />
-      <Btn type="submit" className={primary ? 'primary' : undefined} disabled={saving || !text.trim()}>{saving ? 'Recording…' : dir === 'in' ? 'Record reply' : 'Save message · Demo'}</Btn>
+      <textarea className="chat-input" rows={2} aria-label={dir === 'in' ? 'Reply text' : 'Outgoing message text'} placeholder={dir === 'in' ? `Record ${thread.counterparty.name}'s reply…` : blocked ? 'Outgoing messages are disabled' : `Message ${thread.counterparty.name}…`} value={text} disabled={saving || (dir === 'out' && blocked)} onChange={(event) => setText(event.target.value)} />
+      <Btn type="submit" className={primary && !blocked ? 'primary' : undefined} disabled={saving || !text.trim() || (dir === 'out' && blocked)}>{saving ? 'Recording…' : dir === 'in' ? 'Record reply' : 'Save message · Demo'}</Btn>
     </form>
   </section>
 }

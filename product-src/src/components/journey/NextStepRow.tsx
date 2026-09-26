@@ -36,8 +36,8 @@ export function NextStepRow({ nextStep, cycle, onReview, primary = false, findin
     <div className="journey-next-copy">
       <strong>{nextStep.label}</strong>
       {nextStep.kind !== 'review' && <span className="journey-next-detail">{nextStep.detail}</span>}
-      {nextStep.kind === 'review' || findingCounts && findingCounts.total > 0
-        ? <FindingCountSummary className="journey-next-counts" counts={findingCounts ?? { toDecide: openGroups, waiting: 0, total: openGroups }} />
+      {nextStep.kind === 'review' || nextStep.kind === 'send' || nextStep.kind === 'done' || findingCounts && findingCounts.total > 0
+        ? <FindingCountSummary className="journey-next-counts" counts={{ toDecide: openGroups, waiting: findingCounts?.waiting ?? 0, total: openGroups + (findingCounts?.waiting ?? 0) }} />
         : (missingSets > 0 || gaps > 0) && <CollectionCounts missingSets={missingSets} gaps={gaps} />}
     </div>
     <Btn className={`journey-next-button${primary ? ' primary' : ''}`} onClick={open}>{label}<ArrowRight size={13} aria-hidden="true" /></Btn>

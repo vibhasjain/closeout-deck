@@ -3,7 +3,7 @@ import { authedFetch } from '@/lib/api'
 import { stream } from '@/lib/chat'
 import { viewerSession } from '@/lib/viewerSession'
 import * as memory from '@/lib/memory'
-import { CALL_OPENER, MICROPHONE_CONSTRAINTS, callEndTranscript, startCall, stitchTranscript } from './live'
+import { CALL_OPENER, MICROPHONE_CONSTRAINTS, callEndBody, callEndTranscript, startCall, stitchTranscript } from './live'
 import type { CallHandle, LiveEvent } from './live'
 
 vi.mock('@/lib/api', () => ({ authedFetch: vi.fn() }))
@@ -227,6 +227,28 @@ describe('GPT-Live call lifecycle', () => {
     expect(peer().closed).toBe(true); expect(streamMock).not.toHaveBeenCalled()
   })
 
+  it('posts full long turns on normal hang-up without applying the unload byte limit', async () => {
+    call(); await started()
+    for (let index = 0; index < 10; index++) channel().emit({ type: index % 2 ? 'session.input_transcript.delta' : 'session.output_transcript.delta', delta: '界'.repeat(4000), start_ms: index * 1000, end_ms: index * 1000 + 900 })
+    await handle!.dispose()
+    const request = endCalls()[0][1]!, body = JSON.parse(request.body as string)
+    expect(request.keepalive).toBe(false)
+    expect(body.transcript).toHaveLength(10)
+    expect(body.transcript.every((turn: { text: string }) => turn.text.length === 4000)).toBe(true)
+    expect(new TextEncoder().encode(request.body as string).byteLength).toBeGreaterThan(60_000)
+  })
+
+  it('uses the complete-turn byte budget on the actual pagehide request', async () => {
+    call(); await started()
+    for (let index = 0; index < 10; index++) channel().emit({ type: index % 2 ? 'session.input_transcript.delta' : 'session.output_transcript.delta', delta: '界'.repeat(4000), start_ms: index * 1000, end_ms: index * 1000 + 900 })
+    window.dispatchEvent(new Event('pagehide')); await flush()
+    const request = endCalls()[0][1]!, body = JSON.parse(request.body as string)
+    expect(request.keepalive).toBe(true)
+    expect(new TextEncoder().encode(request.body as string).byteLength).toBeLessThanOrEqual(60_000)
+    expect(body.transcript.at(-1).startMs).toBe(9000)
+    expect(body.transcript.every((turn: { text: string }) => turn.text.length === 4000)).toBe(true)
+  })
+
   it('releases the lock if a start response arrives after disposal', async () => {
     let respond!: (response: Response) => void
     fetchMock.mockImplementationOnce(() => new Promise<Response>(resolve => { respond = resolve }))
@@ -380,11 +402,12 @@ describe('GPT-Live call lifecycle', () => {
   it('persists the call before connection, at final turn boundaries, and on teardown', async () => {
     const onPersist = vi.fn(), onSaved = vi.fn()
     call({ onPersist, onSaved }); await started()
-    expect(onPersist).toHaveBeenCalledWith(expect.objectContaining({ sessionId: 'call-1', purpose: 'onboard', startedAt: expect.any(Number) }), true)
+    expect(onPersist).toHaveBeenCalledWith(expect.objectContaining({ sessionId: 'call-1', purpose: 'onboard', startedAt: expect.any(Number) }), false)
     channel().emit({ type: 'session.input_transcript.delta', delta: 'Sunday.', start_ms: 0, end_ms: 600 })
     await vi.advanceTimersByTimeAsync(1200)
-    expect(onPersist).toHaveBeenCalledWith(expect.objectContaining({ transcript: [expect.objectContaining({ text: 'Sunday.' })] }), true)
+    expect(onPersist).toHaveBeenCalledWith(expect.objectContaining({ transcript: [expect.objectContaining({ text: 'Sunday.' })] }), false)
     await handle!.dispose()
+    expect(onPersist).toHaveBeenLastCalledWith(expect.objectContaining({ seconds: expect.any(Number) }), true)
     expect(onSaved).toHaveBeenCalledWith('call-1')
   })
 
@@ -421,12 +444,38 @@ describe('voice transcript timestamps and server bounds', () => {
     ])
   })
   it('splits long turns without dropping characters and respects the end endpoint row limit', () => {
-    const rows = callEndTranscript([{ role: 'user', text: 'a'.repeat(901), startMs: 0, endMs: 1000 }])
-    expect(rows.map(row => row.text.length)).toEqual([400, 400, 101])
+    const text = 'a'.repeat(8001)
+    const rows = callEndTranscript([{ role: 'user', text, startMs: 0, endMs: 1000 }])
+    expect(rows.map(row => row.text.length)).toEqual([4000, 4000, 1])
+    expect(rows.map(row => row.text).join('')).toBe(text)
     const longCall = Array.from({ length: 210 }, (_, index) => ({ role: index % 2 ? 'user' as const : 'agent' as const, text: `turn ${index}`, startMs: index, endMs: index + 1 }))
     expect(callEndTranscript(longCall)).toHaveLength(200)
     expect(callEndTranscript(longCall).at(-1)?.text).toBe('turn 209')
-    expect(callEndTranscript(Array.from({ length: 210 }, () => ({ role: 'user', text: 'test', startMs: 0, endMs: 1 })))).toHaveLength(3)
-    expect(new TextEncoder().encode(JSON.stringify(callEndTranscript(Array.from({ length: 200 }, () => ({ role: 'user', text: '你'.repeat(400), startMs: 0, endMs: 1 }))))).byteLength).toBeLessThanOrEqual(60_000)
+    expect(callEndTranscript(Array.from({ length: 210 }, () => ({ role: 'user', text: 'test', startMs: 0, endMs: 1 })))).toHaveLength(200)
+  })
+  it('keeps a 4000-character answer intact across local persistence and normal end', () => {
+    const turns = [{ role: 'agent' as const, text: '界'.repeat(4000), startMs: 0, endMs: 1000 }]
+    expect(callEndTranscript(turns)).toEqual([{ role: 'agent', text: turns[0].text, startMs: 0 }])
+    const saved = callEndTranscript(turns).map(turn => ({ ...turn, endMs: turn.startMs }))
+    expect(callEndTranscript(saved)).toEqual(callEndTranscript(turns))
+    expect(JSON.parse(callEndBody(43, turns)).transcript[0].text).toBe(turns[0].text)
+  })
+  it('only trims pagehide payloads and drops oldest whole turns, including split turns', () => {
+    const turns = Array.from({ length: 10 }, (_, index) => ({ role: index % 2 ? 'agent' as const : 'user' as const, text: '界'.repeat(index === 0 ? 8000 : 4000), startMs: index * 1000, endMs: index * 1000 + 900 }))
+    const complete = JSON.parse(callEndBody(43, turns))
+    expect(complete.transcript).toHaveLength(11)
+    const body = callEndBody(43, turns, true), kept = JSON.parse(body).transcript
+    expect(new TextEncoder().encode(body).byteLength).toBeLessThanOrEqual(60_000)
+    expect(kept.at(-1).text).toBe(turns.at(-1)!.text)
+    expect(kept.every((turn: { text: string; startMs: number }) => turn.text === turns.find(source => source.startMs === turn.startMs)!.text)).toBe(true)
+    expect(kept[0].startMs).toBeGreaterThan(0)
+  })
+  it('does not split a Unicode surrogate pair or drop half an old turn to reach 200 rows', () => {
+    const unicode = 'a'.repeat(3999) + '😀tail'
+    expect(callEndTranscript([{ role: 'agent', text: unicode, startMs: 0, endMs: 1 }]).map(row => row.text)).toEqual(['a'.repeat(3999), '😀tail'])
+    const old = { role: 'agent' as const, text: 'a'.repeat(8000), startMs: 0, endMs: 1 }
+    const later = Array.from({ length: 199 }, (_, index) => ({ role: 'user' as const, text: 'Later', startMs: index + 1, endMs: index + 1 }))
+    expect(callEndTranscript([old, ...later])).toHaveLength(199)
+    expect(callEndTranscript([old, ...later])[0].startMs).toBe(1)
   })
 })

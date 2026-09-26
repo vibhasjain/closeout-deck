@@ -19,14 +19,15 @@ export interface SavedCall {
   saveError?: string
   serverSaved?: boolean
   saving?: boolean
+  live?: boolean
   purpose?: CallPurpose
 }
 export const liveCallKey = (email: string) => `closeout:live-call:v1:${email}`
 export const callOwner = () => viewerSession()?.email ?? (import.meta.env.DEV ? 'dev@hypertrack.io' : null)
 const writes = new Map<string, { last: number; pending?: StoredCall; timer?: ReturnType<typeof setTimeout> }>()
 
-/** A trailing write captures final turns without ever exceeding one write per second. */
-export function persistLiveCall(email: string, record: Omit<StoredCall, 'transcript'> & { transcript: readonly (CallTranscriptTurn | TranscriptTurn)[] }) {
+/** Throttle live updates; teardown flushes synchronously before the page can disappear. */
+export function persistLiveCall(email: string, record: Omit<StoredCall, 'transcript'> & { transcript: readonly (CallTranscriptTurn | TranscriptTurn)[] }, flush = false) {
   const key = liveCallKey(email)
   const entry = writes.get(key) ?? { last: -Infinity }
   writes.set(key, entry)
@@ -37,7 +38,7 @@ export function persistLiveCall(email: string, record: Omit<StoredCall, 'transcr
     try { localStorage.setItem(key, JSON.stringify(entry.pending)) } catch { /* Private mode or storage quota: the live /end path remains available. */ }
     entry.pending = undefined; entry.last = Date.now()
   }
-  const delay = Math.max(0, 1000 - (Date.now() - entry.last))
+  const delay = flush ? 0 : Math.max(0, 1000 - (Date.now() - entry.last))
   if (!delay) { if (entry.timer) clearTimeout(entry.timer); write() }
   else if (!entry.timer) entry.timer = setTimeout(write, delay)
 }

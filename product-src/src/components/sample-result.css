@@ -52,7 +52,8 @@
   min-height: 1.375rem;
   max-width: 100%;
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .finding-detail .finding-action-card {
@@ -157,7 +158,8 @@
   padding: .625rem .875rem;
   border: 0;
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .finding-case table.sheet th:first-child,
@@ -198,7 +200,42 @@
   padding-top: 0;
   border-top: 0;
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.finding-source-reference { display: grid; gap: 3px; min-width: 0; text-align: left; }
+.finding-reference-file { overflow-wrap: break-word; }
+
+/* Each source remains readable on a phone, with clocks next to their own labels. */
+@media (max-width: 479px) {
+  .finding-case table.sheet,
+  .finding-case table.sheet tbody { display: block; width: 100%; }
+  .finding-case table.sheet colgroup,
+  .finding-case table.sheet thead { display: none; }
+  .finding-case table.sheet tr { display: block; padding: 10px 0; }
+  .finding-case table.sheet tr + tr { border-top: 1px solid hsl(var(--border)); }
+  .finding-case table.sheet tr > td {
+    display: grid;
+    grid-template-columns: 84px minmax(0, 1fr);
+    gap: 12px;
+    padding: 4px var(--table-edge-inset);
+    border: 0;
+    text-align: left;
+    overflow-x: auto;
+  }
+  .finding-case table.sheet td[data-label]::before {
+    content: attr(data-label);
+    color: hsl(var(--muted-foreground));
+    font-size: 12px;
+    font-weight: 400;
+    white-space: nowrap;
+  }
+  .finding-case table.sheet td[data-label]:empty { display: none; }
+  .finding-case table.sheet tr.finding-note { padding-top: 0; border: 0; }
+  .finding-case table.sheet .finding-note td {
+    display: block;
+    white-space: normal;
+  }
 }
 
 .finding-detail .finding-action-card > .email-issue-open,

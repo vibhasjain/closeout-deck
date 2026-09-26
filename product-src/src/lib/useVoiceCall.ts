@@ -66,15 +66,15 @@ export function useVoiceCall(purpose: 'onboard' | 'desk', cycleId?: string, scop
           return { error, retry: async () => {
             failed = await applyVoiceActions(failed, purpose, audit, navigate, params, cycleId)
             const current = next.snapshot()
-            if (current.callId) recordVoiceCall({ callId: current.callId, seconds: current.seconds, transcript: current.transcript, final: '', saving: true, purpose }, audit, scope)
+            if (current.callId) recordVoiceCall({ callId: current.callId, seconds: current.seconds, transcript: current.transcript, final: '', saving: true, live: current.status === 'active', purpose }, audit, scope)
             if (failed.length) throw new Error(audit.skipped.at(-1) ?? error)
           } }
         },
-        onPersist(record, final) {
-          if (email) persistLiveCall(email, record)
+        onPersist(record, ended) {
+          if (email) persistLiveCall(email, record, ended)
           registerCallRetry(record.sessionId, () => next.retrySave())
-          if (final && connected) {
-            try { recordVoiceCall({ callId: record.sessionId, seconds: record.seconds, transcript: record.transcript, final: '', saving: true, purpose }, audit, scope, record.startedAt) } catch (error) { console.warn('Call journal unavailable', error) }
+          if (connected) {
+            try { recordVoiceCall({ callId: record.sessionId, seconds: record.seconds, transcript: record.transcript, final: '', saving: true, live: !ended, purpose }, audit, scope, record.startedAt) } catch (error) { console.warn('Call journal unavailable', error) }
           }
         },
         onSaved: id => { if (email) clearStoredCall(email, id) },
@@ -83,7 +83,7 @@ export function useVoiceCall(purpose: 'onboard' | 'desk', cycleId?: string, scop
           if (event.type === 'state' && mounted.current && visible.current && handle.current === next) setSnapshot(event.snapshot)
           if (event.type === 'actions' && connected) {
             const current = next.snapshot()
-            if (current.callId) recordVoiceCall({ callId: current.callId, seconds: current.seconds, transcript: current.transcript, final: '', saving: true, purpose }, audit, scope)
+            if (current.callId) recordVoiceCall({ callId: current.callId, seconds: current.seconds, transcript: current.transcript, final: '', saving: true, live: current.status === 'active', purpose }, audit, scope)
           }
           if (event.type === 'completed') recordVoiceCall({ ...event, purpose }, audit, scope)
         },

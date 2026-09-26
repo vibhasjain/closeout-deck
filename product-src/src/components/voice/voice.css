@@ -7,7 +7,13 @@
 .call-screen .call-agent h1 { margin: 24px 0 6px; font-size: 16px; line-height: 1.5; letter-spacing: -.015em; font-weight: 500; }
 .call-screen .call-status { font-size: 12px; color: var(--call-muted); margin: 0 0 7px; }
 .call-time, .call-bar time { color: #767672; font-size: 11px; font-variant-numeric: tabular-nums; }
-.call-caption { min-height: 84px; width: min(100%, 460px); padding: 22px 0 10px; font-size: 13px; line-height: 1.65; color: #646461; text-wrap: pretty; }
+.call-captions { min-height: 84px; width: min(100%, 460px); padding: 22px 0 10px; text-align: left; text-wrap: pretty; }
+.call-caption-turn { margin: 0; font-size: 13px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.call-caption-turn + .call-caption-turn { margin-top: 18px; }
+.call-caption-turn--agent { color: #242423; font-weight: 500; }
+.call-caption-turn--user { color: #777774; }
+.call-caption-speaker { display: block; margin-bottom: 4px; font-size: 11px; font-weight: 400; color: #777774; }
+.call-captions-pending { margin: 0; color: #777774; font-size: 13px; line-height: 1.65; text-align: center; }
 .call-checklist { align-self: center; padding-bottom: 28px; }
 .call-checklist h2 { font-size: 13px; font-weight: 500; margin: 0 0 24px; letter-spacing: -.01em; }
 .call-topic-group + .call-topic-group { margin-top: 24px; }
@@ -51,8 +57,11 @@
 .call-bar-text { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 12px; line-height: 1.6; }
 .call-bar-text > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .call-bar .call-error { padding: 12px 0 2px; }
+.desk-call { flex: none; min-width: 0; }
+.call-bar .call-captions { width: 100%; min-height: 0; max-height: min(30dvh, 240px); overflow-y: auto; overscroll-behavior: contain; padding: 14px 0 2px; }
+.call-bar .call-caption-turn + .call-caption-turn { margin-top: 12px; }
 .call-note, .call-screen .call-note { margin: 8px 0; color: #777774; font-size: 12px; line-height: 1.5; }
-.call-note button { min-height: 32px; padding: 0 4px; border: 0; background: transparent; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
+.call-note button { min-height: 44px; min-width: 44px; padding: 0 4px; border: 0; background: transparent; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
 .chat .call-error { margin: 0 .75rem; width: auto; }
 .chat .chat-dictate[aria-pressed="true"] { border-radius: 50%; background: #242423; color: #fff; }
 .chat-dictate-status { margin: 6px .75rem 0; color: #777774; font-size: 12px; }
@@ -71,7 +80,7 @@
   .call-agent { width: 100%; padding-top: 18px; }
   .call-orb:not(.call-orb--compact) { width: 160px; height: 160px; }
   .call-screen .call-agent h1 { margin-top: 17px; font-size: 15px; }
-  .call-caption { min-height: 62px; padding-top: 15px; font-size: 12px; }
+  .call-captions { min-height: 62px; padding-top: 15px; }
   .call-checklist { width: 100%; padding: 0; }
   .call-checklist-desktop { display: none; }
   .call-checklist-mobile { display: block; padding: 0 2px; }
@@ -83,6 +92,20 @@
   .call-footer { position: fixed; bottom: 0; left: 0; right: 0; z-index: 12; margin: 0; padding: 14px 16px max(9px, env(safe-area-inset-bottom)); background: #fff; border-top: 1px solid #f0f0ec; }
   .call-error { padding: 17px 0 0; }
   .call-error-actions button { flex: 1; }
+}
+@media (max-width: 1023.98px) {
+  /* Stay inside the agent dialog so its focus trap also owns the full call screen. */
+  .agent-panel:has(.call-screen--desk) { inset: 0; width: 100%; max-width: none; height: 100dvh; border: 0; transform: none; }
+  .chat:has(.call-screen--desk) > :not(.desk-call) { display: none; }
+  .desk-call--fullscreen { display: flex; flex: 1; min-height: 0; height: 100%; }
+  .call-screen--desk { min-height: 0; height: 100%; padding: 0; background: #fff; overflow: hidden; }
+  .call-screen-header { display: flex; flex: none; align-items: center; justify-content: space-between; min-height: 60px; padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) 0 max(24px, env(safe-area-inset-left)); border-bottom: 1px solid #f0f0ec; font-size: 13px; color: #777774; }
+  .call-screen--desk .call-stage { display: block; width: 100%; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 max(24px, env(safe-area-inset-right)) 0 max(24px, env(safe-area-inset-left)); }
+  .call-screen--desk .call-agent { max-width: 520px; margin: 0 auto; padding: clamp(18px, 5dvh, 52px) 0 24px; }
+  .call-screen--desk .call-orb { width: clamp(180px, 26dvh, 240px); height: clamp(180px, 26dvh, 240px); }
+  .call-screen--desk .call-agent h1 { margin-top: 18px; font-size: 16px; }
+  .call-screen--desk .call-captions { min-height: 110px; padding-top: 28px; }
+  .call-screen--desk .call-footer { position: static; flex: none; margin: 0; padding: 14px 16px max(12px, env(safe-area-inset-bottom)); border-top: 1px solid #f0f0ec; background: #fff; }
 }
 @media (prefers-reduced-motion: reduce) {
   .call-orb { transform: none !important; }

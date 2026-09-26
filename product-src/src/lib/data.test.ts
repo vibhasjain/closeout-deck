@@ -42,6 +42,40 @@ beforeEach(() => {
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
 describe('recorded server cycle', () => {
+  it('does not claim no data before the first list response or after a failed initial load', async () => {
+    vi.spyOn(sessions, 'viewerSession').mockReturnValue({ email: 'loading@example.com', sessionToken: 'loading', exp: 9999999999 })
+    let answer!: (value: Response) => void
+    vi.mocked(api.authedFetch).mockImplementation(path => path === '/files' ? Promise.resolve(response({ files: [] })) : new Promise(resolve => { answer = resolve }))
+    const loading = invalidate()
+    expect(serverCycles(state).every(cycle => cycle.nextStep === undefined)).toBe(true)
+    const rail = () => renderToStaticMarkup(h(MemoryRouter, null, h(PayRuns)))
+    expect(rail()).toContain('Loading your pay runs…')
+    expect(rail()).not.toMatch(/No time entries|missing sets|Get timesheets/)
+    answer(new Response('{}', { status: 503 }))
+    await loading
+    expect(rail()).toContain('Retry')
+    expect(rail()).not.toContain('No time entries')
+    expect(serverCycles(state).every(cycle => cycle.nextStep === undefined)).toBe(true)
+    vi.mocked(api.authedFetch).mockImplementation(request)
+    await invalidate()
+    expect(rail()).not.toContain('Loading your pay runs')
+    expect(serverCycles(state).some(cycle => cycle.week.length > 0)).toBe(true)
+  })
+
+  it('keeps an adjustment-only cycle pending when its detail fails after the list answers', async () => {
+    vi.spyOn(sessions, 'viewerSession').mockReturnValue({ email: 'adjustment-read@example.com', sessionToken: 'adjustment-read', exp: 9999999999 })
+    let answer!: (value: Response) => void
+    vi.mocked(api.authedFetch).mockImplementation(path => path === '/files' ? Promise.resolve(response({ files: [] }))
+      : path === '/data/cycles' ? Promise.resolve(response({ cycles: [{ ...summary, runAt: null, adjustments: { count: 1, amount: 2 } }], sources: [] }))
+      : new Promise(resolve => { answer = resolve }))
+    const loading = invalidate()
+    await vi.waitFor(() => expect(answer).toBeTypeOf('function'))
+    expect(serverCycles(state).every(cycle => !cycle.nextStep)).toBe(true)
+    answer(new Response('{}', { status: 503 }))
+    await loading
+    expect(getDataSnapshot().cycleErrors[payload.cycle.id]).toBeTruthy()
+    expect(serverCycles(state).find(cycle => cycle.id === payload.cycle.id)?.nextStep).toBeUndefined()
+  })
   it('D6: a signed-in account with no data gets the calendar with honest empty states, never the synthetic generator', async () => {
     vi.spyOn(sessions, 'viewerSession').mockReturnValue({ email: 'fresh@example.com', sessionToken: 'fresh', exp: 9999999999 })
     vi.mocked(api.authedFetch).mockImplementation(path => Promise.resolve(response(path === '/files' ? { files: [] } : { cycles: [], sources: [] })))

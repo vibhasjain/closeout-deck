@@ -450,9 +450,10 @@ function synthetic(cal: Onboarding): boolean {
   return cal.dataSource === 'synthetic' && !viewerSession() && !(data.owner === account && (data.payloads.length > 0 || data.sources.length > 0 || data.files.length > 0))
 }
 
-export function useDesk(): { cycles: DeskCycle[]; current: DeskCycle; loading?: boolean; error?: string | null; byId(id: string): DeskCycle | undefined } {
+export function useDesk(): { cycles: DeskCycle[]; current: DeskCycle; loaded?: boolean; loading?: boolean; error?: string | null; cycleErrors?: Record<string, string>; byId(id: string): DeskCycle | undefined } {
   const [cal] = useOnboarding()
   const data = useData(cal.dataSource !== 'synthetic' || !!viewerSession())
   const cycles = activeCycles(cal)
-  return useMemo(() => ({ cycles, current: cycles[0], loading: data.loading, error: data.error, byId: (id: string) => cycles.find((c) => c.id === id) }), [cycles, data.loading, data.error])
+  const loaded = synthetic(cal) || data.loaded
+  return useMemo(() => ({ cycles, current: cycles[0], loaded, loading: !loaded || data.loading, error: data.error, cycleErrors: data.cycleErrors, byId: (id: string) => cycles.find((c) => c.id === id) }), [cycles, loaded, data.loading, data.error, data.cycleErrors])
 }
