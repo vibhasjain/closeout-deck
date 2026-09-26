@@ -12,4 +12,10 @@ describe('read traces', () => {
     expect(appendTrace(traces, 'Read handbooks/' + 'x'.repeat(241))).toBe(traces)
     expect(appendTrace(traces, 'Made up progress')).toBe(traces)
   })
+  it('keeps the server\'s human data reads, capped at three per turn with handbook reads uncapped', () => {
+    const reads = ['Read the dispute from Abel Alvarez', 'Read the thread with Travis Reed', 'Read handbooks/disputes.md',
+      'Read the time entries for Sep 14 to 20', 'Read the decisions', 'Read handbooks/mediation.md']
+    expect(reads.reduce(appendTrace, [])).toEqual(reads.filter(value => value !== 'Read the decisions'))
+    expect(appendTrace([], 'Read the thread\nwith an injected line')).toEqual([])
+  })
 })

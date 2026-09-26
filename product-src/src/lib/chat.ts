@@ -116,11 +116,12 @@ export interface ChatContext { page: string; step?: string; calendar: object; cy
 
 export interface ChatEvent { text?: string; trace?: string; done?: boolean; sessionId?: string; error?: string; final?: string; ingest?: IngestEvent; facts?: { applied: number; cycles: string[] } }
 
-/** Persist only the server's bounded handbook/data read traces, never synthesized steps. */
+/** Persist only the server's bounded read traces, never synthesized steps: handbook reads, plus at most 3 data reads
+ * per turn ("Read the dispute from Abel Alvarez", or older saved "Read data/…" lines). */
 export function appendTrace(traces: string[], value: unknown): string[] {
-  return typeof value === 'string' && /^Read (?:handbooks|data)\/[^\r\n]+$/.test(value) && value.length <= 240
-    && (!value.startsWith('Read data/') || traces.filter(trace => trace.startsWith('Read data/')).length < 3) && !traces.includes(value)
-    ? [...traces, value] : traces
+  if (typeof value !== 'string' || !/^Read [^\r\n]+$/.test(value) || value.length > 240 || traces.includes(value)) return traces
+  const data = (trace: string) => !trace.startsWith('Read handbooks/')
+  return data(value) && traces.filter(data).length >= 3 ? traces : [...traces, value]
 }
 
 export async function* stream(message: string, context: TurnContext, mode: ChatMode = 'chat', signal?: AbortSignal): AsyncGenerator<ChatEvent> {
