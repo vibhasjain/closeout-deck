@@ -1,8 +1,9 @@
+import { SkeletonRegion } from '@/components/Skeleton'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check, Lock, Phone, ScrollText } from 'lucide-react'
 import { AgentAvatar } from '@/components/chat/AgentAvatar'
-import { Btn, Spinner } from '@/components/ui'
+import { Btn } from '@/components/ui'
 import { QuestionScreen } from '@/components/setup/QuestionScreen'
 import { ProfileCard } from '@/components/profile/ProfileCard'
 import { writingRows } from '@/components/profile/profileSummary'
@@ -11,7 +12,6 @@ import { ProfileDialog } from '@/components/profile/ProfileDialog'
 import { RulebookModal } from '@/components/profile/RulebookModal'
 import { NeverContactInput } from '@/components/profile/NeverContactInput'
 import { JourneyBar } from '@/components/setup/JourneyBar'
-import { Shimmer } from '@/components/beautiful/shimmer'
 import { VOICE_ENABLED } from '@/lib/flags'
 import { useVoiceCall } from '@/lib/useVoiceCall'
 import { CallScreen } from '@/components/voice/CallScreen'
@@ -32,7 +32,7 @@ export function WritingProfile({ state, onDone }: { state: Onboarding; onDone():
     return () => window.clearTimeout(timer)
   }, [])
   return <section className="setup-writing setup-split">
-    <div className="setup-copy"><AgentAvatar size={32} working /><h1><Shimmer>Writing your Payroll profile and Rulebook…</Shimmer></h1>{state.setupClosing && <p className="setup-closing">{state.setupClosing}</p>}</div>
+    <div className="setup-copy"><AgentAvatar size={32} working /><SkeletonRegion variant="profile" />{state.setupClosing && <p className="setup-closing">{state.setupClosing}</p>}</div>
     <div className="setup-writing-lists" role="status" aria-live="polite">
       {writingRows(state).map(({ title, rows }) => <div key={title}><h2>{title}</h2><ul>{rows.map((row) => <li className={row.complete ? 'done' : 'not-yet'} key={row.title}>{row.complete && <Check size={14} aria-hidden />}<span>{row.title}</span>{!row.complete && <small className="tag profile-not-yet">Not Yet</small>}</li>)}</ul></div>)}
     </div>
@@ -165,7 +165,7 @@ export function Agent() {
             <button className={`setup-option${firmChoice === 'sample' ? ' selected' : ''}`} type="button" disabled={busy} aria-pressed={firmChoice === 'sample'} onClick={() => setFirmChoice('sample')}>Use the sample firm</button>
           </div>
           {error && <div className="setup-error" role="alert"><p>{error}</p><Btn onClick={() => void submitFirm()}>Retry</Btn></div>}
-          {busy && <p className="setup-working" role="status"><Spinner />Reading up on your firm…</p>}
+          {busy && <SkeletonRegion className="setup-working" />}
           {firmChoice && <Btn type="submit" className={firmReady ? 'primary' : ''} disabled={!firmReady}>Continue →</Btn>}
         </form>
       </section>}
@@ -177,9 +177,9 @@ export function Agent() {
         {error && <div className="setup-error" role="alert"><p>{error}</p><Btn disabled={busy} onClick={() => void ask(getOnboarding().setupRequest || 'Start onboarding')}>Retry</Btn>{!current && <div className="setup-controls"><Btn onClick={() => go('intro')}>Back</Btn><Btn disabled={busy} onClick={() => void ask('Skip this question and continue onboarding.')}>Skip</Btn></div>}</div>}
         {state.setupNotice && <p className="setup-notice" role="status">{state.setupNotice}</p>}
         {current ? <QuestionScreen key={`${historyIndex}:${current.question}`} question={current.question} card={current.card} initialAnswer={current.answer} busy={busy} onCall={() => { void voice.start() }} canBack={historyIndex > 0 || !!error} canForward={historyIndex < state.setupHistory.length - 1} onForward={() => { setError(''); setHistoryIndex(state.setupHistory.length - 1) }} onBack={() => { if (historyIndex === 0) go('intro'); else { setError(''); setHistoryIndex((index) => Math.max(0, index - 1)) } }} onAnswer={answer} />
-          : !error && <section className="setup-centered"><AgentAvatar size={32} working /><p role="status">Your Closeout Agent is reading your profile…</p></section>}
+          : !error && <section className="setup-centered"><AgentAvatar size={32} working /><SkeletonRegion variant="profile" /></section>}
 
-        {busy && current && <p className="setup-reply-status" role="status"><Spinner />Your Closeout Agent is thinking…</p>}
+        {busy && current && <SkeletonRegion className="setup-reply-status" />}
       </div><aside className="setup-conversation-profile" aria-label="Your live Payroll profile"><ProfileCard state={state} /></aside></div>}
       {step === 'writing' && <WritingProfile state={state} onDone={() => go('ready')} />}
       {(step === 'ready' || step === 'never-contact') && ready}

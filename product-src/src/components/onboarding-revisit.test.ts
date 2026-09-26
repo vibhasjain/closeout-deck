@@ -174,12 +174,10 @@ describe('revisiting onboarding', () => {
       expect(Boolean(tab!.props['aria-disabled'])).toBe(!forwarded)
       expect(tab!.props.tabIndex).toBe(forwarded ? undefined : -1)
     }
-    for (const name of ['Settings', 'Agent']) {
-      expect(button(tree, name)).toBeDefined()
-      expect(button(tree, name)!.props.disabled).toBe(!forwarded)
-    }
+    expect(button(tree, 'Settings')).toBeDefined()
+    expect(button(tree, 'Settings')!.props.disabled).toBe(!forwarded)
     // Logging out is never locked, even mid-setup.
-    expect(button(openAccount(render), 'Log Out')!.props.disabled).toBe(false)
+    expect(button(openAccount(render), 'Log out')!.props.disabled).toBe(false)
   })
 
   it.each([['step=intake', 'Timesheets'], ['cycle=2026-09-20&step=review', 'Payroll'], ['', 'Payroll']])('D19: /payroll?%s highlights exactly one nav item (%s)', (query, current) => {
@@ -197,20 +195,20 @@ describe('revisiting onboarding', () => {
     const render = mount(TopNav)
     const tree = render()
     expect(elements(tree).filter(({ props }) => props.to).every(({ props }) => !props['aria-disabled'])).toBe(true)
-    for (const name of ['Settings', 'Agent']) expect(button(tree, name)!.props.disabled).toBe(false)
-    expect(button(openAccount(render), 'Log Out')!.props.disabled).toBe(false)
+    expect(button(tree, 'Settings')!.props.disabled).toBe(false)
+    expect(button(openAccount(render), 'Log out')!.props.disabled).toBe(false)
   })
 
-  it('lets a returning user open Settings, toggle the agent, and see Log Out', () => {
+  it('lets a returning user open Settings with the agent context and see Log out', () => {
     router.params = new URLSearchParams('step=2&agent=1')
     const render = mount(TopNav)
     const tree = render()
     button(tree, 'Settings')!.props.onClick!()
     expect(router.navigate).toHaveBeenCalledWith('/settings?agent=1')
-    button(tree, 'Agent')!.props.onClick!()
-    expect(router.params.get('agent')).toBeNull()
+    expect(button(tree, 'Agent')).toBeUndefined()
+    expect(router.params.get('agent')).toBe('1')
     expect(router.params.get('step')).toBe('2')
-    expect(button(openAccount(render), 'Log Out')).toBeDefined()
+    expect(button(openAccount(render), 'Log out')).toBeDefined()
     expect(store.update).not.toHaveBeenCalled()
   })
 

@@ -1,3 +1,4 @@
+import { SkeletonRegion } from '@/components/Skeleton'
 import { useRef, useState, type FormEvent } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -135,7 +136,8 @@ export function MemoryPanelContent({ snapshot, loading, error, refresh, onMakeRu
     <h2 id="memory-heading">What the Closeout Agent knows</h2>
     {error && <div className="memory-load-error"><p className="memory-note" role="alert">{error}</p><Btn className="memory-button" onClick={() => void refresh()}>Try again</Btn></div>}
     {!instincts.length && !loading && !error && <p className="memory-note memory-empty">The Closeout Agent learns from the call, from your corrections and at each Send to Payroll. You can edit what it knows or make it forget. Forget stays forgotten.</p>}
-    {loading && !instincts.length && <p className="memory-note">Loading what the Closeout Agent knows…</p>}
+    {loading && !instincts.length && !error && <SkeletonRegion rows={4} />}
+    {loading && instincts.length > 0 && <SkeletonRegion rows={1} />}
     {memoryKinds.map(({ kind, label }) => {
       const rows = instincts.filter(row => row.kind === kind)
       return rows.length ? <section className="memory-group" key={kind} aria-label={label}>
@@ -143,7 +145,7 @@ export function MemoryPanelContent({ snapshot, loading, error, refresh, onMakeRu
         <ul>{rows.map(instinct => <MemoryRow key={`${instinct.id}:${instinct.at}`} instinct={instinct} />)}</ul>
       </section> : null
     })}
-    <AddMemory />
+    {(!loading || instincts.length > 0) && <AddMemory />}
     {proposals.length > 0 && <section className="memory-group memory-suggestions" aria-label="Suggested rules">
       <h3>Suggested rules</h3>
       <ul>{proposals.map(proposal => <MemorySuggestion key={proposal.ruleId} proposal={proposal} onMakeRule={onMakeRule} />)}</ul>

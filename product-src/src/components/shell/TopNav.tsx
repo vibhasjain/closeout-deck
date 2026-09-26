@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
-import { Banknote, ClipboardList, Ellipsis, ListChecks, LogOut, Menu, MessageSquare, PanelLeft, Settings, UserRound, X } from 'lucide-react'
+import { Banknote, ClipboardList, Ellipsis, ListChecks, LogOut, Menu, PanelLeft, Settings, UserRound, X } from 'lucide-react'
 import { NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { Btn } from '@/components/ui'
 import { recentCycles } from '@/lib/cycles'
 import { intakeHref } from '@/lib/intake'
 import { signOut, viewerSession } from '@/lib/viewerSession'
@@ -111,12 +110,6 @@ export function TopNav({ wide = true }: { wide?: boolean } = {}) {
   const navigateTo = (to: string) => { closeDrawer(); navigate(to) }
   const pendingHref = intakeHref(recentCycles(state, 2)[1].id)
   const intakeActive = pathname === '/payroll' && params.get('step') === 'intake'
-  const agentToggle = <Btn className="icon-box sidebar-agent-toggle" aria-label="Agent" title="Agent" data-agent-toggle disabled={setupLocked} aria-expanded={agentOpen} aria-controls="agent-panel" onClick={() => setParams((previous) => {
-    const next = new URLSearchParams(previous)
-    if (agentOpen) next.delete('agent')
-    else next.set('agent', '1')
-    return next
-  })}><MessageSquare size={16} aria-hidden="true" /></Btn>
 
   return <header ref={header} className={`topbar sidebar${drawerOpen && !wide ? ' sidebar-open' : ''}`} data-sidebar={state.sidebar}>
     <div className="mobile-topbar" inert={!wide && drawerOpen}>
@@ -124,14 +117,13 @@ export function TopNav({ wide = true }: { wide?: boolean } = {}) {
         setDrawerOpen(true)
         if (agentOpen) setParams((previous) => { const next = new URLSearchParams(previous); next.delete('agent'); return next })
       }}><Menu size={18} aria-hidden="true" /></button>
-      <div className="brand"><img src={import.meta.env.BASE_URL + 'logo-small.svg'} alt="" width="22" height="22" /><span>Closeout</span></div>
-      {agentToggle}
+      <div className="brand"><img className="brand-wordmark" src={import.meta.env.BASE_URL + 'hypertrack-logo.svg'} alt="HyperTrack" width="126" height="24" /></div>
     </div>
     {!wide && drawerOpen && <div className="sidebar-scrim" aria-hidden="true" onClick={closeDrawer} />}
     <div id={sidebarId} ref={drawer} className="sidebar-surface" role={!wide && drawerOpen ? 'dialog' : undefined} aria-modal={!wide && drawerOpen ? true : undefined} aria-label={!wide && drawerOpen ? 'Navigation' : undefined} tabIndex={!wide && drawerOpen ? -1 : undefined} inert={!wide && !drawerOpen}>
       <div className="sidebar-brand-row">
-        <div className="brand"><img src={import.meta.env.BASE_URL + 'logo-small.svg'} alt="" width="22" height="22" /><span className="sidebar-label">Closeout</span></div>
-        <button type="button" className="btn icon-box sidebar-collapse" aria-label={state.sidebar === 'rail' ? 'Expand sidebar' : 'Collapse sidebar'} onClick={() => update({ sidebar: state.sidebar === 'full' ? 'rail' : 'full' })}><PanelLeft size={16} aria-hidden="true" /></button>
+        <div className="brand"><img className="brand-wordmark" src={import.meta.env.BASE_URL + 'hypertrack-logo.svg'} alt="HyperTrack" width="137" height="26" /><img className="brand-mark" src={import.meta.env.BASE_URL + 'logo-small.svg'} alt="HyperTrack" width="26" height="26" /></div>
+        <button type="button" className="btn icon-box sidebar-collapse" aria-label={state.sidebar === 'rail' ? 'Expand sidebar' : 'Collapse sidebar'} onClick={() => update({ sidebar: state.sidebar === 'full' ? 'rail' : 'full' })}><PanelLeft size={16} aria-hidden="true" /><img className="sidebar-expand-mark" src={import.meta.env.BASE_URL + 'logo-small.svg'} alt="HyperTrack" width="26" height="26" /></button>
         <button type="button" className="btn icon-box sidebar-close" aria-label="Close sidebar" onClick={closeDrawer}><X size={18} aria-hidden="true" /></button>
       </div>
       <nav className="nav-tabs" aria-label="Main navigation">
@@ -147,12 +139,13 @@ export function TopNav({ wide = true }: { wide?: boolean } = {}) {
       <PayRuns onNavigate={closeDrawer} />
       <GettingStarted onNavigate={closeDrawer} />
       <div ref={account} className="sidebar-account">
-        <button ref={accountTrigger} type="button" className="sidebar-account-trigger" aria-label="Account menu" title={`${name}${email ? ` · ${email}` : ''}`} aria-haspopup="menu" aria-expanded={accountOpen} aria-controls={accountMenuId} onClick={() => setAccountOpen((open) => !open)}>
+        {wide ? <button ref={accountTrigger} type="button" className="sidebar-account-trigger" aria-label="Account menu" title={`${name}${email ? ` · ${email}` : ''}`} aria-haspopup="menu" aria-expanded={accountOpen} aria-controls={accountMenuId} onClick={() => setAccountOpen((open) => !open)}>
           <span className="account-avatar" aria-hidden="true">{name.trim().slice(0, 1).toUpperCase()}</span>
           <span className="sidebar-label account-details"><span className="account-name">{name}</span><span className="account-email">{email || 'Signed in'}</span></span>
           <Ellipsis className="sidebar-label" size={16} aria-hidden="true" />
-        </button>
-        {accountOpen && <div id={accountMenuId} className="sidebar-account-menu" role="menu" aria-label="Account" onKeyDown={(event) => {
+        </button> : <div className="sidebar-account-identity"><span className="account-avatar" aria-hidden="true">{name.trim().slice(0, 1).toUpperCase()}</span><span className="account-details"><span className="account-name">{name}</span><span className="account-email">{email || 'Signed in'}</span></span></div>}
+        {!wide && <button type="button" className="sidebar-logout" disabled={signingOut} onClick={() => void logOut()}><LogOut size={16} aria-hidden="true" />Log out</button>}
+        {wide && accountOpen && <div id={accountMenuId} className="sidebar-account-menu" role="menu" aria-label="Account" onKeyDown={(event) => {
           if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
           event.preventDefault()
           const items = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
@@ -161,7 +154,7 @@ export function TopNav({ wide = true }: { wide?: boolean } = {}) {
           items[next]?.focus()
         }}>
           <button type="button" role="menuitem" onClick={() => navigateTo('/setup/agent')}><ListChecks size={15} aria-hidden="true" />Onboarding</button>
-          <button type="button" role="menuitem" aria-label="Log Out" disabled={signingOut} onClick={() => void logOut()}><LogOut size={15} aria-hidden="true" />Log out</button>
+          <button type="button" role="menuitem" aria-label="Log out" disabled={signingOut} onClick={() => void logOut()}><LogOut size={15} aria-hidden="true" />Log out</button>
         </div>}
       </div>
     </div>

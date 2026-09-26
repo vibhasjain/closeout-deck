@@ -1,3 +1,4 @@
+import { SkeletonRegion } from '@/components/Skeleton'
 import { useEffect, useId, useState } from 'react'
 import { Banknote, CalendarDays } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -46,7 +47,7 @@ export function PayRuns({ onNavigate }: { onNavigate?: () => void } = {}) {
     <button type="button" className="sidebar-nav-item pay-runs-toggle" aria-label="Pay runs" title="Pay runs" aria-expanded={open} aria-controls={`${id}-list`} onClick={() => setOpen((current) => !current)}><CalendarDays size={16} aria-hidden="true" /></button>
     <div id={`${id}-list`} className="pay-runs-content">
     <h2 className="sidebar-section-title">Pay runs</h2>
-    {loaded === false || error ? <div className="pay-runs-load-state" role={error ? 'alert' : 'status'}>{error ? <><p>Pay runs could not be loaded.</p><button type="button" className="btn" onClick={() => void invalidate()}>Retry</button></> : 'Loading your pay runs…'}</div> : <ClusterList kind="cycles" selected={cycle.id} onSelect={selectCycle}
+    {error ? <div className="pay-runs-load-state" role="alert"><p>Pay runs could not be loaded.</p><button type="button" className="btn" onClick={() => void invalidate()}>Retry</button></div> : loaded === false ? <SkeletonRegion variant="rail" /> : <ClusterList kind="cycles" selected={cycle.id} onSelect={selectCycle}
       items={cycles.map((item) => {
         const payouts = payTotals(item)
         const count = payouts.workerCount.toLocaleString()

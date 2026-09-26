@@ -102,7 +102,6 @@ button.setup-option { display: flex; align-items: center; justify-content: cente
 .setup-file-list li { display: flex; gap: 8px; align-items: center; overflow-wrap: anywhere; }
 .setup-error { border: .5px solid rgb(0 0 0 / .1); border-radius: 10px; padding: 16px; margin: 20px 0; background: #fff; }
 .setup-error p { color: #100f0f; margin: 0 0 10px; }
-.setup-working, .setup-reply-status { display: flex; align-items: center; gap: 8px; font-size: 12px; }
 .setup-writing .setup-copy { justify-content: center; padding-block: 48px; }
 .setup-writing h1 { max-width: 380px; }
 .setup-writing-lists { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; align-content: center; padding: 48px max(24px, 7%); border-left: .5px solid rgb(0 0 0 / .1); background: #fff; margin-top: calc(-1 * var(--setup-head)); }

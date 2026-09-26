@@ -1,3 +1,4 @@
+import { SkeletonRegion } from '@/components/Skeleton'
 import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronRight } from 'lucide-react'
 import { fmtHM } from '@/bench/engine.js'
@@ -164,7 +165,7 @@ export function Intake({ cycle, intake, threads = [] }: { cycle: DeskCycle; inta
         <Chip active={uploadSet === 1} aria-pressed={uploadSet === 1} onClick={() => setUploadSet(1)}>Worker-reported</Chip>
         <Chip active={uploadSet === 2} aria-pressed={uploadSet === 2} onClick={() => setUploadSet(2)}>Client-approved</Chip>
       </div>
-      <Btn disabled={busy} onClick={() => pickUpload()}>{busy ? 'Uploading…' : 'Upload'}</Btn>
+      {busy ? <SkeletonRegion variant="action" /> : <Btn onClick={() => pickUpload()}>Upload</Btn>}
     </div>
     {error && <p role="alert" className="r-note">{error}</p>}
     {cycle.server && !cycle.week.length && cycle.nextStep?.kind === 'get_timesheets' && !results.length && <p className="intake-empty r-note" role="status">No time entries yet for {cycle.label}.</p>}

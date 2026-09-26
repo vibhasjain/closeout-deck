@@ -1,3 +1,4 @@
+import { SkeletonRegion } from '@/components/Skeleton'
 import { useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -109,7 +110,7 @@ export function FindingsCard({ cycleId, live = true }: { cycleId: string; live?:
   const [position, setPosition] = useState(0)
   const [pending, setPending] = useState<string | null>(null)
   const [failure, setFailure] = useState<string | null>(null)
-  if (!cycle) return <div className="journey-findings" role={error ? 'alert' : 'status'}>{error ?? (loading ? 'Loading findings…' : empty ? 'No time entries yet' : 'Findings are not available.')}</div>
+  if (!cycle) return loading && !error ? <SkeletonRegion className="journey-findings" /> : <div className="journey-findings" role={error ? 'alert' : 'status'}>{error ?? (empty ? 'No time entries yet' : 'Findings are not available.')}</div>
   const items = carouselFindings(cycle, state, threads)
   const askable = new Set(items.filter(item => item.resolution.state === 'waiting' && !item.asked && hasAskableGaps(cycle, item.resolution, state, threads)))
   const index = Math.min(position, Math.max(0, items.length - 1))

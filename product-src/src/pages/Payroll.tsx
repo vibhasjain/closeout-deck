@@ -1,3 +1,4 @@
+import { SkeletonRegion } from '@/components/Skeleton'
 import { useEffect } from 'react'
 import { Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Banknote, CircleCheck, Lock } from 'lucide-react'
@@ -70,8 +71,9 @@ export function Payroll() {
     <section className="detail reconcile-payments" aria-label="Payroll">
       <PageTitle title="Payroll" description="Collect time entries, resolve discrepancies, and prepare each pay run." />
       {awaitingData || loadError ? <>
-        <div className="journey-next-step" role="region" aria-label="Next step"><span className="r-note">{loadError ? 'Pay runs could not be loaded.' : 'Loading your pay runs…'}</span></div>
-        <div className="payroll-load-state" role={loadError ? 'alert' : 'status'}>{loadError ? <><p>Pay runs could not be loaded. Please try again.</p><Btn onClick={() => void invalidate()}>Retry</Btn></> : <p>Loading your pay runs…</p>}</div>
+        {loadError ? <><div className="journey-next-step" role="region" aria-label="Next step"><span className="r-note">Pay runs could not be loaded.</span></div>
+          <div className="payroll-load-state" role="alert"><p>Pay runs could not be loaded. Please try again.</p><Btn onClick={() => void invalidate()}>Retry</Btn></div></>
+          : <><SkeletonRegion variant="next-step" className="journey-next-step" /><SkeletonRegion variant="kpis" /><SkeletonRegion variant="review" /></>}
       </> : <>
       {/* One black button per pane: the next step's, unless the visible Review list carries its own Approve. */}
       {cycle.nextStep && <NextStepRow nextStep={cycle.nextStep} cycle={cycle} findingCounts={findingCounts(resolutionGroups(cycle, state.resolutions, state.undone[cycle.id], threads, state.neverContact ?? []))} primary={cycle.nextStep.kind !== 'done' && !(cycle.nextStep.kind === 'review' && step === 'review')} onReview={() => {

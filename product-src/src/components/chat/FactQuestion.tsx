@@ -1,3 +1,4 @@
+import { SkeletonRegion } from '@/components/Skeleton'
 import { useRef, useState } from 'react'
 import { Btn, Chip } from '@/components/ui'
 import type { QuestionCard } from '@/lib/chat'
@@ -27,7 +28,7 @@ export function FactQuestion({ card, onAnswer }: { card: QuestionCard; onAnswer(
   return <form className="chat-question" onSubmit={(event) => { event.preventDefault(); if (answer) onAnswer(answer) }}>
     {card.input === 'files' && <>
       <input ref={picker} hidden type="file" accept=".csv,.xlsx,.xls,.pdf" aria-label="Upload time entries" onChange={(event) => { void upload(event.target.files?.[0]); event.target.value = '' }} />
-      <Btn disabled={uploading} onClick={() => picker.current?.click()}>{uploading ? 'Uploading…' : card.placeholder || 'Upload time entries'}</Btn>
+      {uploading ? <SkeletonRegion /> : <Btn onClick={() => picker.current?.click()}>{card.placeholder || 'Upload time entries'}</Btn>}
     </>}
     {!!card.chips?.length && <div className="chips">{card.chips.map((chip) => <Chip key={chip} active={selected.includes(chip)} aria-pressed={selected.includes(chip)}
       onClick={() => setSelected((old) => card.input === 'multi' ? old.includes(chip) ? old.filter((value) => value !== chip) : [...old, chip] : [chip])}>{chip}</Chip>)}</div>}

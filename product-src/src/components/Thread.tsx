@@ -1,3 +1,4 @@
+import { SkeletonRegion } from '@/components/Skeleton'
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { MessageSquare, Send } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
@@ -88,9 +89,10 @@ function ServerPaymentThread({ cycle, rs }: { cycle: DeskCycle; rs?: RunShift })
     || thread.counterparty.kind === 'site' && (thread.counterparty.name === rs.shift.fac.name
       || thread.counterparty.name === cycle.sites?.find((site) => site.name === rs.shift.fac.name)?.supervisor?.name))
   const thread = relevant.find((item) => item.id === selected) ?? relevant[0]
+  if (!thread && loading && !error) return <SkeletonRegion variant="conversation" />
   if (!thread) return <div className="thread-empty" aria-label="No conversation">
     <MessageSquare size={20} aria-hidden="true" />
-    <p className="r-note" role={error ? 'alert' : 'status'}>{error ?? (loading ? 'Loading conversation…' : 'No conversation yet')}</p>
+    <p className="r-note" role={error ? 'alert' : 'status'}>{error ?? 'No conversation yet'}</p>
   </div>
   return <>
     {relevant.length > 1 && <div className="thread-party-switch journey-thread-picker" role="group" aria-label="Conversation recipient">

@@ -146,6 +146,6 @@ describe('Payroll waits for the account data', () => {
     vi.spyOn(desk, 'useDesk').mockReturnValue({ cycles: [cycle], current: cycle, byId: () => cycle, loaded: phase === 'detail-failed', loading: phase === 'loading', error: phase === 'failed' ? 'Unavailable' : null, cycleErrors: phase === 'detail-failed' ? { [cycle.id]: 'Unavailable' } : {} })
     const html = renderToStaticMarkup(h(MemoryRouter, { initialEntries: ['/payroll'] }, h(OverlayProvider, null, h(AuxProvider, null, h(Payroll)))))
     expect(html).not.toMatch(/Get timesheets|No time entries|missing sets|intake-upload-bar/)
-    expect(html).toContain(phase === 'loading' ? 'Loading your pay runs…' : 'Retry')
+    expect(html).toContain(phase === 'loading' ? 'data-skeleton="review"' : 'Retry')
   })
 })

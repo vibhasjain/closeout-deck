@@ -1,3 +1,4 @@
+import { SkeletonRegion } from '@/components/Skeleton'
 import { useRef, useState } from 'react'
 import { Phone } from 'lucide-react'
 import type { CallCard as CallCardValue, CallTranscriptTurn } from '@/lib/chat'
@@ -54,7 +55,7 @@ export function CallCard({ card, live, transcript, saveError, onRetrySave }: { c
       {turns?.length ? <ol aria-label="Call transcript">{turns.map((turn, index) => <li key={`${turn.startMs}-${index}`}>
         <div className="chat-call-speaker"><span>{turn.role === 'user' ? 'You' : 'Closeout Agent'}</span><time>{duration(turn.startMs / 1000)}</time></div>
         <p>{turn.text}</p>
-      </li>)}</ol> : loading ? <p className="chat-call-unavailable" role="status">Loading transcript…</p>
+      </li>)}</ol> : loading ? <SkeletonRegion variant="conversation" />
         : error ? <div className="chat-call-unavailable" role="status"><span>{error}</span> <button type="button" className="chat-call-retry" onClick={() => void load()}>Retry</button></div>
           : <p className="chat-call-unavailable">{live ? 'The conversation will appear here as you talk.' : fetched ? 'This call’s transcript isn’t available.' : 'Open to load the call transcript.'}</p>}
     </details>

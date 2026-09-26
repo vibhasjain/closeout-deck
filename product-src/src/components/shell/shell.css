@@ -1,5 +1,5 @@
 /* One persistent shell: navigation, agent, then the routed page. */
-.app { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 48px minmax(0, 1fr); height: 100dvh; overflow: hidden; }
+.app { --mobile-header-height: calc(48px + env(safe-area-inset-top)); --mobile-orb-clearance: calc(64px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: var(--mobile-header-height) minmax(0, 1fr); height: 100dvh; overflow: hidden; }
 .main { display: flex; min-width: 0; min-height: 0; overflow: hidden; container: main-pane / inline-size; background: var(--page, #fbfbfa); }
 .main > * { min-width: 0; min-height: 0; flex: 1; }
 .app-setup { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
@@ -9,14 +9,15 @@
 .rail-layout > .detail { display: flex; min-height: 0; overflow: hidden; }
 .rail-layout > .aux { min-height: 0; overflow: hidden; }
 .brand { flex-shrink: 0; }
-.brand img { display: block; width: 22px; height: 22px; filter: grayscale(1); }
+.brand img { display: block; height: 26px; width: auto; filter: grayscale(1); }
+.brand .brand-mark, .sidebar-expand-mark { display: none; }
 
 .scrim.overlay-scrim { position: fixed; inset: 0; visibility: visible; transform: none; opacity: 0; pointer-events: none; transition: opacity 120ms var(--ease-out); }
 .scrim.overlay-scrim.open { opacity: 1; pointer-events: auto; }
 .scrim.overlay-scrim.closing { opacity: 0; }
 [data-aux-toggle] { display: none; position: fixed; right: .75rem; bottom: .75rem; z-index: 20; }
-.agent-scrim { top: 48px; z-index: 30; transform: none; }
-.agent-panel { top: 48px; height: calc(100dvh - 48px); width: 380px; max-width: 100vw; z-index: 35; }
+.agent-scrim { top: var(--mobile-header-height); z-index: 30; transform: none; }
+.agent-panel { top: var(--mobile-header-height); height: calc(100dvh - var(--mobile-header-height)); width: 380px; max-width: 100vw; z-index: 35; }
 .agent-panel[hidden], .agent-scrim[hidden] { display: none; }
 .agent-panel > .chat { flex: 1; width: 100%; min-height: 0; border-right: 0; }
 .agent-panel.closing { transform: translateX(100%); }
@@ -40,8 +41,6 @@
 @media (max-width: 600px) {
   .agent-scrim { inset: 0; }
   .agent-panel { inset: 0; width: 100%; max-width: none; height: 100dvh; border: 0; }
-  .agent-fab { position: fixed; display: grid; place-items: center; left: 16px; bottom: max(16px, env(safe-area-inset-bottom)); width: 48px; height: 48px; z-index: 25; border: 1px solid hsl(var(--border)); border-radius: 50%; background: hsl(var(--background)); box-shadow: 0 2px 8px rgb(0 0 0 / .08); }
-  .agent-fab[aria-expanded="true"] { visibility: hidden; }
   .agent-panel .icon-btn, .agent-panel .chip { min-width: 44px; min-height: 44px; }
   .main :is(button, a.btn, .page-title-info) { min-height: 44px; }
   .main .icon-btn { min-width: 44px; }
@@ -52,9 +51,9 @@
 
 /* The navigation surface is shared by desktop and the mobile left drawer. */
 .topbar.sidebar { display: block; height: auto; min-width: 0; min-height: 0; padding: 0; }
-.mobile-topbar { display: flex; align-items: center; gap: .625rem; height: 48px; padding-inline: .5rem; }
+.mobile-topbar { display: flex; align-items: center; justify-content: space-between; gap: .625rem; height: calc(48px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left)); }
+.mobile-topbar .brand img { width: 126px; height: auto; }
 .brand { display: flex; align-items: center; gap: .5rem; font-size: 14px; font-weight: 600; }
-.mobile-topbar .sidebar-agent-toggle { margin-left: auto; }
 .sidebar .icon-box { display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0; flex: 0 0 auto; }
 .sidebar .icon-box[aria-expanded="true"] { background: hsl(var(--muted)); }
 .sidebar button:disabled { opacity: .45; pointer-events: none; }
@@ -109,22 +108,37 @@
 .checklist-chevron { flex: 0 0 14px; margin-top: 3px; transition: transform 180ms cubic-bezier(.2,.8,.2,1); }
 .expanded .checklist-chevron { transform: rotate(90deg); }
 .sidebar-account { position: relative; flex: 0 0 auto; margin-top: auto; padding: .625rem .5rem; }
-.sidebar-account-trigger { display: flex; align-items: center; gap: .5rem; width: 100%; min-height: 40px; padding: .25rem; border-radius: .375rem; text-align: left; }
-.sidebar-account-trigger:hover { background: hsl(var(--muted)); }
+.sidebar-account-trigger { display: flex; align-items: center; gap: .5rem; width: 100%; min-height: 44px; padding: .375rem; border: 1px solid hsl(var(--border)); border-radius: .375rem; text-align: left; cursor: pointer; }
+.sidebar-account-trigger:hover, .sidebar-account-trigger[aria-expanded="true"] { background: hsl(var(--muted)); }
+.sidebar-account-trigger:focus-visible { outline: 2px solid hsl(var(--foreground)); outline-offset: 2px; }
+.sidebar-account-identity { display: flex; align-items: center; gap: .5rem; min-height: 44px; padding: .375rem; }
+.sidebar-logout { display: flex; align-items: center; gap: .625rem; width: 100%; min-height: 44px; margin-top: .25rem; padding: .5rem .625rem; border-radius: .375rem; font: 13px/1.5 var(--sans); text-align: left; cursor: pointer; }
+.sidebar-logout:hover, .sidebar-logout:focus-visible { background: hsl(var(--muted)); }
 .account-avatar { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; border-radius: 50%; background: hsl(var(--muted)); color: hsl(var(--foreground)); font-size: 12px; }
-.account-details { display: flex; flex: 1; flex-direction: column; min-width: 0; font-size: 11px; line-height: 1.5; }
+.account-details { display: flex; flex: 1; flex-direction: column; min-width: 0; font-size: 13px; line-height: 1.5; }
 .account-name, .account-email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .account-email { color: hsl(var(--muted-foreground)); }
 .sidebar-account-menu { position: absolute; left: .5rem; right: .5rem; bottom: calc(100% - .25rem); z-index: 50; min-width: 180px; padding: .25rem; border: 1px solid hsl(var(--border)); border-radius: .375rem; background: hsl(var(--background)); box-shadow: 0 2px 8px rgb(0 0 0 / .06); }
-.sidebar-account-menu button { display: flex; align-items: center; gap: .5rem; width: 100%; min-height: 34px; padding: .375rem .5rem; border-radius: .25rem; font: 13px/1.5 var(--sans); text-align: left; }
+.sidebar-account-menu button { display: flex; align-items: center; gap: .5rem; width: 100%; min-height: 44px; padding: .375rem .5rem; border-radius: .25rem; font: 13px/1.5 var(--sans); text-align: left; }
 .sidebar-account-menu button:hover, .sidebar-account-menu button:focus-visible { background: hsl(var(--muted)); }
 
 @media (max-width: 1023.98px) {
+  .sidebar .icon-box, .sidebar .icon-btn { min-width: 44px; min-height: 44px; }
+  .sidebar .sidebar-nav-item, .sidebar .cluster-row, .getting-started-list a { min-height: 44px; }
+  .sidebar-surface { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
   .sidebar-surface { overflow-y: auto; overscroll-behavior: contain; }
-  /* Reserve the orb footprint outside the scrollports. Content-only bottom padding
-     clears the last row but still lets every other row scroll behind the orb. */
-  .app:not(.app-setup) .main { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
-  .app:not(.app-setup) .main .scroll { scroll-padding-bottom: 16px; }
+  .agent-fab { position: fixed; display: grid; place-items: center; left: max(16px, env(safe-area-inset-left)); bottom: calc(16px + env(safe-area-inset-bottom)); width: 48px; height: 48px; z-index: 25; border: 1px solid hsl(var(--border)); border-radius: 50%; background: hsl(var(--background)); box-shadow: 0 2px 8px rgb(0 0 0 / .08); }
+  .agent-fab[aria-expanded="true"] { visibility: hidden; }
+  /* The scrollports reach the viewport bottom. Their own end padding lets the
+     final row clear the floating orb, while earlier rows scroll underneath it. */
+  .app:not(.app-setup) .main :is(.payroll-summary, .intake, .sheet-wrap, .settings-columns, .payroll-profile-page-content, .rules-page:has(> .memory-panel)) {
+    padding-bottom: var(--mobile-orb-clearance);
+    scroll-padding-bottom: var(--mobile-orb-clearance);
+  }
+  /* Memory and the rulebook share the outer Rules scroller. Keep only one end gap. */
+  .app:not(.app-setup) .main .rules-page:has(> .memory-panel) > .rules-table-wrap { padding-bottom: 0; }
+  /* Collect cards retain their content height inside the scrolling flex column. */
+  .main .intake > * { flex-shrink: 0; }
 }
 @media (min-width: 1024px) {
   .topbar.sidebar { border: 0; border-right: 1px solid hsl(var(--border)); }
@@ -136,6 +150,8 @@
   .sidebar .sidebar-label, .sidebar-brand-row > .brand, .sidebar .sidebar-collapse, .sidebar .getting-started { display: none; }
   .sidebar-brand-row { justify-content: center; padding-inline: 4px; }
   .sidebar-brand-row > .brand { display: flex; }
+  .sidebar-brand-row .brand-wordmark { display: none; }
+  .sidebar-brand-row .brand-mark { display: block; }
   .sidebar .nav-tabs { padding-inline: 6px; }
   .sidebar .sidebar-nav-item { justify-content: center; min-height: 40px; padding-inline: 0; }
   .sidebar-account-trigger { justify-content: center; }
@@ -148,6 +164,8 @@
 @media (min-width: 1280px) {
   .sidebar[data-sidebar="rail"] .sidebar-label, .sidebar[data-sidebar="rail"] .sidebar-brand-row > .brand, .sidebar[data-sidebar="rail"] .getting-started { display: none; }
   .sidebar[data-sidebar="rail"] .sidebar-brand-row { justify-content: center; padding-inline: 4px; }
+  .sidebar[data-sidebar="rail"] .sidebar-collapse svg { display: none; }
+  .sidebar[data-sidebar="rail"] .sidebar-expand-mark { display: block; width: 26px; height: 26px; filter: grayscale(1); }
   .sidebar[data-sidebar="rail"] .nav-tabs { padding-inline: 6px; }
   .sidebar[data-sidebar="rail"] .sidebar-nav-item { justify-content: center; min-height: 40px; padding-inline: 0; }
   .sidebar[data-sidebar="rail"] .sidebar-account-trigger { justify-content: center; }
@@ -160,7 +178,6 @@
 @media (max-width: 600px) {
   .sidebar .icon-box, .sidebar .icon-btn { min-width: 44px; min-height: 44px; }
   .sidebar .sidebar-nav-item, .sidebar .cluster-row, .getting-started-list a, .sidebar-account-trigger, .sidebar-account-menu button { min-height: 44px; }
-  .mobile-topbar .sidebar-agent-toggle { display: none; }
   .sidebar-surface { padding-bottom: env(safe-area-inset-bottom); }
 }
 

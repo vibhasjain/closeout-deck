@@ -1,3 +1,4 @@
+import { SkeletonRegion } from '@/components/Skeleton'
 // Border beam source: https://libraries.dev/beam.html (border-beam, MIT).
 import { useState } from 'react'
 import { BorderBeam } from 'border-beam'
@@ -31,7 +32,7 @@ const localDate = (date: string) => new Date(`${date}T00:00:00`)
 function Count({ value }: { value: number }) { return <span className="tabular-nums journey-count">{Math.round(useTweened(value)).toLocaleString()}</span> }
 
 export function TaskCard({ cycleId, messageId, onAnswer }: { cycleId: string; messageId?: string; onAnswer?(answer: string): void }) {
-  const { cycle, row, empty, error, pipelineRunning } = useJourneyCycle(cycleId, messageId)
+  const { cycle, row, empty, error, pipelineRunning, loading } = useJourneyCycle(cycleId, messageId)
   const task = taskProgress(cycle, row, empty, pipelineRunning, error)
   const reduced = useReducedMotion()
   const [expanded, setExpanded] = useState(false)
@@ -49,7 +50,7 @@ export function TaskCard({ cycleId, messageId, onAnswer }: { cycleId: string; me
   const active = task.sets.some(count => !count) ? 0 : !task.workers ? 1 : !task.rules ? 2 : 3
   const status = (index: number): TaskRow['status'] => done || index < active ? 'done' : running && index === active ? 'running' : 'queued'
   const rows: TaskRow[] = [
-    { key: 'fetch', step: 1, label: 'Fetching set 1 · set 2 · set 3', amount: task.sets.map((count, index) => <span key={index}>{index > 0 && ' · '}<Count value={count} /></span>), status: status(0), details: task.sets.map((count, index) => ({ label: ['Worker-reported', 'Client-approved', 'Location'][index], meta: <Count value={count} /> })) },
+    { key: 'fetch', step: 1, label: 'Time entry sets 1 · 2 · 3', amount: task.sets.map((count, index) => <span key={index}>{index > 0 && ' · '}<Count value={count} /></span>), status: status(0), details: task.sets.map((count, index) => ({ label: ['Worker-reported', 'Client-approved', 'Location'][index], meta: <Count value={count} /> })) },
     { key: 'match', step: 2, label: 'Matching workers', amount: <Count value={task.workers} />, status: status(1), details: [{ label: 'Workers matched', meta: <Count value={task.workers} /> }] },
     { key: 'rules', step: 3, label: 'Applying rules', amount: <Count value={task.rules} />, status: status(2), details: [{ label: 'Rules checked', meta: <Count value={task.rules} /> }] },
     { key: 'price', step: 4, label: 'Pricing differences', amount: <Count value={task.differences} />, status: status(3), details: [{ label: 'Findings priced', meta: <Count value={task.differences} /> }] },
@@ -59,6 +60,7 @@ export function TaskCard({ cycleId, messageId, onAnswer }: { cycleId: string; me
     ...task.sets.flatMap((count, i) => count ? [`Set ${i + 1} · ${count.toLocaleString()} time entries`] : []),
     ...(cycle ? [...cycle.groups, ...cycle.extraGroups].filter(group => group.cases > 0).map(group => `${kindLabel(group.ruleId)} · ${group.cases.toLocaleString()}`) : []),
   ]
+  if (loading && !cycle && !error) return <SkeletonRegion className="journey-task" />
   return <section className="journey-task" aria-label={`Closeout · ${label}`} data-state={task.status}>
     {running && !reduced && <div className="journey-running-beam" aria-hidden="true" data-testid="running-beam"><BorderBeam size="line" colorVariant="mono" theme="light" strength={.35}><span /></BorderBeam></div>}
     <div className="journey-task-title">

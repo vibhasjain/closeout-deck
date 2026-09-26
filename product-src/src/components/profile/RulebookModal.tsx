@@ -1,3 +1,4 @@
+import { SkeletonRegion } from '@/components/Skeleton'
 import { useEffect, useRef, useState } from 'react'
 import { Check, Circle, Plus, Upload, X } from 'lucide-react'
 import { RULES } from '@/bench/engine.js'
@@ -81,9 +82,9 @@ function ContractsEditor() {
   }
   return <div className="profile-contracts">
     <input ref={fileInput} type="file" hidden multiple aria-label="Choose contracts, CBAs or handbooks" onChange={(event) => { void ingest(event.target.files); event.target.value = '' }} />
-    <button type="button" className={`profile-contract-drop${dragging ? ' dragging' : ''}`} disabled={loading} onClick={() => fileInput.current?.click()} onDragOver={(event) => { event.preventDefault(); setDragging(true) }} onDragLeave={() => setDragging(false)} onDrop={(event) => { event.preventDefault(); setDragging(false); void ingest(event.dataTransfer.files) }}>
-      <Upload size={20} /><span>{loading ? 'Reading contracts…' : 'Drop contracts, CBAs or handbooks'}</span><span className="profile-muted">or choose files</span>
-    </button>
+    {loading ? <SkeletonRegion /> : <button type="button" className={`profile-contract-drop${dragging ? ' dragging' : ''}`} disabled={loading} onClick={() => fileInput.current?.click()} onDragOver={(event) => { event.preventDefault(); setDragging(true) }} onDragLeave={() => setDragging(false)} onDrop={(event) => { event.preventDefault(); setDragging(false); void ingest(event.dataTransfer.files) }}>
+      <Upload size={20} /><span>Drop contracts, CBAs or handbooks</span><span className="profile-muted">or choose files</span>
+    </button>}
     {error && <p role="alert">{error}</p>}
     {state.proposals.length > 0 && <ul className="profile-rule-list profile-proposal-list">{state.proposals.map((proposal) => <li key={proposal.id}>
       <span className="tag">Proposed</span><p>{formatRuleText(proposal.text)}</p><span>{proposal.source}{proposal.cite ? ` · ${proposal.cite}` : ''}</span>

@@ -9,7 +9,7 @@ const render = () => renderToStaticMarkup(createElement(OnboardingSyncBoundary, 
 describe('canonical state hydration boundary', () => {
   it('does not offer editable defaults until the server profile is loaded', () => {
     status.value = { ready: false, loading: true, saving: false, error: null }
-    expect(render()).toContain('Reading your Payroll profile')
+    expect(render()).toContain('data-skeleton="profile"')
     expect(render()).not.toContain('Editable profile')
   })
   it('shows a retry when hydration fails and retains editable content after a save failure', () => {

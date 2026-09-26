@@ -1,3 +1,4 @@
+import { SkeletonRegion } from '@/components/Skeleton'
 import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronLeft, Mic, Phone, Square, Upload } from 'lucide-react'
 import { AgentAvatar } from '@/components/chat/AgentAvatar'
@@ -105,9 +106,9 @@ export function QuestionScreen({ question, card, initialAnswer = '', busy = fals
         </div>}
         {card.input === 'files' && <div className="setup-files">
           <input ref={picker} type="file" multiple hidden aria-label="Choose files" onChange={(event) => { void upload(Array.from(event.target.files ?? [])); event.target.value = '' }} />
-          <button className="setup-drop" type="button" onClick={() => picker.current?.click()} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void upload(Array.from(event.dataTransfer.files)) }}>
-            {uploading ? <Spinner /> : <Upload size={18} aria-hidden />} {card.placeholder || 'Drop files here, or choose files'}
-          </button>
+          {uploading ? <SkeletonRegion /> : <button className="setup-drop" type="button" onClick={() => picker.current?.click()} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void upload(Array.from(event.dataTransfer.files)) }}>
+            <Upload size={18} aria-hidden /> {card.placeholder || 'Drop files here, or choose files'}
+          </button>}
           {files.length > 0 && <ul className="setup-file-list">{files.map((file) => <li key={file}><Check size={13} aria-hidden />{file}</li>)}</ul>}
         </div>}
         <div className="setup-textarea">

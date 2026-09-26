@@ -111,7 +111,7 @@ describe('server-driven task card', () => {
     const cycle = source.cycle!
     const html = renderToStaticMarkup(createElement(TaskCard, { cycleId: cycle.cycle.id, onAnswer: vi.fn() }))
     expect(taskProgress(cycle)).toMatchObject({ sets: [12, 4, 0], workers: 11, rules: 3, missingSets: [3] })
-    for (const label of ['Fetching set 1', 'Matching workers', 'Applying', 'Pricing differences', 'Sample', 'tabular-nums']) expect(html).toContain(label)
+    for (const label of ['Time entry sets 1', 'Matching workers', 'Applying', 'Pricing differences', 'Sample', 'tabular-nums']) expect(html).toContain(label)
     expect(html).toContain('data-timesheet-set="3"')
     expect(html).not.toContain('primary')
     const onAnswer = vi.fn()

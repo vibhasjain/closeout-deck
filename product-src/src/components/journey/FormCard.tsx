@@ -1,3 +1,4 @@
+import { SkeletonRegion } from '@/components/Skeleton'
 /* eslint-disable react-refresh/only-export-components -- Pure form derivations are shared with contract tests. */
 import { useEffect, useState, type ChangeEvent } from 'react'
 import type { Source } from '@/bench/vendors'
@@ -95,9 +96,10 @@ function FormHeader({ title, sample }: { title: string; sample: boolean }) {
 
 export function FormCard({ form, cycleId, prefill, live = true }: { form: JourneyFormName; cycleId: string; prefill?: Prefill; live?: boolean }) {
   const { cycle, row, loading, empty, error } = useJourneyCycle(cycleId)
+  if (loading && !cycle && !row && !error) return <SkeletonRegion className="journey-form" />
   if (form === 'connect') return <ConnectForm key={`${cycleId}:connect`} cycle={cycle} row={row} prefill={prefill} cycleId={cycleId} />
   if (!cycle || (!cycle.runAt && form !== 'dispute')) return <section className="journey-form" aria-label={`${form} form`}>
-    <p className="r-note" role={error ? 'alert' : 'status'}>{error || (loading ? 'Loading cycle…' : empty || cycle ? 'No time entries yet. Get timesheets first.' : 'Cycle unavailable.')}</p>
+    {loading && !error ? <SkeletonRegion /> : <p className="r-note" role={error ? 'alert' : 'status'}>{error || (empty || cycle ? 'No time entries yet. Get timesheets first.' : 'Cycle unavailable.')}</p>}
   </section>
   if (form === 'gaps') return <GapsForm key={`${cycleId}:gaps`} cycle={cycle} prefill={prefill} live={live} />
   if (form === 'send') return <SendForm key={`${cycleId}:send`} cycle={cycle} prefill={prefill} live={live} />
@@ -179,6 +181,7 @@ export function GapsForm({ cycle, prefill, live = true }: FormProps) {
     catch (cause) { setError(errorText(cause)) }
     finally { setBusy(false) }
   }
+  if (!loaded && !threadError) return <section className="journey-form" aria-label="Chase missing time"><FormHeader title="Chase missing time" sample={cycle.sample} /><SkeletonRegion /></section>
   return <section className="journey-form" aria-label="Chase missing time">
     <FormHeader title="Chase missing time" sample={cycle.sample} />
     <div className="journey-gap-list">
@@ -260,7 +263,7 @@ export function SendForm({ cycle, prefill, live = true }: FormProps) {
     <FormHeader title="Send to Payroll" sample={cycle.sample} />
     <dl className="journey-batch-preview">
       <div><dt>Workers</dt><dd className="mono tabular-nums">{preview.workers}</dd></div>
-      <div><dt>Gross</dt><dd className="mono tabular-nums">{batch || previewReady ? money(preview.gross) : 'Loading…'}</dd></div>
+      <div><dt>Gross</dt><dd className="mono tabular-nums">{batch || previewReady ? money(preview.gross) : previewError ? '—' : <SkeletonRegion variant="number" /> }</dd></div>
       <div><dt>Held entries excluded</dt><dd className="mono tabular-nums">{preview.held}</dd></div>
     </dl>
     {batch ? <div className="journey-form-result" role="status">
@@ -375,7 +378,7 @@ export function DisputeForm({ cycle, prefill, live = true }: FormProps) {
     <FormHeader title="Payroll dispute" sample={cycle.sample || dispute?.source === 'simulated'} />
     {!cycle.batch ? <p className="r-note" role="status">Send this cycle to Payroll before opening a dispute.</p> : loadError ?
       <p className="r-note" role="alert">{loadError} <button type="button" className="lnk" onClick={() => setRetry(value => value + 1)}>Retry disputes</button></p>
-      : !loaded ? <p className="r-note" role="status">Loading disputes…</p> : !dispute ? <>
+      : !loaded ? <SkeletonRegion /> : !dispute ? <>
       <input className="journey-form-input" aria-label="Worker" placeholder="Worker" value={worker} maxLength={200} disabled={busy} onChange={event => setWorker(event.target.value)} />
       <textarea className="journey-form-input" aria-label="Dispute description" placeholder="Paste the dispute or describe what happened…" value={description} maxLength={2000} rows={3} disabled={busy}
         onChange={event => { setDescription(event.target.value); setSource('paste'); setFileName('') }} />

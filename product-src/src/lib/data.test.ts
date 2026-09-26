@@ -49,7 +49,7 @@ describe('recorded server cycle', () => {
     const loading = invalidate()
     expect(serverCycles(state).every(cycle => cycle.nextStep === undefined)).toBe(true)
     const rail = () => renderToStaticMarkup(h(MemoryRouter, null, h(PayRuns)))
-    expect(rail()).toContain('Loading your pay runs…')
+    expect(rail()).toContain('data-skeleton="rail"')
     expect(rail()).not.toMatch(/No time entries|missing sets|Get timesheets/)
     answer(new Response('{}', { status: 503 }))
     await loading
@@ -58,7 +58,7 @@ describe('recorded server cycle', () => {
     expect(serverCycles(state).every(cycle => cycle.nextStep === undefined)).toBe(true)
     vi.mocked(api.authedFetch).mockImplementation(request)
     await invalidate()
-    expect(rail()).not.toContain('Loading your pay runs')
+    expect(rail()).not.toContain('data-skeleton')
     expect(serverCycles(state).some(cycle => cycle.week.length > 0)).toBe(true)
   })
 
