@@ -188,6 +188,14 @@ td.sec { position: sticky; left: 0; background: hsl(var(--background)); border-r
 .sv-trail button[aria-current] img { border-color: hsl(var(--foreground)); }
 .sv-stage { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 1.75rem; align-items: start; }
 @media (max-width: 820px) { .sv-stage { grid-template-columns: 1fr; } }
+.sv-tools { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+.sv-mode { margin-left: 0; position: static !important; transform: none !important; }
+.sv-left { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+.sv-fig { position: relative; margin: 0; }
+.sv-flip { all: unset; cursor: pointer; position: absolute; right: 12px; bottom: 12px; width: 26%; display: flex; flex-direction: column; gap: 3px; padding: 4px; background: hsl(var(--background)); border: 1px solid hsl(var(--border)); border-radius: .45rem; box-shadow: 0 4px 14px rgb(0 0 0 / .12); }
+.sv-flip:hover { border-color: hsl(var(--foreground) / .5); }
+.sv-flip img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: .3rem; display: block; }
+.sv-flip .lbl { font-size: 9.5px; text-align: center; }
 .sv-img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: .5rem; border: 1px solid hsl(var(--border)); display: block; background: hsl(var(--muted)); }
 .sv-story { display: flex; flex-direction: column; gap: .75rem; }
 .sv-story h3 { margin: 0; font-size: 20px; line-height: 1.25; font-weight: 600; text-wrap: balance; }
@@ -200,6 +208,8 @@ td.sec { position: sticky; left: 0; background: hsl(var(--background)); border-r
 .sv-opt strong { font-weight: 500; }
 .sv-opt span { font-size: 12px; color: hsl(var(--muted-foreground)); }
 .sv-next { align-self: flex-start; }
+.btn.sv-go { background: hsl(var(--foreground)); color: hsl(var(--background)); border-color: hsl(var(--foreground)); }
+.btn.sv-go:hover { background: hsl(var(--foreground) / .85); }
 .sv-heard { border-top: 1px solid hsl(var(--border)); padding-top: 1.5rem; display: flex; flex-direction: column; gap: 2rem; }
 .sv-q { display: flex; flex-direction: column; gap: .6rem; max-width: 820px; }
 .sv-q .rt { font-weight: 600; font-size: 14px; }
@@ -212,6 +222,8 @@ td.sec { position: sticky; left: 0; background: hsl(var(--background)); border-r
 .sv-ans { all: unset; cursor: pointer; display: block; font-size: 12.5px; padding: .3rem .5rem; margin: .15rem 0 0 -.5rem; border-radius: .4rem; }
 .sv-ans:hover { background: hsl(var(--muted)); }
 .sv-ans em { display: block; color: hsl(var(--muted-foreground)); }
+.sv-src { display: flex; flex-direction: column; gap: .1rem; }
+.sv-src .sv-ans { margin-left: -.5rem; }
 .sv-bet { border: 1px solid hsl(var(--border)); border-radius: .5rem; padding: .75rem .9rem; display: flex; flex-direction: column; gap: .3rem; font-size: 12.5px; }
 .sv-sum ol { margin: .4rem 0 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: .4rem; }
 </style>
@@ -462,84 +474,128 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(
 const Story = (() => {
   const F = {
     '01': { when: 'Sunday, 9:40pm', title: 'The week closes without her',
-      text: 'Time arrives from everywhere: paper sign-in sheets, timekeeping exports, VMS emails, app punches. It all lands in one place, and Denise is on her couch.',
-      now: 'Monday morning she would be merging spreadsheets from five systems by hand.',
+      text: 'Over the weekend, approved hours from every VMS, client file and timekeeping export are pulled in and matched to last week\'s shifts. Clients still missing approvals have already been reminded. Denise is on her couch.',
+      wt: "Approved time lands, but not all of it",
+      wx: "By Monday, clients are supposed to have approved last week's hours. Approved time arrives from VMS portals, Kronos and Bullhorn exports, client files, and at some clients paper that someone keys in. Payroll can only pay from approved time, and some of it is not there yet.",
+      ww: "Monday morning", src: ["5ebad833d6adb3fd", "f6a102c287e3015e", "bf46f89c24ec4761", "01cc3beadf8a0689", "37cf6c6dde0cdc2c", "e693dbb26c3b9d66"],
+      small: ["1681c669ba08bdfa", "c1dbd520c2263365"],
       qs: [['Q1', -1], ['Q7', 2], ['Q10', 0]],
       fork: { ask: 'How does this firm pay its people?', q: 'Q1', opts: [
         { to: '02', label: 'Weekly, with a Monday cutoff', pt: 1 },
         { to: '01b', label: 'Same day, at clock-out', pt: 0 }] } },
     '01b': { when: 'Saturday, 4:12pm', title: 'Paid before he reaches his car',
       text: 'For a same-day payer there is no Monday. The check runs at clock-out: the punch is matched to where he actually was, and clean shifts pay out on their own. Denise only sees the exceptions.',
-      now: 'Instant payers reconcile after paying, and claw back days later.',
+      wt: "Paid first, checked later",
+      wx: "Same-day pay goes out before anyone has the client's time. One agency calls it \"paying people blindly\". Another pays the clinician's reported time and gets the facility's time the following week, then trues up or holds pay back.",
+      ww: "After a same-day payout", src: ["77424e7a75ea3ba9", "c0a2020593cc1062", "9ca226aa75aa2ced", "4ff04e78c433c44b", "295d019490ba97ba"],
       qs: [['Q1', 0], ['Q8', 0]], next: '04' },
     '02': { when: 'Monday, 7:00am', title: 'The chasing happened overnight',
       text: 'Her morning summary: every payment checked, missing client approvals already chased, and a short list that actually needs her. She finishes her coffee.',
-      now: 'Monday and Tuesday are chase days, spent racing the cutoff.',
+      wt: "The late approvals",
+      wx: "Some clients approve on time. Others approve anywhere from a day to two weeks later, on their own pay period rather than hers. Without approved time she can hold the pay back, pay what the worker reported and true up later, or leave it for next week.",
+      ww: "Monday", src: ["03738ce1ea1c3b05", "04c3211da8f1f20b", "36449aa060a26e98", "4ff04e78c433c44b", "c0a2020593cc1062"],
+      small: ["6d900cf14ee0ba8f"],
       qs: [['Q2', 0], ['Q11', 1]], next: '03' },
     '03': { when: 'Monday, 8:30am', title: 'One screen, biggest money first',
       text: 'Instead of thousands of rows, a handful of kinds of issue, each with its dollars. The spreadsheets stay closed.',
-      now: 'Reviewers hop between Excel, a BI tool and the admin screen.',
+      wt: "Approved does not mean right",
+      wx: "Hours paid to the worker but never billed to the client. Clock-ins that do not match what the client is billed. Per diems, callback and overnight rates. Handwritten time cards and blurry photos. Every VMS reporting it a little differently.",
+      ww: "Monday to Tuesday", src: ["507bf3f488f522e4", "5657c3c47c0bed09", "fbb07f2464713990", "0c5ac81528f861bd", "42821b0d3356f530", "1030e5d948d8c5e5"],
+      small: ["a5bd3a7ba4153cad"],
       qs: [['Q12', 1], ['Q28', 2]], next: '04' },
     '04': { when: 'Monday, 9:15am', title: 'The worker says 8 hours. The client says 6.5.',
       text: 'Schedule, worker punch, client timecard, GPS and the photo of the sign-in sheet sit side by side. The answer is visible in seconds.',
-      now: 'He said, she said, settled by instinct and a phone call.',
+      wt: "The worker says one thing. The client says another.",
+      wx: "A facility that only saw the nurse for 10 of her 12 hours, or says she never showed. A signed paper timesheet, and a client manager saying that is not what she worked. Proof comes as a timesheet, a Kronos report or a screenshot.",
+      ww: "Tuesday", src: ["b8bd090723178ed0", "ffe1f9037a1a7c79", "0db0a21f847401e5", "de5679058b29db00"],
       qs: [['Q26', 0], ['Q4', 1]],
       fork: { ask: 'At this firm, whose word is final?', q: 'Q17', opts: [
         { to: '05', label: "The client's", pt: 0 },
         { to: '05b', label: "The worker's, for small gaps with a clean history", q: 'Q16', pt: 0 }] } },
     '05': { when: 'Monday, 9:20am', title: 'The facility signs off in one tap',
       text: 'The nurse coordinator gets the evidence pack on her phone and approves it mid-shift. No login, no email thread.',
-      now: 'Ops relays between worker and facility for days.',
-      qs: [['Q17', 0], ['Q35', 0]], next: '06' },
+      wt: "Waiting for the client to confirm",
+      wx: "When the client disagrees, it is back and forth by email with the facility until someone signs off. MSP contracts require their own time card sign-offs before anything can be billed.",
+      ww: "Tuesday", src: ["b619c7305fb6fd87", "c12b51755b530afa", "268d3a2f52a748d6", "7755038e506990ae"],
+      qs: [['Q17', 0], ['Q35', 0]], next: '07' },
     '05b': { when: 'Monday, 9:20am', title: 'Small claims from clean workers just get paid',
       text: 'Under a few minutes, with a clean history, the worker is right. The claim is paid and logged, and Denise can review the log whenever she likes.',
-      now: "Many already do this, invisibly, in someone's head.",
-      qs: [['Q16', 0]], next: '06' },
-    '06': { when: 'Monday, 9:31am', title: 'The worker hears back the same morning',
+      wt: "Pay now, check later",
+      wx: "When the client is slow, the worker often gets paid first: the nurse has to be paid, so the reported time goes out and gets trued up once the facility's time arrives the following week. Corporate payroll still checks whether the worker or the setup is wrong.",
+      ww: "Tuesday", src: ["73791028aabde450", "9ca226aa75aa2ced", "77424e7a75ea3ba9", "e1859d9f456728a7"],
+      qs: [['Q16', 0]], next: '07' },
+    '06': { when: 'Tuesday, 9:30am', title: 'The worker knows before payday',
       text: "A text lands on her phone at the bus stop: the 1.5 hours are confirmed and on Friday's check.",
-      now: 'Disputes delay pay by days to weeks, and she stops trusting the agency.',
-      qs: [['Q21', 1], ['Q18', 1]], next: '07' },
-    '07': { when: 'Monday, 10:05am', title: 'She says the rule once. It holds forever.',
-      text: '"For this client, ignore gaps under seven minutes." One sentence becomes a rule the agent applies every week, visible to the whole team.',
-      now: "Thresholds live in one person's head or a cheat sheet.",
-      qs: [['Q36', 0]],
-      fork: { ask: "Is this week's biggest correction over her authority limit?", q: 'Q34', opts: [
-        { to: '08', label: "Yes, it's $4,800", pt: 0 },
-        { to: '09', label: "No, it's within her cap", pt: 1 }] } },
-    '08': { when: 'Monday, 10:40am', title: 'Big money goes up with a summary',
-      text: 'Her controller sees one card on his phone: what happened, the evidence, the amount. He approves between meetings.',
-      now: 'Supervisors hear about it only when it is already a catastrophe.',
-      qs: [['Q34', 0]], next: '09' },
-    '09': { when: 'Monday, 11:40am', title: 'Payroll goes out early',
-      text: 'Everything is reconciled before the cutoff. She sends verified hours, breaks and extras straight into the payroll run.',
-      now: 'Unresolved cases roll into next week as corrections.',
-      qs: [['Q19', 0], ['Q5', 0]],
+      wt: "Payday, and the check is short",
+      wx: "Pay lands on Friday. If her hours were held back or never approved, the check is short, and the difference comes a week later, or in an emergency payroll. Caregivers who went unpaid told one agency they would stop coming in.",
+      ww: "Friday", src: ["25c18682c6e79fc3", "4ff04e78c433c44b", "6d2a8f7e8357f6e5"],
+      small: ["a69547c40038f25d", "6e2921e06975e8d1"],
+      qs: [['Q21', 1], ['Q18', 1]],
       fork: { ask: 'Then a dispute shows up. Where from?', q: 'Q13', opts: [
         { to: '10', label: 'The worker texts the next day', pt: 0 },
         { to: '10b', label: "The client's AP flags the invoice weeks later", pt: 2 }] } },
-    '10': { when: 'Tuesday, 2:10pm', title: 'The dispute opens itself',
+    '07': { when: 'Monday, 10:05am', title: 'She says the rule once. It holds forever.',
+      text: '"For this client, ignore gaps under seven minutes." One sentence becomes a rule the agent applies every week, visible to the whole team.',
+      wt: "Every client and state has its own rules",
+      wx: "Each MSP contract sets its own sign-off and billing rules, clients bring their own timekeeping requirements, and state law keeps moving. California meal and break rules are still unsolved for a staffing firm with almost a fifth of its business there.",
+      ww: "Tuesday", src: ["ce0186ec61bb7d27", "cbe1d60ee1d4c6fa", "5d34906664f6872d", "eba6daa54d70532d"],
+      small: ["126435a53f1a1f4b", "c49dcd480ead8f25"],
+      qs: [['Q36', 0]],
+      fork: { ask: "Does a big correction need someone else's sign-off?", q: 'Q34', opts: [
+        { to: '08', label: 'Yes, it goes to her controller or manager', pt: 0 },
+        { to: '09', label: 'No, she decides and reports only catastrophes', pt: 1 }] } },
+    '08': { when: 'Monday, 10:40am', title: 'Big money goes up with a summary',
+      text: 'Her controller sees one card on his phone: what happened, the evidence, the amount. He approves between meetings.',
+      wt: "It goes up to corporate payroll",
+      wx: "Front-line payroll handles the routine. Anything unusual goes up to corporate payroll, and legal questions to the company attorney.",
+      ww: "Tuesday", src: ["b945169b45341b74", "732bfb87ade6650f", "8132c96fd9cd394f", "92d0c7d65c76c18b"],
+      small: ["1c6a20e8175cc433", "fec0a8b97f4bf3ea"],
+      qs: [['Q34', 0]], next: '09' },
+    '09': { when: 'Tuesday, 9:00am', title: 'Payroll is ready a day early',
+      text: 'Everything is approved and reconciled on Monday. On Tuesday morning she sends verified hours, breaks and extras into Wednesday\'s payroll run.',
+      wt: "Payroll runs. What isn't fixed misses it.",
+      wx: "Payroll runs on Tuesday or Wednesday. Whatever is not approved or resolved by then waits for next week, or is paid now and trued up later, which is a lot of manual work.",
+      ww: "Wednesday", src: ["339450a77fa43ad0", "6d2a8f7e8357f6e5", "08a1983df60fa31b", "ac426e1fcdc496cf"],
+      small: ["5f04388c15c646d2"],
+      qs: [['Q19', 0], ['Q5', 0]], next: '06' },
+    '10': { when: 'The next week', title: 'The dispute opens itself',
       text: "A worker's text is matched to the shift and opened as a case, with the evidence already attached. Denise barely has to touch it.",
-      now: 'Disputes arrive by text, phone, email and tickets, and someone triages them all.',
+      wt: "Disputes come back",
+      wx: "The worker calls about the short check, or the facility says she was not there for the whole shift. Each one has to be traced back to the shift, the approval and the pay run.",
+      ww: "The next week", src: ["f8c4cdd765cb9017", "b8bd090723178ed0", "ffe1f9037a1a7c79", "484f4f9c9643224b"],
+      contra: ["2d74ec28a043bd8b", "05dff038c85eca13"],
+      small: ["15aef640ec34b152", "e96d842f3bf00928"],
       qs: [['Q13', 0]], next: '11' },
     '10b': { when: 'Four weeks later', title: 'The invoice defends itself',
       text: "The client's AP clerk circles a line. Before she can email, the proof arrives: location, sign-in sheet, the rule applied and who approved it.",
-      now: 'Billing disputes arrive late, after the evidence is hard to find.',
+      wt: "The client disputes the bill",
+      wx: "A billing dispute can arrive a month after the shift. Timesheets have to be attached to invoices by hand. Hours already paid to the worker may never be billed, and every dispute slows collections.",
+      ww: "Weeks later", src: ["238dc744082b4c4f", "e7cba8aa20a5b259", "caff247021e9dc58", "978bde5fe9160141"],
       qs: [['Q13', 2], ['Q24', 0]], next: '11' },
     '11': { when: 'Month end', title: 'Volume triples. The team stays at three.',
       text: 'Denise shows the CFO two lines: shifts climbing, and the cases a person touched staying flat.',
-      now: 'Manual review grows with every new shift.',
+      wt: "More volume means more people",
+      wx: "One travel nurse agency runs 650 to 700 timesheets a week with four people, a leader and four outsourced staff. Another has a revenue cycle team \"of decent size\" doing reconciliation. A marketplace payroll team said ten times the volume would take \"an army of people\".",
+      ww: "Month end", src: ["ca66384aa2d53ca4", "0d15e80cfff8ef7c", "d5f0157a8462ecfc"],
+      small: ["ed58c100daf6444a"],
       qs: [['Q46', 0], ['Q37', 0]], next: '12' },
     '12': { when: 'Friday, 5:00pm', title: 'She goes home on time',
       text: 'Payroll was right, the clients trust the bills, and nobody chased anyone this week.',
-      now: 'The pain was never the dollars. It was the hours.',
+      wt: "The hours are the cost",
+      wx: "Nobody prices it in dollars. It is hours: \"hours and hours\" attaching timesheets to invoices, a lot of people chasing things down, manual true-ups every week. One agency's verdict: \"It's all manual. It's a disaster.\"",
+      ww: "Week after week", src: ["e7cba8aa20a5b259", "f1aa73b4143ff794", "ac426e1fcdc496cf", "dba17de119c13e10", "626636f313607130"],
+      contra: ["602d1fb09ace71b5"],
       qs: [['Q23', 0], ['Q38', 0]], end: true },
   }
   const FIT = { have: 'We Have This', extend: 'Extends Product', gap: 'Gap' }
   const fitTag = f => FIT[f] ? `<span class="tag fit-${f}">${FIT[f]}</span>` : ''
-  const img = id => `/answers/story/frame-${id}.jpg`
+  let MODE = 'without'
+  const img = (id, m = MODE) => `/answers/story/frame-${id}${m === 'without' ? 'w' : ''}.jpg?v=6`
   const row = q => ANALYSIS.rows[q] || { points: [] }
   const qNum = q => +q.slice(1)
   let path = ['01']
+  // Next follows the main path; on a fork that is the first option.
+  const nextOf = f => f.next || f.fork?.opts[0].to
 
   function who(q, pt) {
     const byName = Object.fromEntries(DATA.companies.map(c => [c.company, c]))
@@ -548,6 +604,28 @@ const Story = (() => {
       const ans = (co.cells[q] || []).map((a, ai) => `<button class="sv-ans" data-co="${esc(n)}" data-q="${qNum(q)}" data-a="${ai}">${esc(a.a)}${a.cite?.quote ? `<em>“${esc(a.cite.quote)}”</em>` : ''}<span class="tag">${esc(SRC[a.cite?.src] || '')}${a.cite?.date ? ' · ' + esc(a.cite.date) : ''}</span></button>`).join('')
       return `<div><div class="sv-co-h">${esc(n)}${co.type ? `<span class="tag ty-${esc(co.type.toLowerCase())}">${esc(co.type)}</span>` : ''}</div>${ans}</div>`
     }).join('')
+  }
+
+  // Named sources behind a "today" frame: [company, question, quote fragment] resolved to the answer that holds it.
+  const KIND = { interview: 'Interview', gong: 'Customer call', hubspot: 'Customer call', slack: 'Slack' }
+  // Citations are fingerprints (sha256 of "Q|quote"), so no customer name or quote sits in the public page.
+  let FP = null
+  async function fingerprints() {
+    const hex = async t => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)))].map(x => x.toString(16).padStart(2, '0')).join('').slice(0, 16)
+    const m = {}
+    for (const co of DATA.companies) for (const [q, arr] of Object.entries(co.cells || {})) for (let ai = 0; ai < arr.length; ai++) if (arr[ai].cite?.quote) m[await hex(q + '|' + arr[ai].cite.quote)] = [co, q, ai]
+    FP = m; if (TAB === 'story') render()
+  }
+  function cites(list) {
+    return (list || []).map(h => {
+      const hit = FP?.[h]; if (!hit) return ''
+      const [co, q, ai] = hit, n = co.company, x = co.cells[q][ai]
+      return `<button class="sv-ans" data-co="${esc(n)}" data-q="${qNum(q)}" data-a="${ai}"><b>${esc(n)}</b> <span class="tag">${esc(KIND[x.cite.src] || x.cite.src)}</span> <span class="tag ty-${esc((co.type || '').toLowerCase())}">${co.type === 'Modern' ? 'Marketplace' : esc(co.type || '')}</span> · ${esc(x.a)}<em>“${esc(x.cite.quote)}”</em></button>`
+    }).join('')
+  }
+  function heard(f) {
+    const sec = (label, list) => { const c = cites(list); return c ? `<div class="sv-src"><span class="lbl">${label}</span>${c}</div>` : '' }
+    return sec('Heard from', f.src) + sec('At smaller shops', f.small) + sec('Not everyone', f.contra)
   }
 
   function block(q, lit) {
@@ -568,16 +646,17 @@ const Story = (() => {
   function render() {
     const el = $('sv')
     if (!ANALYSIS) { el.innerHTML = '<p class="lbl">Loading story…</p>'; return }
-    const id = path[path.length - 1], f = F[id]
+    if (!FP) { fingerprints(); FP = {} }
+    const id = path[path.length - 1], f = F[id], w = MODE === 'without'
     let act = ''
     if (f.fork) act = `<div class="sv-ask">${esc(f.fork.ask)}</div>${f.fork.opts.map(o => { const p = row(o.q || f.fork.q).points[o.pt]; return `<button class="sv-opt" data-to="${o.to}"><strong>${esc(o.label)}</strong>${p ? `<span>${p.companies.length} companies: ${esc(p.text)}</span>` : ''}</button>` }).join('')}`
-    else if (f.next) act = `<button class="btn sv-next" data-to="${f.next}">Next →</button>`
     const qs = [...f.qs]; if (f.fork && !qs.some(x => x[0] === f.fork.q)) qs.push([f.fork.q, -1])
-    el.innerHTML = `<div class="sv-head"><div><h2>Denise's payroll week</h2><p>The ideal week for a staffing firm's payroll lead, told in frames. Choose a path at each fork, and open any finding to see which customers said it.</p></div><button class="btn" data-restart>Start over</button></div>
-      <nav class="sv-trail" aria-label="Your path">${path.map((p, i) => `<button data-i="${i}" ${i === path.length - 1 ? 'aria-current="step"' : ''} title="${esc(F[p].title)}"><img src="${img(p)}" alt=""><span class="lbl">${i + 1} · ${esc(F[p].when)}</span></button>`).join('')}</nav>
-      <div class="sv-stage"><img class="sv-img" src="${img(id)}" alt="${esc(f.title)}">
-        <div class="sv-story"><span class="lbl">The ideal · ${esc(f.when)}</span><h3>${esc(f.title)}</h3><p>${esc(f.text)}</p>
-          <p class="sv-now"><b>How it works now:</b> ${esc(f.now)}</p>${act}${f.end ? summary() : ''}</div></div>
+    el.innerHTML = `<div class="sv-head"><div><h2>Denise's payroll week</h2><p>A staffing firm's payroll lead, one week, told in frames. Switch between her week today and with Closeout, choose a path at each fork, and open any finding to see which customers said it.</p></div><div class="sv-tools"><div class="tabs sv-mode" role="tablist">${['without', 'with'].map(m => `<button class="tab${MODE === m ? ' on' : ''}" data-mode="${m}">${m === 'with' ? 'With Closeout' : 'Without Closeout'}</button>`).join('')}</div>${nextOf(f) ? `<button class="btn sv-go" data-to="${nextOf(f)}">Next →</button>` : ''}</div></div>
+      <nav class="sv-trail" aria-label="Your path">${path.map((p, i) => `<button data-i="${i}" ${i === path.length - 1 ? 'aria-current="step"' : ''} title="${esc(w ? F[p].wt : F[p].title)}"><img src="${img(p)}" alt=""><span class="lbl">${i + 1} · ${esc(w && F[p].ww || F[p].when)}</span></button>`).join('')}</nav>
+      <div class="sv-stage"><div class="sv-left"><figure class="sv-fig"><img class="sv-img" src="${img(id)}" alt="${esc(w ? f.wt : f.title)}">
+          <button class="sv-flip" data-mode="${w ? 'with' : 'without'}" title="Show this moment ${w ? 'with' : 'without'} Closeout"><img src="${img(id, w ? 'with' : 'without')}" alt=""><span class="lbl">${w ? 'With Closeout' : 'Today'} ⇄</span></button></figure>${w ? heard(f) : ''}</div>
+        <div class="sv-story"><span class="lbl">${w ? 'Today' : 'With Closeout'} · ${esc(w && f.ww || f.when)}</span><h3>${esc(w ? f.wt : f.title)}</h3><p>${esc(w ? f.wx : f.text)}</p>
+          ${w ? '' : `<p class="sv-now"><b>Today:</b> ${esc(f.wt)}</p>`}${act}${f.end ? summary() + '<button class="btn sv-next" data-restart>Start over</button>' : ''}</div></div>
       <div class="sv-heard"><span class="lbl">What customers told us</span>${qs.map(([q, i]) => block(q, i)).join('')}</div>`
   }
 
@@ -585,6 +664,7 @@ const Story = (() => {
   $('sv').addEventListener('click', e => {
     const to = e.target.closest('[data-to]'); if (to) return go(to.dataset.to)
     if (e.target.closest('[data-restart]')) { path = ['01']; return render() }
+    const m = e.target.closest('[data-mode]'); if (m) { MODE = m.dataset.mode; return render() }
     const t = e.target.closest('.sv-trail button'); if (t) { path = path.slice(0, +t.dataset.i + 1); return render() }
     const a = e.target.closest('.sv-ans'); if (a) return openAnswer(DATA.companies.find(c => c.company === a.dataset.co), +a.dataset.q, +a.dataset.a)
     const b = e.target.closest('.sv-pt > button')
@@ -597,7 +677,7 @@ const Story = (() => {
   document.addEventListener('keydown', e => {
     if (TAB !== 'story' || !ANALYSIS || $('drawer').classList.contains('open') || e.target.closest('input')) return
     const f = F[path[path.length - 1]]
-    if (e.key === 'ArrowRight' && f.next) go(f.next)
+    if (e.key === 'ArrowRight' && nextOf(f)) go(nextOf(f))
     if (e.key === 'ArrowLeft' && path.length > 1) { path.pop(); render() }
   })
   return { render }
