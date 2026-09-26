@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Banknote, ClipboardList, Ellipsis, ListChecks, LogOut, Menu, PanelLeft, RotateCcw, Settings, UserRound, X } from 'lucide-react'
+import { flushSync } from 'react-dom'
 import { NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { recentCycles } from '@/lib/cycles'
 import { intakeHref } from '@/lib/intake'
 import { signOut, viewerSession } from '@/lib/viewerSession'
-import { startOverAllowed } from '@/lib/startOver'
+import { startOverAllowed, startOverInFlight } from '@/lib/startOver'
 import { StartOver } from '@/components/StartOver'
 import { useOnboarding } from '@/lib/onboarding'
 import { useCurrentEmail } from '@/lib/useCurrentEmail'
@@ -42,9 +43,18 @@ export function TopNav({ wide = true }: { wide?: boolean } = {}) {
   const menuTrigger = useRef<HTMLButtonElement>(null)
   const account = useRef<HTMLDivElement>(null)
   const accountTrigger = useRef<HTMLButtonElement>(null)
+  const drawerStartOver = useRef<HTMLButtonElement>(null)
   const accountMenuId = useId()
   const sidebarId = useId()
-  const closeDrawer = useCallback(() => { setDrawerOpen(false); setAccountOpen(false) }, [])
+  // A reset on its way to the server holds the account area, and the drawer around it, open so its 409 or failure stays on screen.
+  const closeDrawer = useCallback(() => { if (startOverInFlight()) return; setDrawerOpen(false); setAccountOpen(false) }, [])
+  // Cancel and Escape hand focus back to what opened the account area: the account row on desktop, the drawer's Start over on
+  // phones, or the drawer itself once a 403 has hidden Start over.
+  const closeAccount = useCallback(() => {
+    if (startOverInFlight()) return
+    flushSync(() => setAccountOpen(false))
+    ;(accountTrigger.current ?? drawerStartOver.current ?? drawer.current)?.focus()
+  }, [])
 
   // A mobile drawer is transient. Reset it with the width prop so returning from
   // desktop cannot reopen an old dialog or leave the agent launcher inert.
@@ -88,18 +98,17 @@ export function TopNav({ wide = true }: { wide?: boolean } = {}) {
   useEffect(() => {
     if (!accountOpen) return
     account.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
-    const onPointer = (event: PointerEvent) => { if (!account.current?.contains(event.target as Node)) setAccountOpen(false) }
+    const onPointer = (event: PointerEvent) => { if (!startOverInFlight() && !account.current?.contains(event.target as Node)) setAccountOpen(false) }
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
       event.preventDefault()
       event.stopPropagation()
-      setAccountOpen(false)
-      accountTrigger.current?.focus()
+      closeAccount()
     }
     document.addEventListener('pointerdown', onPointer)
     document.addEventListener('keydown', onKey, true)
     return () => { document.removeEventListener('pointerdown', onPointer); document.removeEventListener('keydown', onKey, true) }
-  }, [accountOpen])
+  }, [accountOpen, closeAccount])
 
   const logOut = async () => {
     setSigningOut(true)
@@ -111,9 +120,7 @@ export function TopNav({ wide = true }: { wide?: boolean } = {}) {
     }
   }
   const navigateTo = (to: string) => { closeDrawer(); navigate(to) }
-  // Closing Start over hands focus back to the account row.
   const openStartOver = () => setAccountOpen('start-over')
-  const closeStartOver = () => { setAccountOpen(false); accountTrigger.current?.focus() }
   const pendingHref = intakeHref(recentCycles(state, 2)[1].id)
   const intakeActive = pathname === '/payroll' && params.get('step') === 'intake'
 
@@ -145,15 +152,15 @@ export function TopNav({ wide = true }: { wide?: boolean } = {}) {
       <PayRuns onNavigate={closeDrawer} />
       <GettingStarted onNavigate={closeDrawer} />
       <div ref={account} className="sidebar-account">
-        {wide ? <button ref={accountTrigger} type="button" className="sidebar-account-trigger" aria-label="Account menu" title={`${name}${email ? ` · ${email}` : ''}`} aria-haspopup="menu" aria-expanded={!!accountOpen} aria-controls={accountMenuId} onClick={() => setAccountOpen((open) => open ? false : 'menu')}>
+        {wide ? <button ref={accountTrigger} type="button" className="sidebar-account-trigger" aria-label="Account menu" title={`${name}${email ? ` · ${email}` : ''}`} aria-haspopup="menu" aria-expanded={!!accountOpen} aria-controls={accountMenuId} onClick={() => { if (accountOpen) closeAccount(); else setAccountOpen('menu') }}>
           <span className="account-avatar" aria-hidden="true">{name.trim().slice(0, 1).toUpperCase()}</span>
           <span className="sidebar-label account-details"><span className="account-name">{name}</span><span className="account-email">{email || 'Signed in'}</span></span>
           <Ellipsis className="sidebar-label" size={16} aria-hidden="true" />
         </button> : <div className="sidebar-account-identity"><span className="account-avatar" aria-hidden="true">{name.trim().slice(0, 1).toUpperCase()}</span><span className="account-details"><span className="account-name">{name}</span><span className="account-email">{email || 'Signed in'}</span></span></div>}
         {!wide && <button type="button" className="sidebar-logout" disabled={signingOut} onClick={() => void logOut()}><LogOut size={16} aria-hidden="true" />Log out</button>}
-        {!wide && startOverAllowed() && (accountOpen === 'start-over' ? <StartOver onClose={closeStartOver} />
-          : <button type="button" className="sidebar-logout" onClick={openStartOver}><RotateCcw size={16} aria-hidden="true" />Start over</button>)}
-        {wide && accountOpen === 'start-over' && <div className="sidebar-start-over"><StartOver onClose={closeStartOver} /></div>}
+        {!wide && startOverAllowed() && (accountOpen === 'start-over' ? <StartOver onClose={closeAccount} />
+          : <button ref={drawerStartOver} type="button" className="sidebar-logout" onClick={openStartOver}><RotateCcw size={16} aria-hidden="true" />Start over</button>)}
+        {wide && accountOpen === 'start-over' && <div className="sidebar-start-over"><StartOver onClose={closeAccount} /></div>}
         {wide && accountOpen === 'menu' && <div id={accountMenuId} className="sidebar-account-menu" role="menu" aria-label="Account" onKeyDown={(event) => {
           if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
           event.preventDefault()

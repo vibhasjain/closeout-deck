@@ -141,6 +141,8 @@ export function Agent() {
 
   const firmReady = !!firmChoice && (firmChoice === 'sample' || !!domain.trim()) && !busy
   const neverContactOpen = step === 'never-contact' || (step === 'ready' && busy)
+  // A modal over the page leaves everything behind it inert, the account corner included.
+  const covered = modal !== null || neverContactOpen
   const ready = <section className="setup-split setup-ready">
     <div className="setup-copy">
       <AgentAvatar size={32} />
@@ -154,8 +156,8 @@ export function Agent() {
 
   return <div className="agent-setup" data-step={step} data-on-call={!!voice.snapshot && voice.snapshot.status !== 'ended' || undefined}>
     <JourneyBar state={state} />
-    <OnboardingAccount />
-    <div className="setup-stage" inert={modal !== null || neverContactOpen} aria-hidden={modal !== null || neverContactOpen || undefined}>
+    <OnboardingAccount inert={covered} />
+    <div className="setup-stage" inert={covered} aria-hidden={covered || undefined}>
       {voice.snapshot && voice.snapshot.status !== 'ended' ? <CallScreen snapshot={voice.snapshot} onboarding={state} onMute={voice.mute} onEnd={() => { void voice.end().catch(() => {}) }} onRetry={() => { void (voice.snapshot?.errorKind === 'save' ? voice.retrySave() : voice.start()).catch(() => {}) }} onRetryTurn={voice.retryTurn} onKeepTyping={keepTyping} /> : <>
       {showCallSummary && thisCall && <section className="setup-call-summary"><h1>{thisCall.callSaveError || thisCall.callServerSaved === false ? 'Call ended' : 'Your call is saved'}</h1><Message message={thisCall} /><Btn className="primary" onClick={keepTyping}>{state.covered.length === ONBOARD_TOPICS.length ? 'Review my Payroll profile' : 'Keep typing'}</Btn></section>}
       {callsNeedingSave.length > 0 && <section className="setup-call-summary" aria-label="Call notes awaiting saving">{callsNeedingSave.map(message => <Message key={message.id} message={message} />)}</section>}

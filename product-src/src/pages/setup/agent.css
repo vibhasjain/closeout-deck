@@ -33,20 +33,10 @@ button.setup-option { display: flex; align-items: center; justify-content: cente
 .setup-trust { list-style: none; padding: 0; margin: 28px 0; display: grid; gap: 20px; }
 .setup-trust li { display: flex; gap: 12px; align-items: baseline; color: #716f6f; }
 .setup-trust svg { flex-shrink: 0; }
-/* The quiet account corner (Log out, and Start over for HyperTrack accounts). Grey avatar, never the pane's black next step.
-   The journey bar leaves it room wherever the bar spans the full width. */
+/* The quiet account corner (components/setup/onboarding-account.css) sits top right; the journey bar leaves it room
+   wherever the bar spans the full width. */
 .agent-setup { position: relative; }
 .agent-setup .setup-sections { padding-right: 64px; }
-.setup-account { position: absolute; top: 0; right: 12px; z-index: 2; }
-.agent-setup .setup-account-trigger { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
-.setup-account-trigger .account-avatar { background: rgb(0 0 0 / .05); color: #716f6f; }
-.setup-account-trigger:hover .account-avatar, .setup-account-trigger:focus-visible .account-avatar { background: rgb(0 0 0 / .08); color: #100f0f; }
-.setup-account-panel { position: fixed; inset: 48px 12px auto auto; margin: 0; width: min(300px, calc(100vw - 24px)); max-height: calc(100dvh - 60px); overflow-y: auto; padding: 4px; border: .5px solid rgb(0 0 0 / .1); border-radius: 10px; background: #fff; color: #100f0f; box-shadow: 0 2px 8px rgb(0 0 0 / .06); }
-.setup-account-identity { display: flex; flex-direction: column; min-width: 0; padding: 8px 10px; margin-bottom: 4px; border-bottom: .5px solid rgb(0 0 0 / .1); }
-.agent-setup .setup-account-item { display: flex; align-items: center; gap: 8px; width: 100%; padding: 0 10px; border: 0; border-radius: 5px; background: transparent; color: #100f0f; font: inherit; text-align: left; cursor: pointer; }
-.setup-account-item:hover, .setup-account-item:focus-visible { background: rgb(0 0 0 / .05); }
-.setup-account-panel .start-over { padding: 8px 10px; }
-.setup-account-panel .start-over p { margin: 0 0 12px; max-width: none; }
 .agent-setup:is([data-step="intro"], [data-step="conversation"], [data-step="writing"], [data-step="ready"], [data-step="never-contact"]):not([data-on-call]) .setup-sections { width: 50%; padding-right: 24px; }
 .agent-setup:is([data-step="intro"], [data-step="conversation"], [data-step="writing"], [data-step="ready"], [data-step="never-contact"]):not([data-on-call]) .setup-stage { padding: 0; }
 .setup-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); width: 100%; align-items: stretch; min-height: calc(100dvh - var(--setup-head)); }
@@ -147,7 +137,6 @@ button.setup-option { display: flex; align-items: center; justify-content: cente
 @media (max-width: 767px) {
   .agent-setup { --setup-head: 54px; }
   .agent-setup .setup-sections { width: 100% !important; padding-right: 64px !important; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .setup-account { top: 5px; }
   .setup-section > span { font-size: 10px; line-height: 1.4; align-items: flex-start; }
   .setup-stage { min-height: calc(100dvh - var(--setup-head)); }
   .setup-split { grid-template-columns: minmax(0, 1fr); min-height: calc(100dvh - var(--setup-head)); }

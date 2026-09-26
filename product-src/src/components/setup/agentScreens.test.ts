@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
@@ -53,6 +54,18 @@ describe('one black next step per setup pane', () => {
     expect(corner).not.toContain('primary')
     // This session has no HyperTrack email, so no Start over.
     expect(corner).not.toContain('Start over')
+  })
+  it('keeps the account corner inert with the stage under the never-contact dialog', () => {
+    state.value.setupStep = 'never-contact'
+    const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(Agent)))
+    expect(html).toContain('<div class="setup-account" inert="" aria-hidden="true">')
+    state.value.setupStep = 'ready'
+    expect(renderToStaticMarkup(createElement(MemoryRouter, null, createElement(Agent)))).toContain('<div class="setup-account">')
+  })
+  it('gives the corner menu rows a 44px tap target that does not lean on the setup page', () => {
+    const css = readFileSync(new URL('./onboarding-account.css', import.meta.url), 'utf8')
+    expect(css).toMatch(/\.setup-account \.setup-account-item \{[^}]*min-height: 44px/)
+    expect(css).not.toContain('.agent-setup')
   })
   it('personalizes the welcome from the viewer session', () => {
     expect(renderToStaticMarkup(createElement(MemoryRouter, null, createElement(Agent)))).toContain('Welcome, Morgan')

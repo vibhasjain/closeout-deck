@@ -6,7 +6,8 @@ import { OnboardingAccount } from '@/components/setup/OnboardingAccount'
 import { startOver } from '@/lib/startOver'
 import { signOut } from '@/lib/viewerSession'
 
-const hooks = vi.hoisted(() => ({ cursor: 0, slots: [] as unknown[] }))
+const hooks = vi.hoisted(() => ({ cursor: 0, slots: [] as unknown[], effects: [] as (() => void)[] }))
+const reset = vi.hoisted(() => ({ inFlight: false }))
 const account = vi.hoisted(() => ({ email: 'morgan@example.com', name: 'Morgan Lee' }))
 vi.mock('react', async original => ({
   ...await original<typeof import('react')>(),
@@ -17,10 +18,15 @@ vi.mock('react', async original => ({
       hooks.slots[index] = typeof value === 'function' ? (value as (previous: T) => T)(hooks.slots[index] as T) : value
     }]
   },
-  useRef: <T,>(initial: T) => ({ current: initial }),
+  // Refs persist across renders like React's, so a test can stand in for the element React attaches.
+  useRef: <T,>(initial: T) => {
+    const index = hooks.cursor++
+    if (!(index in hooks.slots)) hooks.slots[index] = { current: initial }
+    return hooks.slots[index]
+  },
   useCallback: <T,>(callback: T) => callback,
   useId: () => 'sidebar-menu',
-  useEffect: () => {},
+  useEffect: (effect: () => void) => { hooks.effects.push(effect) },
 }))
 vi.mock('react-router-dom', () => ({
   NavLink: () => null,
@@ -37,7 +43,7 @@ vi.mock('./Overlay', () => ({ useOverlay: () => ({ toast: vi.fn() }) }))
 vi.mock('./PayRuns', () => ({ PayRuns: () => null }))
 vi.mock('./GettingStarted', () => ({ GettingStarted: () => null }))
 // The wipe itself is covered in StartOver.test.ts; here it only proves the confirm gates the call.
-vi.mock('@/lib/startOver', async (original) => ({ ...await original<typeof import('@/lib/startOver')>(), startOver: vi.fn(async () => 'busy') }))
+vi.mock('@/lib/startOver', async (original) => ({ ...await original<typeof import('@/lib/startOver')>(), startOver: vi.fn(async () => 'busy'), startOverInFlight: () => reset.inFlight }))
 
 type Props = {
   children?: ReactNode
@@ -47,6 +53,8 @@ type Props = {
   src?: string
   disabled?: boolean
   inert?: boolean
+  'aria-hidden'?: boolean
+  ref?: { current: unknown }
   'aria-label'?: string
   'aria-expanded'?: boolean
   id?: string
@@ -55,18 +63,27 @@ type Props = {
   popoverTarget?: string
   onClick?(): void
   onClose?(): void
-  onToggle?(event: { newState: string }): void
+  onToggle?(event: { newState: string, currentTarget?: { showPopover(): void } }): void
   onSubmit?(event: { preventDefault(): void }): Promise<void>
   onChange?(event: { target: { value: string } }): void
 }
 const elements = (node: ReactNode): ReactElement<Props>[] => Children.toArray(node).flatMap(child => isValidElement<Props>(child) ? [child, ...elements(child.props.children)] : [])
 const text = (node: ReactNode): string => Children.toArray(node).map(child => isValidElement<Props>(child) ? text(child.props.children) : String(child)).join('')
 const button = (node: ReactNode, name: string) => elements(node).find(({ type, props }) => type === 'button' && (props['aria-label'] === name || text(props.children) === name))!
-const render = (width: number) => { hooks.cursor = 0; return TopNav({ wide: width >= 1024 }) }
+const render = (width: number) => { hooks.cursor = 0; hooks.effects = []; return TopNav({ wide: width >= 1024 }) }
 const renderCorner = () => { hooks.cursor = 0; return OnboardingAccount() }
+// Runs the last render's effects against a stand-in document and returns its listeners, keyed by type (":capture" for capture).
+function listen() {
+  const listeners: Record<string, (event: object) => void> = {}
+  vi.stubGlobal('document', { body: { style: {} }, addEventListener: (type: string, listener: (event: object) => void, capture?: boolean) => { listeners[type + (capture ? ':capture' : '')] = listener }, removeEventListener() {} })
+  hooks.effects.forEach((effect) => effect())
+  return listeners
+}
+const escape = { key: 'Escape', preventDefault() {}, stopPropagation() {} }
 const find = (node: ReactNode, match: (element: ReactElement<Props>) => boolean) => elements(node).find(match)
 
-beforeEach(() => { hooks.slots = []; vi.clearAllMocks() })
+beforeEach(() => { hooks.slots = []; reset.inFlight = false; vi.clearAllMocks() })
+afterEach(() => { vi.unstubAllGlobals() })
 
 describe('HyperTrack navigation and unified sign out', () => {
   it('keeps the 390px top bar to a left burger and right full HyperTrack logo', () => {
@@ -177,6 +194,76 @@ describe('Start over from every account control, HyperTrack accounts only', () =
     const corner = renderCorner()
     expect(button(corner, 'Start over')).toBeUndefined()
     expect(button(corner, 'Log out')).toBeDefined()
+  })
+
+  it('hands focus back to Start over after Cancel or Escape in the 390px drawer', () => {
+    button(render(390), 'Open sidebar').props.onClick!()
+    const item = button(find(render(390), ({ props }) => props.role === 'dialog')!, 'Start over')
+    const focus = vi.fn()
+    item.props.ref!.current = { focus } // what React attaches once the button is back
+    item.props.onClick!()
+    find(render(390), ({ type }) => type === StartOver)!.props.onClose!()
+    expect(focus).toHaveBeenCalledOnce()
+    expect(find(render(390), ({ type }) => type === StartOver)).toBeUndefined()
+    button(find(render(390), ({ props }) => props.role === 'dialog')!, 'Start over').props.onClick!()
+    render(390)
+    listen()['keydown:capture'](escape)
+    expect(focus).toHaveBeenCalledTimes(2)
+    const closed = render(390)
+    expect(find(closed, ({ type }) => type === StartOver)).toBeUndefined()
+    expect(find(closed, ({ props }) => props.role === 'dialog')).toBeDefined()
+  })
+
+  it('hands focus back to Start over after Cancel in the onboarding corner, or to the avatar once it is gone', () => {
+    const item = button(renderCorner(), 'Start over')
+    const focus = vi.fn()
+    item.props.ref!.current = { focus }
+    item.props.onClick!()
+    find(renderCorner(), ({ type }) => type === StartOver)!.props.onClose!()
+    expect(focus).toHaveBeenCalledOnce()
+    expect(find(renderCorner(), ({ type }) => type === StartOver)).toBeUndefined()
+    item.props.ref!.current = null
+    const avatar = vi.fn()
+    button(renderCorner(), 'Account menu').props.ref!.current = { focus: avatar }
+    button(renderCorner(), 'Start over').props.onClick!()
+    find(renderCorner(), ({ type }) => type === StartOver)!.props.onClose!()
+    expect(avatar).toHaveBeenCalledOnce()
+  })
+
+  it('holds the confirm on screen while the reset is in flight, whatever dismisses it', () => {
+    reset.inFlight = true
+    button(render(1440), 'Account menu').props.onClick!()
+    button(find(render(1440), ({ props }) => props.role === 'menu')!, 'Start over').props.onClick!()
+    render(1440)
+    const desktop = listen()
+    desktop.pointerdown({ target: {} })
+    desktop['keydown:capture'](escape)
+    button(render(1440), 'Account menu').props.onClick!()
+    expect(find(render(1440), ({ type }) => type === StartOver)).toBeDefined()
+    reset.inFlight = false
+    render(1440)
+    listen().pointerdown({ target: {} })
+    expect(find(render(1440), ({ type }) => type === StartOver)).toBeUndefined()
+
+    hooks.slots = []
+    button(render(390), 'Open sidebar').props.onClick!()
+    button(find(render(390), ({ props }) => props.role === 'dialog')!, 'Start over').props.onClick!()
+    reset.inFlight = true
+    const drawer = render(390)
+    listen().pointerdown({ target: {} })
+    find(drawer, ({ props }) => props.className === 'sidebar-scrim')!.props.onClick!()
+    button(drawer, 'Close sidebar').props.onClick!()
+    const held = render(390)
+    expect(find(held, ({ props }) => props.role === 'dialog')).toBeDefined()
+    expect(find(held, ({ type }) => type === StartOver)).toBeDefined()
+
+    // The onboarding corner's popover light-dismisses natively, so it reopens instead.
+    hooks.slots = []
+    button(renderCorner(), 'Start over').props.onClick!()
+    const showPopover = vi.fn()
+    find(renderCorner(), ({ props }) => props.popover === 'auto')!.props.onToggle!({ newState: 'closed', currentTarget: { showPopover } })
+    expect(showPopover).toHaveBeenCalledOnce()
+    expect(find(renderCorner(), ({ type }) => type === StartOver)).toBeDefined()
   })
 
   it('never wipes without the typed confirm', async () => {

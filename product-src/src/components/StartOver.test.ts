@@ -84,6 +84,24 @@ describe('Start over', () => {
     expect(renderToStaticMarkup(createElement(StartOver))).toBe('')
   })
 
+  it('reports the reset in flight until the server answers, and keeps holding once it worked', async () => {
+    for (const [status, held] of [[409, false], [500, false], [200, true]] as const) {
+      vi.resetModules()
+      backend(status)
+      const answer = reset
+      let release!: () => void
+      reset = vi.fn(async (url: string, init?: RequestInit) => { await new Promise<void>(resolve => { release = resolve }); return answer(url, init) })
+      const { startOver, startOverInFlight } = await import('@/lib/startOver')
+      expect(startOverInFlight()).toBe(false)
+      const done = startOver('start over')
+      await vi.waitFor(() => expect(reset).toHaveBeenCalled())
+      expect(startOverInFlight()).toBe(true)
+      release()
+      await done
+      expect(startOverInFlight(), String(status)).toBe(held)
+    }
+  })
+
   it('keeps everything and stays put on busy, refusal or failure', async () => {
     for (const [status, result] of [[409, 'busy'], [403, 'not_internal'], [500, 'failed']] as const) {
       vi.resetModules()
